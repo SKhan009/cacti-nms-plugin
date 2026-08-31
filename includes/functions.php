@@ -323,14 +323,64 @@ function nms_recent_core_log_events($limit = 15) {
 	$data = fread($handle, $read);
 	fclose($handle);
 
+	$seen = array();
 	$lines = preg_split('/\r?\n/', $data);
 	foreach (array_reverse($lines) as $line) {
-		if (preg_match('/\b(FATAL|ERROR|WARNING)\b/i', $line, $match)) {
-			$events[] = array('severity' => strtolower($match[1]), 'message' => trim($line));
-			if (count($events) >= $limit) break;
+		$line = trim($line);
+		if ($line === '' || !preg_match('/\b(FATAL|ERROR|WARNING)\b/i', $line, $match)) {
+			continue;
 		}
+
+		/* Cacti writes a second shutdown-handler line for the same PHP error. */
+		if (strpos($line, 'CactiShutdownHandler()') !== false) {
+			continue;
+		}
+
+		$time = '';
+		$message = $line;
+		if (preg_match('/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}|\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2})\s*-\s*(.*)$/', $line, $parts)) {
+			$time = $parts[1];
+			$message = $parts[2];
+		}
+
+		$event = array(
+			'severity' => strtolower($match[1]),
+			'title' => ucfirst(strtolower($match[1])) . ' reported by Cacti',
+			'detail' => preg_replace('/^(ERROR PHP ERROR:|AUTOM8 WARNING:|WARNING:|ERROR:)\s*/i', '', $message),
+			'time' => $time,
+			'state' => 'attention',
+			'count' => 1,
+			'key' => sha1(preg_replace('/\d+/', '#', $message))
+		);
+
+		if (strpos($line, 'csrf-magic.php') !== false && strpos($line, '/plugins/nms/nms.php') !== false) {
+			$event['severity'] = 'resolved';
+			$event['title'] = 'Older NMS page error — fixed';
+			$event['detail'] = 'The previous NMS page footer could not load correctly. The footer was removed and this problem is no longer occurring.';
+			$event['state'] = 'resolved';
+			$event['key'] = 'resolved-nms-footer';
+		} elseif (strpos($line, 'AUTOM8 WARNING:') !== false && strpos($line, 'SQL column ifIP') !== false) {
+			$event['severity'] = 'resolved';
+			$event['title'] = 'Older traffic rule warning — fixed';
+			$event['detail'] = 'A traffic rule requested an IP field that this device does not provide. The unsupported check was removed.';
+			$event['state'] = 'resolved';
+			$event['key'] = 'resolved-automation-ifip';
+		} else {
+			$event['detail'] = preg_replace('/\s+Stack trace:.*/i', '', $event['detail']);
+			if (strlen($event['detail']) > 240) {
+				$event['detail'] = substr($event['detail'], 0, 237) . '...';
+			}
+		}
+
+		if (isset($seen[$event['key']])) {
+			$events[$seen[$event['key']]]['count']++;
+			continue;
+		}
+
+		$seen[$event['key']] = count($events);
+		$events[] = $event;
+		if (count($events) >= $limit) break;
 	}
 
 	return $events;
 }
-

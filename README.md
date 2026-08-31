@@ -15,3 +15,7 @@ The plugin stores incident lifecycle and audit events only in its own `plugin_nm
 The fault dashboard is rendered as a dedicated NMS interface. It still uses Cacti's
 authenticated session and live database, but does not display Cacti's administration
 chrome. Administrators can return through the **Cacti Backend** button in the header.
+
+Technical log lines are summarized under **System notices** in plain language. Repeated
+messages are combined, and known corrected problems are labelled **Fixed**. The original
+Cacti log remains available through the **Technical log** button.

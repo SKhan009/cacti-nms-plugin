@@ -198,11 +198,18 @@ $nms_backend_url = $config['url_path'] . 'index.php';
 	</section>
 
 	<section class="nms-panel nms-log-panel">
-		<div class="nms-panel-head"><div><h2>Recent Cacti warnings and errors</h2><p>Read directly from the configured Cacti log</p></div><a class="nms-log-link" href="../../clog.php">Open full log</a></div>
+		<div class="nms-panel-head"><div><h2>System notices</h2><p>Simple explanations of recent Cacti messages</p></div><a class="nms-log-link" href="../../clog.php">Technical log</a></div>
 		<div class="nms-log-list">
-		<?php if (!count($log_events)) { ?><p class="nms-empty">No warning, error, or fatal log events were found.</p><?php } ?>
+		<?php if (!count($log_events)) { ?><p class="nms-empty">No system problems were found.</p><?php } ?>
 		<?php foreach ($log_events as $event) { ?>
-			<div class="nms-log-entry"><span class="<?php print nms_h($event['severity']); ?>"><?php print nms_h(strtoupper($event['severity'])); ?></span><code><?php print nms_h($event['message']); ?></code></div>
+			<div class="nms-log-entry <?php print nms_h($event['state']); ?>">
+				<span class="<?php print nms_h($event['severity']); ?>"><?php print nms_h($event['state'] === 'resolved' ? 'FIXED' : strtoupper($event['severity'])); ?></span>
+				<div class="nms-log-copy">
+					<strong><?php print nms_h($event['title']); ?></strong>
+					<p><?php print nms_h($event['detail']); ?></p>
+					<small><?php print $event['time'] !== '' ? nms_h($event['time']) : 'Recent'; ?><?php if ($event['count'] > 1) { ?> · Repeated <?php print (int) $event['count']; ?> times<?php } ?></small>
+				</div>
+			</div>
 		<?php } ?>
 		</div>
 	</section>
