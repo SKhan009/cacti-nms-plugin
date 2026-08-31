@@ -35,3 +35,12 @@ enabled.
 The NMS Fault page was restricted to Cacti device-status incidents. System notices,
 technical-log links, collector faults, RRD faults, and poller-output faults are not
 displayed. Summary cards and filtering use the same device-only scope.
+
+## 2026-08-31 — Always show device readings
+
+The main table now lists every enabled Cacti device, including healthy devices. It shows
+the current status, availability, response time, poll totals, failed polls, and latest
+reading. The All view is the default, so the page is not empty when no faults exist.
+
+Per-device RRD health was added to the same table. Each device reports fresh versus total
+RRD sources, stale or missing counts, and the latest RRD file update time.

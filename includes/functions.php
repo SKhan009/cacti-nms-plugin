@@ -303,3 +303,37 @@ function nms_time_ago($date) {
 	if ($seconds < 86400) return floor($seconds / 3600) . 'h ago';
 	return floor($seconds / 86400) . 'd ago';
 }
+
+function nms_device_rrd_reading($host_id) {
+	$rows = db_fetch_assoc_prepared('SELECT local_data_id, rrd_path, MAX(rrd_step) AS rrd_step
+		FROM poller_item
+		WHERE host_id = ?
+		GROUP BY local_data_id, rrd_path', array((int) $host_id));
+
+	$reading = array(
+		'total' => 0,
+		'fresh' => 0,
+		'stale' => 0,
+		'missing' => 0,
+		'latest' => 0
+	);
+
+	foreach ($rows as $row) {
+		$reading['total']++;
+		if (!is_file($row['rrd_path'])) {
+			$reading['missing']++;
+			continue;
+		}
+
+		$modified = (int) filemtime($row['rrd_path']);
+		$reading['latest'] = max($reading['latest'], $modified);
+		$stale_after = max(600, max(60, (int) $row['rrd_step']) * 3);
+		if (time() - $modified > $stale_after) {
+			$reading['stale']++;
+		} else {
+			$reading['fresh']++;
+		}
+	}
+
+	return $reading;
+}

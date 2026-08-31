@@ -15,9 +15,11 @@ The fault dashboard is rendered as a dedicated NMS interface. It still uses Cact
 authenticated session and live database, but does not display Cacti's administration
 chrome. Administrators can return through the **Cacti Backend** button in the header.
 
-The Fault dashboard intentionally displays only device-status incidents from Cacti's
-`host` table. Collector, RRD, poller-output, automation, PHP, and system-log messages are
-not shown on this page.
+The Fault dashboard displays every enabled device from Cacti's `host` table, including
+healthy devices. Each row shows status, availability, poller response time, poll totals,
+failed polls, RRD freshness, and the latest reading time. Faulted devices also show their
+active incident and acknowledgement action. Collector, automation, PHP, and system-log
+messages are not shown on this page; RRD data appears only as a per-device health reading.
 
 The left navigation sidebar can be opened or collapsed from the menu button in the
 header. Acknowledgements are recorded against Cacti's authenticated user and move an
