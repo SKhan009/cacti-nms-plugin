@@ -51,7 +51,6 @@ function nms_page_head() {
 	global $config;
 
 	if (get_current_page() === 'nms.php') {
-		print '<link rel="stylesheet" href="' . html_escape($config['url_path'] . 'plugins/nms/css/nms.css?v=1.0.0') . '">';
+		print '<link rel="stylesheet" href="' . html_escape($config['url_path'] . 'plugins/nms/css/nms-v1.1.css?v=1.1.0') . '">';
 	}
 }
-

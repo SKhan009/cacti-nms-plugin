@@ -12,3 +12,6 @@ Data sources:
 
 The plugin stores incident lifecycle and audit events only in its own `plugin_nms_*` tables.
 
+The fault dashboard is rendered as a dedicated NMS interface. It still uses Cacti's
+authenticated session and live database, but does not display Cacti's administration
+chrome. Administrators can return through the **Cacti Backend** button in the header.

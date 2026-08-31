@@ -84,9 +84,31 @@ $availability = $device_total > 0 ? round(($device_up / $device_total) * 100, 1)
 $last_sync = db_fetch_cell_prepared("SELECT updated_at FROM plugin_nms_meta WHERE meta_key = 'last_sync'", array());
 $log_events = nms_recent_core_log_events(12);
 $nms_csrf_token = csrf_get_tokens();
-
-top_header();
+$nms_asset_base = $config['url_path'] . 'plugins/nms/';
+$nms_backend_url = $config['url_path'] . 'index.php';
 ?>
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="robots" content="noindex,nofollow">
+	<title>NMS · Fault Management</title>
+	<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-v1.1.css?v=1.1.0'); ?>">
+</head>
+<body class="nms-standalone">
+	<header class="nms-app-header">
+		<a class="nms-brand" href="nms.php" aria-label="NMS fault dashboard">
+			<span class="nms-brand-mark">N</span>
+			<span><strong>NMS</strong><small>Network Management System</small></span>
+		</a>
+		<nav class="nms-primary-nav" aria-label="NMS modules">
+			<a class="selected" href="nms.php">Faults</a>
+		</nav>
+		<a class="nms-backend-button" href="<?php print nms_h($nms_backend_url); ?>">
+			<span aria-hidden="true">&#8599;</span> Cacti Backend
+		</a>
+	</header>
 
 <div class="nms-shell">
 	<div class="nms-heading">
@@ -185,6 +207,5 @@ top_header();
 		</div>
 	</section>
 </div>
-
-<?php
-bottom_footer();
+</body>
+</html>
