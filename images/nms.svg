@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="24" viewBox="0 0 80 24" role="img" aria-label="NMS">
+  <rect width="80" height="24" rx="3" fill="#1d512e"/>
+  <path d="M7 15h4l2-7 3 11 3-8 2 4h4" fill="none" stroke="#8bc34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="31" y="17" font-family="Arial,sans-serif" font-size="13" font-weight="700" fill="#fff">NMS</text>
+</svg>
+

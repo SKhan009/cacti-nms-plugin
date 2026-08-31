@@ -1,0 +1,14 @@
+# NMS Fault Management Plugin
+
+The `nms` plugin adds dynamic fault management to Cacti 1.2.31 without modifying Cacti core.
+
+Data sources:
+
+- current device status from `host`;
+- collector status and heartbeat age from `poller`;
+- live RRD file existence and modification time;
+- unknown (`U`) values received through the `poller_output` hook;
+- current warning, error, and fatal entries from Cacti's configured log.
+
+The plugin stores incident lifecycle and audit events only in its own `plugin_nms_*` tables.
+

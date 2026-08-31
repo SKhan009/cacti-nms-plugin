@@ -1,0 +1,9 @@
+[info]
+name = NMS
+version = 1.0.0
+longname = NMS Fault Management
+author = NMS Project
+homepage = https://www.cacti.net/
+email = admin@localhost
+compat = 1.2.31
+
