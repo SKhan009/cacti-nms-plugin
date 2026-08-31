@@ -29,3 +29,9 @@ were re-enabled after deployment.
 Incident 1 was acknowledged successfully through the live HTTP form as user `admin`
 during verification. The request returned to the fault page normally and NMS remained
 enabled.
+
+## 2026-08-31 — Device-only Fault view
+
+The NMS Fault page was restricted to Cacti device-status incidents. System notices,
+technical-log links, collector faults, RRD faults, and poller-output faults are not
+displayed. Summary cards and filtering use the same device-only scope.
