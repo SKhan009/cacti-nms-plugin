@@ -19,3 +19,7 @@ chrome. Administrators can return through the **Cacti Backend** button in the he
 Technical log lines are summarized under **System notices** in plain language. Repeated
 messages are combined, and known corrected problems are labelled **Fixed**. The original
 Cacti log remains available through the **Technical log** button.
+
+The left navigation sidebar can be opened or collapsed from the menu button in the
+header. Acknowledgements are recorded against Cacti's authenticated user and move an
+incident from **Open** to **Acknowledged** without modifying Cacti core.

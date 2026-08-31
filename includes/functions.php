@@ -359,6 +359,12 @@ function nms_recent_core_log_events($limit = 15) {
 			$event['detail'] = 'The previous NMS page footer could not load correctly. The footer was removed and this problem is no longer occurring.';
 			$event['state'] = 'resolved';
 			$event['key'] = 'resolved-nms-footer';
+		} elseif (strpos($line, 'Undefined constant "SESS_USER_ID"') !== false && strpos($line, '/plugins/nms/nms.php') !== false) {
+			$event['severity'] = 'resolved';
+			$event['title'] = 'Acknowledgement error — fixed';
+			$event['detail'] = 'The acknowledge button used the wrong Cacti user-session name. It now records the signed-in user correctly.';
+			$event['state'] = 'resolved';
+			$event['key'] = 'resolved-acknowledgement-session';
 		} elseif (strpos($line, 'AUTOM8 WARNING:') !== false && strpos($line, 'SQL column ifIP') !== false) {
 			$event['severity'] = 'resolved';
 			$event['title'] = 'Older traffic rule warning — fixed';

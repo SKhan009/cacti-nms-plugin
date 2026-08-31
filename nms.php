@@ -10,7 +10,7 @@ nms_sync_all_faults(false);
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 	$action = get_nfilter_request_var('nms_action');
 	$id = get_filter_request_var('id');
-	$user_id = isset($_SESSION[SESS_USER_ID]) ? (int) $_SESSION[SESS_USER_ID] : 0;
+	$user_id = isset($_SESSION['sess_user_id']) ? (int) $_SESSION['sess_user_id'] : 0;
 
 	if ($action === 'acknowledge' && $id > 0) {
 		nms_acknowledge_incident($id, $user_id);
@@ -94,14 +94,17 @@ $nms_backend_url = $config['url_path'] . 'index.php';
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="robots" content="noindex,nofollow">
 	<title>NMS · Fault Management</title>
-	<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-v1.1.css?v=1.1.0'); ?>">
+	<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-v1.1.css?v=1.3.0'); ?>">
 </head>
 <body class="nms-standalone">
 	<header class="nms-app-header">
-		<a class="nms-brand" href="nms.php" aria-label="NMS fault dashboard">
-			<span class="nms-brand-mark">N</span>
-			<span><strong>NMS</strong><small>Network Management System</small></span>
-		</a>
+		<div class="nms-header-start">
+			<button class="nms-sidebar-toggle" id="nmsSidebarToggle" type="button" aria-controls="nmsSidebar" aria-expanded="true" aria-label="Collapse sidebar"><span></span><span></span><span></span></button>
+			<a class="nms-brand" href="nms.php" aria-label="NMS fault dashboard">
+				<span class="nms-brand-mark">N</span>
+				<span><strong>NMS</strong><small>Network Management System</small></span>
+			</a>
+		</div>
 		<nav class="nms-primary-nav" aria-label="NMS modules">
 			<a class="selected" href="nms.php">Faults</a>
 		</nav>
@@ -110,7 +113,17 @@ $nms_backend_url = $config['url_path'] . 'index.php';
 		</a>
 	</header>
 
-<div class="nms-shell">
+	<div class="nms-app-layout">
+		<aside class="nms-sidebar" id="nmsSidebar">
+			<div class="nms-sidebar-section">
+				<p class="nms-sidebar-label">Monitoring</p>
+				<a class="nms-sidebar-link selected" href="#incident-queue"><span class="nms-sidebar-icon">!</span><span class="nms-sidebar-copy"><strong>Faults</strong><small>Active incident queue</small></span></a>
+				<a class="nms-sidebar-link" href="#system-notices"><span class="nms-sidebar-icon">i</span><span class="nms-sidebar-copy"><strong>System notices</strong><small>Warnings and fixes</small></span></a>
+			</div>
+			<div class="nms-sidebar-status"><span></span><div class="nms-sidebar-copy"><strong>Live monitoring</strong><small>Reading Cacti data</small></div></div>
+		</aside>
+
+<main class="nms-shell">
 	<div class="nms-heading">
 		<div>
 			<p class="nms-eyebrow">NMS / Fault Management</p>
@@ -130,7 +143,7 @@ $nms_backend_url = $config['url_path'] . 'index.php';
 		<div class="nms-summary nms-summary-resolved"><span>Resolved today</span><strong><?php print (int) $counts['resolved_today']; ?></strong><small>Automatically or manually cleared</small></div>
 	</div>
 
-	<section class="nms-panel">
+	<section class="nms-panel" id="incident-queue">
 		<div class="nms-panel-head">
 			<div><h2>Incident queue</h2><p><?php print count($incidents); ?> matching incidents · Last synchronized <?php print $last_sync ? nms_h(nms_time_ago($last_sync)) : 'now'; ?></p></div>
 			<div class="nms-state-links">
@@ -197,7 +210,7 @@ $nms_backend_url = $config['url_path'] . 'index.php';
 		</div>
 	</section>
 
-	<section class="nms-panel nms-log-panel">
+	<section class="nms-panel nms-log-panel" id="system-notices">
 		<div class="nms-panel-head"><div><h2>System notices</h2><p>Simple explanations of recent Cacti messages</p></div><a class="nms-log-link" href="../../clog.php">Technical log</a></div>
 		<div class="nms-log-list">
 		<?php if (!count($log_events)) { ?><p class="nms-empty">No system problems were found.</p><?php } ?>
@@ -213,6 +226,18 @@ $nms_backend_url = $config['url_path'] . 'index.php';
 		<?php } ?>
 		</div>
 	</section>
-</div>
+</main>
+	</div>
+	<script>
+	(function() {
+		var button = document.getElementById('nmsSidebarToggle');
+		if (!button) return;
+		button.addEventListener('click', function() {
+			var collapsed = document.body.classList.toggle('nms-sidebar-collapsed');
+			button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+			button.setAttribute('aria-label', collapsed ? 'Open sidebar' : 'Collapse sidebar');
+		});
+	})();
+	</script>
 </body>
 </html>
