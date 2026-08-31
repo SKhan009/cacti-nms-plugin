@@ -137,69 +137,70 @@ function nms_host_status_name($status) {
 	return isset($map[$status]) ? $map[$status] : 'Invalid state ' . $status;
 }
 
-function nms_poller_status_name($status) {
-	$map = array(
-		POLLER_STATUS_NEW => 'New',
-		POLLER_STATUS_RUNNING => 'Running',
-		POLLER_STATUS_IDLE => 'Idle',
-		POLLER_STATUS_DOWN => 'Down',
-		POLLER_STATUS_DISABLED => 'Disabled',
-		POLLER_STATUS_RECOVERING => 'Recovering',
-		POLLER_STATUS_HEARTBEAT => 'Heartbeat missed'
+function nms_parameter_matches($raw_value, $comparison, $threshold_value) {
+	$raw = trim((string) $raw_value);
+	$threshold = trim((string) $threshold_value);
+	$raw_lower = strtolower($raw);
+	$threshold_lower = strtolower($threshold);
+	$is_unknown = $raw === '' || in_array($raw_lower, array('u', 'unknown', 'nan', 'null'), true);
+
+	if ($comparison === 'is_unknown') return $is_unknown;
+	if ($comparison === 'is_not_unknown') return !$is_unknown;
+	if ($comparison === 'contains') return $threshold !== '' && strpos($raw_lower, $threshold_lower) !== false;
+	if ($comparison === 'not_contains') return $threshold !== '' && strpos($raw_lower, $threshold_lower) === false;
+	if ($comparison === 'equals') return $raw_lower === $threshold_lower;
+	if ($comparison === 'not_equals') return $raw_lower !== $threshold_lower;
+
+	if (!is_numeric($raw) || !is_numeric($threshold)) return false;
+	$current = (float) $raw;
+	$limit = (float) $threshold;
+	if ($comparison === 'greater_than') return $current > $limit;
+	if ($comparison === 'greater_or_equal') return $current >= $limit;
+	if ($comparison === 'less_than') return $current < $limit;
+	if ($comparison === 'less_or_equal') return $current <= $limit;
+
+	return false;
+}
+
+function nms_comparison_label($comparison) {
+	$labels = array(
+		'greater_than' => 'is greater than',
+		'greater_or_equal' => 'is greater than or equal to',
+		'less_than' => 'is less than',
+		'less_or_equal' => 'is less than or equal to',
+		'equals' => 'equals',
+		'not_equals' => 'does not equal',
+		'contains' => 'contains',
+		'not_contains' => 'does not contain',
+		'is_unknown' => 'is unknown or empty',
+		'is_not_unknown' => 'has a valid value'
 	);
-	return isset($map[$status]) ? $map[$status] : 'Invalid state ' . $status;
+	return isset($labels[$comparison]) ? $labels[$comparison] : $comparison;
 }
 
 function nms_sync_device_faults() {
-	$rows = db_fetch_assoc("SELECT h.*, ht.name AS template_name,
+	$core_rows = db_fetch_assoc("SELECT h.*, ht.name AS template_name,
 		c.id AS category_id, c.name AS category_name,
-		r.id AS rule_id, r.name AS rule_name, r.metric, r.threshold, r.severity
+		r.id AS rule_id, r.name AS rule_name, r.parameter_key, r.comparison,
+		r.threshold_value, r.unit, r.severity
 		FROM host AS h
 		INNER JOIN host_template AS ht ON ht.id = h.host_template_id
 		INNER JOIN plugin_nms_category_templates AS ct ON ct.host_template_id = h.host_template_id
 		INNER JOIN plugin_nms_device_categories AS c ON c.id = ct.category_id
-		INNER JOIN plugin_nms_fault_rules AS r ON r.category_id = c.id AND r.enabled = 'on'
+		INNER JOIN plugin_nms_fault_rules AS r ON r.category_id = c.id
+			AND r.enabled = 'on' AND r.metric = 'core_status'
 		WHERE h.deleted = '' AND h.disabled = ''
 		ORDER BY h.id, r.sort_order, r.id");
 	$active = array();
-	$rrd_cache = array();
 
-	foreach ($rows as $row) {
-		$triggered = false;
-		$current = '';
-		$limit = (float) $row['threshold'];
-		$metric = $row['metric'];
-
-		if ($metric === 'status_not_up') {
-			$current = nms_host_status_name((int) $row['status']);
-			$triggered = (int) $row['status'] !== HOST_UP;
-		} elseif ($metric === 'availability_below') {
-			$current = number_format((float) $row['availability'], 1) . '%';
-			$triggered = (float) $row['availability'] < $limit;
-		} elseif ($metric === 'response_above') {
-			$current = number_format((float) $row['cur_time'], 2) . ' ms';
-			$triggered = (float) $row['cur_time'] > $limit;
-		} elseif ($metric === 'rrd_stale_minutes' || $metric === 'rrd_missing_count') {
-			if (!isset($rrd_cache[$row['id']])) {
-				$rrd_cache[$row['id']] = nms_device_rrd_reading($row['id']);
-			}
-			$rrd = $rrd_cache[$row['id']];
-			if ($metric === 'rrd_stale_minutes') {
-				$current = $rrd['oldest_age'] > 0 ? floor($rrd['oldest_age'] / 60) . ' minutes' : 'No RRD age';
-				$triggered = $rrd['total'] > 0 && $rrd['oldest_age'] > ($limit * 60);
-			} else {
-				$current = $rrd['missing'] . ' missing';
-				$triggered = $rrd['missing'] >= max(1, $limit);
-			}
-		}
-
-		if (!$triggered) continue;
+	foreach ($core_rows as $row) {
+		$current = strtolower(nms_host_status_name((int) $row['status']));
+		if (!nms_parameter_matches($current, $row['comparison'], $row['threshold_value'])) continue;
 
 		$fingerprint = 'device-rule:' . $row['rule_id'] . ':host:' . $row['id'];
 		$active[] = $fingerprint;
-		$message = 'Current value: ' . $current . '. Configured threshold: ' .
-			($metric === 'status_not_up' ? 'device must be Up' : rtrim(rtrim(number_format($limit, 3, '.', ''), '0'), '.')) .
-			'. Category: ' . $row['category_name'] . '. Template: ' . $row['template_name'] . '.';
+		$message = 'Device state is ' . $current . '. The configured healthy value is ' .
+			$row['threshold_value'] . '. Category: ' . $row['category_name'] . '. Template: ' . $row['template_name'] . '.';
 		nms_open_incident(array(
 			'fingerprint' => $fingerprint,
 			'source_type' => 'device',
@@ -211,106 +212,43 @@ function nms_sync_device_faults() {
 		));
 	}
 
+	$parameter_rows = db_fetch_assoc("SELECT h.id, h.description, ht.name AS template_name,
+		c.name AS category_name, r.id AS rule_id, r.name AS rule_name, r.parameter_key,
+		r.comparison, r.threshold_value, r.unit, r.severity,
+		p.local_data_id, p.parameter_name, p.display_name, p.raw_value, p.last_seen
+		FROM host AS h
+		INNER JOIN host_template AS ht ON ht.id = h.host_template_id
+		INNER JOIN plugin_nms_category_templates AS ct ON ct.host_template_id = h.host_template_id
+		INNER JOIN plugin_nms_device_categories AS c ON c.id = ct.category_id
+		INNER JOIN plugin_nms_fault_rules AS r ON r.category_id = c.id
+			AND r.enabled = 'on' AND r.metric = 'parameter'
+		INNER JOIN plugin_nms_device_parameters AS p ON p.host_id = h.id
+			AND p.parameter_key = r.parameter_key
+		WHERE h.deleted = '' AND h.disabled = ''
+		ORDER BY h.id, r.sort_order, r.id, p.local_data_id");
+
+	foreach ($parameter_rows as $row) {
+		if (!nms_parameter_matches($row['raw_value'], $row['comparison'], $row['threshold_value'])) continue;
+		$fingerprint = 'device-rule:' . $row['rule_id'] . ':host:' . $row['id'] . ':data:' . $row['local_data_id'];
+		$active[] = $fingerprint;
+		$unit = trim($row['unit']) !== '' ? ' ' . trim($row['unit']) : '';
+		$message = $row['display_name'] . ' is ' . $row['raw_value'] . $unit . '. Rule: ' .
+			nms_comparison_label($row['comparison']) .
+			(in_array($row['comparison'], array('is_unknown', 'is_not_unknown'), true) ? '' : ' ' . $row['threshold_value'] . $unit) .
+			'. Category: ' . $row['category_name'] . '. Template: ' . $row['template_name'] . '.';
+		nms_open_incident(array(
+			'fingerprint' => $fingerprint,
+			'source_type' => 'device',
+			'source_key' => $row['id'] . ':' . $row['rule_id'] . ':' . $row['local_data_id'],
+			'host_id' => $row['id'],
+			'local_data_id' => $row['local_data_id'],
+			'severity' => $row['severity'],
+			'title' => $row['description'] . ' - ' . $row['rule_name'],
+			'message' => $message
+		));
+	}
+
 	nms_resolve_missing('device', $active);
-}
-
-function nms_sync_poller_faults() {
-	$cron = (int) read_config_option('cron_interval');
-	if ($cron < 60) {
-		$cron = 300;
-	}
-	$stale_after = max(600, ($cron * 2) + 60);
-	$rows = db_fetch_assoc('SELECT * FROM poller');
-	$active = array();
-
-	foreach ($rows as $row) {
-		if ($row['disabled'] === 'on' || (int) $row['status'] === POLLER_STATUS_DISABLED) {
-			continue;
-		}
-
-		$last = max((int) strtotime($row['last_status']), (int) strtotime($row['last_update']));
-		$age = $last > 0 ? time() - $last : PHP_INT_MAX;
-		if ($age > $stale_after) {
-			$fingerprint = 'poller:' . $row['id'] . ':stale';
-			$active[] = $fingerprint;
-			nms_open_incident(array(
-				'fingerprint' => $fingerprint,
-				'source_type' => 'poller',
-				'source_key' => (string) $row['id'],
-				'poller_id' => $row['id'],
-				'severity' => 'critical',
-				'title' => $row['name'] . ' is not updating',
-				'message' => 'Last collector update: ' . $row['last_update'] . ' (' . $age . ' seconds ago)'
-			));
-		}
-
-		if (!in_array((int) $row['status'], array(POLLER_STATUS_NEW, POLLER_STATUS_RUNNING, POLLER_STATUS_IDLE), true)) {
-			$fingerprint = 'poller:' . $row['id'] . ':status';
-			$active[] = $fingerprint;
-			$status = nms_poller_status_name((int) $row['status']);
-			nms_open_incident(array(
-				'fingerprint' => $fingerprint,
-				'source_type' => 'poller',
-				'source_key' => (string) $row['id'],
-				'poller_id' => $row['id'],
-				'severity' => (int) $row['status'] === POLLER_STATUS_RECOVERING ? 'warning' : 'critical',
-				'title' => $row['name'] . ' status is ' . strtolower($status),
-				'message' => 'Collector ' . $row['hostname'] . ' reports ' . $status
-			));
-		}
-	}
-
-	nms_resolve_missing('poller', $active);
-}
-
-function nms_sync_rrd_faults() {
-	$rows = db_fetch_assoc("SELECT pi.local_data_id, pi.host_id, pi.rrd_path, MAX(pi.rrd_step) AS rrd_step,
-		MAX(dtd.name_cache) AS name_cache, MAX(h.description) AS host_description
-		FROM poller_item AS pi
-		INNER JOIN host AS h ON h.id = pi.host_id AND h.deleted = '' AND h.disabled = ''
-		LEFT JOIN data_template_data AS dtd ON dtd.local_data_id = pi.local_data_id
-		GROUP BY pi.local_data_id, pi.host_id, pi.rrd_path");
-	$active = array();
-
-	foreach ($rows as $row) {
-		$step = max(60, (int) $row['rrd_step']);
-		$stale_after = max(600, ($step * 3));
-		$name = trim($row['name_cache']) !== '' ? $row['name_cache'] : 'Data source ' . $row['local_data_id'];
-
-		if (!is_file($row['rrd_path'])) {
-			$fingerprint = 'rrd:' . $row['local_data_id'] . ':missing';
-			$active[] = $fingerprint;
-			nms_open_incident(array(
-				'fingerprint' => $fingerprint,
-				'source_type' => 'rrd',
-				'source_key' => (string) $row['local_data_id'],
-				'host_id' => $row['host_id'],
-				'local_data_id' => $row['local_data_id'],
-				'severity' => 'major',
-				'title' => $name . ' RRD file is missing',
-				'message' => 'Expected path: ' . $row['rrd_path']
-			));
-			continue;
-		}
-
-		$age = time() - filemtime($row['rrd_path']);
-		if ($age > $stale_after) {
-			$fingerprint = 'rrd:' . $row['local_data_id'] . ':stale';
-			$active[] = $fingerprint;
-			nms_open_incident(array(
-				'fingerprint' => $fingerprint,
-				'source_type' => 'rrd',
-				'source_key' => (string) $row['local_data_id'],
-				'host_id' => $row['host_id'],
-				'local_data_id' => $row['local_data_id'],
-				'severity' => 'major',
-				'title' => $name . ' data is stale',
-				'message' => 'RRD last changed ' . $age . ' seconds ago for ' . $row['host_description']
-			));
-		}
-	}
-
-	nms_resolve_missing('rrd', $active);
 }
 
 function nms_sync_all_faults($force = false) {
@@ -320,8 +258,9 @@ function nms_sync_all_faults($force = false) {
 	}
 
 	nms_sync_device_faults();
-	nms_sync_poller_faults();
-	nms_sync_rrd_faults();
+	nms_resolve_missing('poller', array());
+	nms_resolve_missing('rrd', array());
+	nms_resolve_missing('output', array());
 
 	db_execute_prepared("INSERT INTO plugin_nms_meta (meta_key, meta_value, updated_at)
 		VALUES ('last_sync', ?, ?)
@@ -336,40 +275,4 @@ function nms_time_ago($date) {
 	if ($seconds < 3600) return floor($seconds / 60) . 'm ago';
 	if ($seconds < 86400) return floor($seconds / 3600) . 'h ago';
 	return floor($seconds / 86400) . 'd ago';
-}
-
-function nms_device_rrd_reading($host_id) {
-	$rows = db_fetch_assoc_prepared('SELECT local_data_id, rrd_path, MAX(rrd_step) AS rrd_step
-		FROM poller_item
-		WHERE host_id = ?
-		GROUP BY local_data_id, rrd_path', array((int) $host_id));
-
-	$reading = array(
-		'total' => 0,
-		'fresh' => 0,
-		'stale' => 0,
-		'missing' => 0,
-		'latest' => 0,
-		'oldest_age' => 0
-	);
-
-	foreach ($rows as $row) {
-		$reading['total']++;
-		if (!is_file($row['rrd_path'])) {
-			$reading['missing']++;
-			continue;
-		}
-
-		$modified = (int) filemtime($row['rrd_path']);
-		$reading['latest'] = max($reading['latest'], $modified);
-		$reading['oldest_age'] = max($reading['oldest_age'], time() - $modified);
-		$stale_after = max(600, max(60, (int) $row['rrd_step']) * 3);
-		if (time() - $modified > $stale_after) {
-			$reading['stale']++;
-		} else {
-			$reading['fresh']++;
-		}
-	}
-
-	return $reading;
 }

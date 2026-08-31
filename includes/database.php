@@ -100,6 +100,37 @@ function nms_setup_database() {
 		UNIQUE KEY category_metric (category_id, metric)
 	) ENGINE=InnoDB ROW_FORMAT=Dynamic");
 
+	if (!(int) db_fetch_cell("SELECT COUNT(*) FROM information_schema.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'plugin_nms_fault_rules' AND COLUMN_NAME = 'parameter_key'")) {
+		db_execute("ALTER TABLE plugin_nms_fault_rules
+			ADD parameter_key VARCHAR(191) NOT NULL DEFAULT '' AFTER metric,
+			ADD comparison VARCHAR(20) NOT NULL DEFAULT 'greater_than' AFTER parameter_key,
+			ADD threshold_value VARCHAR(191) NOT NULL DEFAULT '' AFTER threshold,
+			ADD unit VARCHAR(24) NOT NULL DEFAULT '' AFTER threshold_value");
+	}
+	if ((int) db_fetch_cell("SELECT COUNT(*) FROM information_schema.STATISTICS
+		WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'plugin_nms_fault_rules' AND INDEX_NAME = 'category_metric'")) {
+		db_execute('ALTER TABLE plugin_nms_fault_rules DROP INDEX category_metric');
+	}
+	if (!(int) db_fetch_cell("SELECT COUNT(*) FROM information_schema.STATISTICS
+		WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'plugin_nms_fault_rules' AND INDEX_NAME = 'category_parameter'")) {
+		db_execute('ALTER TABLE plugin_nms_fault_rules ADD KEY category_parameter (category_id, parameter_key)');
+	}
+
+	db_execute("CREATE TABLE IF NOT EXISTS plugin_nms_device_parameters (
+		host_id MEDIUMINT UNSIGNED NOT NULL,
+		local_data_id INT UNSIGNED NOT NULL,
+		parameter_key VARCHAR(191) NOT NULL,
+		parameter_name VARCHAR(100) NOT NULL,
+		display_name VARCHAR(255) NOT NULL,
+		raw_value VARCHAR(512) NOT NULL,
+		numeric_value DECIMAL(30,8) NULL DEFAULT NULL,
+		last_seen DATETIME NOT NULL,
+		PRIMARY KEY (host_id, local_data_id, parameter_key),
+		KEY parameter_key (parameter_key),
+		KEY last_seen (last_seen)
+	) ENGINE=InnoDB ROW_FORMAT=Dynamic");
+
 	nms_seed_fault_configuration();
 }
 
@@ -128,19 +159,20 @@ function nms_seed_fault_configuration() {
 	nms_sync_template_categories();
 
 	$category_ids = db_fetch_assoc('SELECT id FROM plugin_nms_device_categories');
-	$defaults = array(
-		array('Device is not up', 'status_not_up', 0, 'critical', 10),
-		array('Availability below limit', 'availability_below', 95, 'major', 20),
-		array('Poller response above limit', 'response_above', 500, 'warning', 30),
-		array('RRD data older than limit', 'rrd_stale_minutes', 15, 'major', 40),
-		array('Missing RRD files', 'rrd_missing_count', 1, 'major', 50)
-	);
+	db_execute("UPDATE plugin_nms_fault_rules SET metric = 'core_status', parameter_key = 'core:status',
+		comparison = 'not_equals', threshold_value = 'up', unit = '' WHERE metric = 'status_not_up'");
+	db_execute("DELETE FROM plugin_nms_fault_rules WHERE metric IN
+		('availability_below', 'response_above', 'rrd_stale_minutes', 'rrd_missing_count')");
+
 	foreach ($category_ids as $category) {
-		foreach ($defaults as $rule) {
-			db_execute_prepared('INSERT IGNORE INTO plugin_nms_fault_rules
-				(category_id, name, metric, threshold, severity, enabled, sort_order, created_at, updated_at)
-				VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
-				array($category['id'], $rule[0], $rule[1], $rule[2], $rule[3], 'on', $rule[4]));
+		$exists = (int) db_fetch_cell_prepared("SELECT COUNT(*) FROM plugin_nms_fault_rules
+			WHERE category_id = ? AND parameter_key = 'core:status'", array($category['id']));
+		if (!$exists) {
+			db_execute_prepared("INSERT INTO plugin_nms_fault_rules
+				(category_id, name, metric, parameter_key, comparison, threshold, threshold_value, unit,
+				severity, enabled, sort_order, created_at, updated_at)
+				VALUES (?, 'Device is not up', 'core_status', 'core:status', 'not_equals', 0, 'up', '',
+				'critical', 'on', 10, NOW(), NOW())", array($category['id']));
 		}
 	}
 }
@@ -190,6 +222,7 @@ function nms_drop_database() {
 	db_execute('DROP TABLE IF EXISTS plugin_nms_meta');
 	db_execute('DROP TABLE IF EXISTS plugin_nms_topology');
 	db_execute('DROP TABLE IF EXISTS plugin_nms_fault_rules');
+	db_execute('DROP TABLE IF EXISTS plugin_nms_device_parameters');
 	db_execute('DROP TABLE IF EXISTS plugin_nms_category_templates');
 	db_execute('DROP TABLE IF EXISTS plugin_nms_device_categories');
 }

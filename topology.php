@@ -55,10 +55,12 @@ $topology_interfaces = $site_id > 0 ? nms_topology_interfaces($site_id) : array(
 $root_device = null;
 $mapped_count = 0;
 $up_count = 0;
+$fault_count = 0;
 foreach ($topology_devices as $device) {
 	if ($device['locked'] === 'on') $root_device = $device;
 	if ((int) $device['is_mapped'] === 1) $mapped_count++;
 	if ((int) $device['status'] === HOST_UP) $up_count++;
+	if ((int) $device['fault_count'] > 0) $fault_count++;
 }
 
 $nms_csrf_token = csrf_get_tokens();
@@ -66,8 +68,8 @@ $nms_asset_base = $config['url_path'] . 'plugins/nms/';
 $nms_backend_url = $config['url_path'] . 'index.php';
 $nms_active_module = 'topology';
 $nms_page_title = 'NMS · Dynamic Topology';
-$nms_extra_css = 'css/nms-topology.css?v=1.0.0';
-$nms_extra_js = 'js/nms-topology.js?v=1.0.0';
+$nms_extra_css = 'css/nms-topology.css?v=1.1.0';
+$nms_extra_js = 'js/nms-topology.js?v=1.1.0';
 
 require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 

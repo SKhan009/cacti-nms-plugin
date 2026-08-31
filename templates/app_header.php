@@ -9,7 +9,7 @@ if (!isset($nms_page_title)) $nms_page_title = 'NMS';
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="robots" content="noindex,nofollow">
 	<title><?php print nms_h($nms_page_title); ?></title>
-	<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-v1.1.css?v=1.7.0'); ?>">
+	<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-v1.1.css?v=1.8.0'); ?>">
 	<?php if (!empty($nms_extra_css)) { ?><link rel="stylesheet" href="<?php print nms_h($nms_asset_base . $nms_extra_css); ?>"><?php } ?>
 </head>
 <body class="nms-standalone">

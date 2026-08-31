@@ -11,16 +11,26 @@ function nms_topology_sites() {
 
 function nms_topology_devices($site_id) {
 	return db_fetch_assoc_prepared("SELECT
-			h.id, h.description, h.hostname, h.status, h.availability, h.cur_time,
-			h.last_updated, h.site_id, h.poller_id, h.snmp_sysName, h.snmp_sysDescr,
-			h.snmp_version, h.host_template_id, p.name AS poller_name,
+			h.id, h.description, h.hostname, h.status, h.availability,
+			h.last_updated, h.site_id, h.snmp_sysName, h.snmp_sysDescr,
+			h.snmp_version, h.host_template_id,
+			ht.name AS template_name, c.name AS category_name,
 			COALESCE(g.graph_count, 0) AS graph_count,
 			COALESCE(i.interface_count, 0) AS interface_count,
+			COALESCE(f.fault_count, 0) AS fault_count, COALESCE(f.fault_rank, 0) AS fault_rank,
 			l.parent_host_id, l.parent_snmp_index, l.pos_x, l.pos_y, l.locked,
 			CASE WHEN l.host_id IS NULL THEN 0 ELSE 1 END AS is_mapped
 		FROM host AS h
-		LEFT JOIN poller AS p ON p.id = h.poller_id
+		LEFT JOIN host_template AS ht ON ht.id = h.host_template_id
+		LEFT JOIN plugin_nms_category_templates AS ct ON ct.host_template_id = h.host_template_id
+		LEFT JOIN plugin_nms_device_categories AS c ON c.id = ct.category_id
 		LEFT JOIN plugin_nms_topology AS l ON l.host_id = h.id
+		LEFT JOIN (
+			SELECT host_id, COUNT(*) AS fault_count,
+				MAX(CASE severity WHEN 'critical' THEN 3 WHEN 'major' THEN 2 WHEN 'warning' THEN 1 ELSE 0 END) AS fault_rank
+			FROM plugin_nms_incidents WHERE source_type = 'device' AND status IN ('open', 'acknowledged')
+			GROUP BY host_id
+		) AS f ON f.host_id = h.id
 		LEFT JOIN (
 			SELECT host_id, COUNT(*) AS graph_count FROM graph_local GROUP BY host_id
 		) AS g ON g.host_id = h.id
@@ -100,6 +110,7 @@ function nms_topology_remove_device($host_id, $site_id) {
 function nms_topology_json_devices($devices, $interfaces, $url_path) {
 	$result = array();
 	foreach ($devices as $device) {
+		$fault_severity = (int) $device['fault_rank'] === 3 ? 'critical' : ((int) $device['fault_rank'] === 2 ? 'major' : ((int) $device['fault_rank'] === 1 ? 'warning' : ''));
 		$result[] = array(
 			'id' => (int) $device['id'],
 			'name' => (string) $device['description'],
@@ -107,10 +118,12 @@ function nms_topology_json_devices($devices, $interfaces, $url_path) {
 			'sys_name' => (string) $device['snmp_sysName'],
 			'sys_description' => (string) $device['snmp_sysDescr'],
 			'status' => nms_host_status_name((int) $device['status']),
+			'category' => (string) $device['category_name'],
+			'template' => (string) $device['template_name'],
+			'fault_count' => (int) $device['fault_count'],
+			'fault_severity' => $fault_severity,
 			'availability' => round((float) $device['availability'], 1),
-			'response_ms' => round((float) $device['cur_time'], 2),
 			'last_updated' => (string) $device['last_updated'],
-			'poller' => (string) $device['poller_name'],
 			'snmp_version' => (int) $device['snmp_version'],
 			'graphs' => (int) $device['graph_count'],
 			'interfaces' => (int) $device['interface_count'],
@@ -122,7 +135,8 @@ function nms_topology_json_devices($devices, $interfaces, $url_path) {
 			'x' => $device['pos_x'] === null ? null : (float) $device['pos_x'],
 			'y' => $device['pos_y'] === null ? null : (float) $device['pos_y'],
 			'graphs_url' => $url_path . 'graph_view.php?action=preview&host_id=' . (int) $device['id'],
-			'device_url' => $url_path . 'host.php?action=edit&id=' . (int) $device['id']
+			'device_url' => $url_path . 'host.php?action=edit&id=' . (int) $device['id'],
+			'faults_url' => $url_path . 'plugins/nms/nms.php?state=fault&search=' . rawurlencode((string) $device['description'])
 		);
 	}
 	return $result;

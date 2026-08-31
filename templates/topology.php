@@ -18,7 +18,7 @@
 		<div><span>Core devices</span><strong><?php print $root_device ? '1 configured' : 'Configuration required'; ?></strong></div>
 		<div><span>Mapped</span><strong><?php print (int) $mapped_count; ?></strong></div>
 		<div><span>Inventory</span><strong><?php print count($topology_devices); ?></strong></div>
-		<div><span>Live status</span><strong><?php print (int) $up_count; ?> up</strong></div>
+		<div><span>Configured faults</span><strong><?php print (int) $fault_count; ?> devices</strong></div>
 	</div>
 
 	<section class="nms-panel nms-root-config">

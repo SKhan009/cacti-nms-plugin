@@ -21,6 +21,8 @@
 	function statusClass(status) {
 		return String(status).toLowerCase().replace(/[^a-z]+/g, '-');
 	}
+	function healthClass(device) { return device.fault_count > 0 ? device.fault_severity : statusClass(device.status); }
+	function healthLabel(device) { return device.fault_count > 0 ? device.fault_severity + ' fault' : device.status; }
 
 	function post(action, device, extra) {
 		var body = new URLSearchParams();
@@ -37,14 +39,14 @@
 		var query = search.value.trim().toLowerCase();
 		inventory.innerHTML = '';
 		config.devices.filter(function (device) {
-			return !query || [device.name, device.hostname, device.poller, device.sys_name].join(' ').toLowerCase().indexOf(query) !== -1;
+			return !query || [device.name, device.hostname, device.category, device.template, device.sys_name].join(' ').toLowerCase().indexOf(query) !== -1;
 		}).forEach(function (device) {
 			var card = document.createElement('button');
 			card.type = 'button';
 			card.className = 'nms-inventory-card' + (selectedId === device.id ? ' selected' : '');
 			card.draggable = !device.locked;
-			card.innerHTML = '<span class="nms-device-glyph ' + statusClass(device.status) + '">' + (device.locked ? 'SW' : 'DV') + '</span>' +
-				'<span class="nms-inventory-copy"><strong>' + escapeHtml(device.name) + '</strong><small>' + escapeHtml(device.hostname) + ' · ' + escapeHtml(device.poller || 'No poller') + '</small></span>' +
+			card.innerHTML = '<span class="nms-device-glyph ' + healthClass(device) + '">' + (device.locked ? 'SW' : 'DV') + '</span>' +
+				'<span class="nms-inventory-copy"><strong>' + escapeHtml(device.name) + '</strong><small>' + escapeHtml(device.hostname) + ' · ' + escapeHtml(device.category || 'Unmapped') + '</small></span>' +
 				'<span class="nms-map-label ' + (device.mapped ? 'mapped' : '') + '">' + (device.locked ? 'Fixed' : device.mapped ? 'On map' : 'Drag') + '</span>';
 			card.addEventListener('click', function () { selectedId = device.id; renderAll(); });
 			card.addEventListener('dragstart', function (event) { event.dataTransfer.setData('text/nms-host-id', device.id); event.dataTransfer.effectAllowed = 'move'; });
@@ -66,9 +68,9 @@
 			var y = device.y == null ? fallback.y : device.y;
 			var node = document.createElement('button');
 			node.type = 'button';
-			node.className = 'nms-topology-node ' + statusClass(device.status) + (device.locked ? ' locked' : '') + (selectedId === device.id ? ' selected' : '');
+			node.className = 'nms-topology-node ' + healthClass(device) + (device.locked ? ' locked' : '') + (selectedId === device.id ? ' selected' : '');
 			node.style.left = x + '%'; node.style.top = y + '%';
-			node.innerHTML = '<span class="nms-device-glyph ' + statusClass(device.status) + '">' + (device.locked ? 'SW' : 'DV') + '</span><span><strong>' + escapeHtml(device.name) + '</strong><small>' + escapeHtml(device.hostname) + '</small></span><i></i>';
+			node.innerHTML = '<span class="nms-device-glyph ' + healthClass(device) + '">' + (device.locked ? 'SW' : 'DV') + '</span><span><strong>' + escapeHtml(device.name) + '</strong><small>' + escapeHtml(device.hostname) + '</small></span><i></i>';
 			node.addEventListener('click', function () { selectedId = device.id; renderAll(); });
 			if (!device.locked) node.addEventListener('pointerdown', function (event) { startMove(event, device); });
 			canvas.appendChild(node);
@@ -103,11 +105,11 @@
 		var portOptions = parentDevice ? parentDevice.interface_options.map(function (item) {
 			return '<option value="' + escapeHtml(item.index) + '"' + (device.parent_snmp_index === item.index ? ' selected' : '') + '>' + escapeHtml(item.label) + '</option>';
 		}).join('') : '';
-		detail.innerHTML = '<div class="nms-detail-title"><span class="nms-device-glyph ' + statusClass(device.status) + '">' + (device.locked ? 'SW' : 'DV') + '</span><div><small>CACTI DEVICE #' + device.id + '</small><h2>' + escapeHtml(device.name) + '</h2></div></div>' +
-			'<span class="nms-live-status ' + statusClass(device.status) + '">● ' + escapeHtml(device.status) + '</span><dl>' +
-			'<div><dt>Address</dt><dd>' + escapeHtml(device.hostname) + '</dd></div><div><dt>Availability</dt><dd>' + device.availability + '%</dd></div><div><dt>Response</dt><dd>' + device.response_ms + ' ms</dd></div><div><dt>Poller</dt><dd>' + escapeHtml(device.poller || 'Not assigned') + '</dd></div><div><dt>SNMP</dt><dd>Version ' + device.snmp_version + '</dd></div><div><dt>Interfaces</dt><dd>' + device.interfaces + '</dd></div><div><dt>Graphs</dt><dd>' + device.graphs + '</dd></div></dl>' +
+		detail.innerHTML = '<div class="nms-detail-title"><span class="nms-device-glyph ' + healthClass(device) + '">' + (device.locked ? 'SW' : 'DV') + '</span><div><small>CACTI DEVICE #' + device.id + '</small><h2>' + escapeHtml(device.name) + '</h2></div></div>' +
+			'<span class="nms-live-status ' + healthClass(device) + '">● ' + escapeHtml(healthLabel(device)) + '</span><dl>' +
+			'<div><dt>Address</dt><dd>' + escapeHtml(device.hostname) + '</dd></div><div><dt>Category</dt><dd>' + escapeHtml(device.category || 'Unmapped') + '</dd></div><div><dt>Template</dt><dd>' + escapeHtml(device.template || 'None') + '</dd></div><div><dt>Cacti status</dt><dd>' + escapeHtml(device.status) + '</dd></div><div><dt>Availability</dt><dd>' + device.availability + '%</dd></div><div><dt>Active faults</dt><dd>' + device.fault_count + '</dd></div><div><dt>SNMP</dt><dd>Version ' + device.snmp_version + '</dd></div><div><dt>Interfaces</dt><dd>' + device.interfaces + '</dd></div><div><dt>Graphs</dt><dd>' + device.graphs + '</dd></div></dl>' +
 			(device.locked ? '<p class="nms-fixed-note">This root device is fixed.</p>' : '<label class="nms-parent-select">Connected to device<select id="nmsParentDevice">' + parentOptions + '</select></label><label class="nms-parent-select">Parent switch port<select id="nmsParentPort"><option value="">Not configured</option>' + portOptions + '</select></label>') +
-			'<a class="nms-detail-action" href="' + escapeHtml(device.graphs_url) + '">Open Cacti graphs</a><a class="nms-detail-secondary" href="' + escapeHtml(device.device_url) + '">Configure in Cacti</a>' +
+			(device.fault_count > 0 ? '<a class="nms-detail-action" href="' + escapeHtml(device.faults_url) + '">Open device faults</a>' : '') + '<a class="nms-detail-secondary" href="' + escapeHtml(device.graphs_url) + '">Open Cacti graphs</a><a class="nms-detail-secondary" href="' + escapeHtml(device.device_url) + '">Configure in Cacti</a>' +
 			(!device.locked && device.mapped ? '<button id="nmsRemoveFromMap" class="nms-remove-map" type="button">Remove from topology</button>' : '');
 		var parentSelect = document.getElementById('nmsParentDevice');
 		if (parentSelect) parentSelect.addEventListener('change', function () { device.parent_id = Number(parentSelect.value); device.parent_snmp_index = ''; renderDetail(); saveDevice(device).catch(showError); });

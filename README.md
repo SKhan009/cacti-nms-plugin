@@ -5,9 +5,8 @@ The `nms` plugin adds dynamic fault management to Cacti 1.2.31 without modifying
 Data sources:
 
 - current device status from `host`;
-- collector status and heartbeat age from `poller`;
-- live RRD file existence and modification time;
-- unknown (`U`) values received through the `poller_output` hook;
+- actual device parameter definitions from Cacti data templates;
+- latest raw values returned by Cacti device collection, captured through `poller_output`;
 
 The plugin stores category mappings, fault-rule configuration, incident lifecycle, and audit
 events only in its own `plugin_nms_*` tables. Cacti core tables remain unchanged.
@@ -21,17 +20,23 @@ an administrator can correct a mapping at any time. The mapping points to the ac
 `host_template.id`, so all existing and future devices using that template receive the same
 fault rules.
 
-Each category has independent rules for Cacti device state, availability, poller response,
-RRD freshness, and missing RRD files. The threshold, severity, rule name, and enabled state
-are editable. Multiple rules can be active for the same category and can create multiple
-faults for one device. Saving a mapping or rule immediately evaluates the affected live
-Cacti devices; no sample or fallback readings are used.
+The configuration page has two compact tabs: **Fault values and severity** and **Cacti
+template mapping**. Parameter choices come only from data sources attached to real devices
+in the selected category. A rule can compare numeric readings, for example temperature
+greater than `80` or free memory less than `500`, and text readings, for example interface
+state does not equal `up`. Unknown, empty, equals, not-equals, contains, greater-than and
+less-than conditions are supported. Threshold, unit, severity, name and enabled state are
+editable. Multiple rules can monitor the same parameter at different severities.
+
+The plugin does not create generic poller or RRD-file faults. It records the latest raw
+device value in `plugin_nms_device_parameters`, evaluates it against category rules and
+stores only resulting incident state. It never inserts sample readings.
 
 ## Dynamic topology
 
 The **Topology** module has no sample-device fallback. It reads device names, addresses,
-status, availability, poller assignment, SNMP version, interface counts, graph counts and
-links from Cacti core tables. Before a map can be used, devices must be enabled and assigned
+status, availability, category, configured fault severity, SNMP version, interface counts,
+graph counts and links from Cacti core tables. Before a map can be used, devices must be enabled and assigned
 to a Cacti Site under **Management → Devices**.
 
 For each site, an administrator explicitly selects the real core switch or gateway. The
@@ -52,10 +57,10 @@ authenticated session and live database, but does not display Cacti's administra
 chrome. Administrators can return through the **Cacti Backend** button in the header.
 
 The Fault dashboard displays every enabled device from Cacti's `host` table, including
-healthy devices. Each row shows status, availability, poller response time, poll totals,
-failed polls, RRD freshness, and the latest reading time. Faulted devices also show their
-active incident and acknowledgement action. Collector, automation, PHP, and system-log
-messages are not shown on this page; RRD data appears only as a per-device health reading.
+healthy devices. Each row shows status, availability, latest real device parameters and the
+latest reading time. Faulted devices also show their
+active incident and acknowledgement action. Collector, RRD-file, automation, PHP and
+system-log messages are not shown on this page.
 
 The left navigation sidebar can be opened or collapsed from the menu button in the
 header. Acknowledgements are recorded against Cacti's authenticated user and move an

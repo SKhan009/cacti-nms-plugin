@@ -74,16 +74,17 @@ $counts = db_fetch_row("SELECT COUNT(*) AS total_count,
 $device_total = (int) $counts['total_count'];
 $device_up = (int) $counts['up_count'];
 $availability = $device_total > 0 ? round(($device_up / $device_total) * 100, 1) : 100;
-$rrd_by_host = array();
-$rrd_summary = array('total' => 0, 'fresh' => 0, 'stale' => 0, 'missing' => 0);
-$monitored_host_ids = db_fetch_assoc("SELECT id FROM host WHERE deleted = '' AND disabled = ''");
-foreach ($monitored_host_ids as $monitored_host) {
-	$host_id = (int) $monitored_host['id'];
-	$rrd_by_host[$host_id] = nms_device_rrd_reading($host_id);
-	foreach ($rrd_summary as $key => $value) {
-		$rrd_summary[$key] += $rrd_by_host[$host_id][$key];
-	}
+$parameters_by_host = array();
+$parameter_rows = db_fetch_assoc("SELECT p.host_id, p.parameter_name, p.display_name, p.raw_value, p.last_seen
+	FROM plugin_nms_device_parameters AS p
+	INNER JOIN host AS h ON h.id = p.host_id AND h.deleted = '' AND h.disabled = ''
+	ORDER BY p.host_id, p.last_seen DESC, p.display_name");
+foreach ($parameter_rows as $parameter) {
+	$host_id = (int) $parameter['host_id'];
+	if (!isset($parameters_by_host[$host_id])) $parameters_by_host[$host_id] = array();
+	$parameters_by_host[$host_id][] = $parameter;
 }
+$parameter_count = count($parameter_rows);
 $last_sync = db_fetch_cell_prepared("SELECT updated_at FROM plugin_nms_meta WHERE meta_key = 'last_sync'", array());
 $nms_csrf_token = csrf_get_tokens();
 $nms_asset_base = $config['url_path'] . 'plugins/nms/';
@@ -109,7 +110,7 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 		<div class="nms-summary nms-summary-total"><span>Total devices</span><strong><?php print (int) $counts['total_count']; ?></strong><small>Enabled monitoring targets</small></div>
 		<div class="nms-summary nms-summary-resolved"><span>Devices up</span><strong><?php print (int) $counts['up_count']; ?></strong><small>Responding normally</small></div>
 		<div class="nms-summary nms-summary-critical"><span>Devices with faults</span><strong><?php print (int) $counts['fault_count']; ?></strong><small>Based on configured category rules</small></div>
-		<div class="nms-summary <?php print ($rrd_summary['stale'] + $rrd_summary['missing']) > 0 ? 'nms-summary-ack' : 'nms-summary-resolved'; ?>"><span>Healthy RRD readings</span><strong><?php print (int) $rrd_summary['fresh']; ?>/<?php print (int) $rrd_summary['total']; ?></strong><small><?php print (int) $rrd_summary['stale']; ?> stale · <?php print (int) $rrd_summary['missing']; ?> missing</small></div>
+		<div class="nms-summary nms-summary-total"><span>Device parameters</span><strong><?php print $parameter_count; ?></strong><small>Latest actual values captured from Cacti</small></div>
 	</div>
 
 	<section class="nms-panel" id="incident-queue">
@@ -131,10 +132,10 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 
 		<div class="nms-table-wrap">
 			<table class="nms-table">
-				<thead><tr><th>Device</th><th>Address</th><th>Status</th><th>Availability</th><th>Poller response</th><th>Polls</th><th>RRD readings</th><th>Last device reading</th><th>Action</th></tr></thead>
+				<thead><tr><th>Device</th><th>Address</th><th>Fault status</th><th>Availability</th><th>Latest device parameters</th><th>Last device reading</th><th>Action</th></tr></thead>
 				<tbody>
 				<?php if (!count($devices)) { ?>
-					<tr><td colspan="9" class="nms-empty">No devices match the current filters.</td></tr>
+					<tr><td colspan="7" class="nms-empty">No devices match the current filters.</td></tr>
 				<?php } ?>
 				<?php foreach ($devices as $device) {
 					$is_up = (int) $device['status'] === HOST_UP;
@@ -144,16 +145,14 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 					$severity_class = $has_fault ? ($device['incident_severity'] ?: 'warning') : 'healthy';
 					$detail = $has_fault ? trim((string) $device['incident_message']) : ($is_up ? 'All enabled fault rules are within their limits' : trim((string) $device['status_last_error']));
 					if ($detail === '') $detail = 'Cacti reports device state ' . $status_name;
-					$rrd = isset($rrd_by_host[(int) $device['id']]) ? $rrd_by_host[(int) $device['id']] : nms_device_rrd_reading($device['id']);
+					$device_parameters = isset($parameters_by_host[(int) $device['id']]) ? $parameters_by_host[(int) $device['id']] : array();
 				?>
 				<tr>
 					<td><div class="nms-incident"><i class="nms-severity <?php print nms_h($severity_class); ?>"></i><div><strong><?php print nms_h($device['description']); ?></strong><small><?php print nms_h(($device['category_name'] ?: 'Unmapped') . ' · ' . ($device['template_name'] ?: 'No template')); ?></small><small><?php print nms_h($detail); ?></small></div></div></td>
 					<td><strong><?php print nms_h($device['hostname']); ?></strong><?php if ($device['site_name']) { ?><small><?php print nms_h($device['site_name']); ?></small><?php } ?></td>
 					<td><span class="nms-state <?php print nms_h($status_class); ?>"><?php print $has_fault ? nms_h($device['incident_status']) : 'Healthy'; ?></span><small>Cacti device: <?php print nms_h($status_name); ?></small><?php if ($has_fault && (int) $device['active_fault_count'] > 1) { ?><small><?php print (int) $device['active_fault_count']; ?> active faults</small><?php } ?><?php if ($device['acknowledged_by_name']) { ?><small>by <?php print nms_h($device['acknowledged_by_name']); ?></small><?php } ?></td>
 					<td><strong><?php print nms_h(number_format((float) $device['availability'], 1)); ?>%</strong><small><?php print (int) $device['failed_polls']; ?> failed</small></td>
-					<td class="nms-nowrap"><strong><?php print nms_h(number_format((float) $device['cur_time'], 2)); ?> ms</strong><small><?php print nms_h(number_format((float) $device['avg_time'], 2)); ?> ms average</small></td>
-					<td><strong><?php print (int) $device['total_polls']; ?></strong><small>Total checks</small></td>
-					<td class="nms-nowrap"><strong><?php print (int) $rrd['fresh']; ?> of <?php print (int) $rrd['total']; ?> fresh</strong><small><?php if ($rrd['latest'] > 0) { ?>Updated <?php print nms_h(nms_time_ago(date('Y-m-d H:i:s', $rrd['latest']))); ?><?php } else { ?>No RRD update<?php } ?><?php if ($rrd['stale'] > 0 || $rrd['missing'] > 0) { ?> · <?php print (int) $rrd['stale']; ?> stale, <?php print (int) $rrd['missing']; ?> missing<?php } ?></small></td>
+					<td><strong><?php print count($device_parameters); ?> readings</strong><?php if (count($device_parameters)) { foreach (array_slice($device_parameters, 0, 2) as $parameter) { ?><small title="<?php print nms_h($parameter['display_name']); ?>"><?php print nms_h($parameter['parameter_name']); ?>: <?php print nms_h($parameter['raw_value']); ?></small><?php } } else { ?><small>Waiting for the next Cacti collection</small><?php } ?></td>
 					<td class="nms-nowrap" title="<?php print nms_h($device['last_updated']); ?>"><?php print nms_h(nms_time_ago($device['last_updated'])); ?></td>
 					<td>
 					<?php if ($device['incident_status'] === 'open') { ?>

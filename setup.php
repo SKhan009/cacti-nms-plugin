@@ -52,6 +52,6 @@ function nms_page_head() {
 	global $config;
 
 	if (in_array(get_current_page(), array('nms.php', 'fault_config.php', 'topology.php'), true)) {
-		print '<link rel="stylesheet" href="' . html_escape($config['url_path'] . 'plugins/nms/css/nms-v1.1.css?v=1.7.0') . '">';
+		print '<link rel="stylesheet" href="' . html_escape($config['url_path'] . 'plugins/nms/css/nms-v1.1.css?v=1.8.0') . '">';
 	}
 }
