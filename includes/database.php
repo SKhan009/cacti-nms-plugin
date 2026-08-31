@@ -48,11 +48,27 @@ function nms_setup_database() {
 		updated_at DATETIME NOT NULL,
 		PRIMARY KEY (meta_key)
 	) ENGINE=InnoDB ROW_FORMAT=Dynamic");
+
+	/* Cacti remains the source of device data. This table stores presentation only. */
+	db_execute("CREATE TABLE IF NOT EXISTS plugin_nms_topology (
+		host_id INT UNSIGNED NOT NULL,
+		site_id INT UNSIGNED NOT NULL DEFAULT 0,
+		parent_host_id INT UNSIGNED NOT NULL DEFAULT 0,
+		parent_snmp_index VARCHAR(191) NOT NULL DEFAULT '',
+		pos_x DECIMAL(6,2) NOT NULL DEFAULT 50.00,
+		pos_y DECIMAL(6,2) NOT NULL DEFAULT 50.00,
+		locked CHAR(2) NOT NULL DEFAULT '',
+		updated_by INT UNSIGNED NOT NULL DEFAULT 0,
+		updated_at DATETIME NOT NULL,
+		PRIMARY KEY (host_id),
+		KEY site_id (site_id),
+		KEY parent_host_id (parent_host_id)
+	) ENGINE=InnoDB ROW_FORMAT=Dynamic");
 }
 
 function nms_drop_database() {
 	db_execute('DROP TABLE IF EXISTS plugin_nms_events');
 	db_execute('DROP TABLE IF EXISTS plugin_nms_incidents');
 	db_execute('DROP TABLE IF EXISTS plugin_nms_meta');
+	db_execute('DROP TABLE IF EXISTS plugin_nms_topology');
 }
-

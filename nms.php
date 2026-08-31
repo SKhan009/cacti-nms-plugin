@@ -85,42 +85,10 @@ $last_sync = db_fetch_cell_prepared("SELECT updated_at FROM plugin_nms_meta WHER
 $nms_csrf_token = csrf_get_tokens();
 $nms_asset_base = $config['url_path'] . 'plugins/nms/';
 $nms_backend_url = $config['url_path'] . 'index.php';
+$nms_active_module = 'faults';
+$nms_page_title = 'NMS · Fault Management';
+require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 ?>
-<!doctype html>
-<html lang="en">
-<head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<meta name="robots" content="noindex,nofollow">
-	<title>NMS · Fault Management</title>
-	<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-v1.1.css?v=1.5.0'); ?>">
-</head>
-<body class="nms-standalone">
-	<header class="nms-app-header">
-		<div class="nms-header-start">
-			<button class="nms-sidebar-toggle" id="nmsSidebarToggle" type="button" aria-controls="nmsSidebar" aria-expanded="true" aria-label="Collapse sidebar"><span></span><span></span><span></span></button>
-			<a class="nms-brand" href="nms.php" aria-label="NMS fault dashboard">
-				<span class="nms-brand-mark">N</span>
-				<span><strong>NMS</strong><small>Network Management System</small></span>
-			</a>
-		</div>
-		<nav class="nms-primary-nav" aria-label="NMS modules">
-			<a class="selected" href="nms.php">Faults</a>
-		</nav>
-		<a class="nms-backend-button" href="<?php print nms_h($nms_backend_url); ?>">
-			<span aria-hidden="true">&#8599;</span> Cacti Backend
-		</a>
-	</header>
-
-	<div class="nms-app-layout">
-		<aside class="nms-sidebar" id="nmsSidebar">
-			<div class="nms-sidebar-section">
-				<p class="nms-sidebar-label">Monitoring</p>
-				<a class="nms-sidebar-link selected" href="#incident-queue"><span class="nms-sidebar-icon">●</span><span class="nms-sidebar-copy"><strong>Device readings</strong><small>All monitored devices</small></span></a>
-			</div>
-			<div class="nms-sidebar-status"><span></span><div class="nms-sidebar-copy"><strong>Live monitoring</strong><small>Reading Cacti devices</small></div></div>
-		</aside>
-
 <main class="nms-shell">
 	<div class="nms-heading">
 		<div>
@@ -201,17 +169,4 @@ $nms_backend_url = $config['url_path'] . 'index.php';
 	</section>
 
 </main>
-	</div>
-	<script>
-	(function() {
-		var button = document.getElementById('nmsSidebarToggle');
-		if (!button) return;
-		button.addEventListener('click', function() {
-			var collapsed = document.body.classList.toggle('nms-sidebar-collapsed');
-			button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-			button.setAttribute('aria-label', collapsed ? 'Open sidebar' : 'Collapse sidebar');
-		});
-	})();
-	</script>
-</body>
-</html>
+<?php require($config['base_path'] . '/plugins/nms/templates/app_footer.php'); ?>

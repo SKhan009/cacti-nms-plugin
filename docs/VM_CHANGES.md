@@ -1,5 +1,19 @@
 # VM configuration changes
 
+## 2026-08-31 — Dynamic Cacti topology module
+
+NMS version 1.6.0 adds a Topology module with the same shared header and sidebar as the
+Fault view. The module reads enabled devices by Cacti Site from the core `host`, `sites`,
+`poller`, `graph_local`, and `host_snmp_cache` tables. It contains no demonstration device
+data and will stop at a configuration-required screen when a site, device, or root device
+is missing.
+
+The new `plugin_nms_topology` table stores only visual configuration: root device, parent
+device, selected parent SNMP interface index, coordinates, and audit fields. Device facts
+remain owned by Cacti. Administrators select a core switch or gateway, drag inventory
+devices to the canvas, and optionally confirm the physical parent port from Cacti's indexed
+interfaces.
+
 ## 2026-08-31 — Traffic automation `ifIP` warning
 
 Device 2 does not return the `ifIP` field for the **SNMP - Interface Statistics**

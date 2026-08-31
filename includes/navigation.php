@@ -7,7 +7,7 @@ function nms_show_tab() {
 		return;
 	}
 
-	$selected = get_current_page() === 'nms.php' ? " class='selected'" : '';
+	$selected = in_array(get_current_page(), array('nms.php', 'topology.php'), true) ? " class='selected'" : '';
 	$url = html_escape($config['url_path'] . 'plugins/nms/nms.php');
 	$icon = html_escape($config['url_path'] . 'plugins/nms/images/nms.svg');
 
@@ -15,9 +15,13 @@ function nms_show_tab() {
 }
 
 function nms_draw_navigation_text($nav) {
-	if (get_current_page() === 'nms.php') {
+	if (in_array(get_current_page(), array('nms.php', 'topology.php'), true)) {
 		$nav['NMS'] = 'plugins/nms/nms.php';
-		$nav['Fault Management'] = 'plugins/nms/nms.php';
+		if (get_current_page() === 'topology.php') {
+			$nav['Topology'] = 'plugins/nms/topology.php';
+		} else {
+			$nav['Fault Management'] = 'plugins/nms/nms.php';
+		}
 	}
 
 	return $nav;
