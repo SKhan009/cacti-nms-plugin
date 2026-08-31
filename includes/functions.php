@@ -151,28 +151,62 @@ function nms_poller_status_name($status) {
 }
 
 function nms_sync_device_faults() {
-	$rows = db_fetch_assoc("SELECT h.*, s.name AS site_name
+	$rows = db_fetch_assoc("SELECT h.*, ht.name AS template_name,
+		c.id AS category_id, c.name AS category_name,
+		r.id AS rule_id, r.name AS rule_name, r.metric, r.threshold, r.severity
 		FROM host AS h
-		LEFT JOIN sites AS s ON s.id = h.site_id
-		WHERE h.deleted = '' AND h.disabled = '' AND h.status != " . HOST_UP);
+		INNER JOIN host_template AS ht ON ht.id = h.host_template_id
+		INNER JOIN plugin_nms_category_templates AS ct ON ct.host_template_id = h.host_template_id
+		INNER JOIN plugin_nms_device_categories AS c ON c.id = ct.category_id
+		INNER JOIN plugin_nms_fault_rules AS r ON r.category_id = c.id AND r.enabled = 'on'
+		WHERE h.deleted = '' AND h.disabled = ''
+		ORDER BY h.id, r.sort_order, r.id");
 	$active = array();
+	$rrd_cache = array();
 
 	foreach ($rows as $row) {
-		$fingerprint = 'device:' . $row['id'] . ':status';
-		$active[] = $fingerprint;
-		$status = nms_host_status_name((int) $row['status']);
-		$severity = (int) $row['status'] === HOST_DOWN || (int) $row['status'] === HOST_ERROR ? 'critical' : 'warning';
-		$message = trim($row['status_last_error']) !== '' ? $row['status_last_error'] : 'Cacti reports device state ' . $status;
-		if (!empty($row['site_name'])) {
-			$message .= ' | Site: ' . $row['site_name'];
+		$triggered = false;
+		$current = '';
+		$limit = (float) $row['threshold'];
+		$metric = $row['metric'];
+
+		if ($metric === 'status_not_up') {
+			$current = nms_host_status_name((int) $row['status']);
+			$triggered = (int) $row['status'] !== HOST_UP;
+		} elseif ($metric === 'availability_below') {
+			$current = number_format((float) $row['availability'], 1) . '%';
+			$triggered = (float) $row['availability'] < $limit;
+		} elseif ($metric === 'response_above') {
+			$current = number_format((float) $row['cur_time'], 2) . ' ms';
+			$triggered = (float) $row['cur_time'] > $limit;
+		} elseif ($metric === 'rrd_stale_minutes' || $metric === 'rrd_missing_count') {
+			if (!isset($rrd_cache[$row['id']])) {
+				$rrd_cache[$row['id']] = nms_device_rrd_reading($row['id']);
+			}
+			$rrd = $rrd_cache[$row['id']];
+			if ($metric === 'rrd_stale_minutes') {
+				$current = $rrd['oldest_age'] > 0 ? floor($rrd['oldest_age'] / 60) . ' minutes' : 'No RRD age';
+				$triggered = $rrd['total'] > 0 && $rrd['oldest_age'] > ($limit * 60);
+			} else {
+				$current = $rrd['missing'] . ' missing';
+				$triggered = $rrd['missing'] >= max(1, $limit);
+			}
 		}
+
+		if (!$triggered) continue;
+
+		$fingerprint = 'device-rule:' . $row['rule_id'] . ':host:' . $row['id'];
+		$active[] = $fingerprint;
+		$message = 'Current value: ' . $current . '. Configured threshold: ' .
+			($metric === 'status_not_up' ? 'device must be Up' : rtrim(rtrim(number_format($limit, 3, '.', ''), '0'), '.')) .
+			'. Category: ' . $row['category_name'] . '. Template: ' . $row['template_name'] . '.';
 		nms_open_incident(array(
 			'fingerprint' => $fingerprint,
 			'source_type' => 'device',
-			'source_key' => (string) $row['id'],
+			'source_key' => $row['id'] . ':' . $row['rule_id'],
 			'host_id' => $row['id'],
-			'severity' => $severity,
-			'title' => $row['description'] . ' is ' . strtolower($status),
+			'severity' => $row['severity'],
+			'title' => $row['description'] . ' - ' . $row['rule_name'],
 			'message' => $message
 		));
 	}
@@ -315,7 +349,8 @@ function nms_device_rrd_reading($host_id) {
 		'fresh' => 0,
 		'stale' => 0,
 		'missing' => 0,
-		'latest' => 0
+		'latest' => 0,
+		'oldest_age' => 0
 	);
 
 	foreach ($rows as $row) {
@@ -327,6 +362,7 @@ function nms_device_rrd_reading($host_id) {
 
 		$modified = (int) filemtime($row['rrd_path']);
 		$reading['latest'] = max($reading['latest'], $modified);
+		$reading['oldest_age'] = max($reading['oldest_age'], time() - $modified);
 		$stale_after = max(600, max(60, (int) $row['rrd_step']) * 3);
 		if (time() - $modified > $stale_after) {
 			$reading['stale']++;

@@ -9,7 +9,23 @@ Data sources:
 - live RRD file existence and modification time;
 - unknown (`U`) values received through the `poller_output` hook;
 
-The plugin stores incident lifecycle and audit events only in its own `plugin_nms_*` tables.
+The plugin stores category mappings, fault-rule configuration, incident lifecycle, and audit
+events only in its own `plugin_nms_*` tables. Cacti core tables remain unchanged.
+
+## Device categories and fault rules
+
+The **Fault Configuration** page contains the ten Figure 5.2 groups: Voice / Video,
+Security, Network, VSAT, LOS, Computers, Power, Timing, Fire Prevention, and Sensors &
+Instrumentation. Every existing Cacti host template is automatically placed in one group;
+an administrator can correct a mapping at any time. The mapping points to the actual
+`host_template.id`, so all existing and future devices using that template receive the same
+fault rules.
+
+Each category has independent rules for Cacti device state, availability, poller response,
+RRD freshness, and missing RRD files. The threshold, severity, rule name, and enabled state
+are editable. Multiple rules can be active for the same category and can create multiple
+faults for one device. Saving a mapping or rule immediately evaluates the affected live
+Cacti devices; no sample or fallback readings are used.
 
 ## Dynamic topology
 

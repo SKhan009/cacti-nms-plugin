@@ -10,7 +10,7 @@ function plugin_nms_install() {
 	api_plugin_register_hook('nms', 'poller_output', 'nms_poller_output', 'includes/polling.php');
 	api_plugin_register_hook('nms', 'poller_bottom', 'nms_poller_bottom', 'includes/polling.php');
 
-	api_plugin_register_realm('nms', 'nms.php,topology.php', 'View NMS Faults and Configure Topology', 1);
+	api_plugin_register_realm('nms', 'nms.php,fault_config.php,topology.php', 'View NMS Faults, Rules, and Topology', 1);
 
 	include_once($config['base_path'] . '/plugins/nms/includes/database.php');
 	nms_setup_database();
@@ -34,7 +34,7 @@ function plugin_nms_check_config() {
 
 function plugin_nms_upgrade() {
 	plugin_nms_check_config();
-	api_plugin_register_realm('nms', 'nms.php,topology.php', 'View NMS Faults and Configure Topology', 1);
+	api_plugin_register_realm('nms', 'nms.php,fault_config.php,topology.php', 'View NMS Faults, Rules, and Topology', 1);
 }
 
 function plugin_nms_version() {
@@ -51,7 +51,7 @@ function nms_check_dependencies() {
 function nms_page_head() {
 	global $config;
 
-	if (in_array(get_current_page(), array('nms.php', 'topology.php'), true)) {
-		print '<link rel="stylesheet" href="' . html_escape($config['url_path'] . 'plugins/nms/css/nms-v1.1.css?v=1.6.0') . '">';
+	if (in_array(get_current_page(), array('nms.php', 'fault_config.php', 'topology.php'), true)) {
+		print '<link rel="stylesheet" href="' . html_escape($config['url_path'] . 'plugins/nms/css/nms-v1.1.css?v=1.7.0') . '">';
 	}
 }

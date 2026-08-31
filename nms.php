@@ -31,41 +31,44 @@ $params = array();
 
 if ($state === 'up') {
 	$where[] = 'h.status = ' . HOST_UP;
+	$where[] = 'i.id IS NULL';
 } elseif ($state === 'fault') {
-	$where[] = 'h.status != ' . HOST_UP;
+	$where[] = 'i.id IS NOT NULL';
 } elseif ($state === 'acknowledged') {
-	$where[] = "i.status = 'acknowledged'";
+	$where[] = "EXISTS (SELECT 1 FROM plugin_nms_incidents AS ia WHERE ia.host_id = h.id AND ia.source_type = 'device' AND ia.status = 'acknowledged')";
 }
 if ($search !== '') {
-	$where[] = '(h.description LIKE ? OR h.hostname LIKE ? OR h.snmp_sysName LIKE ? OR s.name LIKE ?)';
+	$where[] = '(h.description LIKE ? OR h.hostname LIKE ? OR h.snmp_sysName LIKE ? OR s.name LIKE ? OR ht.name LIKE ? OR c.name LIKE ?)';
 	$term = '%' . $search . '%';
-	$params[] = $term;
-	$params[] = $term;
-	$params[] = $term;
-	$params[] = $term;
+	for ($index = 0; $index < 6; $index++) $params[] = $term;
 }
 
 $devices = db_fetch_assoc_prepared("SELECT h.*, s.name AS site_name,
-		i.id AS incident_id, i.severity AS incident_severity, i.status AS incident_status,
-		i.title AS incident_title, i.message AS incident_message,
-		i.first_seen AS incident_first_seen, i.last_seen AS incident_last_seen,
-		ua.username AS acknowledged_by_name
+	ht.name AS template_name, c.name AS category_name,
+	i.id AS incident_id, i.severity AS incident_severity, i.status AS incident_status,
+	i.title AS incident_title, i.message AS incident_message,
+	i.first_seen AS incident_first_seen, i.last_seen AS incident_last_seen,
+	ua.username AS acknowledged_by_name,
+	(SELECT COUNT(*) FROM plugin_nms_incidents AS ic WHERE ic.host_id = h.id
+		AND ic.source_type = 'device' AND ic.status IN ('open', 'acknowledged')) AS active_fault_count
 	FROM host AS h
 	LEFT JOIN sites AS s ON s.id = h.site_id
-	LEFT JOIN plugin_nms_incidents AS i ON i.host_id = h.id
-		AND i.source_type = 'device' AND i.status IN ('open', 'acknowledged')
+	LEFT JOIN host_template AS ht ON ht.id = h.host_template_id
+	LEFT JOIN plugin_nms_category_templates AS ct ON ct.host_template_id = h.host_template_id
+	LEFT JOIN plugin_nms_device_categories AS c ON c.id = ct.category_id
+	LEFT JOIN plugin_nms_incidents AS i ON i.id = (SELECT ii.id FROM plugin_nms_incidents AS ii
+		WHERE ii.host_id = h.id AND ii.source_type = 'device' AND ii.status IN ('open', 'acknowledged')
+		ORDER BY FIELD(ii.status, 'open', 'acknowledged'), FIELD(ii.severity, 'critical', 'major', 'warning'), ii.id LIMIT 1)
 	LEFT JOIN user_auth AS ua ON ua.id = i.acknowledged_by
 	WHERE " . implode(' AND ', $where) . "
-	ORDER BY (h.status = " . HOST_UP . ") ASC, h.description ASC
+	ORDER BY (i.id IS NULL) ASC, h.description ASC
 	LIMIT 250", $params);
 
 $counts = db_fetch_row("SELECT COUNT(*) AS total_count,
 	SUM(h.status = " . HOST_UP . ") AS up_count,
-	SUM(h.status != " . HOST_UP . ") AS fault_count,
-	SUM(i.status = 'acknowledged') AS acknowledged_count
+	SUM(EXISTS (SELECT 1 FROM plugin_nms_incidents AS i WHERE i.host_id = h.id AND i.source_type = 'device' AND i.status IN ('open', 'acknowledged'))) AS fault_count,
+	SUM(EXISTS (SELECT 1 FROM plugin_nms_incidents AS i WHERE i.host_id = h.id AND i.source_type = 'device' AND i.status = 'acknowledged')) AS acknowledged_count
 	FROM host AS h
-	LEFT JOIN plugin_nms_incidents AS i ON i.host_id = h.id
-		AND i.source_type = 'device' AND i.status IN ('open', 'acknowledged')
 	WHERE h.deleted = '' AND h.disabled = ''");
 
 $device_total = (int) $counts['total_count'];
@@ -105,7 +108,7 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 	<div class="nms-summary-grid">
 		<div class="nms-summary nms-summary-total"><span>Total devices</span><strong><?php print (int) $counts['total_count']; ?></strong><small>Enabled monitoring targets</small></div>
 		<div class="nms-summary nms-summary-resolved"><span>Devices up</span><strong><?php print (int) $counts['up_count']; ?></strong><small>Responding normally</small></div>
-		<div class="nms-summary nms-summary-critical"><span>Device faults</span><strong><?php print (int) $counts['fault_count']; ?></strong><small>Need attention</small></div>
+		<div class="nms-summary nms-summary-critical"><span>Devices with faults</span><strong><?php print (int) $counts['fault_count']; ?></strong><small>Based on configured category rules</small></div>
 		<div class="nms-summary <?php print ($rrd_summary['stale'] + $rrd_summary['missing']) > 0 ? 'nms-summary-ack' : 'nms-summary-resolved'; ?>"><span>Healthy RRD readings</span><strong><?php print (int) $rrd_summary['fresh']; ?>/<?php print (int) $rrd_summary['total']; ?></strong><small><?php print (int) $rrd_summary['stale']; ?> stale · <?php print (int) $rrd_summary['missing']; ?> missing</small></div>
 	</div>
 
@@ -135,17 +138,18 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 				<?php } ?>
 				<?php foreach ($devices as $device) {
 					$is_up = (int) $device['status'] === HOST_UP;
+					$has_fault = (int) $device['active_fault_count'] > 0;
 					$status_name = nms_host_status_name((int) $device['status']);
-					$status_class = $is_up ? 'up' : strtolower($status_name);
-					$severity_class = $is_up ? 'healthy' : ($device['incident_severity'] ?: 'critical');
-					$detail = $is_up ? 'Device is responding normally' : trim((string) $device['status_last_error']);
+					$status_class = $has_fault ? $device['incident_status'] : 'up';
+					$severity_class = $has_fault ? ($device['incident_severity'] ?: 'warning') : 'healthy';
+					$detail = $has_fault ? trim((string) $device['incident_message']) : ($is_up ? 'All enabled fault rules are within their limits' : trim((string) $device['status_last_error']));
 					if ($detail === '') $detail = 'Cacti reports device state ' . $status_name;
 					$rrd = isset($rrd_by_host[(int) $device['id']]) ? $rrd_by_host[(int) $device['id']] : nms_device_rrd_reading($device['id']);
 				?>
 				<tr>
-					<td><div class="nms-incident"><i class="nms-severity <?php print nms_h($severity_class); ?>"></i><div><strong><?php print nms_h($device['description']); ?></strong><small><?php print nms_h($detail); ?></small></div></div></td>
+					<td><div class="nms-incident"><i class="nms-severity <?php print nms_h($severity_class); ?>"></i><div><strong><?php print nms_h($device['description']); ?></strong><small><?php print nms_h(($device['category_name'] ?: 'Unmapped') . ' · ' . ($device['template_name'] ?: 'No template')); ?></small><small><?php print nms_h($detail); ?></small></div></div></td>
 					<td><strong><?php print nms_h($device['hostname']); ?></strong><?php if ($device['site_name']) { ?><small><?php print nms_h($device['site_name']); ?></small><?php } ?></td>
-					<td><span class="nms-state <?php print nms_h($status_class); ?>"><?php print nms_h($status_name); ?></span><?php if ($device['acknowledged_by_name']) { ?><small>by <?php print nms_h($device['acknowledged_by_name']); ?></small><?php } ?></td>
+					<td><span class="nms-state <?php print nms_h($status_class); ?>"><?php print $has_fault ? nms_h($device['incident_status']) : 'Healthy'; ?></span><small>Cacti device: <?php print nms_h($status_name); ?></small><?php if ($has_fault && (int) $device['active_fault_count'] > 1) { ?><small><?php print (int) $device['active_fault_count']; ?> active faults</small><?php } ?><?php if ($device['acknowledged_by_name']) { ?><small>by <?php print nms_h($device['acknowledged_by_name']); ?></small><?php } ?></td>
 					<td><strong><?php print nms_h(number_format((float) $device['availability'], 1)); ?>%</strong><small><?php print (int) $device['failed_polls']; ?> failed</small></td>
 					<td class="nms-nowrap"><strong><?php print nms_h(number_format((float) $device['cur_time'], 2)); ?> ms</strong><small><?php print nms_h(number_format((float) $device['avg_time'], 2)); ?> ms average</small></td>
 					<td><strong><?php print (int) $device['total_polls']; ?></strong><small>Total checks</small></td>
@@ -159,7 +163,7 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 							<input type="hidden" name="id" value="<?php print (int) $device['incident_id']; ?>">
 							<button type="submit" class="nms-ack">Acknowledge</button>
 						</form>
-					<?php } elseif ($is_up) { ?><span class="nms-ok">Healthy</span><?php } else { ?><span class="nms-muted">—</span><?php } ?>
+					<?php } elseif (!$has_fault) { ?><span class="nms-ok">Healthy</span><?php } else { ?><span class="nms-muted">Acknowledged</span><?php } ?>
 					</td>
 				</tr>
 				<?php } ?>

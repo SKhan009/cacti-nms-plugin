@@ -1,7 +1,7 @@
 [info]
 name = NMS
-version = 1.6.0
-longname = NMS Fault Management and Dynamic Topology
+version = 1.7.0
+longname = NMS Fault Configuration and Dynamic Topology
 author = NMS Project
 homepage = https://www.cacti.net/
 email = admin@localhost
