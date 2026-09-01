@@ -1,5 +1,6 @@
 <?php
 $device_form_is_edit = !empty($edit_device);
+$device_form_is_prefilled = !$device_form_is_edit && (isset_request_var('host_template_id') || isset_request_var('snmp_community') || isset_request_var('snmp_port'));
 $device_values = $device_form_is_edit ? array_merge($cacti_device_defaults, $edit_device) : $cacti_device_defaults;
 $selected_snmp_version = isset_request_var('snmp_version') ? (int) get_filter_request_var('snmp_version') : (int) $device_values['snmp_version'];
 $selected_auth_protocol = isset_request_var('snmp_auth_protocol') ? get_nfilter_request_var('snmp_auth_protocol') : $device_values['snmp_auth_protocol'];
@@ -54,6 +55,6 @@ $selected_poller_id = isset_request_var('poller_id') ? (int) get_filter_request_
 		</div></fieldset>
 		<label class="nms-wide-field"><span>Notes</span><textarea name="notes" rows="3"><?php print nms_h(isset_request_var('notes') ? get_nfilter_request_var('notes') : ($device_values['notes'] ?? '')); ?></textarea></label>
 		<div class="nms-check-row"><label><input type="checkbox" name="proxy" value="1"><span>Allow shared IP for proxy or SNMPSim communities</span></label><label><input type="checkbox" name="disabled" value="1" <?php print ((isset_request_var('disabled')) || (!isset_request_var('nms_action') && ($device_values['disabled'] ?? '') === 'on')) ? 'checked' : ''; ?>><span><?php print $device_form_is_edit ? 'Disable device monitoring' : 'Create with monitoring disabled'; ?></span></label></div>
-		<div class="nms-form-actions"><button type="submit"><?php print $device_form_is_edit ? 'Save device changes' : 'Create device in Cacti'; ?></button><a href="?tab=inventory">Cancel</a></div>
+		<div class="nms-form-actions"><button type="submit"><?php print $device_form_is_edit ? 'Save device changes' : ($device_form_is_prefilled ? 'Save device' : 'Create device in Cacti'); ?></button><a href="?tab=inventory">Cancel</a></div>
 	</form>
 </section>
