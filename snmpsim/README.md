@@ -18,9 +18,17 @@ devices through one loopback simulator endpoint.
 ## VM layout
 
 - Python environment: `/opt/snmpsim/venv`
-- data records: `/opt/snmpsim/data`
+- data records: `/var/lib/snmpsim/data`
 - service: `/etc/systemd/system/snmpsim.service`
 - listener: UDP `127.0.0.1:1161`
+
+After activating a validated record, the upload handler writes `.reload.pending` inside
+the data directory. The root-owned `snmpsim-reload.timer` checks that marker every ten
+seconds and restarts `snmpsim.service`. Apache receives no sudo or service-management
+access. The data directory is writable by Apache and readable by the unprivileged
+`snmpsim` account. SELinux is limited to that directory through the
+`httpd_sys_rw_content_t` label. The directory uses its set-group-ID bit so files created
+by Apache inherit the `snmpsim` group.
 
 The Python packages and the explicit runtime dependency required by the responder are
 pinned in `requirements.txt`.
@@ -36,3 +44,7 @@ snmpwalk -v2c -c sim-sensor 127.0.0.1:1161 1.3.6.1.2.1.99
 
 The readings are deterministic lab data. Change the value field in a record and restart
 `snmpsim` to reproduce a healthy or faulty device state for NMS rule testing.
+
+The `examples/` directory contains small files intended for testing the NMS upload page.
+They are not loaded merely by deploying the plugin; importing one validates it, creates
+the Cacti templates, and then activates its community in the simulator.

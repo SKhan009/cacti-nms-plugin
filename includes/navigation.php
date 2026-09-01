@@ -7,7 +7,7 @@ function nms_show_tab() {
 		return;
 	}
 
-	$selected = in_array(get_current_page(), array('nms.php', 'fault_config.php', 'topology.php'), true) ? " class='selected'" : '';
+	$selected = in_array(get_current_page(), array('nms.php', 'devices.php', 'fault_config.php', 'topology.php'), true) ? " class='selected'" : '';
 	$url = html_escape($config['url_path'] . 'plugins/nms/nms.php');
 	$icon = html_escape($config['url_path'] . 'plugins/nms/images/nms.svg');
 
@@ -15,12 +15,14 @@ function nms_show_tab() {
 }
 
 function nms_draw_navigation_text($nav) {
-	if (in_array(get_current_page(), array('nms.php', 'fault_config.php', 'topology.php'), true)) {
+	if (in_array(get_current_page(), array('nms.php', 'devices.php', 'fault_config.php', 'topology.php'), true)) {
 		$nav['NMS'] = 'plugins/nms/nms.php';
 		if (get_current_page() === 'topology.php') {
 			$nav['Topology'] = 'plugins/nms/topology.php';
 		} elseif (get_current_page() === 'fault_config.php') {
 			$nav['Fault Configuration'] = 'plugins/nms/fault_config.php';
+		} elseif (get_current_page() === 'devices.php') {
+			$nav['Device Management'] = 'plugins/nms/devices.php';
 		} else {
 			$nav['Fault Management'] = 'plugins/nms/nms.php';
 		}

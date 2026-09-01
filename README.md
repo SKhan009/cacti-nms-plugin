@@ -72,3 +72,25 @@ The repository includes a reproducible SNMPSim lab under `snmpsim/`. It supplies
 router, Linux server, and environmental sensor on the VM loopback interface for testing
 real Cacti SNMP collection and NMS fault rules. See `snmpsim/README.md` for the endpoint,
 community names, readings, and VM layout.
+
+## Device management and SNMP record imports
+
+The **Devices** module provides a live inventory from Cacti's `host`, template, site,
+poller, graph, data-source, and poller-item tables. Its Add Device form calls Cacti's
+supported `api_device_save()` function, so the created target is a normal core Cacti
+device rather than a copied NMS record.
+
+Administrators can upload a static `.snmprec` file up to 2 MB and 5,000 lines. NMS
+validates every OID, type tag, value, community, filename, and category before making
+changes. It stores import metadata in `plugin_nms_snmprec_*` tables and deploys the
+validated record to the configured SNMPSim directory. Text and object-identifier records
+remain visible in the import inventory. Numeric Integer, Counter, Gauge, TimeTicks, and
+Counter64 records receive native Cacti data-source and graph templates by duplicating the
+installed **SNMP - Generic OID Template** through Cacti's template APIs and fixing the
+template OID to the imported record. A single upload is limited to 64 graphable readings.
+
+Each import creates or reuses a named Cacti host template, links all generated graph
+templates to it, and maps it to one NMS device category. The administrator can then use
+**Add device** with the imported community and host template. Uploading templates does not
+create synthetic Cacti readings: the poller must retrieve the actual OID from SNMPSim or
+the eventual real device.

@@ -131,6 +131,43 @@ function nms_setup_database() {
 		KEY last_seen (last_seen)
 	) ENGINE=InnoDB ROW_FORMAT=Dynamic");
 
+	/* Upload history and generated Cacti object links. Uploaded values remain in SNMPSim. */
+	db_execute("CREATE TABLE IF NOT EXISTS plugin_nms_snmprec_imports (
+		id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+		original_name VARCHAR(255) NOT NULL,
+		community VARCHAR(100) NOT NULL,
+		template_name VARCHAR(150) NOT NULL,
+		host_template_id MEDIUMINT UNSIGNED NOT NULL DEFAULT 0,
+		category_id INT UNSIGNED NOT NULL DEFAULT 0,
+		record_count INT UNSIGNED NOT NULL DEFAULT 0,
+		graphable_count INT UNSIGNED NOT NULL DEFAULT 0,
+		file_hash CHAR(64) NOT NULL,
+		deployed_path VARCHAR(512) NOT NULL,
+		uploaded_by INT UNSIGNED NOT NULL DEFAULT 0,
+		created_at DATETIME NOT NULL,
+		PRIMARY KEY (id),
+		UNIQUE KEY file_hash (file_hash),
+		UNIQUE KEY community (community),
+		KEY host_template_id (host_template_id),
+		KEY category_id (category_id)
+	) ENGINE=InnoDB ROW_FORMAT=Dynamic");
+
+	db_execute("CREATE TABLE IF NOT EXISTS plugin_nms_snmprec_oids (
+		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+		import_id INT UNSIGNED NOT NULL,
+		oid VARCHAR(255) NOT NULL,
+		tag VARCHAR(64) NOT NULL,
+		raw_value VARCHAR(1024) NOT NULL,
+		section_name VARCHAR(255) NOT NULL DEFAULT '',
+		graphable CHAR(2) NOT NULL DEFAULT '',
+		data_template_id MEDIUMINT UNSIGNED NOT NULL DEFAULT 0,
+		graph_template_id MEDIUMINT UNSIGNED NOT NULL DEFAULT 0,
+		PRIMARY KEY (id),
+		UNIQUE KEY import_oid (import_id, oid),
+		KEY data_template_id (data_template_id),
+		KEY graph_template_id (graph_template_id)
+	) ENGINE=InnoDB ROW_FORMAT=Dynamic");
+
 	nms_seed_fault_configuration();
 }
 
@@ -217,6 +254,8 @@ function nms_sync_template_categories() {
 }
 
 function nms_drop_database() {
+	db_execute('DROP TABLE IF EXISTS plugin_nms_snmprec_oids');
+	db_execute('DROP TABLE IF EXISTS plugin_nms_snmprec_imports');
 	db_execute('DROP TABLE IF EXISTS plugin_nms_events');
 	db_execute('DROP TABLE IF EXISTS plugin_nms_incidents');
 	db_execute('DROP TABLE IF EXISTS plugin_nms_meta');

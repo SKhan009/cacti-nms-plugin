@@ -9,7 +9,7 @@ if (!isset($nms_page_title)) $nms_page_title = 'NMS';
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="robots" content="noindex,nofollow">
 	<title><?php print nms_h($nms_page_title); ?></title>
-	<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-v1.1.css?v=1.8.0'); ?>">
+	<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-v1.1.css?v=1.9.0'); ?>">
 	<?php if (!empty($nms_extra_css)) { ?><link rel="stylesheet" href="<?php print nms_h($nms_asset_base . $nms_extra_css); ?>"><?php } ?>
 </head>
 <body class="nms-standalone">
@@ -20,6 +20,7 @@ if (!isset($nms_page_title)) $nms_page_title = 'NMS';
 		</div>
 		<nav class="nms-primary-nav" aria-label="NMS modules">
 			<a class="<?php print $nms_active_module === 'faults' ? 'selected' : ''; ?>" href="nms.php">Faults</a>
+			<a class="<?php print $nms_active_module === 'devices' ? 'selected' : ''; ?>" href="devices.php">Devices</a>
 			<a class="<?php print $nms_active_module === 'configuration' ? 'selected' : ''; ?>" href="fault_config.php">Fault Configuration</a>
 			<a class="<?php print $nms_active_module === 'topology' ? 'selected' : ''; ?>" href="topology.php">Topology</a>
 		</nav>
@@ -30,6 +31,7 @@ if (!isset($nms_page_title)) $nms_page_title = 'NMS';
 			<div class="nms-sidebar-section">
 				<p class="nms-sidebar-label">Monitoring</p>
 				<a class="nms-sidebar-link <?php print $nms_active_module === 'faults' ? 'selected' : ''; ?>" href="nms.php"><span class="nms-sidebar-icon">●</span><span class="nms-sidebar-copy"><strong>Device readings</strong><small>Health from Cacti core</small></span></a>
+				<a class="nms-sidebar-link <?php print $nms_active_module === 'devices' ? 'selected' : ''; ?>" href="devices.php"><span class="nms-sidebar-icon">＋</span><span class="nms-sidebar-copy"><strong>Device management</strong><small>Add devices and SNMP records</small></span></a>
 				<a class="nms-sidebar-link <?php print $nms_active_module === 'configuration' ? 'selected' : ''; ?>" href="fault_config.php"><span class="nms-sidebar-icon">⚙</span><span class="nms-sidebar-copy"><strong>Fault configuration</strong><small>Categories and severity</small></span></a>
 				<a class="nms-sidebar-link <?php print $nms_active_module === 'topology' ? 'selected' : ''; ?>" href="topology.php"><span class="nms-sidebar-icon">⌘</span><span class="nms-sidebar-copy"><strong>Topology</strong><small>Configured device map</small></span></a>
 			</div>

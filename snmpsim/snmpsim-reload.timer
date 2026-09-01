@@ -1,0 +1,11 @@
+[Unit]
+Description=Check for NMS SNMP record uploads
+
+[Timer]
+OnBootSec=10s
+OnUnitActiveSec=10s
+AccuracySec=1s
+Unit=snmpsim-reload.service
+
+[Install]
+WantedBy=timers.target

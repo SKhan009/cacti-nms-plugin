@@ -1,5 +1,26 @@
 # VM configuration changes
 
+## 2026-09-01 — Device management and SNMP record imports
+
+NMS 1.9.0 adds a Device Management page that reads the complete device inventory from
+Cacti core and creates devices with Cacti's supported device API. A validated `.snmprec`
+upload now creates a native Cacti host template plus one Generic OID data-source and graph
+template for each numeric reading. Import metadata and Cacti object IDs are kept in the
+plugin's `plugin_nms_snmprec_imports` and `plugin_nms_snmprec_oids` tables.
+
+The SNMPSim runtime data directory moved to `/var/lib/snmpsim/data`. It is owned by
+`apache:snmpsim`, mode `2770`, and labelled `httpd_sys_rw_content_t`; uploaded files are
+mode `0640` and inherit the `snmpsim` group. A root-owned systemd timer checks the upload
+marker every ten seconds and restarts SNMPSim. Apache receives no sudo permission.
+
+End-to-end verification imported `sim-ui-demo`, created Cacti host template 30, three
+data-source templates, three graph templates, and Device 6 (**NMS Imported Sensor Demo
+Device**). Its template associations were applied and the Cacti poller reports the device
+Up with 100% availability. A second end-to-end import based on the supplied Serial Device
+Server reference created host template 32 and 13 data-source/graph template pairs from 19
+OID records. The `serial-device-server` community became available automatically on the
+next ten-second activation check. No Cacti core file was modified.
+
 ## 2026-09-01 — SNMPSim lab devices
 
 SNMPSim 1.2.2 was installed in an isolated Python 3.11 environment at
