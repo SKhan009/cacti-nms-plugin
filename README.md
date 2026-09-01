@@ -94,3 +94,15 @@ templates to it, and maps it to one NMS device category. The administrator can t
 **Add device** with the imported community and host template. Uploading templates does not
 create synthetic Cacti readings: the poller must retrieve the actual OID from SNMPSim or
 the eventual real device.
+
+Use **Upload SNMP record → Download sample file** for a ready-to-import test record. The
+sample community can be `nms-device-demo`, with a host template such as **NMS Demo
+Environmental Device**. It contains 23 OIDs, including 18 numeric CPU, memory,
+environmental, storage, and interface readings.
+
+On **Devices → Manage → Create a graph from a data source**, NMS lists the device's live
+`data_local` and `data_template_rrd` items from Cacti core. Already-graphed readings stay
+visible and are marked read-only. For an ungraphed reading, one action creates a native
+Cacti graph template, links its LINE and Current/Average/Maximum graph items to the
+selected data-template item, and creates the device graph against the existing local data
+source. The data source is reused; it is not copied into an NMS table.

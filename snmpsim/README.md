@@ -48,3 +48,10 @@ The readings are deterministic lab data. Change the value field in a record and 
 The `examples/` directory contains small files intended for testing the NMS upload page.
 They are not loaded merely by deploying the plugin; importing one validates it, creates
 the Cacti templates, and then activates its community in the simulator.
+
+`examples/nms-device-demo.snmprec` is the general UI test file. It has 23 records and 18
+graphable readings. Download it directly from the Upload SNMP Record page, then use:
+
+- simulator community: `nms-device-demo`
+- host template: `NMS Demo Environmental Device`
+- category: `Sensors & Instrumentation`

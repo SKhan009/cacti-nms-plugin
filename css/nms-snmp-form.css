@@ -185,6 +185,118 @@
 	margin-top: 18px;
 }
 
+.nms-graph-builder-steps {
+	background: #f8faf8;
+	border-top: 1px solid #e1e9e3;
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+}
+
+.nms-graph-builder-steps > div {
+	align-items: center;
+	border-right: 1px solid #e1e9e3;
+	display: flex;
+	gap: 10px;
+	padding: 12px 18px;
+}
+
+.nms-graph-builder-steps > div:last-child {
+	border-right: 0;
+}
+
+.nms-graph-builder-steps b {
+	align-items: center;
+	background: #e4f1e8;
+	border-radius: 50%;
+	color: #287c45;
+	display: flex;
+	font-size: 10px;
+	height: 24px;
+	justify-content: center;
+	width: 24px;
+}
+
+.nms-graph-builder-steps span,
+.nms-graph-builder-steps small {
+	display: block;
+}
+
+.nms-graph-builder-steps strong {
+	font-size: 11px;
+}
+
+.nms-graph-builder-steps small {
+	color: #829087;
+	font-size: 9px;
+	margin-top: 2px;
+}
+
+.nms-graph-builder-form {
+	align-items: end;
+	display: grid;
+	gap: 12px;
+	grid-template-columns: minmax(360px, 1.5fr) minmax(210px, .7fr) minmax(150px, .45fr) auto;
+	padding: 16px 20px 20px;
+}
+
+.nms-graph-builder-form label,
+.nms-graph-builder-form label > span,
+.nms-graph-builder-form label > small {
+	display: block;
+}
+
+.nms-graph-builder-form label > span {
+	color: #657269;
+	font-size: 10px;
+	font-weight: 800;
+	margin-bottom: 6px;
+}
+
+.nms-graph-builder-form label > span em {
+	color: #8a958e;
+	font-size: 9px;
+	font-style: normal;
+	font-weight: 600;
+}
+
+.nms-graph-builder-form label > small {
+	color: #859188;
+	font-size: 9px;
+	line-height: 1.35;
+	margin-top: 5px;
+}
+
+.nms-graph-builder-form input,
+.nms-graph-builder-form select {
+	background: #fff;
+	border: 1px solid #cedbd1;
+	border-radius: 7px;
+	box-sizing: border-box;
+	color: #26342b;
+	font: inherit;
+	font-size: 11px;
+	height: 38px;
+	padding: 0 10px;
+	width: 100%;
+}
+
+.nms-graph-builder-form button {
+	background: #287c45;
+	border: 0;
+	border-radius: 7px;
+	color: #fff;
+	cursor: pointer;
+	font-size: 11px;
+	font-weight: 800;
+	height: 38px;
+	padding: 0 18px;
+}
+
+.nms-graph-builder-form button:disabled {
+	cursor: not-allowed;
+	opacity: .55;
+}
+
 .nms-association-table {
 	border-top: 1px solid #e1e9e3;
 }
@@ -401,6 +513,10 @@
 }
 
 @media (max-width: 1050px) {
+	.nms-graph-builder-form {
+		grid-template-columns: minmax(300px, 1fr) 1fr;
+	}
+
 	.nms-device-facts,
 	.nms-device-action-grid {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -408,6 +524,16 @@
 }
 
 @media (max-width: 700px) {
+	.nms-graph-builder-form,
+	.nms-graph-builder-steps {
+		grid-template-columns: 1fr;
+	}
+
+	.nms-graph-builder-steps > div {
+		border-bottom: 1px solid #e1e9e3;
+		border-right: 0;
+	}
+
 	.nms-panel-head,
 	.nms-overview-actions {
 		align-items: stretch;

@@ -17,6 +17,18 @@ $page_error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 	$action = get_nfilter_request_var('nms_action');
 	try {
+		if ($action === 'create_graph_from_data_source') {
+			$device_id = (int) get_filter_request_var('id');
+			$result = nms_device_create_graph_from_data_source(
+				$device_id,
+				get_filter_request_var('local_rrd_id'),
+				get_nfilter_request_var('graph_name'),
+				get_nfilter_request_var('vertical_label')
+			);
+			header('Location: devices.php?tab=edit&id=' . $device_id . '&graph_created=' . (int) $result['local_graph_id'] . '#graph-builder');
+			exit;
+		}
+
 		if ($action === 'change_data_query') {
 			$device_id = (int) get_filter_request_var('id');
 			$query_id = nms_device_change_data_query($device_id, get_filter_request_var('snmp_query_id'), get_filter_request_var('reindex_method'));
@@ -143,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 		}
 	} catch (Throwable $exception) {
 		$page_error = $exception->getMessage();
-		$tab = $action === 'import_snmprec' ? 'import' : (in_array($action, array('update_device', 'add_graph_template', 'add_data_query', 'change_data_query', 'reload_data_query', 'remove_data_query'), true) ? 'edit' : 'add');
+		$tab = $action === 'import_snmprec' ? 'import' : (in_array($action, array('update_device', 'add_graph_template', 'add_data_query', 'change_data_query', 'reload_data_query', 'remove_data_query', 'create_graph_from_data_source'), true) ? 'edit' : 'add');
 	}
 }
 
@@ -195,6 +207,7 @@ $cacti_device_defaults = array(
 $edit_device = array();
 $device_graph_templates = array();
 $device_data_queries = array();
+$device_data_source_items = array();
 $available_graph_templates = array();
 $available_data_queries = array();
 if ($tab === 'edit') {
@@ -210,6 +223,19 @@ if ($tab === 'edit') {
 		$page_error = 'The selected Cacti device was not found.';
 		$tab = 'inventory';
 	} else {
+		$device_data_source_items = db_fetch_assoc_prepared("SELECT dl.id AS local_data_id, dl.snmp_query_id,
+			dt.id AS data_template_id, dt.name AS data_template_name, dtr.id AS local_rrd_id,
+			dtr.data_source_name, dtd.name AS data_source_title,
+			COUNT(DISTINCT CASE WHEN gl.host_id = dl.host_id THEN gti.local_graph_id END) AS graph_count
+			FROM data_local AS dl
+			INNER JOIN data_template AS dt ON dt.id = dl.data_template_id
+			INNER JOIN data_template_rrd AS dtr ON dtr.local_data_id = dl.id
+			INNER JOIN data_template_data AS dtd ON dtd.local_data_id = dl.id
+			LEFT JOIN graph_templates_item AS gti ON gti.task_item_id = dtr.id AND gti.local_graph_id > 0
+			LEFT JOIN graph_local AS gl ON gl.id = gti.local_graph_id
+			WHERE dl.host_id = ?
+			GROUP BY dl.id, dl.snmp_query_id, dt.id, dt.name, dtr.id, dtr.data_source_name, dtd.name
+			ORDER BY dtd.name, dt.name, dtr.data_source_name", array($edit_device_id));
 		$device_graph_templates = db_fetch_assoc_prepared("SELECT gt.id, gt.name,
 			MAX(gl.id) AS graph_local_id, COUNT(DISTINCT gl.id) AS graph_count
 			FROM host_graph AS hg INNER JOIN graph_templates AS gt ON gt.id = hg.graph_template_id
@@ -257,6 +283,7 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 	<?php if (isset_request_var('device_created')) { ?><div class="nms-form-message success"><strong>Device created</strong><span>Cacti device <?php print (int) get_filter_request_var('device_created'); ?> is ready for polling and graph selection.</span></div><?php } ?>
 	<?php if (isset_request_var('device_updated')) { ?><div class="nms-form-message success"><strong>Device updated</strong><span>The live Cacti device settings were saved successfully.</span></div><?php } ?>
 	<?php if (isset_request_var('graph_template_added')) { ?><div class="nms-form-message success"><strong>Graph template added</strong><span>The Cacti graph-template association is now active for this device.</span></div><?php } ?>
+	<?php if (isset_request_var('graph_created')) { ?><div class="nms-form-message success"><strong>Graph created</strong><span>Cacti graph <?php print (int) get_filter_request_var('graph_created'); ?> now uses the selected existing data-source item.</span></div><?php } ?>
 	<?php if (isset_request_var('data_query_added')) { ?><div class="nms-form-message success"><strong>Data query added</strong><span>The Cacti data query is now associated with this device.</span></div><?php } ?>
 	<?php if (isset_request_var('data_query_changed')) { ?><div class="nms-form-message success"><strong>Re-index method updated</strong><span>The Cacti data-query setting was saved.</span></div><?php } ?>
 	<?php if (isset_request_var('data_query_reloaded')) { ?><div class="nms-form-message success"><strong>Data query reloaded</strong><span>Cacti refreshed the indexed data for this device.</span></div><?php } ?>
