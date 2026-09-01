@@ -158,6 +158,8 @@ $cacti_device_defaults = array(
 );
 
 $edit_device = array();
+$device_graph_templates = array();
+$device_data_queries = array();
 if ($tab === 'edit') {
 	$edit_device_id = isset_request_var('id') ? (int) get_filter_request_var('id') : 0;
 	$edit_device = db_fetch_row_prepared("SELECT h.*, ht.name AS template_name, p.name AS poller_name,
@@ -170,6 +172,17 @@ if ($tab === 'edit') {
 	if (!$edit_device) {
 		$page_error = 'The selected Cacti device was not found.';
 		$tab = 'inventory';
+	} else {
+		$device_graph_templates = db_fetch_assoc_prepared("SELECT gt.id, gt.name,
+			MAX(gl.id) AS graph_local_id, COUNT(DISTINCT gl.id) AS graph_count
+			FROM host_graph AS hg INNER JOIN graph_templates AS gt ON gt.id = hg.graph_template_id
+			LEFT JOIN graph_local AS gl ON gl.graph_template_id = gt.id AND gl.host_id = hg.host_id
+			WHERE hg.host_id = ? GROUP BY gt.id, gt.name ORDER BY gt.name", array($edit_device_id));
+		$device_data_queries = db_fetch_assoc_prepared("SELECT sq.id, sq.name, hsq.reindex_method,
+			COUNT(hsc.snmp_index) AS item_count, COUNT(DISTINCT hsc.snmp_index) AS row_count
+			FROM host_snmp_query AS hsq INNER JOIN snmp_query AS sq ON sq.id = hsq.snmp_query_id
+			LEFT JOIN host_snmp_cache AS hsc ON hsc.host_id = hsq.host_id AND hsc.snmp_query_id = hsq.snmp_query_id
+			WHERE hsq.host_id = ? GROUP BY sq.id, sq.name, hsq.reindex_method ORDER BY sq.name", array($edit_device_id));
 	}
 }
 
