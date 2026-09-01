@@ -65,10 +65,25 @@ $device_actions = array(
 			<button type="submit" <?php print !$available_data_queries ? 'disabled' : ''; ?>>Add query</button>
 		</form>
 		<div class="nms-association-table">
-			<div class="nms-association-row query heading"><span>Data query</span><span>Re-index method</span><span>Status</span></div>
+			<div class="nms-association-row query heading"><span>Data query</span><span>Re-index method</span><span>Status</span><span>Actions</span></div>
 			<?php if (!$device_data_queries) { ?><div class="nms-association-empty">No associated data queries.</div><?php } ?>
 			<?php foreach ($device_data_queries as $data_query) { ?>
-			<div class="nms-association-row query"><strong><?php print nms_h($data_query['name']); ?></strong><span><?php print nms_h(isset($reindex_types[$data_query['reindex_method']]) ? $reindex_types[$data_query['reindex_method']] : 'Method ' . (int) $data_query['reindex_method']); ?></span><span><i class="nms-association-state active">Success</i><small><?php print (int) $data_query['item_count']; ?> items · <?php print (int) $data_query['row_count']; ?> rows</small></span></div>
+			<div class="nms-association-row query">
+				<strong><?php print nms_h($data_query['name']); ?></strong>
+				<form class="nms-reindex-options" method="post" action="devices.php?tab=edit&id=<?php print $device_id; ?>#data-queries">
+					<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>">
+					<input type="hidden" name="nms_action" value="change_data_query">
+					<input type="hidden" name="id" value="<?php print $device_id; ?>">
+					<input type="hidden" name="snmp_query_id" value="<?php print (int) $data_query['id']; ?>">
+					<?php foreach ($reindex_types as $reindex_id => $reindex_name) { $reindex_input_id = 'reindex-' . $device_id . '-' . (int) $data_query['id'] . '-' . (int) $reindex_id; ?><input type="radio" name="reindex_method" id="<?php print $reindex_input_id; ?>" value="<?php print (int) $reindex_id; ?>" <?php print (int) $data_query['reindex_method'] === (int) $reindex_id ? 'checked' : ''; ?> onchange="this.form.submit()"><label for="<?php print $reindex_input_id; ?>" title="<?php print nms_h($reindex_types_tips[$reindex_id] ?? $reindex_name); ?>"><?php print nms_h($reindex_name); ?></label><?php } ?>
+				</form>
+				<span><i class="nms-association-state active">Success</i><small><?php print (int) $data_query['item_count']; ?> items · <?php print (int) $data_query['row_count']; ?> rows</small></span>
+				<div class="nms-query-actions">
+					<form method="post" action="devices.php?tab=edit&id=<?php print $device_id; ?>#data-queries"><input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>"><input type="hidden" name="nms_action" value="reload_data_query"><input type="hidden" name="id" value="<?php print $device_id; ?>"><input type="hidden" name="snmp_query_id" value="<?php print (int) $data_query['id']; ?>"><button type="submit" class="reload" title="Reload this data query">Reload</button></form>
+					<a class="verbose" href="<?php print nms_h($core_base . 'host.php?action=query_verbose&id=' . (int) $data_query['id'] . '&host_id=' . $device_id . '&header=true'); ?>" title="Run the query and show Cacti verbose output">Verbose</a>
+					<form method="post" action="devices.php?tab=edit&id=<?php print $device_id; ?>#data-queries" onsubmit="return confirm('Remove this data query and its indexed cache from the device?');"><input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>"><input type="hidden" name="nms_action" value="remove_data_query"><input type="hidden" name="id" value="<?php print $device_id; ?>"><input type="hidden" name="snmp_query_id" value="<?php print (int) $data_query['id']; ?>"><button type="submit" class="remove" title="Remove this data query">Remove</button></form>
+				</div>
+			</div>
 			<?php } ?>
 		</div>
 	</section>

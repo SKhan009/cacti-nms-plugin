@@ -17,6 +17,27 @@ $page_error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 	$action = get_nfilter_request_var('nms_action');
 	try {
+		if ($action === 'change_data_query') {
+			$device_id = (int) get_filter_request_var('id');
+			$query_id = nms_device_change_data_query($device_id, get_filter_request_var('snmp_query_id'), get_filter_request_var('reindex_method'));
+			header('Location: devices.php?tab=edit&id=' . $device_id . '&data_query_changed=' . $query_id . '#data-queries');
+			exit;
+		}
+
+		if ($action === 'reload_data_query') {
+			$device_id = (int) get_filter_request_var('id');
+			$query_id = nms_device_reload_data_query($device_id, get_filter_request_var('snmp_query_id'));
+			header('Location: devices.php?tab=edit&id=' . $device_id . '&data_query_reloaded=' . $query_id . '#data-queries');
+			exit;
+		}
+
+		if ($action === 'remove_data_query') {
+			$device_id = (int) get_filter_request_var('id');
+			$query_id = nms_device_remove_data_query($device_id, get_filter_request_var('snmp_query_id'));
+			header('Location: devices.php?tab=edit&id=' . $device_id . '&data_query_removed=' . $query_id . '#data-queries');
+			exit;
+		}
+
 		if ($action === 'add_graph_template') {
 			$device_id = (int) get_filter_request_var('id');
 			$template_id = nms_device_add_graph_template($device_id, get_filter_request_var('graph_template_id'));
@@ -122,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 		}
 	} catch (Throwable $exception) {
 		$page_error = $exception->getMessage();
-		$tab = $action === 'import_snmprec' ? 'import' : (in_array($action, array('update_device', 'add_graph_template', 'add_data_query'), true) ? 'edit' : 'add');
+		$tab = $action === 'import_snmprec' ? 'import' : (in_array($action, array('update_device', 'add_graph_template', 'add_data_query', 'change_data_query', 'reload_data_query', 'remove_data_query'), true) ? 'edit' : 'add');
 	}
 }
 
@@ -237,6 +258,9 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 	<?php if (isset_request_var('device_updated')) { ?><div class="nms-form-message success"><strong>Device updated</strong><span>The live Cacti device settings were saved successfully.</span></div><?php } ?>
 	<?php if (isset_request_var('graph_template_added')) { ?><div class="nms-form-message success"><strong>Graph template added</strong><span>The Cacti graph-template association is now active for this device.</span></div><?php } ?>
 	<?php if (isset_request_var('data_query_added')) { ?><div class="nms-form-message success"><strong>Data query added</strong><span>The Cacti data query is now associated with this device.</span></div><?php } ?>
+	<?php if (isset_request_var('data_query_changed')) { ?><div class="nms-form-message success"><strong>Re-index method updated</strong><span>The Cacti data-query setting was saved.</span></div><?php } ?>
+	<?php if (isset_request_var('data_query_reloaded')) { ?><div class="nms-form-message success"><strong>Data query reloaded</strong><span>Cacti refreshed the indexed data for this device.</span></div><?php } ?>
+	<?php if (isset_request_var('data_query_removed')) { ?><div class="nms-form-message success"><strong>Data query removed</strong><span>The association and its indexed cache were removed from this device.</span></div><?php } ?>
 	<?php if (isset_request_var('imported')) { ?><div class="nms-form-message success"><strong>SNMP record imported</strong><span>The simulator file and Cacti templates were created successfully.</span></div><?php } ?>
 
 	<div class="nms-page-tabs" role="tablist" aria-label="Device management views">

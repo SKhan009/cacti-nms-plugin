@@ -41,6 +41,38 @@ function nms_device_add_data_query($device_id, $data_query_id, $reindex_method) 
 	return $data_query_id;
 }
 
+function nms_device_require_data_query($device_id, $data_query_id) {
+	$device_id = nms_device_require($device_id);
+	$data_query_id = (int) $data_query_id;
+	if ($data_query_id < 1 || !(int) db_fetch_cell_prepared(
+		'SELECT COUNT(*) FROM host_snmp_query WHERE host_id = ? AND snmp_query_id = ?',
+		array($device_id, $data_query_id))) {
+		throw new InvalidArgumentException('Select a data query associated with this device.');
+	}
+	return array($device_id, $data_query_id);
+}
+
+function nms_device_change_data_query($device_id, $data_query_id, $reindex_method) {
+	global $reindex_types;
+	list($device_id, $data_query_id) = nms_device_require_data_query($device_id, $data_query_id);
+	$reindex_method = (int) $reindex_method;
+	if (!isset($reindex_types[$reindex_method])) throw new InvalidArgumentException('Select a valid re-index method.');
+	api_device_dq_change($device_id, $data_query_id, $reindex_method);
+	return $data_query_id;
+}
+
+function nms_device_reload_data_query($device_id, $data_query_id) {
+	list($device_id, $data_query_id) = nms_device_require_data_query($device_id, $data_query_id);
+	run_data_query($device_id, $data_query_id);
+	return $data_query_id;
+}
+
+function nms_device_remove_data_query($device_id, $data_query_id) {
+	list($device_id, $data_query_id) = nms_device_require_data_query($device_id, $data_query_id);
+	api_device_dq_remove($device_id, $data_query_id);
+	return $data_query_id;
+}
+
 function nms_device_create($input) {
 	return nms_device_save(0, $input);
 }
