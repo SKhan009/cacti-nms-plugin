@@ -100,7 +100,7 @@ sample community can be `nms-device-demo`, with a host template such as **NMS De
 Environmental Device**. It contains 23 OIDs, including 18 numeric CPU, memory,
 environmental, storage, and interface readings.
 
-On **Devices → Manage → Create a graph from a data source**, NMS lists the device's live
+On **Devices → Create graph template**, NMS lists the selected device's live
 `data_local` and `data_template_rrd` items from Cacti core. Already-graphed readings stay
 visible and are marked read-only. For an ungraphed reading, one action creates a native
 Cacti graph template, links its LINE and Current/Average/Maximum graph items to the

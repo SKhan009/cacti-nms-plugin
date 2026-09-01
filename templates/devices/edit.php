@@ -1,8 +1,6 @@
 <?php
 $device_id = (int) $edit_device['id'];
 $core_base = $config['url_path'];
-$available_source_item_count = 0;
-foreach ($device_data_source_items as $source_item) if ((int) $source_item['graph_count'] === 0) $available_source_item_count++;
 $device_actions = array(
 	array('Create New Device', $core_base . 'host.php?action=edit', 'Open the Cacti device creation form.'),
 	array('Create Graphs for this Device', $core_base . 'graphs_new.php?reset=true&host_id=' . $device_id, 'Select graph templates and data queries for this device.'),
@@ -38,27 +36,6 @@ $device_actions = array(
 <?php require($config['base_path'] . '/plugins/nms/templates/devices/add.php'); ?>
 
 <div class="nms-device-associations">
-	<section class="nms-panel" id="graph-builder">
-		<div class="nms-panel-head">
-			<div><h2>Create a graph from a data source</h2><p>Choose a live data-source item already stored in Cacti. NMS creates the matching graph template, graph items, and device graph.</p></div>
-			<a class="nms-panel-action" href="<?php print nms_h($core_base . 'data_sources.php?reset=true&host_id=' . $device_id . '&ds_rows=30&filter=&template_id=-1&method_id=-1&page=1'); ?>">View data sources</a>
-		</div>
-		<div class="nms-graph-builder-steps">
-			<div><b>1</b><span><strong>Choose a reading</strong><small>Fetched from this Cacti device</small></span></div>
-			<div><b>2</b><span><strong>Name the graph</strong><small>Or use the automatic name</small></span></div>
-			<div><b>3</b><span><strong>Create</strong><small>Template, items, and graph together</small></span></div>
-		</div>
-		<form class="nms-graph-builder-form" method="post" action="devices.php?tab=edit&id=<?php print $device_id; ?>#graph-builder">
-			<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>">
-			<input type="hidden" name="nms_action" value="create_graph_from_data_source">
-			<input type="hidden" name="id" value="<?php print $device_id; ?>">
-			<label class="source"><span>Cacti data-source item</span><select required name="local_rrd_id" <?php print !$available_source_item_count ? 'disabled' : ''; ?>><option value=""><?php print $available_source_item_count ? 'Select a reading from this device' : 'Every data-source item already has a graph'; ?></option><?php foreach ($device_data_source_items as $source_item) { ?><option value="<?php print (int) $source_item['local_rrd_id']; ?>" <?php print (int) $source_item['graph_count'] > 0 ? 'disabled' : ''; ?>><?php print nms_h($source_item['data_template_name'] . ' — ' . $source_item['data_source_name'] . ' (Data Source ' . (int) $source_item['local_data_id'] . ')' . ((int) $source_item['graph_count'] > 0 ? ' — already graphed' : '')); ?></option><?php } ?></select><small>Every item comes directly from Cacti core; already-graphed items remain visible but cannot be selected.</small></label>
-			<label><span>Graph name <em>optional</em></span><input name="graph_name" maxlength="190" placeholder="Automatic from data template"></label>
-			<label><span>Vertical label <em>optional</em></span><input name="vertical_label" maxlength="20" placeholder="Value, %, bytes, °C"></label>
-			<button type="submit" <?php print !$available_source_item_count ? 'disabled' : ''; ?>>Create graph in Cacti</button>
-		</form>
-	</section>
-
 	<section class="nms-panel" id="graph-templates">
 		<div class="nms-panel-head"><div><h2>Associated Graph Templates</h2><p>The same graph-template associations stored by Cacti.</p></div><a class="nms-panel-action" href="<?php print nms_h($core_base . 'graphs_new.php?reset=true&host_id=' . $device_id); ?>">Create graphs</a></div>
 		<form class="nms-association-add top" method="post" action="devices.php?tab=edit&id=<?php print $device_id; ?>#graph-templates">

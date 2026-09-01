@@ -9,7 +9,7 @@ require_once($config['base_path'] . '/plugins/nms/includes/device_manager.php');
 
 nms_setup_database();
 
-$allowed_tabs = array('inventory', 'add', 'edit', 'import');
+$allowed_tabs = array('inventory', 'add', 'edit', 'graphs', 'import');
 $tab = isset_request_var('tab') ? get_nfilter_request_var('tab') : 'inventory';
 if (!in_array($tab, $allowed_tabs, true)) $tab = 'inventory';
 $page_error = '';
@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 				get_nfilter_request_var('graph_name'),
 				get_nfilter_request_var('vertical_label')
 			);
-			header('Location: devices.php?tab=edit&id=' . $device_id . '&graph_created=' . (int) $result['local_graph_id'] . '#graph-builder');
+			header('Location: devices.php?tab=graphs&id=' . $device_id . '&graph_created=' . (int) $result['local_graph_id'] . '#graph-builder');
 			exit;
 		}
 
@@ -155,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 		}
 	} catch (Throwable $exception) {
 		$page_error = $exception->getMessage();
-		$tab = $action === 'import_snmprec' ? 'import' : (in_array($action, array('update_device', 'add_graph_template', 'add_data_query', 'change_data_query', 'reload_data_query', 'remove_data_query', 'create_graph_from_data_source'), true) ? 'edit' : 'add');
+		$tab = $action === 'import_snmprec' ? 'import' : ($action === 'create_graph_from_data_source' ? 'graphs' : (in_array($action, array('update_device', 'add_graph_template', 'add_data_query', 'change_data_query', 'reload_data_query', 'remove_data_query'), true) ? 'edit' : 'add'));
 	}
 }
 
@@ -210,19 +210,19 @@ $device_data_queries = array();
 $device_data_source_items = array();
 $available_graph_templates = array();
 $available_data_queries = array();
-if ($tab === 'edit') {
+if ($tab === 'edit' || $tab === 'graphs') {
 	$edit_device_id = isset_request_var('id') ? (int) get_filter_request_var('id') : 0;
-	$edit_device = db_fetch_row_prepared("SELECT h.*, ht.name AS template_name, p.name AS poller_name,
+	if ($edit_device_id > 0) $edit_device = db_fetch_row_prepared("SELECT h.*, ht.name AS template_name, p.name AS poller_name,
 		s.name AS site_name, (SELECT COUNT(*) FROM graph_local WHERE host_id = h.id) AS graph_count,
 		(SELECT COUNT(*) FROM data_local WHERE host_id = h.id) AS data_source_count,
 		(SELECT COUNT(*) FROM poller_item WHERE host_id = h.id) AS poller_item_count
 		FROM host AS h LEFT JOIN host_template AS ht ON ht.id = h.host_template_id
 		LEFT JOIN poller AS p ON p.id = h.poller_id LEFT JOIN sites AS s ON s.id = h.site_id
 		WHERE h.id = ? AND h.deleted = ''", array($edit_device_id));
-	if (!$edit_device) {
+	if (!$edit_device && $tab === 'edit') {
 		$page_error = 'The selected Cacti device was not found.';
 		$tab = 'inventory';
-	} else {
+	} elseif ($edit_device) {
 		$device_data_source_items = db_fetch_assoc_prepared("SELECT dl.id AS local_data_id, dl.snmp_query_id,
 			dt.id AS data_template_id, dt.name AS data_template_name, dtr.id AS local_rrd_id,
 			dtr.data_source_name, dtd.name AS data_source_title,
@@ -294,6 +294,7 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 		<a class="<?php print $tab === 'inventory' ? 'selected' : ''; ?>" href="?tab=inventory">Device dashboard</a>
 		<a class="<?php print $tab === 'add' ? 'selected' : ''; ?>" href="?tab=add">Add device</a>
 		<?php if ($tab === 'edit') { ?><a class="selected" href="?tab=edit&id=<?php print (int) $edit_device['id']; ?>">Edit device</a><?php } ?>
+		<a class="<?php print $tab === 'graphs' ? 'selected' : ''; ?>" href="?tab=graphs<?php print $edit_device ? '&id=' . (int) $edit_device['id'] : ''; ?>">Create graph template</a>
 		<a class="<?php print $tab === 'import' ? 'selected' : ''; ?>" href="?tab=import">Upload SNMP record</a>
 	</div>
 
