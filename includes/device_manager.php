@@ -70,9 +70,30 @@ function nms_device_create_graph_from_data_source($device_id, $local_rrd_id, $gr
 	$consolidation = isset($consolidation_options[$options['consolidation'] ?? '']) ? $options['consolidation'] : 'average';
 	$color_id = (int) ($options['color_id'] ?? 86);
 	if (!(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM colors WHERE id = ?', array($color_id))) $color_id = 86;
+	$alpha_percent = max(0, min(100, (int) ($options['alpha_percent'] ?? 100)));
+	$alpha = strtoupper(str_pad(dechex((int) round(255 * $alpha_percent / 100)), 2, '0', STR_PAD_LEFT));
+	$cdef_id = (int) ($options['cdef_id'] ?? 0);
+	if ($cdef_id > 0 && !(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM cdef WHERE id = ?', array($cdef_id))) $cdef_id = 0;
+	$gprint_id = (int) ($options['gprint_id'] ?? 2);
+	if (!(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates_gprint WHERE id = ?', array($gprint_id))) $gprint_id = 2;
+	$legend_values = array(
+		1 => !array_key_exists('show_average', $options) || !empty($options['show_average']),
+		2 => !array_key_exists('show_minimum', $options) || !empty($options['show_minimum']),
+		3 => !array_key_exists('show_maximum', $options) || !empty($options['show_maximum']),
+		4 => !array_key_exists('show_current', $options) || !empty($options['show_current'])
+	);
 	$width = in_array((int) ($options['width'] ?? 700), array(300, 500, 700, 900, 1200), true) ? (int) $options['width'] : 700;
 	$height = in_array((int) ($options['height'] ?? 200), array(120, 160, 200, 300, 400), true) ? (int) $options['height'] : 200;
 	$base_value = in_array((int) ($options['base_value'] ?? 1000), array(1000, 1024), true) ? (int) $options['base_value'] : 1000;
+	$image_format_id = in_array((int) ($options['image_format_id'] ?? 3), array(1, 3), true) ? (int) $options['image_format_id'] : 3;
+	$slope_mode = !array_key_exists('slope_mode', $options) || !empty($options['slope_mode']) ? 'on' : '';
+	$auto_scale = !array_key_exists('auto_scale', $options) || !empty($options['auto_scale']) ? 'on' : '';
+	$auto_scale_opts = in_array((int) ($options['auto_scale_opts'] ?? 2), array(1, 2, 3, 4), true) ? (int) $options['auto_scale_opts'] : 2;
+	$lower_limit = is_numeric($options['lower_limit'] ?? '0') ? (string) $options['lower_limit'] : '0';
+	$upper_limit = is_numeric($options['upper_limit'] ?? '100') ? (string) $options['upper_limit'] : '100';
+	$auto_scale_log = !empty($options['auto_scale_log']) ? 'on' : '';
+	$auto_scale_rigid = !empty($options['auto_scale_rigid']) ? 'on' : '';
+	$auto_padding = !array_key_exists('auto_padding', $options) || !empty($options['auto_padding']) ? 'on' : '';
 
 	$base_graph_template_id = (int) db_fetch_cell("SELECT id FROM graph_templates WHERE name = 'SNMP - Generic OID Template'");
 	if ($base_graph_template_id < 1) throw new RuntimeException('Cacti Generic OID graph template is not installed.');
@@ -82,16 +103,23 @@ function nms_device_create_graph_from_data_source($device_id, $local_rrd_id, $gr
 		$graph_template_id = (int) api_duplicate_graph(0, $base_graph_template_id, $graph_name, false);
 		if ($graph_template_id < 1) throw new RuntimeException('Cacti could not create the graph template.');
 
-		db_execute_prepared('UPDATE graph_templates_graph SET title = ?, vertical_label = ?, width = ?, height = ?, base_value = ?
+		db_execute_prepared('UPDATE graph_templates_graph SET title = ?, vertical_label = ?, width = ?, height = ?, base_value = ?,
+			image_format_id = ?, slope_mode = ?, auto_scale = ?, auto_scale_opts = ?, lower_limit = ?, upper_limit = ?,
+			auto_scale_log = ?, auto_scale_rigid = ?, auto_padding = ?
 			WHERE graph_template_id = ? AND local_graph_id = 0',
-			array('|host_description| - ' . $graph_name, $vertical_label, $width, $height, $base_value, $graph_template_id));
+			array('|host_description| - ' . $graph_name, $vertical_label, $width, $height, $base_value,
+				$image_format_id, $slope_mode, $auto_scale, $auto_scale_opts, $lower_limit, $upper_limit,
+				$auto_scale_log, $auto_scale_rigid, $auto_padding, $graph_template_id));
 		db_execute_prepared('UPDATE graph_templates_item SET task_item_id = ?
 			WHERE graph_template_id = ? AND local_graph_id = 0',
 			array($template_rrd_id, $graph_template_id));
-		db_execute_prepared('UPDATE graph_templates_item SET graph_type_id = ?, line_width = ?, color_id = ?, consolidation_function_id = ?
+		db_execute_prepared('UPDATE graph_templates_item SET graph_type_id = ?, line_width = ?, color_id = ?, alpha = ?, cdef_id = ?, consolidation_function_id = ?
 			WHERE graph_template_id = ? AND local_graph_id = 0 AND graph_type_id != 9',
-			array($style_options[$graph_style][0], $style_options[$graph_style][1], $color_id,
+			array($style_options[$graph_style][0], $style_options[$graph_style][1], $color_id, $alpha, $cdef_id,
 				$consolidation_options[$consolidation], $graph_template_id));
+		db_execute_prepared('UPDATE graph_templates_item SET gprint_id = ?
+			WHERE graph_template_id = ? AND local_graph_id = 0 AND graph_type_id = 9',
+			array($gprint_id, $graph_template_id));
 		db_execute_prepared("UPDATE graph_template_input SET name = ?
 			WHERE graph_template_id = ? AND column_name = 'task_item_id'",
 			array('Data Source [' . $source['data_template_name'] . ']', $graph_template_id));
@@ -114,6 +142,16 @@ function nms_device_create_graph_from_data_source($device_id, $local_rrd_id, $gr
 				db_execute_prepared('INSERT IGNORE INTO graph_template_input_defs
 					(graph_template_input_id, graph_template_item_id) VALUES (?, ?)',
 					array($data_source_input_id, $minimum_item_id));
+			}
+		}
+
+		$gprint_items = db_fetch_assoc_prepared('SELECT id, consolidation_function_id FROM graph_templates_item
+			WHERE graph_template_id = ? AND local_graph_id = 0 AND graph_type_id = 9', array($graph_template_id));
+		foreach ($gprint_items as $gprint_item) {
+			$cf_id = (int) $gprint_item['consolidation_function_id'];
+			if (isset($legend_values[$cf_id]) && !$legend_values[$cf_id]) {
+				db_execute_prepared('DELETE FROM graph_template_input_defs WHERE graph_template_item_id = ?', array((int) $gprint_item['id']));
+				db_execute_prepared('DELETE FROM graph_templates_item WHERE id = ?', array((int) $gprint_item['id']));
 			}
 		}
 

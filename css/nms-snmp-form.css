@@ -424,6 +424,48 @@
 	opacity: .55;
 }
 
+.nms-graph-options {
+	border: 1px solid #cedbd1;
+	border-radius: 7px;
+	box-sizing: border-box;
+	margin: 0;
+	min-height: 58px;
+	padding: 7px 10px 9px;
+}
+
+.nms-graph-options legend {
+	color: #657269;
+	font-size: 10px;
+	font-weight: 800;
+	padding: 0 4px;
+}
+
+.nms-graph-options > div {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 14px;
+}
+
+.nms-graph-options label {
+	align-items: center;
+	display: inline-flex;
+	gap: 5px;
+}
+
+.nms-graph-options input {
+	height: 16px;
+	margin: 0;
+	width: 16px;
+}
+
+.nms-graph-options label > span {
+	color: #4d5c52;
+	font-size: 10px;
+	font-weight: 700;
+	margin: 0;
+}
+
 .nms-association-table {
 	border-top: 1px solid #e1e9e3;
 }

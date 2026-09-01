@@ -29,9 +29,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 					'graph_style' => get_nfilter_request_var('graph_style'),
 					'consolidation' => get_nfilter_request_var('consolidation'),
 					'color_id' => get_filter_request_var('color_id'),
+					'alpha_percent' => get_filter_request_var('alpha_percent'),
+					'cdef_id' => get_filter_request_var('cdef_id'),
+					'gprint_id' => get_filter_request_var('gprint_id'),
+					'show_current' => isset_request_var('show_current'),
+					'show_minimum' => isset_request_var('show_minimum'),
+					'show_average' => isset_request_var('show_average'),
+					'show_maximum' => isset_request_var('show_maximum'),
 					'width' => get_filter_request_var('width'),
 					'height' => get_filter_request_var('height'),
-					'base_value' => get_filter_request_var('base_value')
+					'base_value' => get_filter_request_var('base_value'),
+					'image_format_id' => get_filter_request_var('image_format_id'),
+					'slope_mode' => isset_request_var('slope_mode'),
+					'auto_scale' => isset_request_var('auto_scale'),
+					'auto_scale_opts' => get_filter_request_var('auto_scale_opts'),
+					'lower_limit' => get_nfilter_request_var('lower_limit'),
+					'upper_limit' => get_nfilter_request_var('upper_limit'),
+					'auto_scale_log' => isset_request_var('auto_scale_log'),
+					'auto_scale_rigid' => isset_request_var('auto_scale_rigid'),
+					'auto_padding' => isset_request_var('auto_padding')
 				)
 			);
 			header('Location: devices.php?tab=graphs&id=' . $device_id . '&graph_created=' . (int) $result['local_graph_id'] . '#graph-builder');
@@ -221,6 +237,8 @@ $available_graph_templates = array();
 $available_data_queries = array();
 $graph_colors = db_fetch_assoc("SELECT id, hex, COALESCE(NULLIF(name, ''), CONCAT('#', hex)) AS name
 	FROM colors WHERE hex != 'FFFFFF' ORDER BY CASE WHEN name IS NULL OR name = '' THEN 1 ELSE 0 END, name, hex");
+$graph_gprints = db_fetch_assoc('SELECT id, name, gprint_text FROM graph_templates_gprint ORDER BY name');
+$graph_cdefs = db_fetch_assoc('SELECT id, name FROM cdef ORDER BY name');
 if ($tab === 'edit' || $tab === 'graphs') {
 	$edit_device_id = isset_request_var('id') ? (int) get_filter_request_var('id') : 0;
 	if ($edit_device_id > 0) $edit_device = db_fetch_row_prepared("SELECT h.*, ht.name AS template_name, p.name AS poller_name,
