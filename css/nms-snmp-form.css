@@ -186,7 +186,7 @@
 }
 
 .nms-graph-device-picker {
-	align-items: end;
+	align-items: center;
 	display: flex;
 	gap: 25px;
 	justify-content: space-between;
@@ -254,6 +254,17 @@
 	display: grid;
 	grid-template-columns: 1.5fr repeat(3, .7fr) auto;
 	margin-bottom: 14px;
+}
+
+.nms-global-graph-table .nms-association-row {
+	grid-template-columns: minmax(260px, 2fr) 60px 90px 90px 80px minmax(110px, .8fr) 60px;
+}
+
+.nms-global-graph-table .nms-association-row > a {
+	color: #287743;
+	font-size: 10px;
+	font-weight: 800;
+	text-decoration: none;
 }
 
 .nms-graph-device-summary > div {

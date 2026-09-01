@@ -6,6 +6,7 @@ require_once($config['base_path'] . '/plugins/nms/includes/database.php');
 require_once($config['base_path'] . '/plugins/nms/includes/snmprec.php');
 require_once($config['base_path'] . '/plugins/nms/includes/template_manager.php');
 require_once($config['base_path'] . '/plugins/nms/includes/device_manager.php');
+require_once($config['base_path'] . '/plugins/nms/includes/graph_template_manager.php');
 
 nms_setup_database();
 nms_template_upgrade_readable_names();
@@ -18,11 +19,9 @@ $page_error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 	$action = get_nfilter_request_var('nms_action');
 	try {
-		if ($action === 'create_graph_from_data_source') {
-			$device_id = (int) get_filter_request_var('id');
-			$result = nms_device_create_graph_from_data_source(
-				$device_id,
-				get_filter_request_var('local_rrd_id'),
+		if ($action === 'create_graph_template') {
+			$graph_template_id = nms_graph_template_create(
+				get_filter_request_var('data_template_rrd_id'),
 				get_nfilter_request_var('graph_name'),
 				get_nfilter_request_var('vertical_label'),
 				array(
@@ -50,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 					'auto_padding' => isset_request_var('auto_padding')
 				)
 			);
-			header('Location: devices.php?tab=graphs&id=' . $device_id . '&graph_created=' . (int) $result['local_graph_id'] . '#graph-builder');
+			header('Location: devices.php?tab=graphs&graph_template_created=' . $graph_template_id . '#graph-builder');
 			exit;
 		}
 
@@ -180,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 		}
 	} catch (Throwable $exception) {
 		$page_error = $exception->getMessage();
-		$tab = $action === 'import_snmprec' ? 'import' : ($action === 'create_graph_from_data_source' ? 'graphs' : (in_array($action, array('update_device', 'add_graph_template', 'add_data_query', 'change_data_query', 'reload_data_query', 'remove_data_query'), true) ? 'edit' : 'add'));
+		$tab = $action === 'import_snmprec' ? 'import' : ($action === 'create_graph_template' ? 'graphs' : (in_array($action, array('update_device', 'add_graph_template', 'add_data_query', 'change_data_query', 'reload_data_query', 'remove_data_query'), true) ? 'edit' : 'add'));
 	}
 }
 
@@ -232,14 +231,15 @@ $cacti_device_defaults = array(
 $edit_device = array();
 $device_graph_templates = array();
 $device_data_queries = array();
-$device_data_source_items = array();
 $available_graph_templates = array();
 $available_data_queries = array();
+$graph_data_template_items = array();
+$global_graph_templates = array();
 $graph_colors = db_fetch_assoc("SELECT id, hex, COALESCE(NULLIF(name, ''), CONCAT('#', hex)) AS name
 	FROM colors WHERE hex != 'FFFFFF' ORDER BY CASE WHEN name IS NULL OR name = '' THEN 1 ELSE 0 END, name, hex");
 $graph_gprints = db_fetch_assoc('SELECT id, name, gprint_text FROM graph_templates_gprint ORDER BY name');
 $graph_cdefs = db_fetch_assoc('SELECT id, name FROM cdef ORDER BY name');
-if ($tab === 'edit' || $tab === 'graphs') {
+if ($tab === 'edit') {
 	$edit_device_id = isset_request_var('id') ? (int) get_filter_request_var('id') : 0;
 	if ($edit_device_id > 0) $edit_device = db_fetch_row_prepared("SELECT h.*, ht.name AS template_name, p.name AS poller_name,
 		s.name AS site_name, (SELECT COUNT(*) FROM graph_local WHERE host_id = h.id) AS graph_count,
@@ -252,19 +252,6 @@ if ($tab === 'edit' || $tab === 'graphs') {
 		$page_error = 'The selected Cacti device was not found.';
 		$tab = 'inventory';
 	} elseif ($edit_device) {
-		$device_data_source_items = db_fetch_assoc_prepared("SELECT dl.id AS local_data_id, dl.snmp_query_id,
-			dt.id AS data_template_id, dt.name AS data_template_name, dtr.id AS local_rrd_id,
-			dtr.data_source_name, dtd.name AS data_source_title,
-			COUNT(DISTINCT CASE WHEN gl.host_id = dl.host_id THEN gti.local_graph_id END) AS graph_count
-			FROM data_local AS dl
-			INNER JOIN data_template AS dt ON dt.id = dl.data_template_id
-			INNER JOIN data_template_rrd AS dtr ON dtr.local_data_id = dl.id
-			INNER JOIN data_template_data AS dtd ON dtd.local_data_id = dl.id
-			LEFT JOIN graph_templates_item AS gti ON gti.task_item_id = dtr.id AND gti.local_graph_id > 0
-			LEFT JOIN graph_local AS gl ON gl.id = gti.local_graph_id
-			WHERE dl.host_id = ?
-			GROUP BY dl.id, dl.snmp_query_id, dt.id, dt.name, dtr.id, dtr.data_source_name, dtd.name
-			ORDER BY dtd.name, dt.name, dtr.data_source_name", array($edit_device_id));
 		$device_graph_templates = db_fetch_assoc_prepared("SELECT gt.id, gt.name,
 			MAX(gl.id) AS graph_local_id, COUNT(DISTINCT gl.id) AS graph_count
 			FROM host_graph AS hg INNER JOIN graph_templates AS gt ON gt.id = hg.graph_template_id
@@ -290,6 +277,26 @@ if ($tab === 'edit' || $tab === 'graphs') {
 	}
 }
 
+if ($tab === 'graphs') {
+	$graph_data_template_items = db_fetch_assoc("SELECT dt.id AS data_template_id, dt.name AS data_template_name,
+		dtr.id AS data_template_rrd_id, dtr.data_source_name, dtd.name AS data_source_title,
+		COUNT(DISTINCT gti.graph_template_id) AS graph_template_count
+		FROM data_template_rrd AS dtr
+		INNER JOIN data_template AS dt ON dt.id = dtr.data_template_id
+		INNER JOIN data_template_data AS dtd ON dtd.data_template_id = dt.id AND dtd.local_data_id = 0
+		LEFT JOIN graph_templates_item AS gti ON gti.task_item_id = dtr.id AND gti.local_graph_id = 0
+		WHERE dtr.local_data_id = 0
+		GROUP BY dt.id, dt.name, dtr.id, dtr.data_source_name, dtd.name
+		ORDER BY dt.name, dtr.data_source_name");
+	$global_graph_templates = db_fetch_assoc("SELECT gt.id, gt.name, gt.hash, gtg.width, gtg.height,
+		gtg.image_format_id, gtg.vertical_label, COUNT(DISTINCT gl.id) AS graph_count
+		FROM graph_templates AS gt
+		INNER JOIN graph_templates_graph AS gtg ON gtg.graph_template_id = gt.id AND gtg.local_graph_id = 0
+		LEFT JOIN graph_local AS gl ON gl.graph_template_id = gt.id
+		GROUP BY gt.id, gt.name, gt.hash, gtg.width, gtg.height, gtg.image_format_id, gtg.vertical_label
+		ORDER BY gt.name");
+}
+
 $device_counts = db_fetch_row("SELECT COUNT(*) AS total,
 	SUM(disabled = '') AS enabled, SUM(status = " . HOST_UP . " AND disabled = '') AS up,
 	SUM(status = " . HOST_DOWN . " AND disabled = '') AS down FROM host WHERE deleted = ''");
@@ -312,7 +319,7 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 	<?php if (isset_request_var('device_created')) { ?><div class="nms-form-message success"><strong>Device created</strong><span>Cacti device <?php print (int) get_filter_request_var('device_created'); ?> is ready for polling and graph selection.</span></div><?php } ?>
 	<?php if (isset_request_var('device_updated')) { ?><div class="nms-form-message success"><strong>Device updated</strong><span>The live Cacti device settings were saved successfully.</span></div><?php } ?>
 	<?php if (isset_request_var('graph_template_added')) { ?><div class="nms-form-message success"><strong>Graph template added</strong><span>The Cacti graph-template association is now active for this device.</span></div><?php } ?>
-	<?php if (isset_request_var('graph_created')) { ?><div class="nms-form-message success"><strong>Graph created</strong><span>Cacti graph <?php print (int) get_filter_request_var('graph_created'); ?> now uses the selected existing data-source item.</span></div><?php } ?>
+	<?php if (isset_request_var('graph_template_created')) { ?><div class="nms-form-message success"><strong>Graph template created</strong><span>Cacti graph template <?php print (int) get_filter_request_var('graph_template_created'); ?> is ready to associate with devices from Manage Device.</span></div><?php } ?>
 	<?php if (isset_request_var('data_query_added')) { ?><div class="nms-form-message success"><strong>Data query added</strong><span>The Cacti data query is now associated with this device.</span></div><?php } ?>
 	<?php if (isset_request_var('data_query_changed')) { ?><div class="nms-form-message success"><strong>Re-index method updated</strong><span>The Cacti data-query setting was saved.</span></div><?php } ?>
 	<?php if (isset_request_var('data_query_reloaded')) { ?><div class="nms-form-message success"><strong>Data query reloaded</strong><span>Cacti refreshed the indexed data for this device.</span></div><?php } ?>
@@ -323,7 +330,7 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 		<a class="<?php print $tab === 'inventory' ? 'selected' : ''; ?>" href="?tab=inventory" data-nms-tip="View live Cacti device status, polling totals, data-source counts, graph counts, and management actions.">Device dashboard</a>
 		<a class="<?php print $tab === 'add' ? 'selected' : ''; ?>" href="?tab=add" data-nms-tip="Create a real device in Cacti using the same core fields and defaults.">Add device</a>
 		<?php if ($tab === 'edit') { ?><a class="selected" href="?tab=edit&id=<?php print (int) $edit_device['id']; ?>" data-nms-tip="Edit this live Cacti device and manage its graph templates and data queries.">Edit device</a><?php } ?>
-		<a class="<?php print $tab === 'graphs' ? 'selected' : ''; ?>" href="?tab=graphs<?php print $edit_device ? '&id=' . (int) $edit_device['id'] : ''; ?>" data-nms-tip="Create a complete native Cacti graph template from an existing device data source.">Create graph template</a>
+		<a class="<?php print $tab === 'graphs' ? 'selected' : ''; ?>" href="?tab=graphs" data-nms-tip="Create a reusable native Cacti graph template from a global data-template item; no device is selected or changed.">Create graph template</a>
 		<a class="<?php print $tab === 'import' ? 'selected' : ''; ?>" href="?tab=import" data-nms-tip="Upload a validated SNMPSim record and create the corresponding Cacti templates.">Upload SNMP record</a>
 	</div>
 
