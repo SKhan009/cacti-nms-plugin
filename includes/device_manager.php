@@ -3,6 +3,20 @@
 require_once($config['base_path'] . '/lib/api_device.php');
 
 function nms_device_create($input) {
+	return nms_device_save(0, $input);
+}
+
+function nms_device_update($device_id, $input) {
+	$device_id = (int) $device_id;
+	if ($device_id < 1 || !(int) db_fetch_cell_prepared("SELECT COUNT(*) FROM host WHERE id = ? AND deleted = ''", array($device_id))) {
+		throw new InvalidArgumentException('Select a valid Cacti device.');
+	}
+
+	return nms_device_save($device_id, $input);
+}
+
+function nms_device_save($device_id, $input) {
+	$device_id = (int) $device_id;
 	$description = trim((string) $input['description']);
 	$hostname = trim((string) $input['hostname']);
 	$template_id = (int) $input['host_template_id'];
@@ -43,9 +57,9 @@ function nms_device_create($input) {
 	}
 	if (!(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM host_template WHERE id = ?', array($template_id))) throw new InvalidArgumentException('Select a valid Cacti host template.');
 	if (!(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM poller WHERE id = ?', array($poller_id))) throw new InvalidArgumentException('Select a valid data collector.');
-	if ((int) db_fetch_cell_prepared("SELECT COUNT(*) FROM host WHERE description = ? AND deleted = ''", array($description))) throw new InvalidArgumentException('A Cacti device already uses this name.');
-	if (!$proxy && (int) db_fetch_cell_prepared("SELECT COUNT(*) FROM host WHERE hostname = ? AND snmp_port = ? AND snmp_community = ? AND deleted = ''",
-		array($hostname, $snmp_port, $community))) {
+	if ((int) db_fetch_cell_prepared("SELECT COUNT(*) FROM host WHERE description = ? AND id != ? AND deleted = ''", array($description, $device_id))) throw new InvalidArgumentException('A Cacti device already uses this name.');
+	if (!$proxy && (int) db_fetch_cell_prepared("SELECT COUNT(*) FROM host WHERE hostname = ? AND snmp_port = ? AND snmp_community = ? AND id != ? AND deleted = ''",
+		array($hostname, $snmp_port, $community, $device_id))) {
 		throw new InvalidArgumentException('This SNMP endpoint already exists. Enable proxy/simulator mode to share an address.');
 	}
 
@@ -55,7 +69,7 @@ function nms_device_create($input) {
 	$ping_method = (int) $input['ping_method'];
 	if (!in_array($ping_method, array(PING_ICMP, PING_TCP, PING_UDP), true)) $ping_method = PING_ICMP;
 
-	$device_id = api_device_save(0, $template_id, $description, $hostname,
+	$saved_device_id = api_device_save($device_id, $template_id, $description, $hostname,
 		$community, $snmp_version,
 		$snmp_username, $snmp_password,
 		$snmp_port, $snmp_timeout, !empty($input['disabled']) ? 'on' : '',
@@ -66,6 +80,6 @@ function nms_device_create($input) {
 		trim((string) $input['snmp_context']), trim((string) $input['snmp_engine_id']),
 		(int) $input['max_oids'], (int) $input['device_threads'], $poller_id, $site_id,
 		trim((string) $input['external_id']), trim((string) $input['location']), -1);
-	if (!$device_id) throw new RuntimeException('Cacti could not create the device. Check the submitted SNMP settings.');
-	return (int) $device_id;
+	if (!$saved_device_id) throw new RuntimeException('Cacti could not save the device. Check the submitted SNMP settings.');
+	return (int) $saved_device_id;
 }

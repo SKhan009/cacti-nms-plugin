@@ -9,7 +9,7 @@
 	<div class="nms-panel-head"><div><h2>Cacti device inventory</h2><p>Live details from Cacti core; no copied device records.</p></div><a class="nms-panel-action" href="?tab=add">Add device</a></div>
 	<div class="nms-table-wrap">
 		<table class="nms-table nms-device-table">
-			<thead><tr><th>Device</th><th>State</th><th>SNMP</th><th>Template and category</th><th>Collection</th><th>Availability</th><th>Last update</th><th>Core</th></tr></thead>
+			<thead><tr><th>Device</th><th>State</th><th>SNMP</th><th>Template and category</th><th>Collection</th><th>Availability</th><th>Last update</th><th>Actions</th></tr></thead>
 			<tbody>
 			<?php if (!count($devices)) { ?><tr><td colspan="8" class="nms-empty">No Cacti devices exist yet.</td></tr><?php } ?>
 			<?php foreach ($devices as $device) {
@@ -24,7 +24,7 @@
 				<td><strong><?php print (int) $device['poller_item_count']; ?> poller items</strong><small><?php print (int) $device['data_source_count']; ?> data sources · <?php print (int) $device['graph_count']; ?> graphs</small><small><?php print nms_h($device['poller_name'] ?: 'Main poller'); ?></small></td>
 				<td><strong><?php print nms_h(number_format((float) $device['availability'], 1)); ?>%</strong><small><?php print nms_h(number_format((float) $device['cur_time'], 2)); ?> ms current</small><small><?php print (int) $device['failed_polls']; ?> of <?php print (int) $device['total_polls']; ?> polls failed</small></td>
 				<td class="nms-nowrap"><?php print nms_h(nms_time_ago($device['last_updated'])); ?></td>
-				<td><a class="nms-row-link" href="<?php print nms_h($config['url_path'] . 'host.php?action=edit&id=' . (int) $device['id']); ?>">Open device</a></td>
+				<td><div class="nms-row-actions"><a class="nms-row-link" href="?tab=edit&id=<?php print (int) $device['id']; ?>">Manage</a><a class="nms-row-link secondary" href="<?php print nms_h($config['url_path'] . 'host.php?action=edit&id=' . (int) $device['id']); ?>">Cacti</a></div></td>
 			</tr>
 			<?php } ?>
 			</tbody>

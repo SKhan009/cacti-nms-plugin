@@ -9,7 +9,7 @@ require_once($config['base_path'] . '/plugins/nms/includes/device_manager.php');
 
 nms_setup_database();
 
-$allowed_tabs = array('inventory', 'add', 'import');
+$allowed_tabs = array('inventory', 'add', 'edit', 'import');
 $tab = isset_request_var('tab') ? get_nfilter_request_var('tab') : 'inventory';
 if (!in_array($tab, $allowed_tabs, true)) $tab = 'inventory';
 $page_error = '';
@@ -49,6 +49,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 				'disabled' => isset_request_var('disabled')
 			));
 			header('Location: devices.php?tab=inventory&device_created=' . $device_id);
+			 exit;
+		}
+
+		if ($action === 'update_device') {
+			$device_id = nms_device_update(get_filter_request_var('id'), array(
+				'description' => get_nfilter_request_var('description'),
+				'hostname' => get_nfilter_request_var('hostname'),
+				'host_template_id' => get_filter_request_var('host_template_id'),
+				'site_id' => get_filter_request_var('site_id'),
+				'poller_id' => get_filter_request_var('poller_id'),
+				'snmp_version' => get_filter_request_var('snmp_version'),
+				'snmp_community' => get_nfilter_request_var('snmp_community'),
+				'snmp_port' => get_filter_request_var('snmp_port'),
+				'snmp_timeout' => get_filter_request_var('snmp_timeout'),
+				'snmp_username' => get_nfilter_request_var('snmp_username'),
+				'snmp_password' => get_nfilter_request_var('snmp_password'),
+				'snmp_auth_protocol' => get_nfilter_request_var('snmp_auth_protocol'),
+				'snmp_priv_passphrase' => get_nfilter_request_var('snmp_priv_passphrase'),
+				'snmp_priv_protocol' => get_nfilter_request_var('snmp_priv_protocol'),
+				'snmp_context' => get_nfilter_request_var('snmp_context'),
+				'snmp_engine_id' => get_nfilter_request_var('snmp_engine_id'),
+				'availability_method' => get_filter_request_var('availability_method'),
+				'ping_method' => get_filter_request_var('ping_method'),
+				'ping_port' => get_filter_request_var('ping_port'),
+				'ping_timeout' => get_filter_request_var('ping_timeout'),
+				'ping_retries' => get_filter_request_var('ping_retries'),
+				'max_oids' => get_filter_request_var('max_oids'),
+				'device_threads' => get_filter_request_var('device_threads'),
+				'notes' => get_nfilter_request_var('notes'),
+				'location' => get_nfilter_request_var('location'),
+				'external_id' => get_nfilter_request_var('external_id'),
+				'proxy' => isset_request_var('proxy'),
+				'disabled' => isset_request_var('disabled')
+			));
+			header('Location: devices.php?tab=edit&id=' . $device_id . '&device_updated=1');
 			exit;
 		}
 
@@ -73,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 		}
 	} catch (Throwable $exception) {
 		$page_error = $exception->getMessage();
-		$tab = $action === 'import_snmprec' ? 'import' : 'add';
+		$tab = $action === 'import_snmprec' ? 'import' : ($action === 'update_device' ? 'edit' : 'add');
 	}
 }
 
@@ -122,6 +157,22 @@ $cacti_device_defaults = array(
 	'device_threads' => (int) read_config_option('device_threads')
 );
 
+$edit_device = array();
+if ($tab === 'edit') {
+	$edit_device_id = isset_request_var('id') ? (int) get_filter_request_var('id') : 0;
+	$edit_device = db_fetch_row_prepared("SELECT h.*, ht.name AS template_name, p.name AS poller_name,
+		s.name AS site_name, (SELECT COUNT(*) FROM graph_local WHERE host_id = h.id) AS graph_count,
+		(SELECT COUNT(*) FROM data_local WHERE host_id = h.id) AS data_source_count,
+		(SELECT COUNT(*) FROM poller_item WHERE host_id = h.id) AS poller_item_count
+		FROM host AS h LEFT JOIN host_template AS ht ON ht.id = h.host_template_id
+		LEFT JOIN poller AS p ON p.id = h.poller_id LEFT JOIN sites AS s ON s.id = h.site_id
+		WHERE h.id = ? AND h.deleted = ''", array($edit_device_id));
+	if (!$edit_device) {
+		$page_error = 'The selected Cacti device was not found.';
+		$tab = 'inventory';
+	}
+}
+
 $device_counts = db_fetch_row("SELECT COUNT(*) AS total,
 	SUM(disabled = '') AS enabled, SUM(status = " . HOST_UP . " AND disabled = '') AS up,
 	SUM(status = " . HOST_DOWN . " AND disabled = '') AS down FROM host WHERE deleted = ''");
@@ -142,11 +193,13 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 
 	<?php if ($page_error !== '') { ?><div class="nms-form-message error"><strong>Could not complete the request</strong><span><?php print nms_h($page_error); ?></span></div><?php } ?>
 	<?php if (isset_request_var('device_created')) { ?><div class="nms-form-message success"><strong>Device created</strong><span>Cacti device <?php print (int) get_filter_request_var('device_created'); ?> is ready for polling and graph selection.</span></div><?php } ?>
+	<?php if (isset_request_var('device_updated')) { ?><div class="nms-form-message success"><strong>Device updated</strong><span>The live Cacti device settings were saved successfully.</span></div><?php } ?>
 	<?php if (isset_request_var('imported')) { ?><div class="nms-form-message success"><strong>SNMP record imported</strong><span>The simulator file and Cacti templates were created successfully.</span></div><?php } ?>
 
 	<div class="nms-page-tabs" role="tablist" aria-label="Device management views">
 		<a class="<?php print $tab === 'inventory' ? 'selected' : ''; ?>" href="?tab=inventory">Device dashboard</a>
 		<a class="<?php print $tab === 'add' ? 'selected' : ''; ?>" href="?tab=add">Add device</a>
+		<?php if ($tab === 'edit') { ?><a class="selected" href="?tab=edit&id=<?php print (int) $edit_device['id']; ?>">Edit device</a><?php } ?>
 		<a class="<?php print $tab === 'import' ? 'selected' : ''; ?>" href="?tab=import">Upload SNMP record</a>
 	</div>
 
