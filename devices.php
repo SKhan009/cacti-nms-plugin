@@ -103,6 +103,25 @@ $imports = db_fetch_assoc("SELECT i.*, c.name AS category_name, ht.name AS host_
 	LEFT JOIN host_template AS ht ON ht.id = i.host_template_id
 	LEFT JOIN user_auth AS u ON u.id = i.uploaded_by ORDER BY i.id DESC LIMIT 50");
 
+$cacti_device_defaults = array(
+	'snmp_version' => (int) read_config_option('snmp_version'),
+	'snmp_community' => (string) read_config_option('snmp_community'),
+	'snmp_port' => (int) read_config_option('snmp_port'),
+	'snmp_timeout' => (int) read_config_option('snmp_timeout'),
+	'snmp_username' => (string) read_config_option('snmp_username'),
+	'snmp_password' => (string) read_config_option('snmp_password'),
+	'snmp_auth_protocol' => (string) read_config_option('snmp_auth_protocol'),
+	'snmp_priv_protocol' => (string) read_config_option('snmp_priv_protocol'),
+	'snmp_priv_passphrase' => (string) read_config_option('snmp_priv_passphrase'),
+	'availability_method' => (int) read_config_option('availability_method'),
+	'ping_method' => (int) read_config_option('ping_method'),
+	'ping_port' => (int) read_config_option('ping_port'),
+	'ping_timeout' => (int) read_config_option('ping_timeout'),
+	'ping_retries' => (int) read_config_option('ping_retries'),
+	'max_oids' => (int) read_config_option('max_get_size'),
+	'device_threads' => (int) read_config_option('device_threads')
+);
+
 $device_counts = db_fetch_row("SELECT COUNT(*) AS total,
 	SUM(disabled = '') AS enabled, SUM(status = " . HOST_UP . " AND disabled = '') AS up,
 	SUM(status = " . HOST_DOWN . " AND disabled = '') AS down FROM host WHERE deleted = ''");
