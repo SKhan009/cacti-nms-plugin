@@ -258,6 +258,11 @@
 	padding: 16px 20px;
 }
 
+.nms-association-add.top {
+	border-bottom: 1px solid #e1e9e3;
+	border-top: 1px solid #e1e9e3;
+}
+
 .nms-association-add.query {
 	grid-template-columns: minmax(0, 1.4fr) minmax(240px, .6fr) auto;
 }
