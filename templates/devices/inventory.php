@@ -24,7 +24,7 @@
 				<td><strong><?php print (int) $device['poller_item_count']; ?> poller items</strong><small><?php print (int) $device['data_source_count']; ?> data sources · <?php print (int) $device['graph_count']; ?> graphs</small><small><?php print nms_h($device['poller_name'] ?: 'Main poller'); ?></small></td>
 				<td><strong><?php print nms_h(number_format((float) $device['availability'], 1)); ?>%</strong><small><?php print nms_h(number_format((float) $device['cur_time'], 2)); ?> ms current</small><small><?php print (int) $device['failed_polls']; ?> of <?php print (int) $device['total_polls']; ?> polls failed</small></td>
 				<td class="nms-nowrap"><?php print nms_h(nms_time_ago($device['last_updated'])); ?></td>
-				<td><div class="nms-row-actions"><a class="nms-row-link" href="?tab=edit&id=<?php print (int) $device['id']; ?>">Manage</a><a class="nms-row-link secondary" href="<?php print nms_h($config['url_path'] . 'host.php?action=edit&id=' . (int) $device['id']); ?>">Cacti</a></div></td>
+				<td><div class="nms-row-actions" style="align-items:center;display:flex;gap:8px;"><a class="nms-row-link" href="?tab=edit&id=<?php print (int) $device['id']; ?>">Manage</a><a class="nms-row-link secondary" href="<?php print nms_h($config['url_path'] . 'host.php?action=edit&id=' . (int) $device['id']); ?>">Cacti</a></div></td>
 			</tr>
 			<?php } ?>
 			</tbody>
