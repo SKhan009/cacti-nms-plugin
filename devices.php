@@ -111,7 +111,8 @@ $nms_asset_base = $config['url_path'] . 'plugins/nms/';
 $nms_backend_url = $config['url_path'] . 'index.php';
 $nms_active_module = 'devices';
 $nms_page_title = 'NMS · Device Management';
-$nms_extra_css = 'css/nms-devices.css?v=1.0.0';
+$nms_extra_css = 'css/nms-devices.css?v=1.1.0';
+$nms_extra_js = 'js/nms-devices.js?v=1.1.0';
 require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 ?>
 <main class="nms-shell nms-devices-shell">

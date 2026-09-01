@@ -1,3 +1,4 @@
+<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-snmp-form.css?v=1.0.0'); ?>">
 <section class="nms-panel nms-form-panel">
 	<div class="nms-panel-head"><div><h2>Add a Cacti device</h2><p>Uses the same Cacti device API as the core console.</p></div></div>
 	<form method="post" action="devices.php?tab=add" class="nms-device-form">
@@ -12,18 +13,21 @@
 			<label><span>Location</span><input name="location" placeholder="Building / rack"></label>
 		</div></fieldset>
 
-		<fieldset><legend>SNMP connection</legend><div class="nms-form-grid">
-			<label><span>SNMP version</span><select name="snmp_version"><option value="2">Version 2c</option><option value="1">Version 1</option><option value="3">Version 3</option></select></label>
-			<label><span>Community (v1/v2c)</span><input name="snmp_community" value="<?php print isset_request_var('snmp_community') ? nms_h(get_nfilter_request_var('snmp_community')) : ''; ?>" placeholder="sim-router"></label>
+		<?php $selected_snmp_version = isset_request_var('snmp_version') ? (int) get_filter_request_var('snmp_version') : 2; ?>
+		<fieldset class="nms-snmp-fieldset"><legend>SNMP connection</legend>
+			<p class="nms-snmp-mode-note" id="nmsSnmpModeNote" aria-live="polite"></p>
+			<div class="nms-form-grid">
+			<label><span>SNMP version</span><select id="nmsSnmpVersion" name="snmp_version"><option value="2" <?php print $selected_snmp_version === 2 ? 'selected' : ''; ?>>Version 2c</option><option value="1" <?php print $selected_snmp_version === 1 ? 'selected' : ''; ?>>Version 1</option><option value="3" <?php print $selected_snmp_version === 3 ? 'selected' : ''; ?>>Version 3</option></select></label>
+			<label class="nms-conditional-field" data-snmp-versions="1,2"><span>Community (v1/v2c)</span><input id="nmsSnmpCommunity" name="snmp_community" value="<?php print isset_request_var('snmp_community') ? nms_h(get_nfilter_request_var('snmp_community')) : ''; ?>" placeholder="sim-router"></label>
 			<label><span>SNMP port</span><input type="number" min="1" max="65535" name="snmp_port" value="<?php print isset_request_var('snmp_port') ? (int) get_filter_request_var('snmp_port') : 161; ?>"></label>
 			<label><span>Timeout (ms)</span><input type="number" min="100" max="10000" name="snmp_timeout" value="1000"></label>
-			<label><span>SNMP v3 username</span><input name="snmp_username"></label>
-			<label><span>SNMP v3 authentication</span><select name="snmp_auth_protocol"><option value="[None]">None</option><option value="MD5">MD5</option><option value="SHA">SHA</option><option value="SHA256">SHA256</option></select></label>
-			<label><span>SNMP v3 password</span><input type="password" name="snmp_password" autocomplete="new-password"></label>
-			<label><span>SNMP v3 privacy</span><select name="snmp_priv_protocol"><option value="[None]">None</option><option value="DES">DES</option><option value="AES">AES</option><option value="AES128">AES128</option></select></label>
-			<label><span>Privacy passphrase</span><input type="password" name="snmp_priv_passphrase" autocomplete="new-password"></label>
-			<label><span>SNMP context</span><input name="snmp_context"></label>
-			<label><span>SNMP engine ID</span><input name="snmp_engine_id"></label>
+			<label class="nms-conditional-field" data-snmp-versions="3"><span>SNMP v3 username</span><input id="nmsSnmpUsername" name="snmp_username"></label>
+			<label class="nms-conditional-field" data-snmp-versions="3"><span>SNMP v3 authentication</span><select id="nmsSnmpAuthProtocol" name="snmp_auth_protocol"><option value="[None]">None (no authentication)</option><option value="MD5">MD5</option><option value="SHA">SHA</option><option value="SHA224">SHA224</option><option value="SHA256">SHA256</option><option value="SHA392">SHA392</option><option value="SHA512">SHA512</option></select></label>
+			<label class="nms-conditional-field" data-snmp-versions="3" data-snmp-auth-required="1"><span>Authentication password</span><input id="nmsSnmpPassword" type="password" minlength="8" name="snmp_password" autocomplete="new-password"><small>At least 8 characters</small></label>
+			<label class="nms-conditional-field" data-snmp-versions="3" data-snmp-auth-enabled="1"><span>SNMP v3 privacy</span><select id="nmsSnmpPrivProtocol" name="snmp_priv_protocol"><option value="[None]">None (no encryption)</option><option value="DES">DES</option><option value="AES">AES</option><option value="AES128">AES128</option><option value="AES192">AES192</option><option value="AES192C">AES192C</option><option value="AES256">AES256</option><option value="AES256C">AES256C</option></select></label>
+			<label class="nms-conditional-field" data-snmp-versions="3" data-snmp-privacy-required="1"><span>Privacy passphrase</span><input id="nmsSnmpPrivPassphrase" type="password" minlength="8" name="snmp_priv_passphrase" autocomplete="new-password"><small>At least 8 characters</small></label>
+			<label class="nms-conditional-field" data-snmp-versions="3"><span>SNMP context</span><input id="nmsSnmpContext" name="snmp_context"></label>
+			<label class="nms-conditional-field" data-snmp-versions="3"><span>SNMP engine ID</span><input id="nmsSnmpEngineId" name="snmp_engine_id"></label>
 		</div></fieldset>
 
 		<fieldset><legend>Availability and polling</legend><div class="nms-form-grid">

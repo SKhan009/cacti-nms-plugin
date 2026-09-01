@@ -1,0 +1,16 @@
+.nms-conditional-field[hidden] {
+	display: none !important;
+}
+
+.nms-snmp-mode-note {
+	color: #718078;
+	font-size: 12px;
+	margin: -2px 0 14px;
+}
+
+.nms-form-grid label small {
+	color: #849087;
+	font-size: 10px;
+	font-weight: 500;
+	margin-top: 4px;
+}
