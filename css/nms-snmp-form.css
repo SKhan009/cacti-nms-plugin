@@ -36,6 +36,9 @@
 
 .nms-device-overview {
 	margin-bottom: 18px;
+	overflow: visible;
+	position: relative;
+	z-index: 20;
 }
 
 .nms-device-facts {
@@ -147,6 +150,8 @@
 	top: calc(100% + 7px);
 	width: 310px;
 	z-index: 30;
+	max-height: min(460px, calc(100vh - 150px));
+	overflow-y: auto;
 }
 
 .nms-device-tools-menu nav a {
