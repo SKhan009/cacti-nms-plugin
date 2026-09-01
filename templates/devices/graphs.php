@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-snmp-form.css?v=1.8.2'); ?>">
+<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-snmp-form.css?v=1.8.3'); ?>">
 <section class="nms-panel nms-graph-device-picker">
 	<div>
 		<h2>Create graph template</h2>
