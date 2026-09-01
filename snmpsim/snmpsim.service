@@ -1,0 +1,19 @@
+[Unit]
+Description=NMS SNMP device simulator
+After=network.target
+
+[Service]
+Type=simple
+User=snmpsim
+Group=snmpsim
+ExecStart=/opt/snmpsim/venv/bin/snmpsim-command-responder --data-dir=/opt/snmpsim/data --agent-udpv4-endpoint=127.0.0.1:1161
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/opt/snmpsim
+
+[Install]
+WantedBy=multi-user.target

@@ -65,3 +65,10 @@ system-log messages are not shown on this page.
 The left navigation sidebar can be opened or collapsed from the menu button in the
 header. Acknowledgements are recorded against Cacti's authenticated user and move an
 incident from **Open** to **Acknowledged** without modifying Cacti core.
+
+## SNMP test devices
+
+The repository includes a reproducible SNMPSim lab under `snmpsim/`. It supplies a
+router, Linux server, and environmental sensor on the VM loopback interface for testing
+real Cacti SNMP collection and NMS fault rules. See `snmpsim/README.md` for the endpoint,
+community names, readings, and VM layout.

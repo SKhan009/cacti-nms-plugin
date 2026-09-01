@@ -1,5 +1,22 @@
 # VM configuration changes
 
+## 2026-09-01 — SNMPSim lab devices
+
+SNMPSim 1.2.2 was installed in an isolated Python 3.11 environment at
+`/opt/snmpsim/venv`. Its systemd service runs as the unprivileged `snmpsim` account,
+starts at boot, and listens only on `127.0.0.1:1161`. The VM's existing Net-SNMP service
+continues to own port 161.
+
+Three SNMP v2c devices were added through Cacti's supported CLI:
+
+- Device 3, **NMS Simulated Router**, community `sim-router`, Cisco Router template;
+- Device 4, **NMS Simulated Server**, community `sim-server`, Net-SNMP Device template;
+- Device 5, **NMS Simulated Sensor**, community `sim-sensor`, AKCP Device template.
+
+After reindexing and a forced poller run, all three devices reported Up with 100%
+availability. Simulator records, Python requirements, the service unit, and operating
+notes are backed up under `snmpsim/` in this repository. No Cacti core file was changed.
+
 ## 2026-08-31 — Dynamic Cacti topology module
 
 NMS version 1.6.0 adds a Topology module with the same shared header and sidebar as the
