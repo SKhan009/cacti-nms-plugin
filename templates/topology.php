@@ -41,8 +41,19 @@
 			<div id="nmsTopologyInventory" class="nms-inventory-list"></div>
 		</aside>
 		<section class="nms-panel nms-map-panel">
-			<div class="nms-topology-panel-head nms-map-head"><div><span>LIVE CACTI DATA</span><h2>Network topology</h2></div><button id="nmsRefreshTopology" type="button">Refresh from Cacti</button></div>
-			<div id="nmsTopologyCanvas" class="nms-topology-canvas"><svg id="nmsTopologyLinks" aria-hidden="true"></svg><div class="nms-drop-guide">Drop Cacti devices here</div></div>
+			<div class="nms-topology-panel-head nms-map-head">
+				<div><span>LIVE CACTI DATA</span><h2>Network topology</h2></div>
+				<div class="nms-map-actions">
+					<div class="nms-zoom-controls" role="group" aria-label="Topology zoom controls">
+						<button id="nmsZoomOut" type="button" title="Zoom out" aria-label="Zoom out">−</button>
+						<output id="nmsZoomLevel" aria-live="polite">100%</output>
+						<button id="nmsZoomIn" type="button" title="Zoom in" aria-label="Zoom in">+</button>
+						<button id="nmsZoomFit" class="fit" type="button" title="Fit all mapped devices to the screen">Fit</button>
+					</div>
+					<button id="nmsRefreshTopology" class="refresh" type="button">Refresh from Cacti</button>
+				</div>
+			</div>
+			<div id="nmsTopologyCanvas" class="nms-topology-canvas"><div id="nmsTopologyWorld" class="nms-topology-world"><svg id="nmsTopologyLinks" aria-hidden="true"></svg></div><div class="nms-drop-guide">Drop Cacti devices here</div></div>
 		</section>
 		<aside class="nms-panel nms-device-detail" id="nmsTopologyDetail"><div class="nms-detail-empty">Select a mapped device to see its Cacti information.</div></aside>
 	</div>

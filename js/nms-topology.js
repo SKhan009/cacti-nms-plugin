@@ -5,9 +5,16 @@
 
 	var inventory = document.getElementById('nmsTopologyInventory');
 	var canvas = document.getElementById('nmsTopologyCanvas');
+	var world = document.getElementById('nmsTopologyWorld');
 	var links = document.getElementById('nmsTopologyLinks');
 	var detail = document.getElementById('nmsTopologyDetail');
 	var search = document.getElementById('nmsTopologySearch');
+	var zoomLevel = document.getElementById('nmsZoomLevel');
+	var zoom = 1;
+	var panX = 0;
+	var panY = 0;
+	var minZoom = 0.5;
+	var maxZoom = 2;
 	var selectedId = config.rootId;
 	var deviceById = {};
 	config.devices.forEach(function (device) { deviceById[device.id] = device; });
@@ -23,6 +30,62 @@
 	}
 	function healthClass(device) { return device.fault_count > 0 ? device.fault_severity : statusClass(device.status); }
 	function healthLabel(device) { return device.fault_count > 0 ? device.fault_severity + ' fault' : device.status; }
+	function clampZoom(value) { return Math.max(minZoom, Math.min(maxZoom, Math.round(value * 10) / 10)); }
+
+	function applyView() {
+		world.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + zoom + ')';
+		zoomLevel.value = Math.round(zoom * 100) + '%';
+		zoomLevel.textContent = zoomLevel.value;
+		canvas.classList.toggle('zoomed', zoom !== 1 || panX !== 0 || panY !== 0);
+	}
+
+	function zoomAt(nextZoom, clientX, clientY) {
+		nextZoom = clampZoom(nextZoom);
+		if (nextZoom === zoom) return;
+		var bounds = canvas.getBoundingClientRect();
+		var originX = bounds.width / 2;
+		var originY = bounds.height / 2;
+		var pointX = clientX == null ? originX : clientX - bounds.left;
+		var pointY = clientY == null ? originY : clientY - bounds.top;
+		var worldX = originX + (pointX - originX - panX) / zoom;
+		var worldY = originY + (pointY - originY - panY) / zoom;
+		zoom = nextZoom;
+		panX = pointX - originX - zoom * (worldX - originX);
+		panY = pointY - originY - zoom * (worldY - originY);
+		applyView();
+	}
+
+	function screenToWorld(clientX, clientY) {
+		var bounds = canvas.getBoundingClientRect();
+		var originX = bounds.width / 2;
+		var originY = bounds.height / 2;
+		return {
+			x: originX + (clientX - bounds.left - originX - panX) / zoom,
+			y: originY + (clientY - bounds.top - originY - panY) / zoom,
+			width: bounds.width,
+			height: bounds.height
+		};
+	}
+
+	function fitToScreen() {
+		var mapped = config.devices.filter(function (device) { return device.mapped; });
+		var bounds = canvas.getBoundingClientRect();
+		if (!mapped.length || !bounds.width || !bounds.height) {
+			zoom = 1; panX = 0; panY = 0; applyView(); return;
+		}
+		var points = mapped.map(function (device) {
+			var point = device.x == null ? defaultPosition(device) : device;
+			return { x: bounds.width * point.x / 100, y: bounds.height * point.y / 100 };
+		});
+		var minX = Math.min.apply(null, points.map(function (point) { return point.x; }));
+		var maxX = Math.max.apply(null, points.map(function (point) { return point.x; }));
+		var minY = Math.min.apply(null, points.map(function (point) { return point.y; }));
+		var maxY = Math.max.apply(null, points.map(function (point) { return point.y; }));
+		zoom = clampZoom(Math.min((bounds.width - 50) / Math.max(180, maxX - minX + 180), (bounds.height - 50) / Math.max(90, maxY - minY + 90), 1.4));
+		panX = zoom * (bounds.width / 2 - (minX + maxX) / 2);
+		panY = zoom * (bounds.height / 2 - (minY + maxY) / 2);
+		applyView();
+	}
 
 	function post(action, device, extra) {
 		var body = new URLSearchParams();
@@ -61,7 +124,7 @@
 	}
 
 	function renderCanvas() {
-		canvas.querySelectorAll('.nms-topology-node').forEach(function (element) { element.remove(); });
+		world.querySelectorAll('.nms-topology-node').forEach(function (element) { element.remove(); });
 		config.devices.filter(function (device) { return device.mapped; }).forEach(function (device) {
 			var fallback = defaultPosition(device);
 			var x = device.x == null ? fallback.x : device.x;
@@ -73,7 +136,7 @@
 			node.innerHTML = '<span class="nms-device-glyph ' + healthClass(device) + '">' + (device.locked ? 'SW' : 'DV') + '</span><span><strong>' + escapeHtml(device.name) + '</strong><small>' + escapeHtml(device.hostname) + '</small></span><i></i>';
 			node.addEventListener('click', function () { selectedId = device.id; renderAll(); });
 			if (!device.locked) node.addEventListener('pointerdown', function (event) { startMove(event, device); });
-			canvas.appendChild(node);
+			world.appendChild(node);
 		});
 		requestAnimationFrame(renderLinks);
 	}
@@ -125,10 +188,10 @@
 
 	function startMove(event, device) {
 		event.preventDefault(); selectedId = device.id;
-		var bounds = canvas.getBoundingClientRect();
 		function move(pointerEvent) {
-			device.x = Math.max(8, Math.min(92, (pointerEvent.clientX - bounds.left) * 100 / bounds.width));
-			device.y = Math.max(10, Math.min(90, (pointerEvent.clientY - bounds.top) * 100 / bounds.height));
+			var point = screenToWorld(pointerEvent.clientX, pointerEvent.clientY);
+			device.x = Math.max(8, Math.min(92, point.x * 100 / point.width));
+			device.y = Math.max(10, Math.min(90, point.y * 100 / point.height));
 			renderCanvas();
 		}
 		function stop() { window.removeEventListener('pointermove', move); saveDevice(device).catch(showError); }
@@ -144,14 +207,40 @@
 		event.preventDefault(); canvas.classList.remove('drag-active');
 		var device = deviceById[Number(event.dataTransfer.getData('text/nms-host-id'))];
 		if (!device || device.locked) return;
-		var bounds = canvas.getBoundingClientRect();
-		device.x = Math.max(8, Math.min(92, (event.clientX - bounds.left) * 100 / bounds.width));
-		device.y = Math.max(10, Math.min(90, (event.clientY - bounds.top) * 100 / bounds.height));
+		var point = screenToWorld(event.clientX, event.clientY);
+		device.x = Math.max(8, Math.min(92, point.x * 100 / point.width));
+		device.y = Math.max(10, Math.min(90, point.y * 100 / point.height));
 		device.parent_id = device.parent_id || config.rootId; device.mapped = true; selectedId = device.id;
 		saveDevice(device).then(renderAll).catch(showError);
 	});
 	search.addEventListener('input', renderInventory);
+	document.getElementById('nmsZoomOut').addEventListener('click', function () { zoomAt(zoom - 0.1); });
+	document.getElementById('nmsZoomIn').addEventListener('click', function () { zoomAt(zoom + 0.1); });
+	document.getElementById('nmsZoomFit').addEventListener('click', fitToScreen);
+	canvas.addEventListener('wheel', function (event) {
+		event.preventDefault();
+		zoomAt(zoom + (event.deltaY < 0 ? 0.1 : -0.1), event.clientX, event.clientY);
+	}, { passive: false });
+	canvas.addEventListener('pointerdown', function (event) {
+		if (event.button !== 0 || event.target.closest('.nms-topology-node')) return;
+		var startX = event.clientX;
+		var startY = event.clientY;
+		var initialPanX = panX;
+		var initialPanY = panY;
+		canvas.classList.add('panning');
+		function pan(pointerEvent) {
+			panX = initialPanX + pointerEvent.clientX - startX;
+			panY = initialPanY + pointerEvent.clientY - startY;
+			applyView();
+		}
+		function stopPan() {
+			canvas.classList.remove('panning');
+			window.removeEventListener('pointermove', pan);
+		}
+		window.addEventListener('pointermove', pan);
+		window.addEventListener('pointerup', stopPan, { once: true });
+	});
 	document.getElementById('nmsRefreshTopology').addEventListener('click', function () { window.location.reload(); });
-	window.addEventListener('resize', renderLinks);
-	renderAll();
+	window.addEventListener('resize', function () { renderLinks(); applyView(); });
+	renderAll(); applyView();
 })();
