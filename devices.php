@@ -8,6 +8,7 @@ require_once($config['base_path'] . '/plugins/nms/includes/template_manager.php'
 require_once($config['base_path'] . '/plugins/nms/includes/device_manager.php');
 
 nms_setup_database();
+nms_template_upgrade_readable_names();
 
 $allowed_tabs = array('inventory', 'add', 'edit', 'graphs', 'import');
 $tab = isset_request_var('tab') ? get_nfilter_request_var('tab') : 'inventory';

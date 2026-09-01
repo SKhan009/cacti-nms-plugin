@@ -19,14 +19,34 @@ function nms_template_host($name) {
 	return (int) $id;
 }
 
-function nms_template_data_source_name($oid) {
-	return 'nms_' . substr(sha1($oid), 0, 15);
+function nms_template_known_oid_label($oid) {
+	$labels = array(
+		'1.3.6.1.2.1.1.3.0' => 'System uptime',
+		'1.3.6.1.2.1.1.5.0' => 'Device name'
+	);
+	return $labels[$oid] ?? '';
 }
 
 function nms_template_record_label($record) {
-	$section = trim((string) $record['section']);
-	$suffix = implode('.', array_slice(explode('.', $record['oid']), -4));
-	return substr(($section !== '' ? $section : 'SNMP reading') . ' [' . $suffix . ']', 0, 150);
+	$known_label = nms_template_known_oid_label((string) $record['oid']);
+	if ($known_label !== '') return $known_label;
+
+	$section = trim(preg_replace('/[_-]+/', ' ', (string) $record['section']));
+	$section = trim(preg_replace('/\s+/', ' ', $section));
+	if ($section === '') $section = 'SNMP reading';
+	if ((int) ($record['reading_total'] ?? 1) > 1) {
+		$section .= ' - Reading ' . max(1, (int) ($record['reading_index'] ?? 1));
+	}
+	return substr($section, 0, 150);
+}
+
+function nms_template_data_source_name($record) {
+	$label = strtolower(nms_template_record_label($record));
+	$label = trim(preg_replace('/[^a-z0-9]+/', '_', $label), '_');
+	if ($label === '') $label = 'reading';
+	$index = max(1, (int) ($record['reading_index'] ?? 1));
+	$suffix = '_' . $index;
+	return 'nms_' . substr($label, 0, 19 - 4 - strlen($suffix)) . $suffix;
 }
 
 function nms_template_pair($template_name, $record) {
@@ -58,7 +78,7 @@ function nms_template_pair($template_name, $record) {
 	db_execute_prepared('UPDATE data_template_data SET name = ? WHERE id = ?',
 		array('|host_description| - ' . $label, $data_template_data_id));
 	db_execute_prepared('UPDATE data_template_rrd SET data_source_name = ?, data_source_type_id = ? WHERE id = ?',
-		array(nms_template_data_source_name($record['oid']), $data_source_type_id, $data_template_rrd_id));
+		array(nms_template_data_source_name($record), $data_source_type_id, $data_template_rrd_id));
 	db_execute_prepared('UPDATE data_input_data SET t_value = ?, value = ?
 		WHERE data_template_data_id = ? AND data_input_field_id = ?',
 		array('', $record['oid'], $data_template_data_id, $oid_field_id));
@@ -84,7 +104,13 @@ function nms_template_import($original_name, $community, $template_name, $catego
 	}
 
 	$graphable_count = 0;
-	foreach ($records as $record) if ($record['graphable']) $graphable_count++;
+	$section_totals = array();
+	foreach ($records as $record) {
+		if (!$record['graphable']) continue;
+		$graphable_count++;
+		$section_key = strtolower(trim((string) $record['section']));
+		$section_totals[$section_key] = ($section_totals[$section_key] ?? 0) + 1;
+	}
 	if ($graphable_count === 0) throw new InvalidArgumentException('The file has no numeric readings that Cacti can graph.');
 	if ($graphable_count > 64) throw new InvalidArgumentException('A single import can create at most 64 graphable readings.');
 
@@ -104,10 +130,15 @@ function nms_template_import($original_name, $community, $template_name, $catego
 		));
 		$import_id = (int) db_fetch_cell('SELECT LAST_INSERT_ID()');
 
+		$section_positions = array();
 		foreach ($records as $record) {
 			$data_template_id = 0;
 			$graph_template_id = 0;
 			if ($record['graphable']) {
+				$section_key = strtolower(trim((string) $record['section']));
+				$section_positions[$section_key] = ($section_positions[$section_key] ?? 0) + 1;
+				$record['reading_index'] = $section_positions[$section_key];
+				$record['reading_total'] = $section_totals[$section_key];
 				$pair = nms_template_pair($template_name, $record);
 				$data_template_id = $pair['data_template_id'];
 				$graph_template_id = $pair['graph_template_id'];
@@ -133,4 +164,48 @@ function nms_template_import($original_name, $community, $template_name, $catego
 		if ($target_path !== '' && is_file($target_path)) @unlink($target_path);
 		throw $exception;
 	}
+}
+
+function nms_template_upgrade_readable_names() {
+	$migration_key = 'readable_template_names_v1';
+	if ((string) db_fetch_cell_prepared('SELECT meta_value FROM plugin_nms_meta WHERE meta_key = ?', array($migration_key)) === 'done') return;
+
+	$rows = db_fetch_assoc("SELECT o.id, o.import_id, o.oid, o.section_name AS section,
+		o.data_template_id, o.graph_template_id, i.template_name
+		FROM plugin_nms_snmprec_oids AS o
+		INNER JOIN plugin_nms_snmprec_imports AS i ON i.id = o.import_id
+		WHERE o.graphable = 'on' AND o.data_template_id > 0 AND o.graph_template_id > 0
+		ORDER BY o.import_id, o.id");
+	$totals = array();
+	foreach ($rows as $row) {
+		$key = (int) $row['import_id'] . ':' . strtolower(trim((string) $row['section']));
+		$totals[$key] = ($totals[$key] ?? 0) + 1;
+	}
+
+	$positions = array();
+	foreach ($rows as $row) {
+		$key = (int) $row['import_id'] . ':' . strtolower(trim((string) $row['section']));
+		$positions[$key] = ($positions[$key] ?? 0) + 1;
+		$record = array(
+			'oid' => $row['oid'], 'section' => $row['section'],
+			'reading_index' => $positions[$key], 'reading_total' => $totals[$key]
+		);
+		$label = nms_template_record_label($record);
+		$prefix = preg_match('/^NMS\b/i', $row['template_name']) ? $row['template_name'] : 'NMS ' . $row['template_name'];
+		$object_name = substr($prefix . ' - ' . $label, 0, 190);
+		$data_template_id = (int) $row['data_template_id'];
+		$graph_template_id = (int) $row['graph_template_id'];
+
+		db_execute_prepared('UPDATE data_template SET name = ? WHERE id = ?', array($object_name, $data_template_id));
+		db_execute_prepared('UPDATE data_template_data SET name = ? WHERE data_template_id = ? AND local_data_id = 0',
+			array('|host_description| - ' . $label, $data_template_id));
+		db_execute_prepared('UPDATE data_template_rrd SET data_source_name = ? WHERE data_template_id = ? AND local_data_id = 0',
+			array(nms_template_data_source_name($record), $data_template_id));
+		db_execute_prepared('UPDATE graph_templates SET name = ? WHERE id = ?', array($object_name, $graph_template_id));
+		db_execute_prepared('UPDATE graph_templates_graph SET title = ?, vertical_label = ? WHERE graph_template_id = ? AND local_graph_id = 0',
+			array('|host_description| - ' . $label, substr($label, 0, 20), $graph_template_id));
+	}
+
+	db_execute_prepared("INSERT INTO plugin_nms_meta (meta_key, meta_value, updated_at) VALUES (?, 'done', NOW())
+		ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value), updated_at = NOW()", array($migration_key));
 }
