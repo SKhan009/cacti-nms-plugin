@@ -10,7 +10,7 @@ $selected_template_id = isset_request_var('host_template_id') ? (int) get_filter
 $selected_site_id = isset_request_var('site_id') ? (int) get_filter_request_var('site_id') : (int) ($device_values['site_id'] ?? 0);
 $selected_poller_id = isset_request_var('poller_id') ? (int) get_filter_request_var('poller_id') : (int) ($device_values['poller_id'] ?? 1);
 ?>
-<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-snmp-form.css?v=1.2.0'); ?>">
+<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-snmp-form.css?v=1.4.0'); ?>">
 <section class="nms-panel nms-form-panel">
 	<div class="nms-panel-head"><div><h2><?php print $device_form_is_edit ? 'Edit ' . nms_h($device_values['description']) : 'Add a Cacti device'; ?></h2><p><?php print $device_form_is_edit ? 'Live settings from Cacti core. Saving updates this device directly.' : 'Uses the same Cacti device API as the core console.'; ?></p></div><?php if ($device_form_is_edit) { ?><span class="nms-device-id">Device ID <?php print (int) $device_values['id']; ?></span><?php } ?></div>
 	<form method="post" action="devices.php?tab=<?php print $device_form_is_edit ? 'edit&id=' . (int) $device_values['id'] : 'add'; ?>" class="nms-device-form">

@@ -35,7 +35,7 @@
 }
 
 .nms-device-overview {
-	margin: 0;
+	margin-bottom: 18px;
 }
 
 .nms-device-facts {
@@ -99,55 +99,54 @@
 	display: block;
 }
 
-.nms-device-edit-top {
-	align-items: start;
-	display: grid;
-	gap: 18px;
-	grid-template-columns: minmax(0, 1fr) 320px;
-	margin-bottom: 18px;
+.nms-overview-actions {
+	align-items: center;
+	display: flex;
+	gap: 8px;
 }
 
 .nms-device-tools-menu {
-	position: sticky;
-	top: 82px;
+	position: relative;
 }
 
-.nms-device-tools-title {
+.nms-device-tools-menu summary {
 	align-items: center;
 	background: #174e2d;
+	border-radius: 7px;
 	color: #fff;
+	cursor: pointer;
 	display: flex;
-	justify-content: space-between;
-	padding: 15px 17px;
-}
-
-.nms-device-tools-title span,
-.nms-device-tools-title strong {
-	display: block;
-}
-
-.nms-device-tools-title span {
-	font-size: 9px;
+	font-size: 11px;
 	font-weight: 800;
-	letter-spacing: .13em;
-	text-transform: uppercase;
+	gap: 10px;
+	height: 36px;
+	list-style: none;
+	padding: 0 12px;
 }
 
-.nms-device-tools-title strong {
-	font-size: 15px;
-	margin-top: 2px;
+.nms-device-tools-menu summary::-webkit-details-marker {
+	display: none;
 }
 
-.nms-device-tools-title small {
-	background: rgba(255, 255, 255, .14);
+.nms-device-tools-menu summary small {
+	background: rgba(255, 255, 255, .15);
 	border-radius: 999px;
-	font-size: 10px;
-	padding: 5px 8px;
+	font-size: 9px;
+	padding: 4px 6px;
 }
 
 .nms-device-tools-menu nav {
+	background: #fff;
+	border: 1px solid #dce6de;
+	border-radius: 9px;
+	box-shadow: 0 14px 35px rgba(18, 55, 31, .16);
 	display: grid;
+	position: absolute;
 	padding: 8px;
+	right: 0;
+	top: calc(100% + 7px);
+	width: 310px;
+	z-index: 30;
 }
 
 .nms-device-tools-menu nav a {
@@ -249,6 +248,62 @@
 	padding: 22px 20px;
 }
 
+.nms-association-add {
+	align-items: end;
+	background: #f8faf8;
+	border-top: 1px solid #e1e9e3;
+	display: grid;
+	gap: 12px;
+	grid-template-columns: minmax(0, 1fr) auto;
+	padding: 16px 20px;
+}
+
+.nms-association-add.query {
+	grid-template-columns: minmax(0, 1.4fr) minmax(240px, .6fr) auto;
+}
+
+.nms-association-add label,
+.nms-association-add label span {
+	display: block;
+}
+
+.nms-association-add label span {
+	color: #657269;
+	font-size: 10px;
+	font-weight: 800;
+	margin-bottom: 6px;
+}
+
+.nms-association-add select {
+	background: #fff;
+	border: 1px solid #cedbd1;
+	border-radius: 7px;
+	color: #26342b;
+	font: inherit;
+	font-size: 11px;
+	height: 38px;
+	padding: 0 10px;
+	width: 100%;
+}
+
+.nms-association-add button {
+	background: #287c45;
+	border: 0;
+	border-radius: 7px;
+	color: #fff;
+	cursor: pointer;
+	font-size: 11px;
+	font-weight: 800;
+	height: 38px;
+	padding: 0 20px;
+}
+
+.nms-association-add button:disabled,
+.nms-association-add select:disabled {
+	cursor: not-allowed;
+	opacity: .55;
+}
+
 .nms-device-action-grid strong {
 	color: #267740;
 	font-size: 12px;
@@ -262,14 +317,6 @@
 }
 
 @media (max-width: 1050px) {
-	.nms-device-edit-top {
-		grid-template-columns: 1fr;
-	}
-
-	.nms-device-tools-menu {
-		position: static;
-	}
-
 	.nms-device-facts,
 	.nms-device-action-grid {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -277,6 +324,18 @@
 }
 
 @media (max-width: 700px) {
+	.nms-panel-head,
+	.nms-overview-actions {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.nms-device-tools-menu nav {
+		left: 0;
+		right: auto;
+		width: min(310px, calc(100vw - 70px));
+	}
+
 	.nms-device-facts,
 	.nms-device-action-grid {
 		grid-template-columns: 1fr;
@@ -292,5 +351,11 @@
 		gap: 8px;
 		grid-template-columns: 1fr;
 		padding: 12px 16px;
+	}
+
+	.nms-association-add,
+	.nms-association-add.query {
+		align-items: stretch;
+		grid-template-columns: 1fr;
 	}
 }

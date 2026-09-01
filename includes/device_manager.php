@@ -1,17 +1,52 @@
 <?php
 
 require_once($config['base_path'] . '/lib/api_device.php');
+require_once($config['base_path'] . '/lib/api_automation.php');
+
+function nms_device_require($device_id) {
+	$device_id = (int) $device_id;
+	if ($device_id < 1 || !(int) db_fetch_cell_prepared("SELECT COUNT(*) FROM host WHERE id = ? AND deleted = ''", array($device_id))) {
+		throw new InvalidArgumentException('Select a valid Cacti device.');
+	}
+	return $device_id;
+}
+
+function nms_device_add_graph_template($device_id, $graph_template_id) {
+	$device_id = nms_device_require($device_id);
+	$graph_template_id = (int) $graph_template_id;
+	if ($graph_template_id < 1 || !(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates WHERE id = ?', array($graph_template_id))) {
+		throw new InvalidArgumentException('Select a valid Cacti graph template.');
+	}
+
+	db_execute_prepared('REPLACE INTO host_graph (host_id, graph_template_id) VALUES (?, ?)', array($device_id, $graph_template_id));
+	automation_hook_graph_template($device_id, $graph_template_id);
+	api_plugin_hook_function('add_graph_template_to_host', array('host_id' => $device_id, 'graph_template_id' => $graph_template_id));
+	return $graph_template_id;
+}
+
+function nms_device_add_data_query($device_id, $data_query_id, $reindex_method) {
+	global $reindex_types;
+	$device_id = nms_device_require($device_id);
+	$data_query_id = (int) $data_query_id;
+	$reindex_method = (int) $reindex_method;
+	$snmp_version = (int) db_fetch_cell_prepared("SELECT snmp_version FROM host WHERE id = ? AND deleted = ''", array($device_id));
+	$sql = 'SELECT COUNT(*) FROM snmp_query WHERE id = ?';
+	if ($snmp_version === 0) $sql .= ' AND data_input_id != 2';
+	if ($data_query_id < 1 || !(int) db_fetch_cell_prepared($sql, array($data_query_id))) {
+		throw new InvalidArgumentException('Select a valid Cacti data query for this device.');
+	}
+	if (!isset($reindex_types[$reindex_method])) throw new InvalidArgumentException('Select a valid re-index method.');
+
+	api_device_dq_add($device_id, $data_query_id, $reindex_method);
+	return $data_query_id;
+}
 
 function nms_device_create($input) {
 	return nms_device_save(0, $input);
 }
 
 function nms_device_update($device_id, $input) {
-	$device_id = (int) $device_id;
-	if ($device_id < 1 || !(int) db_fetch_cell_prepared("SELECT COUNT(*) FROM host WHERE id = ? AND deleted = ''", array($device_id))) {
-		throw new InvalidArgumentException('Select a valid Cacti device.');
-	}
-
+	$device_id = nms_device_require($device_id);
 	return nms_device_save($device_id, $input);
 }
 

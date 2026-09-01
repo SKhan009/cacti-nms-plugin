@@ -17,6 +17,20 @@ $page_error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 	$action = get_nfilter_request_var('nms_action');
 	try {
+		if ($action === 'add_graph_template') {
+			$device_id = (int) get_filter_request_var('id');
+			$template_id = nms_device_add_graph_template($device_id, get_filter_request_var('graph_template_id'));
+			header('Location: devices.php?tab=edit&id=' . $device_id . '&graph_template_added=' . $template_id . '#graph-templates');
+			exit;
+		}
+
+		if ($action === 'add_data_query') {
+			$device_id = (int) get_filter_request_var('id');
+			$query_id = nms_device_add_data_query($device_id, get_filter_request_var('snmp_query_id'), get_filter_request_var('reindex_method'));
+			header('Location: devices.php?tab=edit&id=' . $device_id . '&data_query_added=' . $query_id . '#data-queries');
+			exit;
+		}
+
 		if ($action === 'add_device') {
 			$device_id = nms_device_create(array(
 				'description' => get_nfilter_request_var('description'),
@@ -108,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 		}
 	} catch (Throwable $exception) {
 		$page_error = $exception->getMessage();
-		$tab = $action === 'import_snmprec' ? 'import' : ($action === 'update_device' ? 'edit' : 'add');
+		$tab = $action === 'import_snmprec' ? 'import' : (in_array($action, array('update_device', 'add_graph_template', 'add_data_query'), true) ? 'edit' : 'add');
 	}
 }
 
@@ -160,6 +174,8 @@ $cacti_device_defaults = array(
 $edit_device = array();
 $device_graph_templates = array();
 $device_data_queries = array();
+$available_graph_templates = array();
+$available_data_queries = array();
 if ($tab === 'edit') {
 	$edit_device_id = isset_request_var('id') ? (int) get_filter_request_var('id') : 0;
 	$edit_device = db_fetch_row_prepared("SELECT h.*, ht.name AS template_name, p.name AS poller_name,
@@ -183,6 +199,18 @@ if ($tab === 'edit') {
 			FROM host_snmp_query AS hsq INNER JOIN snmp_query AS sq ON sq.id = hsq.snmp_query_id
 			LEFT JOIN host_snmp_cache AS hsc ON hsc.host_id = hsq.host_id AND hsc.snmp_query_id = hsq.snmp_query_id
 			WHERE hsq.host_id = ? GROUP BY sq.id, sq.name, hsq.reindex_method ORDER BY sq.name", array($edit_device_id));
+		$available_graph_templates = db_fetch_assoc_prepared("SELECT DISTINCT gt.id, gt.name
+			FROM graph_templates AS gt LEFT JOIN snmp_query_graph AS sqg ON sqg.graph_template_id = gt.id
+			INNER JOIN graph_templates_item AS gti ON gti.graph_template_id = gt.id
+			INNER JOIN data_template_rrd AS dtr ON gti.task_item_id = dtr.id
+			INNER JOIN data_template_data AS dtd ON dtd.data_template_id = dtr.data_template_id
+			WHERE sqg.name IS NULL AND gti.local_graph_id = 0 AND dtr.local_data_id = 0
+			AND gt.id NOT IN (SELECT graph_template_id FROM host_graph WHERE host_id = ?)
+			ORDER BY gt.name", array($edit_device_id));
+		$data_query_filter = (int) $edit_device['snmp_version'] === 0 ? ' AND sq.data_input_id != 2' : '';
+		$available_data_queries = db_fetch_assoc_prepared("SELECT sq.id, sq.name FROM snmp_query AS sq
+			WHERE sq.id NOT IN (SELECT snmp_query_id FROM host_snmp_query WHERE host_id = ?)$data_query_filter
+			ORDER BY sq.name", array($edit_device_id));
 	}
 }
 
@@ -207,6 +235,8 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 	<?php if ($page_error !== '') { ?><div class="nms-form-message error"><strong>Could not complete the request</strong><span><?php print nms_h($page_error); ?></span></div><?php } ?>
 	<?php if (isset_request_var('device_created')) { ?><div class="nms-form-message success"><strong>Device created</strong><span>Cacti device <?php print (int) get_filter_request_var('device_created'); ?> is ready for polling and graph selection.</span></div><?php } ?>
 	<?php if (isset_request_var('device_updated')) { ?><div class="nms-form-message success"><strong>Device updated</strong><span>The live Cacti device settings were saved successfully.</span></div><?php } ?>
+	<?php if (isset_request_var('graph_template_added')) { ?><div class="nms-form-message success"><strong>Graph template added</strong><span>The Cacti graph-template association is now active for this device.</span></div><?php } ?>
+	<?php if (isset_request_var('data_query_added')) { ?><div class="nms-form-message success"><strong>Data query added</strong><span>The Cacti data query is now associated with this device.</span></div><?php } ?>
 	<?php if (isset_request_var('imported')) { ?><div class="nms-form-message success"><strong>SNMP record imported</strong><span>The simulator file and Cacti templates were created successfully.</span></div><?php } ?>
 
 	<div class="nms-page-tabs" role="tablist" aria-label="Device management views">
