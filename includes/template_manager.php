@@ -91,6 +91,15 @@ function nms_template_pair($template_name, $record) {
 	db_execute_prepared('UPDATE graph_templates_item SET task_item_id = ?
 		WHERE graph_template_id = ? AND local_graph_id = 0',
 		array($data_template_rrd_id, $graph_template_id));
+	db_execute_prepared("UPDATE graph_template_input SET name = ?
+		WHERE graph_template_id = ? AND column_name = 'task_item_id'",
+		array('Data Source [' . $label . ']', $graph_template_id));
+	$linked_graph_items = (int) db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates_item
+		WHERE graph_template_id = ? AND local_graph_id = 0 AND task_item_id = ?',
+		array($graph_template_id, $data_template_rrd_id));
+	if ($linked_graph_items === 0) {
+		throw new RuntimeException('Cacti created the graph template but did not link its data-source item.');
+	}
 
 	return array('data_template_id' => $data_template_id, 'graph_template_id' => $graph_template_id);
 }
@@ -167,7 +176,7 @@ function nms_template_import($original_name, $community, $template_name, $catego
 }
 
 function nms_template_upgrade_readable_names() {
-	$migration_key = 'readable_template_names_v1';
+	$migration_key = 'readable_template_names_v2';
 	if ((string) db_fetch_cell_prepared('SELECT meta_value FROM plugin_nms_meta WHERE meta_key = ?', array($migration_key)) === 'done') return;
 
 	$rows = db_fetch_assoc("SELECT o.id, o.import_id, o.oid, o.section_name AS section,
@@ -204,6 +213,8 @@ function nms_template_upgrade_readable_names() {
 		db_execute_prepared('UPDATE graph_templates SET name = ? WHERE id = ?', array($object_name, $graph_template_id));
 		db_execute_prepared('UPDATE graph_templates_graph SET title = ?, vertical_label = ? WHERE graph_template_id = ? AND local_graph_id = 0',
 			array('|host_description| - ' . $label, substr($label, 0, 20), $graph_template_id));
+		db_execute_prepared("UPDATE graph_template_input SET name = ? WHERE graph_template_id = ? AND column_name = 'task_item_id'",
+			array('Data Source [' . $label . ']', $graph_template_id));
 	}
 
 	db_execute_prepared("INSERT INTO plugin_nms_meta (meta_key, meta_value, updated_at) VALUES (?, 'done', NOW())
