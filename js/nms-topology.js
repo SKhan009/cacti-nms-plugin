@@ -107,6 +107,7 @@
 			var card = document.createElement('button');
 			card.type = 'button';
 			card.className = 'nms-inventory-card' + (selectedId === device.id ? ' selected' : '');
+			card.setAttribute('data-nms-tip', device.mapped ? 'Select this live Cacti device to inspect or update its topology connection.' : 'Drag this live Cacti device onto the map, or select it to inspect its details.');
 			card.draggable = !device.locked;
 			card.innerHTML = '<span class="nms-device-glyph ' + healthClass(device) + '">' + (device.locked ? 'SW' : 'DV') + '</span>' +
 				'<span class="nms-inventory-copy"><strong>' + escapeHtml(device.name) + '</strong><small>' + escapeHtml(device.hostname) + ' · ' + escapeHtml(device.category || 'Unmapped') + '</small></span>' +
@@ -132,6 +133,7 @@
 			var node = document.createElement('button');
 			node.type = 'button';
 			node.className = 'nms-topology-node ' + healthClass(device) + (device.locked ? ' locked' : '') + (selectedId === device.id ? ' selected' : '');
+			node.setAttribute('data-nms-tip', device.locked ? 'This is the fixed topology root. Select it to view live Cacti information.' : 'Select for details, or drag to reposition this device on the map.');
 			node.style.left = x + '%'; node.style.top = y + '%';
 			node.innerHTML = '<span class="nms-device-glyph ' + healthClass(device) + '">' + (device.locked ? 'SW' : 'DV') + '</span><span><strong>' + escapeHtml(device.name) + '</strong><small>' + escapeHtml(device.hostname) + '</small></span><i></i>';
 			node.addEventListener('click', function () { selectedId = device.id; renderAll(); });
@@ -171,9 +173,9 @@
 		detail.innerHTML = '<div class="nms-detail-title"><span class="nms-device-glyph ' + healthClass(device) + '">' + (device.locked ? 'SW' : 'DV') + '</span><div><small>CACTI DEVICE #' + device.id + '</small><h2>' + escapeHtml(device.name) + '</h2></div></div>' +
 			'<span class="nms-live-status ' + healthClass(device) + '">● ' + escapeHtml(healthLabel(device)) + '</span><dl>' +
 			'<div><dt>Address</dt><dd>' + escapeHtml(device.hostname) + '</dd></div><div><dt>Category</dt><dd>' + escapeHtml(device.category || 'Unmapped') + '</dd></div><div><dt>Template</dt><dd>' + escapeHtml(device.template || 'None') + '</dd></div><div><dt>Cacti status</dt><dd>' + escapeHtml(device.status) + '</dd></div><div><dt>Availability</dt><dd>' + device.availability + '%</dd></div><div><dt>Active faults</dt><dd>' + device.fault_count + '</dd></div><div><dt>SNMP</dt><dd>Version ' + device.snmp_version + '</dd></div><div><dt>Interfaces</dt><dd>' + device.interfaces + '</dd></div><div><dt>Graphs</dt><dd>' + device.graphs + '</dd></div></dl>' +
-			(device.locked ? '<p class="nms-fixed-note">This root device is fixed.</p>' : '<label class="nms-parent-select">Connected to device<select id="nmsParentDevice">' + parentOptions + '</select></label><label class="nms-parent-select">Parent switch port<select id="nmsParentPort"><option value="">Not configured</option>' + portOptions + '</select></label>') +
-			(device.fault_count > 0 ? '<a class="nms-detail-action" href="' + escapeHtml(device.faults_url) + '">Open device faults</a>' : '') + '<a class="nms-detail-secondary" href="' + escapeHtml(device.graphs_url) + '">Open Cacti graphs</a><a class="nms-detail-secondary" href="' + escapeHtml(device.device_url) + '">Configure in Cacti</a>' +
-			(!device.locked && device.mapped ? '<button id="nmsRemoveFromMap" class="nms-remove-map" type="button">Remove from topology</button>' : '');
+			(device.locked ? '<p class="nms-fixed-note">This root device is fixed.</p>' : '<label class="nms-parent-select" data-nms-tip="The mapped Cacti device this node connects to. Changing it redraws and saves the link.">Connected to device<select id="nmsParentDevice">' + parentOptions + '</select></label><label class="nms-parent-select" data-nms-tip="Optional SNMP interface on the parent device used for this topology connection.">Parent switch port<select id="nmsParentPort"><option value="">Not configured</option>' + portOptions + '</select></label>') +
+			(device.fault_count > 0 ? '<a class="nms-detail-action" data-nms-tip="Open active faults for this device." href="' + escapeHtml(device.faults_url) + '">Open device faults</a>' : '') + '<a class="nms-detail-secondary" data-nms-tip="Open graphs for this device in the Cacti console." href="' + escapeHtml(device.graphs_url) + '">Open Cacti graphs</a><a class="nms-detail-secondary" data-nms-tip="Open the live device configuration in the Cacti console." href="' + escapeHtml(device.device_url) + '">Configure in Cacti</a>' +
+			(!device.locked && device.mapped ? '<button id="nmsRemoveFromMap" class="nms-remove-map" data-nms-tip="Remove only the saved map placement. The Cacti device is not deleted." type="button">Remove from topology</button>' : '');
 		var parentSelect = document.getElementById('nmsParentDevice');
 		if (parentSelect) parentSelect.addEventListener('change', function () { device.parent_id = Number(parentSelect.value); device.parent_snmp_index = ''; renderDetail(); saveDevice(device).catch(showError); });
 		var parentPort = document.getElementById('nmsParentPort');

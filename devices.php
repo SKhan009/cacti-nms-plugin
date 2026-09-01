@@ -320,11 +320,11 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 	<?php if (isset_request_var('imported')) { ?><div class="nms-form-message success"><strong>SNMP record imported</strong><span>The simulator file and Cacti templates were created successfully.</span></div><?php } ?>
 
 	<div class="nms-page-tabs" role="tablist" aria-label="Device management views">
-		<a class="<?php print $tab === 'inventory' ? 'selected' : ''; ?>" href="?tab=inventory">Device dashboard</a>
-		<a class="<?php print $tab === 'add' ? 'selected' : ''; ?>" href="?tab=add">Add device</a>
-		<?php if ($tab === 'edit') { ?><a class="selected" href="?tab=edit&id=<?php print (int) $edit_device['id']; ?>">Edit device</a><?php } ?>
-		<a class="<?php print $tab === 'graphs' ? 'selected' : ''; ?>" href="?tab=graphs<?php print $edit_device ? '&id=' . (int) $edit_device['id'] : ''; ?>">Create graph template</a>
-		<a class="<?php print $tab === 'import' ? 'selected' : ''; ?>" href="?tab=import">Upload SNMP record</a>
+		<a class="<?php print $tab === 'inventory' ? 'selected' : ''; ?>" href="?tab=inventory" data-nms-tip="View live Cacti device status, polling totals, data-source counts, graph counts, and management actions.">Device dashboard</a>
+		<a class="<?php print $tab === 'add' ? 'selected' : ''; ?>" href="?tab=add" data-nms-tip="Create a real device in Cacti using the same core fields and defaults.">Add device</a>
+		<?php if ($tab === 'edit') { ?><a class="selected" href="?tab=edit&id=<?php print (int) $edit_device['id']; ?>" data-nms-tip="Edit this live Cacti device and manage its graph templates and data queries.">Edit device</a><?php } ?>
+		<a class="<?php print $tab === 'graphs' ? 'selected' : ''; ?>" href="?tab=graphs<?php print $edit_device ? '&id=' . (int) $edit_device['id'] : ''; ?>" data-nms-tip="Create a complete native Cacti graph template from an existing device data source.">Create graph template</a>
+		<a class="<?php print $tab === 'import' ? 'selected' : ''; ?>" href="?tab=import" data-nms-tip="Upload a validated SNMPSim record and create the corresponding Cacti templates.">Upload SNMP record</a>
 	</div>
 
 	<?php require($config['base_path'] . '/plugins/nms/templates/devices/' . $tab . '.php'); ?>

@@ -2,7 +2,7 @@
 	<div class="nms-heading nms-topology-heading">
 		<div><p class="nms-eyebrow">NMS / Dynamic Topology</p><h1><?php print $selected_site ? nms_h($selected_site['name']) : 'Topology'; ?></h1><p>Device facts come directly from Cacti. Only map position and parent connection are stored by this plugin.</p></div>
 		<form class="nms-site-picker" method="get" action="topology.php">
-			<label for="site_id">Cacti site</label>
+			<label for="site_id" data-nms-tip="Select the real Cacti site whose enabled devices should appear on this topology map.">Cacti site</label>
 			<select id="site_id" name="site_id" onchange="this.form.submit()">
 				<?php foreach ($sites as $site) { ?><option value="<?php print (int) $site['id']; ?>" <?php print (int) $site['id'] === $site_id ? 'selected' : ''; ?>><?php print nms_h($site['name']); ?> (<?php print (int) $site['device_count']; ?>)</option><?php } ?>
 			</select>
@@ -26,8 +26,8 @@
 		<form method="post" action="topology.php?site_id=<?php print $site_id; ?>">
 			<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>">
 			<input type="hidden" name="nms_action" value="set_root">
-			<select name="host_id" required><option value="">Choose a Cacti device</option><?php foreach ($topology_devices as $device) { ?><option value="<?php print (int) $device['id']; ?>" <?php print $root_device && (int) $root_device['id'] === (int) $device['id'] ? 'selected' : ''; ?>><?php print nms_h($device['description']); ?> · <?php print nms_h($device['hostname']); ?></option><?php } ?></select>
-			<button type="submit">Save root device</button>
+			<select name="host_id" required data-nms-tip="Choose the main switch or gateway. This device stays fixed and becomes the default parent for newly mapped devices."><option value="">Choose a Cacti device</option><?php foreach ($topology_devices as $device) { ?><option value="<?php print (int) $device['id']; ?>" <?php print $root_device && (int) $root_device['id'] === (int) $device['id'] ? 'selected' : ''; ?>><?php print nms_h($device['description']); ?> · <?php print nms_h($device['hostname']); ?></option><?php } ?></select>
+			<button type="submit" data-nms-tip="Save the selected root for this Cacti site.">Save root device</button>
 		</form>
 	</section>
 
@@ -37,7 +37,7 @@
 	<div class="nms-topology-grid">
 		<aside class="nms-panel nms-inventory-panel">
 			<div class="nms-topology-panel-head"><span>INVENTORY</span><h2>Cacti devices</h2><p>Drag an item onto the map.</p></div>
-			<label class="nms-topology-search"><span>⌕</span><input id="nmsTopologySearch" type="search" placeholder="Search name, IP or poller"></label>
+			<label class="nms-topology-search" data-nms-tip="Filter the site inventory by device name, address, category, template, poller, or SNMP identity."><span>⌕</span><input id="nmsTopologySearch" type="search" placeholder="Search name, IP or poller"></label>
 			<div id="nmsTopologyInventory" class="nms-inventory-list"></div>
 		</aside>
 		<section class="nms-panel nms-map-panel">
@@ -45,12 +45,12 @@
 				<div><span>LIVE CACTI DATA</span><h2>Network topology</h2></div>
 				<div class="nms-map-actions">
 					<div class="nms-zoom-controls" role="group" aria-label="Topology zoom controls">
-						<button id="nmsZoomOut" type="button" title="Zoom out" aria-label="Zoom out">−</button>
+						<button id="nmsZoomOut" type="button" data-nms-tip="Zoom out to show more of the topology canvas." aria-label="Zoom out">−</button>
 						<output id="nmsZoomLevel" aria-live="polite">100%</output>
-						<button id="nmsZoomIn" type="button" title="Zoom in" aria-label="Zoom in">+</button>
-						<button id="nmsZoomFit" class="fit" type="button" title="Fit all mapped devices to the screen">Fit</button>
+						<button id="nmsZoomIn" type="button" data-nms-tip="Zoom in for a closer view of mapped devices." aria-label="Zoom in">+</button>
+						<button id="nmsZoomFit" class="fit" type="button" data-nms-tip="Fit every mapped device inside the visible canvas.">Fit</button>
 					</div>
-					<button id="nmsRefreshTopology" class="refresh" type="button">Refresh from Cacti</button>
+					<button id="nmsRefreshTopology" class="refresh" type="button" data-nms-tip="Reload device status, availability, interfaces, graph totals, and faults from Cacti core.">Refresh from Cacti</button>
 				</div>
 			</div>
 			<div id="nmsTopologyCanvas" class="nms-topology-canvas"><div id="nmsTopologyWorld" class="nms-topology-world"><svg id="nmsTopologyLinks" aria-hidden="true"></svg></div><div class="nms-drop-guide">Drop Cacti devices here</div></div>
