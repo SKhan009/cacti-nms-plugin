@@ -26,7 +26,7 @@ function nms_device_add_graph_template($device_id, $graph_template_id) {
 	return $graph_template_id;
 }
 
-function nms_device_create_graph_from_data_source($device_id, $local_rrd_id, $graph_name, $vertical_label) {
+function nms_device_create_graph_from_data_source($device_id, $local_rrd_id, $graph_name, $vertical_label, $options = array()) {
 	$device_id = nms_device_require($device_id);
 	$local_rrd_id = (int) $local_rrd_id;
 	$source = db_fetch_row_prepared('SELECT dl.id AS local_data_id, dl.snmp_query_id, dl.snmp_index,
@@ -47,14 +47,16 @@ function nms_device_create_graph_from_data_source($device_id, $local_rrd_id, $gr
 	}
 	if ($template_rrd_id < 1) throw new RuntimeException('This Cacti data source is not linked to a reusable data template item.');
 
-	$already_graphed = (int) db_fetch_cell_prepared('SELECT COUNT(*)
-		FROM graph_templates_item AS gti
-		INNER JOIN graph_local AS gl ON gl.id = gti.local_graph_id
-		WHERE gl.host_id = ? AND gti.task_item_id = ?', array($device_id, $local_rrd_id));
-	if ($already_graphed) throw new InvalidArgumentException('This data-source item is already used by a graph for this device.');
-
 	$default_name = 'NMS ' . $source['data_template_name'] . ' - ' . $source['data_source_name'] . ' - DS ' . (int) $source['local_data_id'];
-	$graph_name = trim((string) $graph_name) === '' ? $default_name : nms_template_clean_name($graph_name, 190);
+	if (trim((string) $graph_name) === '') {
+		$graph_name = $default_name;
+		$suffix = 2;
+		while ((int) db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates WHERE name = ?', array($graph_name))) {
+			$graph_name = substr($default_name, 0, 184) . ' ' . $suffix++;
+		}
+	} else {
+		$graph_name = nms_template_clean_name($graph_name, 190);
+	}
 	$vertical_label = trim((string) $vertical_label);
 	if ($vertical_label === '') $vertical_label = substr($source['data_source_name'], 0, 20);
 	$vertical_label = substr(preg_replace('/[^A-Za-z0-9 _\/%.-]/', '', $vertical_label), 0, 20);
@@ -62,6 +64,15 @@ function nms_device_create_graph_from_data_source($device_id, $local_rrd_id, $gr
 	if ((int) db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates WHERE name = ?', array($graph_name))) {
 		throw new InvalidArgumentException('A Cacti graph template with this name already exists. Choose another name.');
 	}
+	$style_options = array('line1' => array(4, 1), 'line2' => array(5, 2), 'line3' => array(6, 3), 'area' => array(7, 0));
+	$consolidation_options = array('average' => 1, 'minimum' => 2, 'maximum' => 3, 'last' => 4);
+	$graph_style = isset($style_options[$options['graph_style'] ?? '']) ? $options['graph_style'] : 'line1';
+	$consolidation = isset($consolidation_options[$options['consolidation'] ?? '']) ? $options['consolidation'] : 'average';
+	$color_id = (int) ($options['color_id'] ?? 86);
+	if (!(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM colors WHERE id = ?', array($color_id))) $color_id = 86;
+	$width = in_array((int) ($options['width'] ?? 700), array(300, 500, 700, 900, 1200), true) ? (int) $options['width'] : 700;
+	$height = in_array((int) ($options['height'] ?? 200), array(120, 160, 200, 300, 400), true) ? (int) $options['height'] : 200;
+	$base_value = in_array((int) ($options['base_value'] ?? 1000), array(1000, 1024), true) ? (int) $options['base_value'] : 1000;
 
 	$base_graph_template_id = (int) db_fetch_cell("SELECT id FROM graph_templates WHERE name = 'SNMP - Generic OID Template'");
 	if ($base_graph_template_id < 1) throw new RuntimeException('Cacti Generic OID graph template is not installed.');
@@ -71,12 +82,40 @@ function nms_device_create_graph_from_data_source($device_id, $local_rrd_id, $gr
 		$graph_template_id = (int) api_duplicate_graph(0, $base_graph_template_id, $graph_name, false);
 		if ($graph_template_id < 1) throw new RuntimeException('Cacti could not create the graph template.');
 
-		db_execute_prepared('UPDATE graph_templates_graph SET title = ?, vertical_label = ?
+		db_execute_prepared('UPDATE graph_templates_graph SET title = ?, vertical_label = ?, width = ?, height = ?, base_value = ?
 			WHERE graph_template_id = ? AND local_graph_id = 0',
-			array('|host_description| - ' . $graph_name, $vertical_label, $graph_template_id));
+			array('|host_description| - ' . $graph_name, $vertical_label, $width, $height, $base_value, $graph_template_id));
 		db_execute_prepared('UPDATE graph_templates_item SET task_item_id = ?
 			WHERE graph_template_id = ? AND local_graph_id = 0',
 			array($template_rrd_id, $graph_template_id));
+		db_execute_prepared('UPDATE graph_templates_item SET graph_type_id = ?, line_width = ?, color_id = ?, consolidation_function_id = ?
+			WHERE graph_template_id = ? AND local_graph_id = 0 AND graph_type_id != 9',
+			array($style_options[$graph_style][0], $style_options[$graph_style][1], $color_id,
+				$consolidation_options[$consolidation], $graph_template_id));
+		db_execute_prepared("UPDATE graph_template_input SET name = ?
+			WHERE graph_template_id = ? AND column_name = 'task_item_id'",
+			array('Data Source [' . $source['data_template_name'] . ']', $graph_template_id));
+
+		$minimum_item = db_fetch_row_prepared('SELECT * FROM graph_templates_item
+			WHERE graph_template_id = ? AND local_graph_id = 0 AND graph_type_id = 9 AND consolidation_function_id = 1 LIMIT 1',
+			array($graph_template_id));
+		if ($minimum_item) {
+			db_execute_prepared('UPDATE graph_templates_item SET sequence = sequence + 1
+				WHERE graph_template_id = ? AND local_graph_id = 0 AND sequence >= 3', array($graph_template_id));
+			$minimum_item['id'] = 0;
+			$minimum_item['hash'] = get_hash_graph_template(0, 'graph_template_item');
+			$minimum_item['text_format'] = 'Minimum:';
+			$minimum_item['consolidation_function_id'] = 2;
+			$minimum_item['sequence'] = 3;
+			$minimum_item_id = (int) sql_save($minimum_item, 'graph_templates_item');
+			$data_source_input_id = (int) db_fetch_cell_prepared("SELECT id FROM graph_template_input
+				WHERE graph_template_id = ? AND column_name = 'task_item_id' LIMIT 1", array($graph_template_id));
+			if ($minimum_item_id > 0 && $data_source_input_id > 0) {
+				db_execute_prepared('INSERT IGNORE INTO graph_template_input_defs
+					(graph_template_input_id, graph_template_item_id) VALUES (?, ?)',
+					array($data_source_input_id, $minimum_item_id));
+			}
+		}
 
 		$local_graph_id = (int) sql_save(array(
 			'id' => 0,

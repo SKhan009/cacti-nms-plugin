@@ -346,8 +346,22 @@
 	align-items: end;
 	display: grid;
 	gap: 12px;
-	grid-template-columns: minmax(360px, 1.5fr) minmax(210px, .7fr) minmax(150px, .45fr) auto;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
 	padding: 16px 20px 20px;
+}
+
+.nms-graph-builder-form .source {
+	grid-column: span 2;
+}
+
+.nms-graph-builder-form > button {
+	justify-self: end;
+}
+
+.nms-inline-selects {
+	display: grid !important;
+	gap: 6px;
+	grid-template-columns: 1fr 1fr;
 }
 
 .nms-graph-builder-form label,
@@ -659,6 +673,10 @@
 	.nms-graph-builder-form,
 	.nms-graph-builder-steps {
 		grid-template-columns: 1fr;
+	}
+
+	.nms-graph-builder-form .source {
+		grid-column: auto;
 	}
 
 	.nms-graph-builder-steps > div {

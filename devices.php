@@ -24,7 +24,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 				$device_id,
 				get_filter_request_var('local_rrd_id'),
 				get_nfilter_request_var('graph_name'),
-				get_nfilter_request_var('vertical_label')
+				get_nfilter_request_var('vertical_label'),
+				array(
+					'graph_style' => get_nfilter_request_var('graph_style'),
+					'consolidation' => get_nfilter_request_var('consolidation'),
+					'color_id' => get_filter_request_var('color_id'),
+					'width' => get_filter_request_var('width'),
+					'height' => get_filter_request_var('height'),
+					'base_value' => get_filter_request_var('base_value')
+				)
 			);
 			header('Location: devices.php?tab=graphs&id=' . $device_id . '&graph_created=' . (int) $result['local_graph_id'] . '#graph-builder');
 			exit;
@@ -211,6 +219,8 @@ $device_data_queries = array();
 $device_data_source_items = array();
 $available_graph_templates = array();
 $available_data_queries = array();
+$graph_colors = db_fetch_assoc("SELECT id, hex, COALESCE(NULLIF(name, ''), CONCAT('#', hex)) AS name
+	FROM colors WHERE hex != 'FFFFFF' ORDER BY CASE WHEN name IS NULL OR name = '' THEN 1 ELSE 0 END, name, hex");
 if ($tab === 'edit' || $tab === 'graphs') {
 	$edit_device_id = isset_request_var('id') ? (int) get_filter_request_var('id') : 0;
 	if ($edit_device_id > 0) $edit_device = db_fetch_row_prepared("SELECT h.*, ht.name AS template_name, p.name AS poller_name,
