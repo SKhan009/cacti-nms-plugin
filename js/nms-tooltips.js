@@ -1,4 +1,8 @@
-(function () {
+/**
+ * @file nms-tooltips.js
+ * Provide shared contextual help with keyboard/pointer positioning and enhancement of dynamically inserted controls.
+ */
+(/** Initialize shared contextual help, tooltip positioning, and dynamic-content enhancement. */ function () {
 	'use strict';
 
 	var fieldHelp = {
@@ -101,16 +105,19 @@
 	var counter = 0;
 	var pointerTargets = '.nms-page-tabs a,.nms-primary-nav a,.nms-sidebar-link,.nms-sidebar-status,.nms-sidebar-toggle,.nms-brand,.nms-backend-button';
 
+	/** Normalize whitespace and remove the optional marker from display text. */
 	function cleanText(value) {
 		return (value || '').replace(/\s+/g, ' ').replace(/optional/gi, '').trim();
 	}
 
+	/** Read a label's text without embedded controls or existing help icons. */
 	function labelText(label) {
 		var clone = label.cloneNode(true);
-		Array.prototype.forEach.call(clone.querySelectorAll('input,select,textarea,button,small,.nms-help-icon'), function (node) { node.remove(); });
+		Array.prototype.forEach.call(clone.querySelectorAll('input,select,textarea,button,small,.nms-help-icon,.nms-search-select-control'), /** Remove an embedded control from the temporary label clone. */ function (node) { node.remove(); });
 		return cleanText(clone.textContent);
 	}
 
+	/** Identify search/filter controls and explicit opt-outs that should not receive tooltips. */
 	function isSearchOrFilter(target) {
 		if (!target || !target.matches) return false;
 		if (target.closest('[data-nms-no-tooltip]')) return true;
@@ -120,6 +127,7 @@
 		return false;
 	}
 
+	/** Create the shared accessible tooltip element once and return it. */
 	function ensureTooltip() {
 		if (tooltip) return tooltip;
 		tooltip = document.createElement('div');
@@ -130,6 +138,7 @@
 		return tooltip;
 	}
 
+	/** Place the tooltip above or below its target while keeping it within the viewport. */
 	function position(target) {
 		if (!tooltip || !target) return;
 		var rect = target.getBoundingClientRect();
@@ -145,6 +154,7 @@
 		tooltip.setAttribute('data-placement', placement);
 	}
 
+	/** Position a pointer-following tooltip with edge-aware offsets. */
 	function positionAtPointer() {
 		if (!tooltip) return;
 		var tipRect = tooltip.getBoundingClientRect();
@@ -160,6 +170,7 @@
 		tooltip.setAttribute('data-placement', 'pointer');
 	}
 
+	/** Display escaped help text for a target and select keyboard or pointer positioning. */
 	function show(target, event) {
 		var text = target.getAttribute('data-nms-tip');
 		if (!text) return;
@@ -170,7 +181,7 @@
 			pointerX = event.clientX;
 			pointerY = event.clientY;
 		}
-		tooltip.innerHTML = '<strong>More information</strong>' + text.replace(/[&<>"']/g, function (character) {
+		tooltip.innerHTML = '<strong>More information</strong>' + text.replace(/[&<>"']/g, /** Replace a special HTML character with its safe entity. */ function (character) {
 			return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character];
 		});
 		tooltip.classList.add('visible');
@@ -178,6 +189,7 @@
 		else position(target);
 	}
 
+	/** Hide the active tooltip, ignoring a hide request from another target. */
 	function hide(target) {
 		if (target && activeTarget !== target) return;
 		if (tooltip) tooltip.classList.remove('visible');
@@ -185,6 +197,7 @@
 		pointerMode = false;
 	}
 
+	/** Bind tooltip interactions once per eligible element. */
 	function bind(target) {
 		if (!target || target.getAttribute('data-nms-tip-bound') === '1') return;
 		if (isSearchOrFilter(target)) return;
@@ -195,17 +208,17 @@
 		if (!target.matches('a,button,input,select,textarea,[tabindex]')) target.setAttribute('tabindex', '0');
 		if (!target.id) target.id = 'nmsHelpTarget' + (++counter);
 		target.setAttribute('aria-describedby', 'nmsGlobalTooltip');
-		target.addEventListener('mouseenter', function (event) { show(target, event); });
-		target.addEventListener('mousemove', function (event) {
+		target.addEventListener('mouseenter', /** Show the target's help when the pointer enters it. */ function (event) { show(target, event); });
+		target.addEventListener('mousemove', /** Follow pointer movement only for the active pointer-enabled tooltip target. */ function (event) {
 			if (activeTarget !== target || !target.matches(pointerTargets)) return;
 			pointerX = event.clientX;
 			pointerY = event.clientY;
 			positionAtPointer();
 		});
-		target.addEventListener('mouseleave', function () { hide(target); });
-		target.addEventListener('focus', function (event) { show(target, event); });
-		target.addEventListener('blur', function () { hide(target); });
-		target.addEventListener('click', function (event) {
+		target.addEventListener('mouseleave', /** Hide this target's tooltip when the pointer leaves. */ function () { hide(target); });
+		target.addEventListener('focus', /** Show contextual help when the target receives keyboard focus. */ function (event) { show(target, event); });
+		target.addEventListener('blur', /** Hide this target's help when keyboard focus leaves it. */ function () { hide(target); });
+		target.addEventListener('click', /** Open help-icon content without triggering its surrounding control. */ function (event) {
 			if (!target.classList.contains('nms-help-icon')) return;
 			event.preventDefault();
 			event.stopPropagation();
@@ -213,6 +226,7 @@
 		});
 	}
 
+	/** Append and bind a focusable help icon unless the host already has one. */
 	function addIcon(host, text, title) {
 		if (!host || !text || host.querySelector('.nms-help-icon')) return;
 		var icon = document.createElement('span');
@@ -226,6 +240,7 @@
 		bind(icon);
 	}
 
+	/** Resolve a form label's help text and enhance it once with a help icon. */
 	function enhanceLabel(label) {
 		if (label.getAttribute('data-nms-help-ready') === '1') return;
 		if (isSearchOrFilter(label)) return;
@@ -237,11 +252,12 @@
 		var text = label.getAttribute('data-nms-tip') || fieldHelp[name];
 		if (!text && title) text = 'Use this control to configure ' + title.toLowerCase() + '. The value is applied to the current NMS or Cacti record.';
 		if (!text) return;
-		var host = label.querySelector(':scope > span:not(.nms-inline-selects):not(.nms-sidebar-copy)');
+		var host = label.querySelector(':scope > span:not(.nms-inline-selects):not(.nms-sidebar-copy):not(.nms-search-select-control)');
 		if (!host) {
 			host = document.createElement('span');
 			host.className = 'nms-generated-label';
 			var firstControl = label.querySelector('input,select,textarea');
+			while (firstControl.parentNode !== label) firstControl = firstControl.parentNode;
 			while (label.firstChild && label.firstChild !== firstControl) host.appendChild(label.firstChild);
 			label.insertBefore(host, firstControl);
 		}
@@ -249,6 +265,7 @@
 		label.setAttribute('data-nms-help-ready', '1');
 	}
 
+	/** Add contextual help to recognized section headings outside the topology canvas. */
 	function enhanceSection(heading) {
 		if (heading.getAttribute('data-nms-help-ready') === '1') return;
 		var title = cleanText(heading.textContent);
@@ -258,12 +275,13 @@
 		heading.setAttribute('data-nms-help-ready', '1');
 	}
 
+	/** Enhance eligible elements in a scope and replace native titles with shared tooltip content. */
 	function refresh(scope) {
 		scope = scope && scope.querySelectorAll ? scope : document;
-		Array.prototype.forEach.call(scope.querySelectorAll('[data-nms-tip]'), function (target) {
+		Array.prototype.forEach.call(scope.querySelectorAll('[data-nms-tip]'), /** Remove tooltip content from controls that are excluded from contextual help. */ function (target) {
 			if (isSearchOrFilter(target)) target.removeAttribute('data-nms-tip');
 		});
-		Array.prototype.forEach.call(scope.querySelectorAll('[title]:not([data-nms-tip])'), function (target) {
+		Array.prototype.forEach.call(scope.querySelectorAll('[title]:not([data-nms-tip])'), /** Transfer native title text into the shared tooltip attribute to avoid duplicate tooltips. */ function (target) {
 			target.setAttribute('data-nms-tip', target.getAttribute('title'));
 			target.removeAttribute('title');
 		});
@@ -272,16 +290,16 @@
 		Array.prototype.forEach.call(scope.querySelectorAll('[data-nms-tip]'), bind);
 	}
 
-	document.addEventListener('keydown', function (event) { if (event.key === 'Escape') hide(); });
-	document.addEventListener('click', function (event) { if (activeTarget && !activeTarget.contains(event.target)) hide(); });
-	window.addEventListener('resize', function () { if (activeTarget) pointerMode ? positionAtPointer() : position(activeTarget); });
-	window.addEventListener('scroll', function () { if (activeTarget) pointerMode ? hide(activeTarget) : position(activeTarget); }, true);
-	document.addEventListener('DOMContentLoaded', function () {
+	document.addEventListener('keydown', /** Dismiss the active tooltip when Escape is pressed. */ function (event) { if (event.key === 'Escape') hide(); });
+	document.addEventListener('click', /** Dismiss help when clicking outside the active target. */ function (event) { if (activeTarget && !activeTarget.contains(event.target)) hide(); });
+	window.addEventListener('resize', /** Reposition the active tooltip after a viewport resize. */ function () { if (activeTarget) pointerMode ? positionAtPointer() : position(activeTarget); });
+	window.addEventListener('scroll', /** Hide pointer help or reposition anchored help while the page scrolls. */ function () { if (activeTarget) pointerMode ? hide(activeTarget) : position(activeTarget); }, true);
+	document.addEventListener('DOMContentLoaded', /** Enhance initial page content and observe newly inserted elements for help bindings. */ function () {
 		ensureTooltip();
 		refresh(document);
-		new MutationObserver(function (mutations) {
-			mutations.forEach(function (mutation) {
-				Array.prototype.forEach.call(mutation.addedNodes, function (node) { if (node.nodeType === 1) refresh(node); });
+		new MutationObserver(/** Process added-node batches reported by the DOM observer. */ function (mutations) {
+			mutations.forEach(/** Visit the nodes inserted by this DOM mutation. */ function (mutation) {
+				Array.prototype.forEach.call(mutation.addedNodes, /** Enhance newly inserted element content, ignoring text nodes. */ function (node) { if (node.nodeType === 1) refresh(node); });
 			});
 		}).observe(document.body, {childList: true, subtree: true});
 	});

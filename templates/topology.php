@@ -1,4 +1,10 @@
-<main class="nms-shell nms-topology-shell">
+<?php
+/**
+ * @file topology.php
+ * Render the site selector, required-configuration states, map canvas, inventory, and detail-panel shell.
+ * The topology controller supplies core-backed data; js/nms-topology.js handles map interactions.
+ */
+?><main class="nms-shell nms-topology-shell">
 	<div class="nms-heading nms-topology-heading">
 		<div><p class="nms-eyebrow">NMS / Dynamic Topology</p><h1><?php print $selected_site ? nms_h($selected_site['name']) : 'Topology'; ?></h1><p>Device facts come directly from Cacti. Only map position and parent connection are stored by this plugin.</p></div>
 		<form class="nms-site-picker" method="get" action="topology.php">

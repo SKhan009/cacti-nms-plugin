@@ -1,4 +1,9 @@
-(function () {
+/**
+ * @file nms-topology.js
+ * Render the core-backed topology payload and manage selection, dragging, zooming, panning, and saved parent/interface choices.
+ * Layout writes go to the CSRF-protected controller; device facts are supplied by the server.
+ */
+(/** Initialize the live Cacti topology view from its server-provided configuration. */ function () {
 	'use strict';
 	var config = window.NMS_TOPOLOGY;
 	if (!config) return;
@@ -17,21 +22,27 @@
 	var maxZoom = 2;
 	var selectedId = config.rootId;
 	var deviceById = {};
-	config.devices.forEach(function (device) { deviceById[device.id] = device; });
+	config.devices.forEach(/** Index the device by ID for selection and parent-link lookups. */ function (device) { deviceById[device.id] = device; });
 
+	/** Escape nullable device text before inserting it into generated HTML. */
 	function escapeHtml(value) {
-		return String(value == null ? '' : value).replace(/[&<>'"]/g, function (character) {
+		return String(value == null ? '' : value).replace(/[&<>'"]/g, /** Encode one special HTML character as an entity. */ function (character) {
 			return { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character];
 		});
 	}
 
+	/** Normalize a device status into a CSS class fragment. */
 	function statusClass(status) {
 		return String(status).toLowerCase().replace(/[^a-z]+/g, '-');
 	}
+	/** Prefer an active fault's severity class over the device status class. */
 	function healthClass(device) { return device.fault_count > 0 ? device.fault_severity : statusClass(device.status); }
+	/** Describe the active fault severity or the device's current core status. */
 	function healthLabel(device) { return device.fault_count > 0 ? device.fault_severity + ' fault' : device.status; }
+	/** Clamp zoom to the configured bounds and round to tenths. */
 	function clampZoom(value) { return Math.max(minZoom, Math.min(maxZoom, Math.round(value * 10) / 10)); }
 
+	/** Apply pan/zoom transforms and synchronize the zoom indicator and canvas state. */
 	function applyView() {
 		world.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + zoom + ')';
 		zoomLevel.value = Math.round(zoom * 100) + '%';
@@ -39,6 +50,7 @@
 		canvas.classList.toggle('zoomed', zoom !== 1 || panX !== 0 || panY !== 0);
 	}
 
+	/** Change zoom while keeping the chosen screen anchor at the same visual point. */
 	function zoomAt(nextZoom, clientX, clientY) {
 		nextZoom = clampZoom(nextZoom);
 		if (nextZoom === zoom) return;
@@ -55,6 +67,7 @@
 		applyView();
 	}
 
+	/** Invert the current viewport transform to obtain canvas-relative world coordinates. */
 	function screenToWorld(clientX, clientY) {
 		var bounds = canvas.getBoundingClientRect();
 		var originX = bounds.width / 2;
@@ -67,43 +80,46 @@
 		};
 	}
 
+	/** Fit mapped devices inside the canvas by computing their bounds and updating the viewport. */
 	function fitToScreen() {
-		var mapped = config.devices.filter(function (device) { return device.mapped; });
+		var mapped = config.devices.filter(/** Include only devices currently placed on the topology map. */ function (device) { return device.mapped; });
 		var bounds = canvas.getBoundingClientRect();
 		if (!mapped.length || !bounds.width || !bounds.height) {
 			zoom = 1; panX = 0; panY = 0; applyView(); return;
 		}
-		var points = mapped.map(function (device) {
+		var points = mapped.map(/** Convert a device's stored or initial layout position into canvas pixels. */ function (device) {
 			var point = device.x == null ? defaultPosition(device) : device;
 			return { x: bounds.width * point.x / 100, y: bounds.height * point.y / 100 };
 		});
-		var minX = Math.min.apply(null, points.map(function (point) { return point.x; }));
-		var maxX = Math.max.apply(null, points.map(function (point) { return point.x; }));
-		var minY = Math.min.apply(null, points.map(function (point) { return point.y; }));
-		var maxY = Math.max.apply(null, points.map(function (point) { return point.y; }));
+		var minX = Math.min.apply(null, points.map(/** Extract horizontal coordinates for the minimum map bound. */ function (point) { return point.x; }));
+		var maxX = Math.max.apply(null, points.map(/** Extract horizontal coordinates for the maximum map bound. */ function (point) { return point.x; }));
+		var minY = Math.min.apply(null, points.map(/** Extract vertical coordinates for the minimum map bound. */ function (point) { return point.y; }));
+		var maxY = Math.max.apply(null, points.map(/** Extract vertical coordinates for the maximum map bound. */ function (point) { return point.y; }));
 		zoom = clampZoom(Math.min((bounds.width - 50) / Math.max(180, maxX - minX + 180), (bounds.height - 50) / Math.max(90, maxY - minY + 90), 1.4));
 		panX = zoom * (bounds.width / 2 - (minX + maxX) / 2);
 		panY = zoom * (bounds.height / 2 - (minY + maxY) / 2);
 		applyView();
 	}
 
+	/** Submit a CSRF-protected topology action and reject HTTP or application-level failures. */
 	function post(action, device, extra) {
 		var body = new URLSearchParams();
 		body.set('__csrf_magic', config.csrfToken);
 		body.set('nms_action', action);
 		body.set('host_id', device.id);
-		Object.keys(extra || {}).forEach(function (key) { body.set(key, extra[key]); });
+		Object.keys(extra || {}).forEach(/** Append each extra action field to the submitted form body. */ function (key) { body.set(key, extra[key]); });
 		return fetch(config.saveUrl, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, body: body.toString() })
-			.then(function (response) { if (!response.ok) throw new Error('Cacti rejected the topology update.'); return response.json(); })
-			.then(function (result) { if (!result.ok) throw new Error('The device configuration is not valid for this Cacti site.'); return result; });
+			.then(/** Reject failed HTTP responses before decoding the topology response JSON. */ function (response) { if (!response.ok) throw new Error('Cacti rejected the topology update.'); return response.json(); })
+			.then(/** Reject unsuccessful topology actions even when their HTTP request succeeded. */ function (result) { if (!result.ok) throw new Error('The device configuration is not valid for this Cacti site.'); return result; });
 	}
 
+	/** Rebuild searchable device inventory cards with selection and drag interactions. */
 	function renderInventory() {
 		var query = search.value.trim().toLowerCase();
 		inventory.innerHTML = '';
-		config.devices.filter(function (device) {
+		config.devices.filter(/** Match the inventory search against device names, addresses, categories, and templates. */ function (device) {
 			return !query || [device.name, device.hostname, device.category, device.template, device.sys_name].join(' ').toLowerCase().indexOf(query) !== -1;
-		}).forEach(function (device) {
+		}).forEach(/** Create a device inventory card using its live status and mapping state. */ function (device) {
 			var card = document.createElement('button');
 			card.type = 'button';
 			card.className = 'nms-inventory-card' + (selectedId === device.id ? ' selected' : '');
@@ -112,22 +128,24 @@
 			card.innerHTML = '<span class="nms-device-glyph ' + healthClass(device) + '">' + (device.locked ? 'SW' : 'DV') + '</span>' +
 				'<span class="nms-inventory-copy"><strong>' + escapeHtml(device.name) + '</strong><small>' + escapeHtml(device.hostname) + ' · ' + escapeHtml(device.category || 'Unmapped') + '</small></span>' +
 				'<span class="nms-map-label ' + (device.mapped ? 'mapped' : '') + '">' + (device.locked ? 'Fixed' : device.mapped ? 'On map' : 'Drag') + '</span>';
-			card.addEventListener('click', function () { selectedId = device.id; renderAll(); });
-			card.addEventListener('dragstart', function (event) { event.dataTransfer.setData('text/nms-host-id', device.id); event.dataTransfer.effectAllowed = 'move'; });
+			card.addEventListener('click', /** Select this inventory device and refresh the map and detail views. */ function () { selectedId = device.id; renderAll(); });
+			card.addEventListener('dragstart', /** Attach the Cacti device ID to the inventory drag payload. */ function (event) { event.dataTransfer.setData('text/nms-host-id', device.id); event.dataTransfer.effectAllowed = 'move'; });
 			inventory.appendChild(card);
 		});
 		inventory.dispatchEvent(new CustomEvent('nms:list-updated'));
 	}
 
+	/** Choose an initial visual grid position for a device without stored coordinates. */
 	function defaultPosition(device) {
-		var movable = config.devices.filter(function (item) { return !item.locked; });
-		var index = Math.max(0, movable.findIndex(function (item) { return item.id === device.id; }));
+		var movable = config.devices.filter(/** Exclude locked devices when computing movable-device grid positions. */ function (item) { return !item.locked; });
+		var index = Math.max(0, movable.findIndex(/** Locate the current device within the movable-device list. */ function (item) { return item.id === device.id; }));
 		return { x: 18 + (index % 4) * 21, y: 67 + Math.floor(index / 4) * 17 };
 	}
 
+	/** Rebuild mapped device nodes and their selection and movement handlers. */
 	function renderCanvas() {
-		world.querySelectorAll('.nms-topology-node').forEach(function (element) { element.remove(); });
-		config.devices.filter(function (device) { return device.mapped; }).forEach(function (device) {
+		world.querySelectorAll('.nms-topology-node').forEach(/** Remove the previous node element before rebuilding the canvas. */ function (element) { element.remove(); });
+		config.devices.filter(/** Include only mapped devices when rebuilding node elements. */ function (device) { return device.mapped; }).forEach(/** Render a mapped node at its stored or initial position and bind its interactions. */ function (device) {
 			var fallback = defaultPosition(device);
 			var x = device.x == null ? fallback.x : device.x;
 			var y = device.y == null ? fallback.y : device.y;
@@ -137,18 +155,19 @@
 			node.setAttribute('data-nms-tip', device.locked ? 'This is the fixed topology root. Select it to view live Cacti information.' : 'Select for details, or drag to reposition this device on the map.');
 			node.style.left = x + '%'; node.style.top = y + '%';
 			node.innerHTML = '<span class="nms-device-glyph ' + healthClass(device) + '">' + (device.locked ? 'SW' : 'DV') + '</span><span><strong>' + escapeHtml(device.name) + '</strong><small>' + escapeHtml(device.hostname) + '</small></span><i></i>';
-			node.addEventListener('click', function () { selectedId = device.id; renderAll(); });
-			if (!device.locked) node.addEventListener('pointerdown', function (event) { startMove(event, device); });
+			node.addEventListener('click', /** Select the clicked map device and refresh the surrounding views. */ function () { selectedId = device.id; renderAll(); });
+			if (!device.locked) node.addEventListener('pointerdown', /** Start pointer-driven movement for this unlocked device. */ function (event) { startMove(event, device); });
 			world.appendChild(node);
 		});
 		requestAnimationFrame(renderLinks);
 	}
 
+	/** Redraw SVG links between mapped child devices and their configured parents. */
 	function renderLinks() {
 		var bounds = canvas.getBoundingClientRect();
 		links.setAttribute('viewBox', '0 0 ' + bounds.width + ' ' + bounds.height);
 		links.innerHTML = '';
-		config.devices.filter(function (device) { return device.mapped && !device.locked; }).forEach(function (device) {
+		config.devices.filter(/** Select mapped non-root devices that can have parent links. */ function (device) { return device.mapped && !device.locked; }).forEach(/** Draw a child-to-parent line when its configured or root parent is mapped. */ function (device) {
 			var parent = deviceById[device.parent_id] || deviceById[config.rootId];
 			if (!parent || !parent.mapped) return;
 			var childPoint = device.x == null ? defaultPosition(device) : device;
@@ -160,53 +179,60 @@
 		});
 	}
 
+	/** Render selected-device facts and controls for its parent, port, and map membership. */
 	function renderDetail() {
 		var device = deviceById[selectedId];
 		if (!device) return;
-		var parentOptions = config.devices.filter(function (item) { return item.mapped && item.id !== device.id; }).map(function (item) {
+		var parentOptions = config.devices.filter(/** Allow mapped devices other than the selected device as parent choices. */ function (item) { return item.mapped && item.id !== device.id; }).map(/** Render an escaped parent option and mark the current parent selected. */ function (item) {
 			var chosen = (device.parent_id || config.rootId) === item.id ? ' selected' : '';
 			return '<option value="' + item.id + '"' + chosen + '>' + escapeHtml(item.name) + '</option>';
 		}).join('');
 		var parentDevice = deviceById[device.parent_id || config.rootId];
-		var portOptions = parentDevice ? parentDevice.interface_options.map(function (item) {
+		var portOptions = parentDevice ? parentDevice.interface_options.map(/** Render an escaped parent-interface option using its SNMP index as the value. */ function (item) {
 			return '<option value="' + escapeHtml(item.index) + '"' + (device.parent_snmp_index === item.index ? ' selected' : '') + '>' + escapeHtml(item.label) + '</option>';
 		}).join('') : '';
 		detail.innerHTML = '<div class="nms-detail-title"><span class="nms-device-glyph ' + healthClass(device) + '">' + (device.locked ? 'SW' : 'DV') + '</span><div><small>CACTI DEVICE #' + device.id + '</small><h2>' + escapeHtml(device.name) + '</h2></div></div>' +
 			'<span class="nms-live-status ' + healthClass(device) + '">● ' + escapeHtml(healthLabel(device)) + '</span><dl>' +
-			'<div><dt>Address</dt><dd>' + escapeHtml(device.hostname) + '</dd></div><div><dt>Category</dt><dd>' + escapeHtml(device.category || 'Unmapped') + '</dd></div><div><dt>Template</dt><dd>' + escapeHtml(device.template || 'None') + '</dd></div><div><dt>Cacti status</dt><dd>' + escapeHtml(device.status) + '</dd></div><div><dt>Availability</dt><dd>' + device.availability + '%</dd></div><div><dt>Active faults</dt><dd>' + device.fault_count + '</dd></div><div><dt>SNMP</dt><dd>Version ' + device.snmp_version + '</dd></div><div><dt>Interfaces</dt><dd>' + device.interfaces + '</dd></div><div><dt>Graphs</dt><dd>' + device.graphs + '</dd></div></dl>' +
+			'<div><dt>Address</dt><dd>' + escapeHtml(device.hostname) + '</dd></div><div><dt>Serial number</dt><dd>' + escapeHtml(device.serial_number || 'Not available') + (device.serial_status === 'changed' ? ' (changed)' : '') + '</dd></div><div><dt>Category</dt><dd>' + escapeHtml(device.category || 'Unmapped') + '</dd></div><div><dt>Template</dt><dd>' + escapeHtml(device.template || 'None') + '</dd></div><div><dt>Cacti status</dt><dd>' + escapeHtml(device.status) + '</dd></div><div><dt>Availability</dt><dd>' + device.availability + '%</dd></div><div><dt>Active faults</dt><dd>' + device.fault_count + '</dd></div><div><dt>SNMP</dt><dd>Version ' + device.snmp_version + '</dd></div><div><dt>Interfaces</dt><dd>' + device.interfaces + '</dd></div><div><dt>Graphs</dt><dd>' + device.graphs + '</dd></div></dl>' +
 			(device.locked ? '<p class="nms-fixed-note">This root device is fixed.</p>' : '<label class="nms-parent-select" data-nms-tip="The mapped Cacti device this node connects to. Changing it redraws and saves the link.">Connected to device<select id="nmsParentDevice">' + parentOptions + '</select></label><label class="nms-parent-select" data-nms-tip="Optional SNMP interface on the parent device used for this topology connection.">Parent switch port<select id="nmsParentPort"><option value="">Not configured</option>' + portOptions + '</select></label>') +
 			(device.fault_count > 0 ? '<a class="nms-detail-action" data-nms-tip="Open active faults for this device." href="' + escapeHtml(device.faults_url) + '">Open device faults</a>' : '') + '<a class="nms-detail-secondary" data-nms-tip="Open graphs for this device in the Cacti console." href="' + escapeHtml(device.graphs_url) + '">Open Cacti graphs</a><a class="nms-detail-secondary" data-nms-tip="Open the live device configuration in the Cacti console." href="' + escapeHtml(device.device_url) + '">Configure in Cacti</a>' +
 			(!device.locked && device.mapped ? '<button id="nmsRemoveFromMap" class="nms-remove-map" data-nms-tip="Remove only the saved map placement. The Cacti device is not deleted." type="button">Remove from topology</button>' : '');
 		var parentSelect = document.getElementById('nmsParentDevice');
-		if (parentSelect) parentSelect.addEventListener('change', function () { device.parent_id = Number(parentSelect.value); device.parent_snmp_index = ''; renderDetail(); saveDevice(device).catch(showError); });
+		if (parentSelect) parentSelect.addEventListener('change', /** Change the parent, clear its old port selection, and save the updated mapping. */ function () { device.parent_id = Number(parentSelect.value); device.parent_snmp_index = ''; renderDetail(); saveDevice(device).catch(showError); });
 		var parentPort = document.getElementById('nmsParentPort');
-		if (parentPort) parentPort.addEventListener('change', function () { device.parent_snmp_index = parentPort.value; saveDevice(device).catch(showError); });
+		if (parentPort) parentPort.addEventListener('change', /** Save the newly selected parent-interface index. */ function () { device.parent_snmp_index = parentPort.value; saveDevice(device).catch(showError); });
 		var remove = document.getElementById('nmsRemoveFromMap');
-		if (remove) remove.addEventListener('click', function () { post('remove_device', device).then(function () { device.mapped = false; selectedId = config.rootId; renderAll(); }).catch(showError); });
+		if (remove) remove.addEventListener('click', /** Request removal of this device's visual mapping and report save errors. */ function () { post('remove_device', device).then(/** Reflect successful map removal locally and select the root device. */ function () { device.mapped = false; selectedId = config.rootId; renderAll(); }).catch(showError); });
 	}
 
+	/** Persist a device's visual position, parent device, and selected parent SNMP interface. */
 	function saveDevice(device) {
 		return post('save_position', device, { parent_host_id: device.parent_id || config.rootId, parent_snmp_index: device.parent_snmp_index || '', x: device.x, y: device.y });
 	}
 
+	/** Select a device and track pointer movement until its final position is saved. */
 	function startMove(event, device) {
 		event.preventDefault(); selectedId = device.id;
+		/** Convert pointer movement to bounded percentage coordinates and redraw the moved device. */
 		function move(pointerEvent) {
 			var point = screenToWorld(pointerEvent.clientX, pointerEvent.clientY);
 			device.x = Math.max(8, Math.min(92, point.x * 100 / point.width));
 			device.y = Math.max(10, Math.min(90, point.y * 100 / point.height));
 			renderCanvas();
 		}
+		/** Detach the movement listener and save the final device position. */
 		function stop() { window.removeEventListener('pointermove', move); saveDevice(device).catch(showError); }
 		window.addEventListener('pointermove', move); window.addEventListener('pointerup', stop, { once: true });
 	}
 
+	/** Display a topology save failure to the operator. */
 	function showError(error) { window.alert(error.message || 'Unable to save topology configuration.'); }
+	/** Refresh inventory, map nodes, and details from the shared device state. */
 	function renderAll() { renderInventory(); renderCanvas(); renderDetail(); }
 
-	canvas.addEventListener('dragover', function (event) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; canvas.classList.add('drag-active'); });
-	canvas.addEventListener('dragleave', function () { canvas.classList.remove('drag-active'); });
-	canvas.addEventListener('drop', function (event) {
+	canvas.addEventListener('dragover', /** Allow an inventory drop and highlight the canvas as the drag destination. */ function (event) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; canvas.classList.add('drag-active'); });
+	canvas.addEventListener('dragleave', /** Clear the canvas drag highlight when the pointer leaves. */ function () { canvas.classList.remove('drag-active'); });
+	canvas.addEventListener('drop', /** Place an eligible dropped device at bounded canvas coordinates and save its mapping. */ function (event) {
 		event.preventDefault(); canvas.classList.remove('drag-active');
 		var device = deviceById[Number(event.dataTransfer.getData('text/nms-host-id'))];
 		if (!device || device.locked) return;
@@ -217,25 +243,27 @@
 		saveDevice(device).then(renderAll).catch(showError);
 	});
 	search.addEventListener('input', renderInventory);
-	document.getElementById('nmsZoomOut').addEventListener('click', function () { zoomAt(zoom - 0.1); });
-	document.getElementById('nmsZoomIn').addEventListener('click', function () { zoomAt(zoom + 0.1); });
+	document.getElementById('nmsZoomOut').addEventListener('click', /** Decrease map zoom by one tenth around the default anchor. */ function () { zoomAt(zoom - 0.1); });
+	document.getElementById('nmsZoomIn').addEventListener('click', /** Increase map zoom by one tenth around the default anchor. */ function () { zoomAt(zoom + 0.1); });
 	document.getElementById('nmsZoomFit').addEventListener('click', fitToScreen);
-	canvas.addEventListener('wheel', function (event) {
+	canvas.addEventListener('wheel', /** Translate wheel direction into zoom centered on the pointer. */ function (event) {
 		event.preventDefault();
 		zoomAt(zoom + (event.deltaY < 0 ? 0.1 : -0.1), event.clientX, event.clientY);
 	}, { passive: false });
-	canvas.addEventListener('pointerdown', function (event) {
+	canvas.addEventListener('pointerdown', /** Start canvas panning for a primary-button drag outside device nodes. */ function (event) {
 		if (event.button !== 0 || event.target.closest('.nms-topology-node')) return;
 		var startX = event.clientX;
 		var startY = event.clientY;
 		var initialPanX = panX;
 		var initialPanY = panY;
 		canvas.classList.add('panning');
+		/** Update pan offsets from the pointer's displacement since the drag began. */
 		function pan(pointerEvent) {
 			panX = initialPanX + pointerEvent.clientX - startX;
 			panY = initialPanY + pointerEvent.clientY - startY;
 			applyView();
 		}
+		/** End canvas panning and detach its movement listener. */
 		function stopPan() {
 			canvas.classList.remove('panning');
 			window.removeEventListener('pointermove', pan);
@@ -243,7 +271,7 @@
 		window.addEventListener('pointermove', pan);
 		window.addEventListener('pointerup', stopPan, { once: true });
 	});
-	document.getElementById('nmsRefreshTopology').addEventListener('click', function () { window.location.reload(); });
-	window.addEventListener('resize', function () { renderLinks(); applyView(); });
+	document.getElementById('nmsRefreshTopology').addEventListener('click', /** Reload server-provided topology and device readings. */ function () { window.location.reload(); });
+	window.addEventListener('resize', /** Redraw links and reapply the viewport after resizing. */ function () { renderLinks(); applyView(); });
 	renderAll(); applyView();
 })();

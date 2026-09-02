@@ -25,6 +25,7 @@
 }
 
 .nms-row-actions {
+	align-items: center;
 	display: flex;
 	gap: 6px;
 }
@@ -43,7 +44,7 @@
 
 .nms-device-facts {
 	display: grid;
-	grid-template-columns: repeat(6, minmax(0, 1fr));
+	grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
 .nms-device-facts > div {
@@ -70,6 +71,67 @@
 .nms-device-facts strong {
 	font-size: 16px;
 	margin-top: 5px;
+}
+
+.nms-snmp-information {
+	border-top: 1px solid #e1e9e3;
+	padding: 14px 20px 16px;
+}
+
+.nms-snmp-information-head {
+	align-items: start;
+	display: flex;
+	gap: 20px;
+	justify-content: space-between;
+	margin-bottom: 12px;
+}
+
+.nms-snmp-information-head h3,
+.nms-snmp-information-head p {
+	margin: 0;
+}
+
+.nms-snmp-information-head h3 {
+	font-size: 14px;
+}
+
+.nms-snmp-information-head p,
+.nms-snmp-information-head small {
+	color: #7d8981;
+	font-size: 11px;
+	font-weight: 500;
+}
+
+.nms-snmp-information dl {
+	display: grid;
+	gap: 10px 24px;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	margin: 0;
+}
+
+.nms-snmp-information dl > div {
+	min-width: 0;
+}
+
+.nms-snmp-information dl > .system {
+	grid-column: 1 / -1;
+}
+
+.nms-snmp-information dt {
+	color: #7d8981;
+	font-size: 10px;
+	font-weight: 800;
+	letter-spacing: .04em;
+	text-transform: uppercase;
+}
+
+.nms-snmp-information dd {
+	color: #17231b;
+	font-size: 12px;
+	font-weight: 650;
+	line-height: 1.45;
+	margin: 3px 0 0;
+	overflow-wrap: anywhere;
 }
 
 .nms-device-tools {
@@ -154,9 +216,14 @@
 	overflow-y: auto;
 }
 
-.nms-device-tools-menu nav a {
+.nms-device-tools-menu nav a,
+.nms-device-tools-menu nav button {
 	align-items: center;
+	background: transparent;
+	border: 0;
 	border-bottom: 1px solid #e4ebe6;
+	border-radius: 0;
+	box-sizing: border-box;
 	color: #36443b;
 	display: flex;
 	font-size: 11px;
@@ -164,18 +231,26 @@
 	justify-content: space-between;
 	padding: 9px 10px;
 	text-decoration: none;
+	width: 100%;
 }
 
-.nms-device-tools-menu nav a:last-child {
+.nms-device-tools-menu nav form {
+	margin: 0;
+}
+
+.nms-device-tools-menu nav > :last-child,
+.nms-device-tools-menu nav > :last-child button {
 	border-bottom: 0;
 }
 
-.nms-device-tools-menu nav a:hover {
+.nms-device-tools-menu nav a:hover,
+.nms-device-tools-menu nav button:hover {
 	background: #f0f6f2;
 	color: #267740;
 }
 
-.nms-device-tools-menu nav a span {
+.nms-device-tools-menu nav a span,
+.nms-device-tools-menu nav button span {
 	color: #2b8048;
 }
 
@@ -257,7 +332,7 @@
 }
 
 .nms-global-graph-table .nms-association-row {
-	grid-template-columns: minmax(260px, 2fr) 60px 90px 90px 80px minmax(110px, .8fr) 60px;
+	grid-template-columns: minmax(260px, 2fr) 60px 90px 90px 80px minmax(110px, .8fr) 88px;
 }
 
 .nms-global-graph-table .nms-association-row > a {
@@ -266,6 +341,9 @@
 	font-weight: 800;
 	text-decoration: none;
 }
+
+.nms-template-actions { align-items: center; display: flex; gap: 8px; }
+.nms-template-actions a { color: #287743; font-size: 10px; font-weight: 800; text-decoration: none; }
 
 .nms-graph-device-summary > div {
 	border-right: 1px solid #e1e9e3;
@@ -547,6 +625,10 @@
 	grid-template-columns: minmax(180px, 1fr) minmax(330px, 1.2fr) minmax(150px, .6fr) minmax(210px, .7fr);
 }
 
+.nms-association-row.graph {
+	grid-template-columns: minmax(0, 1.5fr) minmax(180px, .5fr) 70px;
+}
+
 .nms-association-row.heading {
 	background: #f8faf8;
 	color: #7b8780;
@@ -741,16 +823,35 @@
 	text-decoration: none;
 }
 
-.nms-searchable-select {
-	display: grid !important;
-	gap: 6px;
-	margin: 0 !important;
+.nms-search-select-control { display: block !important; margin: 0 !important; position: relative; }
+.nms-search-select-source { height: 1px !important; opacity: 0; pointer-events: none; position: absolute; width: 1px !important; }
+.nms-search-select-trigger {
+	background: #fff !important; border: 1px solid #cedbd1 !important; border-radius: 7px !important;
+	color: #26342b !important; cursor: pointer; font-size: 11px !important; font-weight: 500 !important;
+	height: 38px !important; overflow: hidden; padding: 0 34px 0 10px !important; position: relative;
+	text-align: left; text-overflow: ellipsis; white-space: nowrap; width: 100%;
 }
-
-.nms-searchable-select input[type="search"] {
-	background: #f7faf8;
-	padding-right: 12px;
+.nms-search-select-trigger::after { content: '⌄'; font-size: 15px; position: absolute; right: 12px; top: 8px; }
+.nms-search-select-trigger.invalid { border-color: #c83e32 !important; box-shadow: 0 0 0 2px rgba(200, 62, 50, .14); }
+.nms-search-select-panel {
+	background: #fff; border: 1px solid #cbd7ce; border-radius: 9px; box-shadow: 0 14px 32px rgba(26, 54, 36, .18);
+	left: 0; padding: 8px; position: absolute; top: calc(100% + 5px); width: 100%; z-index: 40;
 }
+.nms-search-select-panel[hidden] { display: none !important; }
+.nms-search-select-panel input[type="search"] {
+	background: #f7faf8; border: 1px solid #cedbd1; border-radius: 7px; box-sizing: border-box;
+	font-size: 11px; height: 36px; margin-bottom: 6px; padding: 0 10px; width: 100%;
+}
+.nms-search-select-options { display: block !important; margin: 0 !important; max-height: 280px; overflow-y: auto; }
+.nms-search-select-option {
+	background: transparent !important; border: 0 !important; border-radius: 6px !important; color: #26342b !important;
+	display: block; font-size: 11px !important; font-weight: 600 !important; height: auto !important;
+	line-height: 1.35 !important; padding: 9px 10px !important; text-align: left; width: 100%;
+}
+.nms-search-select-option:hover, .nms-search-select-option:focus-visible { background: #e9f3ec !important; color: #176536 !important; }
+.nms-search-select-empty { color: #7d8981; display: block; font-size: 11px; padding: 12px 10px; }
+.nms-search-select-option[hidden],
+.nms-search-select-empty[hidden] { display: none !important; }
 
 .nms-color-select {
 	align-items: center;
@@ -785,6 +886,12 @@
 .nms-query-actions .remove {
 	color: #b83b32;
 }
+
+.nms-x-action, .nms-delete-x, .nms-icon-action button {
+	background: transparent !important; border: 0 !important; color: #cf2f28 !important; cursor: pointer;
+	font-size: 20px !important; font-weight: 800 !important; height: 30px !important; line-height: 1 !important; padding: 2px 7px !important;
+}
+.nms-icon-action, .nms-template-actions form, .nms-row-actions form { margin: 0; }
 
 .nms-device-action-grid strong {
 	color: #267740;
@@ -866,8 +973,18 @@
 	}
 
 	.nms-device-facts,
-	.nms-device-action-grid {
+	.nms-device-action-grid,
+	.nms-snmp-information dl {
 		grid-template-columns: 1fr;
+	}
+
+	.nms-snmp-information-head {
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.nms-snmp-information dl > .system {
+		grid-column: auto;
 	}
 
 	.nms-device-facts > div {

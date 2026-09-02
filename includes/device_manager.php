@@ -1,10 +1,17 @@
 <?php
+/**
+ * @file device_manager.php
+ * Validate device-management requests and coordinate native Cacti device, graph, and data-query operations.
+ * Imported templates are activated through core graph creation so the Cacti poller, not import records, supplies readings.
+ */
 
 require_once($config['base_path'] . '/lib/api_device.php');
 require_once($config['base_path'] . '/lib/api_automation.php');
 require_once($config['base_path'] . '/lib/api_graph.php');
+require_once($config['base_path'] . '/lib/data_query.php');
 require_once($config['base_path'] . '/lib/template.php');
 
+/** Return a validated, nondeleted Cacti device ID or raise an invalid-input exception. */
 function nms_device_require($device_id) {
 	$device_id = (int) $device_id;
 	if ($device_id < 1 || !(int) db_fetch_cell_prepared("SELECT COUNT(*) FROM host WHERE id = ? AND deleted = ''", array($device_id))) {
@@ -13,6 +20,7 @@ function nms_device_require($device_id) {
 	return $device_id;
 }
 
+/** Validate and attach a reusable graph template to a Cacti device. */
 function nms_device_add_graph_template($device_id, $graph_template_id) {
 	$device_id = nms_device_require($device_id);
 	$graph_template_id = (int) $graph_template_id;
@@ -26,176 +34,21 @@ function nms_device_add_graph_template($device_id, $graph_template_id) {
 	return $graph_template_id;
 }
 
-function nms_device_create_graph_from_data_source($device_id, $local_rrd_id, $graph_name, $vertical_label, $options = array()) {
+/** Remove a validated device-to-graph-template association through Cacti's device API. */
+function nms_device_remove_graph_template($device_id, $graph_template_id) {
 	$device_id = nms_device_require($device_id);
-	$local_rrd_id = (int) $local_rrd_id;
-	$source = db_fetch_row_prepared('SELECT dl.id AS local_data_id, dl.snmp_query_id, dl.snmp_index,
-		dt.id AS data_template_id, dt.name AS data_template_name, dtr.id AS local_rrd_id,
-		dtr.local_data_template_rrd_id, dtr.data_source_name, dtd.name AS data_source_title
-		FROM data_local AS dl
-		INNER JOIN data_template AS dt ON dt.id = dl.data_template_id
-		INNER JOIN data_template_rrd AS dtr ON dtr.local_data_id = dl.id
-		INNER JOIN data_template_data AS dtd ON dtd.local_data_id = dl.id
-		WHERE dl.host_id = ? AND dtr.id = ?', array($device_id, $local_rrd_id));
-	if (!$source) throw new InvalidArgumentException('Select a data-source item from this device.');
-
-	$template_rrd_id = (int) $source['local_data_template_rrd_id'];
-	if ($template_rrd_id < 1) {
-		$template_rrd_id = (int) db_fetch_cell_prepared('SELECT id FROM data_template_rrd
-			WHERE data_template_id = ? AND local_data_id = 0 AND data_source_name = ? LIMIT 1',
-			array($source['data_template_id'], $source['data_source_name']));
+	$graph_template_id = (int) $graph_template_id;
+	if ($graph_template_id < 1 || !(int) db_fetch_cell_prepared(
+		'SELECT COUNT(*) FROM host_graph WHERE host_id = ? AND graph_template_id = ?',
+		array($device_id, $graph_template_id))) {
+		throw new InvalidArgumentException('Select a graph template associated with this device.');
 	}
-	if ($template_rrd_id < 1) throw new RuntimeException('This Cacti data source is not linked to a reusable data template item.');
-
-	$default_name = 'NMS ' . $source['data_template_name'] . ' - ' . $source['data_source_name'] . ' - DS ' . (int) $source['local_data_id'];
-	if (trim((string) $graph_name) === '') {
-		$graph_name = $default_name;
-		$suffix = 2;
-		while ((int) db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates WHERE name = ?', array($graph_name))) {
-			$graph_name = substr($default_name, 0, 184) . ' ' . $suffix++;
-		}
-	} else {
-		$graph_name = nms_template_clean_name($graph_name, 190);
-	}
-	$vertical_label = trim((string) $vertical_label);
-	if ($vertical_label === '') $vertical_label = substr($source['data_source_name'], 0, 20);
-	$vertical_label = substr(preg_replace('/[^A-Za-z0-9 _\/%.-]/', '', $vertical_label), 0, 20);
-	if ($vertical_label === '') $vertical_label = 'Value';
-	if ((int) db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates WHERE name = ?', array($graph_name))) {
-		throw new InvalidArgumentException('A Cacti graph template with this name already exists. Choose another name.');
-	}
-	$style_options = array('line1' => array(4, 1), 'line2' => array(5, 2), 'line3' => array(6, 3), 'area' => array(7, 0));
-	$consolidation_options = array('average' => 1, 'minimum' => 2, 'maximum' => 3, 'last' => 4);
-	$graph_style = isset($style_options[$options['graph_style'] ?? '']) ? $options['graph_style'] : 'line1';
-	$consolidation = isset($consolidation_options[$options['consolidation'] ?? '']) ? $options['consolidation'] : 'average';
-	$color_id = (int) ($options['color_id'] ?? 86);
-	if (!(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM colors WHERE id = ?', array($color_id))) $color_id = 86;
-	$alpha_percent = max(0, min(100, (int) ($options['alpha_percent'] ?? 100)));
-	$alpha = strtoupper(str_pad(dechex((int) round(255 * $alpha_percent / 100)), 2, '0', STR_PAD_LEFT));
-	$cdef_id = (int) ($options['cdef_id'] ?? 0);
-	if ($cdef_id > 0 && !(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM cdef WHERE id = ?', array($cdef_id))) $cdef_id = 0;
-	$gprint_id = (int) ($options['gprint_id'] ?? 2);
-	if (!(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates_gprint WHERE id = ?', array($gprint_id))) $gprint_id = 2;
-	$legend_values = array(
-		1 => !array_key_exists('show_average', $options) || !empty($options['show_average']),
-		2 => !array_key_exists('show_minimum', $options) || !empty($options['show_minimum']),
-		3 => !array_key_exists('show_maximum', $options) || !empty($options['show_maximum']),
-		4 => !array_key_exists('show_current', $options) || !empty($options['show_current'])
-	);
-	$width = in_array((int) ($options['width'] ?? 700), array(300, 500, 700, 900, 1200), true) ? (int) $options['width'] : 700;
-	$height = in_array((int) ($options['height'] ?? 200), array(120, 160, 200, 300, 400), true) ? (int) $options['height'] : 200;
-	$base_value = in_array((int) ($options['base_value'] ?? 1000), array(1000, 1024), true) ? (int) $options['base_value'] : 1000;
-	$image_format_id = in_array((int) ($options['image_format_id'] ?? 3), array(1, 3), true) ? (int) $options['image_format_id'] : 3;
-	$slope_mode = !array_key_exists('slope_mode', $options) || !empty($options['slope_mode']) ? 'on' : '';
-	$auto_scale = !array_key_exists('auto_scale', $options) || !empty($options['auto_scale']) ? 'on' : '';
-	$auto_scale_opts = in_array((int) ($options['auto_scale_opts'] ?? 2), array(1, 2, 3, 4), true) ? (int) $options['auto_scale_opts'] : 2;
-	$lower_limit = is_numeric($options['lower_limit'] ?? '0') ? (string) $options['lower_limit'] : '0';
-	$upper_limit = is_numeric($options['upper_limit'] ?? '100') ? (string) $options['upper_limit'] : '100';
-	$auto_scale_log = !empty($options['auto_scale_log']) ? 'on' : '';
-	$auto_scale_rigid = !empty($options['auto_scale_rigid']) ? 'on' : '';
-	$auto_padding = !array_key_exists('auto_padding', $options) || !empty($options['auto_padding']) ? 'on' : '';
-
-	$base_graph_template_id = (int) db_fetch_cell("SELECT id FROM graph_templates WHERE name = 'SNMP - Generic OID Template'");
-	if ($base_graph_template_id < 1) throw new RuntimeException('Cacti Generic OID graph template is not installed.');
-
-	db_execute('START TRANSACTION');
-	try {
-		$graph_template_id = (int) api_duplicate_graph(0, $base_graph_template_id, $graph_name, false);
-		if ($graph_template_id < 1) throw new RuntimeException('Cacti could not create the graph template.');
-
-		db_execute_prepared('UPDATE graph_templates_graph SET title = ?, vertical_label = ?, width = ?, height = ?, base_value = ?,
-			image_format_id = ?, slope_mode = ?, auto_scale = ?, auto_scale_opts = ?, lower_limit = ?, upper_limit = ?,
-			auto_scale_log = ?, auto_scale_rigid = ?, auto_padding = ?
-			WHERE graph_template_id = ? AND local_graph_id = 0',
-			array('|host_description| - ' . $graph_name, $vertical_label, $width, $height, $base_value,
-				$image_format_id, $slope_mode, $auto_scale, $auto_scale_opts, $lower_limit, $upper_limit,
-				$auto_scale_log, $auto_scale_rigid, $auto_padding, $graph_template_id));
-		db_execute_prepared('UPDATE graph_templates_item SET task_item_id = ?
-			WHERE graph_template_id = ? AND local_graph_id = 0',
-			array($template_rrd_id, $graph_template_id));
-		db_execute_prepared('UPDATE graph_templates_item SET graph_type_id = ?, line_width = ?, color_id = ?, alpha = ?, cdef_id = ?, consolidation_function_id = ?
-			WHERE graph_template_id = ? AND local_graph_id = 0 AND graph_type_id != 9',
-			array($style_options[$graph_style][0], $style_options[$graph_style][1], $color_id, $alpha, $cdef_id,
-				$consolidation_options[$consolidation], $graph_template_id));
-		db_execute_prepared('UPDATE graph_templates_item SET gprint_id = ?
-			WHERE graph_template_id = ? AND local_graph_id = 0 AND graph_type_id = 9',
-			array($gprint_id, $graph_template_id));
-		db_execute_prepared("UPDATE graph_template_input SET name = ?
-			WHERE graph_template_id = ? AND column_name = 'task_item_id'",
-			array('Data Source [' . $source['data_template_name'] . ']', $graph_template_id));
-
-		$minimum_item = db_fetch_row_prepared('SELECT * FROM graph_templates_item
-			WHERE graph_template_id = ? AND local_graph_id = 0 AND graph_type_id = 9 AND consolidation_function_id = 1 LIMIT 1',
-			array($graph_template_id));
-		if ($minimum_item) {
-			db_execute_prepared('UPDATE graph_templates_item SET sequence = sequence + 1
-				WHERE graph_template_id = ? AND local_graph_id = 0 AND sequence >= 3', array($graph_template_id));
-			$minimum_item['id'] = 0;
-			$minimum_item['hash'] = get_hash_graph_template(0, 'graph_template_item');
-			$minimum_item['text_format'] = 'Minimum:';
-			$minimum_item['consolidation_function_id'] = 2;
-			$minimum_item['sequence'] = 3;
-			$minimum_item_id = (int) sql_save($minimum_item, 'graph_templates_item');
-			$data_source_input_id = (int) db_fetch_cell_prepared("SELECT id FROM graph_template_input
-				WHERE graph_template_id = ? AND column_name = 'task_item_id' LIMIT 1", array($graph_template_id));
-			if ($minimum_item_id > 0 && $data_source_input_id > 0) {
-				db_execute_prepared('INSERT IGNORE INTO graph_template_input_defs
-					(graph_template_input_id, graph_template_item_id) VALUES (?, ?)',
-					array($data_source_input_id, $minimum_item_id));
-			}
-		}
-
-		$gprint_items = db_fetch_assoc_prepared('SELECT id, consolidation_function_id FROM graph_templates_item
-			WHERE graph_template_id = ? AND local_graph_id = 0 AND graph_type_id = 9', array($graph_template_id));
-		foreach ($gprint_items as $gprint_item) {
-			$cf_id = (int) $gprint_item['consolidation_function_id'];
-			if (isset($legend_values[$cf_id]) && !$legend_values[$cf_id]) {
-				db_execute_prepared('DELETE FROM graph_template_input_defs WHERE graph_template_item_id = ?', array((int) $gprint_item['id']));
-				db_execute_prepared('DELETE FROM graph_templates_item WHERE id = ?', array((int) $gprint_item['id']));
-			}
-		}
-
-		$local_graph_id = (int) sql_save(array(
-			'id' => 0,
-			'graph_template_id' => $graph_template_id,
-			'host_id' => $device_id,
-			'snmp_query_id' => (int) $source['snmp_query_id'],
-			'snmp_query_graph_id' => 0,
-			'snmp_index' => (string) $source['snmp_index']
-		), 'graph_local');
-		if ($local_graph_id < 1) throw new RuntimeException('Cacti could not create the device graph.');
-
-		change_graph_template($local_graph_id, $graph_template_id, true);
-		db_execute_prepared('UPDATE graph_templates_item SET task_item_id = ? WHERE local_graph_id = ?',
-			array($local_rrd_id, $local_graph_id));
-		db_execute_prepared('REPLACE INTO host_graph (host_id, graph_template_id) VALUES (?, ?)',
-			array($device_id, $graph_template_id));
-		update_graph_title_cache($local_graph_id);
-		set_config_option('time_last_change_graph', time());
-		automation_hook_graph_create_tree(array(
-			'id' => $local_graph_id,
-			'graph_template_id' => $graph_template_id,
-			'host_id' => $device_id,
-			'snmp_query_id' => (int) $source['snmp_query_id'],
-			'snmp_query_graph_id' => 0,
-			'snmp_index' => (string) $source['snmp_index']
-		));
-		api_plugin_hook_function('create_complete_graph_from_template', array(
-			'id' => $local_graph_id,
-			'graph_template_id' => $graph_template_id,
-			'host_id' => $device_id,
-			'snmp_query_id' => (int) $source['snmp_query_id'],
-			'snmp_query_graph_id' => 0,
-			'snmp_index' => (string) $source['snmp_index']
-		));
-		db_execute('COMMIT');
-		return array('graph_template_id' => $graph_template_id, 'local_graph_id' => $local_graph_id);
-	} catch (Throwable $exception) {
-		db_execute('ROLLBACK');
-		throw $exception;
-	}
+	api_device_gt_remove($device_id, $graph_template_id);
+	return $graph_template_id;
 }
 
+
+/** Validate a compatible data query and reindex method, then attach it to the device. */
 function nms_device_add_data_query($device_id, $data_query_id, $reindex_method) {
 	global $reindex_types;
 	$device_id = nms_device_require($device_id);
@@ -213,6 +66,7 @@ function nms_device_add_data_query($device_id, $data_query_id, $reindex_method) 
 	return $data_query_id;
 }
 
+/** Return validated device and data-query IDs only when their Cacti association exists. */
 function nms_device_require_data_query($device_id, $data_query_id) {
 	$device_id = nms_device_require($device_id);
 	$data_query_id = (int) $data_query_id;
@@ -224,6 +78,7 @@ function nms_device_require_data_query($device_id, $data_query_id) {
 	return array($device_id, $data_query_id);
 }
 
+/** Validate and update an associated query's reindex method through Cacti's API. */
 function nms_device_change_data_query($device_id, $data_query_id, $reindex_method) {
 	global $reindex_types;
 	list($device_id, $data_query_id) = nms_device_require_data_query($device_id, $data_query_id);
@@ -233,29 +88,145 @@ function nms_device_change_data_query($device_id, $data_query_id, $reindex_metho
 	return $data_query_id;
 }
 
+/** Run an associated Cacti data query immediately and return its ID. */
 function nms_device_reload_data_query($device_id, $data_query_id) {
 	list($device_id, $data_query_id) = nms_device_require_data_query($device_id, $data_query_id);
 	run_data_query($device_id, $data_query_id);
 	return $data_query_id;
 }
 
+/** Force all device queries to reindex and return query, cache-item, and timing statistics. */
+function nms_device_reindex($device_id) {
+	$device_id = nms_device_require($device_id);
+	$queries = db_fetch_assoc_prepared('SELECT snmp_query_id FROM host_snmp_query WHERE host_id = ? ORDER BY snmp_query_id', array($device_id));
+	$started_at = microtime(true);
+	foreach ($queries as $query) {
+		run_data_query($device_id, (int) $query['snmp_query_id'], false, true);
+	}
+	return array(
+		'query_count' => count($queries),
+		'item_count' => (int) db_fetch_cell_prepared('SELECT COUNT(*) FROM host_snmp_cache WHERE host_id = ?', array($device_id)),
+		'seconds' => microtime(true) - $started_at
+	);
+}
+
+/** Validate and remove the device's data-query association through Cacti's API. */
 function nms_device_remove_data_query($device_id, $data_query_id) {
 	list($device_id, $data_query_id) = nms_device_require_data_query($device_id, $data_query_id);
 	api_device_dq_remove($device_id, $data_query_id);
 	return $data_query_id;
 }
 
+/** Validate imported simulator settings when present, then create the device through the shared save path. */
 function nms_device_create($input) {
+	if (!empty($input['snmpsim_import_id'])) {
+		require_once(__DIR__ . '/snmpsim.php');
+		$defaults = nms_snmpsim_import_defaults($input['snmpsim_import_id']);
+		foreach (array('hostname', 'snmp_port', 'snmp_community', 'host_template_id', 'snmp_version') as $field) {
+			if ((string) $input[$field] !== (string) $defaults[$field]) {
+				throw new InvalidArgumentException('Simulator connection settings changed. Reopen Add device from the imported record. Use normal Add device for a real SNMP target.');
+			}
+		}
+		if (strpos($defaults['hostname'], '127.') === 0 && (int) $input['poller_id'] !== 1) {
+			throw new InvalidArgumentException('A loopback simulator must use the local Cacti collector. Configure a reachable client address for remote collectors.');
+		}
+		$input['proxy'] = true;
+	}
 	return nms_device_save(0, $input);
 }
 
+/** Require an existing device before passing submitted fields to the shared Cacti save path. */
 function nms_device_update($device_id, $input) {
 	$device_id = nms_device_require($device_id);
 	return nms_device_save($device_id, $input);
 }
 
+/** Delete only an NMS-managed device through Cacti and clean up its plugin-owned records. */
+function nms_device_delete($device_id) {
+	$device_id = nms_device_require($device_id);
+	if (!nms_managed_object_exists('device', $device_id)) {
+		throw new InvalidArgumentException('Only a device created through NMS can be deleted here.');
+	}
+	api_device_remove($device_id);
+	foreach (array('plugin_nms_topology', 'plugin_nms_device_parameters', 'plugin_nms_device_inventory') as $table) {
+		db_execute_prepared('DELETE FROM ' . $table . ' WHERE host_id = ?', array($device_id));
+	}
+	nms_managed_object_forget('device', $device_id);
+	return $device_id;
+}
+
+/**
+ * Instantiate imported graph templates through Cacti's supported template API.
+ *
+ * A host-template association alone only makes a graph selectable; it does not
+ * create the local data source or poller item that produces a live reading.
+ * This function follows Cacti's own add_graphs.php path and never inserts a
+ * reading into an NMS table.
+ */
+function nms_device_activate_imported_templates($device_id, $host_template_id) {
+	$device_id = nms_device_require($device_id);
+	$host_template_id = (int) $host_template_id;
+	$templates = db_fetch_assoc_prepared("SELECT DISTINCT o.graph_template_id
+		FROM plugin_nms_snmprec_imports AS i
+		INNER JOIN plugin_nms_snmprec_oids AS o ON o.import_id = i.id
+		WHERE i.host_template_id = ? AND o.graphable = 'on' AND o.graph_template_id > 0
+		AND NOT EXISTS (SELECT 1 FROM graph_local AS gl
+			WHERE gl.host_id = ? AND gl.graph_template_id = o.graph_template_id)
+		ORDER BY o.graph_template_id", array($host_template_id, $device_id));
+	$created = 0;
+
+	foreach ($templates as $template) {
+		$graph_template_id = (int) $template['graph_template_id'];
+		/* Cacti accepts suggested values by reference, so pass a real variable. */
+		$suggested_values = array();
+		$result = create_complete_graph_from_template($graph_template_id, $device_id, null, $suggested_values);
+		if (!is_array($result) || empty($result['local_graph_id'])) {
+			throw new RuntimeException('Cacti could not activate imported graph template ' . $graph_template_id . '.');
+		}
+		$local_data_ids = isset($result['local_data_id']) ? (array) $result['local_data_id'] : array();
+		foreach ($local_data_ids as $local_data_id) {
+			if ((int) $local_data_id > 0) push_out_host($device_id, (int) $local_data_id);
+		}
+		db_execute_prepared('REPLACE INTO host_graph (host_id, graph_template_id) VALUES (?, ?)',
+			array($device_id, $graph_template_id));
+		$created++;
+	}
+
+	if ($created > 0) {
+		set_config_option('time_last_change_graph', time());
+		set_config_option('time_last_change_data_source', time());
+	}
+	return $created;
+}
+
+/** Bring devices created before this fix onto the same Cacti-core polling path. */
+function nms_device_reconcile_imported_templates() {
+	$devices = db_fetch_assoc("SELECT DISTINCT h.id, h.host_template_id
+		FROM host AS h
+		INNER JOIN plugin_nms_snmprec_imports AS i ON i.host_template_id = h.host_template_id
+		WHERE h.deleted = '' AND h.disabled = '' AND EXISTS (
+			SELECT 1 FROM plugin_nms_snmprec_oids AS o
+			WHERE o.import_id = i.id AND o.graphable = 'on' AND o.graph_template_id > 0
+			AND NOT EXISTS (SELECT 1 FROM graph_local AS gl
+				WHERE gl.host_id = h.id AND gl.graph_template_id = o.graph_template_id)
+		)");
+	$created = 0;
+	foreach ($devices as $device) {
+		try {
+			$created += nms_device_activate_imported_templates($device['id'], $device['host_template_id']);
+		} catch (Throwable $exception) {
+			/* Never abort the Cacti poller because one imported template is invalid. */
+			cacti_log('Could not activate imported readings for device ' . (int) $device['id'] .
+				': ' . $exception->getMessage(), false, 'NMS');
+		}
+	}
+	return $created;
+}
+
+/** Validate device, collector, and protocol settings, then persist them using Cacti's device workflow. */
 function nms_device_save($device_id, $input) {
 	$device_id = (int) $device_id;
+	$is_new_device = $device_id === 0;
 	$description = trim((string) $input['description']);
 	$hostname = trim((string) $input['hostname']);
 	$template_id = (int) $input['host_template_id'];
@@ -320,5 +291,19 @@ function nms_device_save($device_id, $input) {
 		(int) $input['max_oids'], (int) $input['device_threads'], $poller_id, $site_id,
 		trim((string) $input['external_id']), trim((string) $input['location']), -1);
 	if (!$saved_device_id) throw new RuntimeException('Cacti could not save the device. Check the submitted SNMP settings.');
+	if ($is_new_device) nms_managed_object_record('device', (int) $saved_device_id);
+	if (empty($input['disabled'])) {
+		/*
+		 * Imported numeric OIDs become real Cacti poller items immediately. If
+		 * one template is temporarily invalid, keep the already-saved Cacti host;
+		 * the poller reconciliation path retries activation on its next cycle.
+		 */
+		try {
+			nms_device_activate_imported_templates((int) $saved_device_id, $template_id);
+		} catch (Throwable $exception) {
+			cacti_log('Device ' . (int) $saved_device_id . ' was saved, but imported readings could not be activated: ' .
+				$exception->getMessage(), false, 'NMS');
+		}
+	}
 	return (int) $saved_device_id;
 }

@@ -1,10 +1,19 @@
 <?php
+/**
+ * @file edit.php
+ * Render existing core device settings and graph/data-query associations with their management controls.
+ * Submitted actions return to devices.php; this template does not implement a separate device store.
+ */
 $device_id = (int) $edit_device['id'];
 $core_base = $config['url_path'];
+$snmp_uptime_ticks = (int) ($edit_device['snmp_sysUpTimeInstance'] ?? 0);
+$snmp_uptime_text = $snmp_uptime_ticks > 0 && function_exists('get_uptime')
+	? get_uptime($edit_device)
+	: 'Not reported';
 $device_actions = array(
 	array('Create New Device', $core_base . 'host.php?action=edit', 'Open the Cacti device creation form.'),
 	array('Create Graphs for this Device', $core_base . 'graphs_new.php?reset=true&host_id=' . $device_id, 'Select graph templates and data queries for this device.'),
-	array('Re-Index Device', $core_base . 'host.php?action=reindex&host_id=' . $device_id, 'Refresh indexed SNMP data such as interfaces and sensors.'),
+	array('Re-Index Device', '', 'Refresh indexed SNMP data such as interfaces and sensors.', 'reindex_device'),
 	array('Enable Device Debug', $core_base . 'host.php?action=enable_debug&host_id=' . $device_id, 'Enable detailed Cacti troubleshooting for this device.'),
 	array('Repopulate Poller Cache', $core_base . 'host.php?action=repopulate&host_id=' . $device_id, 'Rebuild the poller entries for this device.'),
 	array('View Poller Cache', $core_base . 'utilities.php?poller_action=-1&action=view_poller_cache&host_id=' . $device_id . '&template_id=-1&filter=&rows=-1', 'Inspect the poller items currently generated for this device.'),
@@ -19,18 +28,32 @@ $device_actions = array(
 			<a class="nms-panel-action" href="<?php print nms_h($core_base . 'host.php?action=edit&id=' . $device_id); ?>">Open in Cacti</a>
 			<details class="nms-device-tools-menu">
 				<summary><span>Device actions</span><small>ID <?php print $device_id; ?></small></summary>
-				<nav aria-label="Cacti device actions"><?php foreach ($device_actions as $device_action) { ?><a href="<?php print nms_h($device_action[1]); ?>"><?php print nms_h($device_action[0]); ?><span>↗</span></a><?php } ?></nav>
+				<nav aria-label="Cacti device actions"><?php foreach ($device_actions as $device_action) { ?><?php if (!empty($device_action[3])) { ?><form method="post" action="devices.php?tab=edit&id=<?php print $device_id; ?>"><input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>"><input type="hidden" name="nms_action" value="<?php print nms_h($device_action[3]); ?>"><input type="hidden" name="id" value="<?php print $device_id; ?>"><button type="submit" title="<?php print nms_h($device_action[2]); ?>"><?php print nms_h($device_action[0]); ?><span>↻</span></button></form><?php } else { ?><a href="<?php print nms_h($device_action[1]); ?>" title="<?php print nms_h($device_action[2]); ?>"><?php print nms_h($device_action[0]); ?><span>↗</span></a><?php } ?><?php } ?></nav>
 			</details>
 		</div>
 	</div>
 	<div class="nms-device-facts">
 		<div><span>State</span><strong><?php print nms_h(nms_host_status_name((int) $edit_device['status'])); ?></strong></div>
 		<div><span>SNMP identity</span><strong><?php print nms_h($edit_device['snmp_sysName'] ?: 'Pending'); ?></strong></div>
+		<div data-nms-tip="Live chassis serial number read from the serial OID defined by this device's imported MIB record."><span>Serial number</span><strong><?php print nms_h($edit_device['serial_number'] ?: (!empty($edit_device['serial_configured']) ? 'Pending live poll' : 'Not available')); ?></strong><?php if ($edit_device['serial_status'] === 'changed') { ?><small>Changed from baseline</small><?php } elseif ($edit_device['serial_status'] === 'failed') { ?><small>Live SNMP read failed</small><?php } ?></div>
 		<div><span>Poller items</span><strong><?php print (int) $edit_device['poller_item_count']; ?></strong></div>
 		<div><span>Data sources</span><strong><?php print (int) $edit_device['data_source_count']; ?></strong></div>
 		<div><span>Graphs</span><strong><?php print (int) $edit_device['graph_count']; ?></strong></div>
 		<div><span>Availability</span><strong><?php print nms_h(number_format((float) $edit_device['availability'], 1)); ?>%</strong></div>
 	</div>
+	<section class="nms-snmp-information" aria-labelledby="nms-snmp-information-title">
+		<div class="nms-snmp-information-head">
+			<div><h3 id="nms-snmp-information-title">SNMP information</h3><p>Identity values last collected and stored by Cacti.</p></div>
+			<strong><?php print nms_h($edit_device['description']); ?> <small>(<?php print nms_h($edit_device['hostname']); ?>)</small></strong>
+		</div>
+		<dl>
+			<div class="system"><dt>System</dt><dd><?php print nms_h($edit_device['snmp_sysDescr'] ?: 'Not reported'); ?></dd></div>
+			<div><dt>Uptime</dt><dd><?php print $snmp_uptime_ticks > 0 ? nms_h((string) $snmp_uptime_ticks . ' (' . $snmp_uptime_text . ')') : 'Not reported'; ?></dd></div>
+			<div><dt>Hostname</dt><dd><?php print nms_h($edit_device['snmp_sysName'] ?: 'Not reported'); ?></dd></div>
+			<div><dt>Location</dt><dd><?php print nms_h($edit_device['snmp_sysLocation'] ?: 'Not reported'); ?></dd></div>
+			<div><dt>Contact</dt><dd><?php print nms_h($edit_device['snmp_sysContact'] ?: 'Not reported'); ?></dd></div>
+		</dl>
+	</section>
 </section>
 
 <?php require($config['base_path'] . '/plugins/nms/templates/devices/add.php'); ?>
@@ -42,14 +65,14 @@ $device_actions = array(
 			<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>">
 			<input type="hidden" name="nms_action" value="add_graph_template">
 			<input type="hidden" name="id" value="<?php print $device_id; ?>">
-			<label><span>Add Graph Template</span><span class="nms-searchable-select"><input id="nmsGraphTemplateSearch" type="search" autocomplete="off" placeholder="Search graph templates" data-nms-no-tooltip <?php print !$available_graph_templates ? 'disabled' : ''; ?>><select id="nmsGraphTemplateSelect" required name="graph_template_id" <?php print !$available_graph_templates ? 'disabled' : ''; ?>><option value=""><?php print $available_graph_templates ? 'Select from all eligible Cacti graph templates' : 'All available templates are associated'; ?></option><?php foreach ($available_graph_templates as $available_template) { ?><option value="<?php print (int) $available_template['id']; ?>"><?php print nms_h($available_template['name']); ?></option><?php } ?></select></span></label>
+			<label><span>Add Graph Template</span><select class="nms-search-select" data-search-placeholder="Search graph templates" required name="graph_template_id" <?php print !$available_graph_templates ? 'disabled' : ''; ?>><option value=""><?php print $available_graph_templates ? 'Select from all eligible Cacti graph templates' : 'All available templates are associated'; ?></option><?php foreach ($available_graph_templates as $available_template) { ?><option value="<?php print (int) $available_template['id']; ?>"><?php print nms_h($available_template['name']); ?></option><?php } ?></select></label>
 			<button type="submit" <?php print !$available_graph_templates ? 'disabled' : ''; ?>>Add template</button>
 		</form>
 		<div class="nms-association-table">
-			<div class="nms-association-row heading"><span>Graph template</span><span>Status</span></div>
+			<div class="nms-association-row graph heading"><span>Graph template</span><span>Status</span><span>Action</span></div>
 			<?php if (!$device_graph_templates) { ?><div class="nms-association-empty">No associated graph templates.</div><?php } ?>
 			<?php foreach ($device_graph_templates as $graph_template) { ?>
-			<div class="nms-association-row"><strong><?php print nms_h($graph_template['name']); ?></strong><span><?php if ((int) $graph_template['graph_count'] > 0) { ?><i class="nms-association-state active">Being graphed</i><small><?php print (int) $graph_template['graph_count']; ?> graph(s)</small><?php } else { ?><i class="nms-association-state pending">Not graphed</i><?php } ?></span></div>
+			<div class="nms-association-row graph"><strong><?php print nms_h($graph_template['name']); ?></strong><span><?php if ((int) $graph_template['graph_count'] > 0) { ?><i class="nms-association-state active">Being graphed</i><small><?php print (int) $graph_template['graph_count']; ?> graph(s)</small><?php } else { ?><i class="nms-association-state pending">Not graphed</i><?php } ?></span><form class="nms-icon-action" method="post" action="devices.php?tab=edit&id=<?php print $device_id; ?>#graph-templates" onsubmit="return confirm('Remove this graph-template association from the device? Existing graphs are not deleted.');"><input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>"><input type="hidden" name="nms_action" value="remove_graph_template"><input type="hidden" name="id" value="<?php print $device_id; ?>"><input type="hidden" name="graph_template_id" value="<?php print (int) $graph_template['id']; ?>"><button type="submit" aria-label="Remove <?php print nms_h($graph_template['name']); ?> from this device" title="Remove association">×</button></form></div>
 			<?php } ?>
 		</div>
 	</section>
@@ -60,7 +83,7 @@ $device_actions = array(
 			<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>">
 			<input type="hidden" name="nms_action" value="add_data_query">
 			<input type="hidden" name="id" value="<?php print $device_id; ?>">
-			<label><span>Add Data Query</span><span class="nms-searchable-select"><input id="nmsDataQuerySearch" type="search" autocomplete="off" placeholder="Search data queries" data-nms-no-tooltip <?php print !$available_data_queries ? 'disabled' : ''; ?>><select id="nmsDataQuerySelect" required name="snmp_query_id" <?php print !$available_data_queries ? 'disabled' : ''; ?>><option value=""><?php print $available_data_queries ? 'Select from all eligible Cacti data queries' : 'All available queries are associated'; ?></option><?php foreach ($available_data_queries as $available_query) { ?><option value="<?php print (int) $available_query['id']; ?>"><?php print nms_h($available_query['name']); ?></option><?php } ?></select></span></label>
+			<label><span>Add Data Query</span><select class="nms-search-select" data-search-placeholder="Search data queries" required name="snmp_query_id" <?php print !$available_data_queries ? 'disabled' : ''; ?>><option value=""><?php print $available_data_queries ? 'Select from all eligible Cacti data queries' : 'All available queries are associated'; ?></option><?php foreach ($available_data_queries as $available_query) { ?><option value="<?php print (int) $available_query['id']; ?>"><?php print nms_h($available_query['name']); ?></option><?php } ?></select></label>
 			<label><span>Re-Index Method</span><select required name="reindex_method" <?php print !$available_data_queries ? 'disabled' : ''; ?>><?php foreach ($reindex_types as $reindex_id => $reindex_name) { ?><option value="<?php print (int) $reindex_id; ?>" <?php print (int) read_config_option('reindex_method') === (int) $reindex_id ? 'selected' : ''; ?>><?php print nms_h($reindex_name); ?></option><?php } ?></select></label>
 			<button type="submit" <?php print !$available_data_queries ? 'disabled' : ''; ?>>Add query</button>
 		</form>
@@ -81,7 +104,7 @@ $device_actions = array(
 				<div class="nms-query-actions">
 					<form method="post" action="devices.php?tab=edit&id=<?php print $device_id; ?>#data-queries"><input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>"><input type="hidden" name="nms_action" value="reload_data_query"><input type="hidden" name="id" value="<?php print $device_id; ?>"><input type="hidden" name="snmp_query_id" value="<?php print (int) $data_query['id']; ?>"><button type="submit" class="reload" title="Reload this data query">Reload</button></form>
 					<a class="verbose" href="<?php print nms_h($core_base . 'host.php?action=query_verbose&id=' . (int) $data_query['id'] . '&host_id=' . $device_id . '&header=true'); ?>" title="Run the query and show Cacti verbose output">Verbose</a>
-					<form method="post" action="devices.php?tab=edit&id=<?php print $device_id; ?>#data-queries" onsubmit="return confirm('Remove this data query and its indexed cache from the device?');"><input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>"><input type="hidden" name="nms_action" value="remove_data_query"><input type="hidden" name="id" value="<?php print $device_id; ?>"><input type="hidden" name="snmp_query_id" value="<?php print (int) $data_query['id']; ?>"><button type="submit" class="remove" title="Remove this data query">Remove</button></form>
+					<form method="post" action="devices.php?tab=edit&id=<?php print $device_id; ?>#data-queries" onsubmit="return confirm('Remove this data query and its indexed cache from the device?');"><input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>"><input type="hidden" name="nms_action" value="remove_data_query"><input type="hidden" name="id" value="<?php print $device_id; ?>"><input type="hidden" name="snmp_query_id" value="<?php print (int) $data_query['id']; ?>"><button type="submit" class="remove nms-x-action" aria-label="Remove <?php print nms_h($data_query['name']); ?> from this device" title="Remove data query">×</button></form>
 				</div>
 			</div>
 			<?php } ?>

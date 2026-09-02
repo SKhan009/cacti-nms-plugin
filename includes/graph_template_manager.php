@@ -1,8 +1,13 @@
 <?php
+/**
+ * @file graph_template_manager.php
+ * Create reusable styled graph templates from native Cacti data-template items and delete eligible NMS-managed templates.
+ */
 
 require_once($config['base_path'] . '/lib/api_graph.php');
 require_once($config['base_path'] . '/lib/template.php');
 
+/** Create a styled reusable graph template from Cacti's Generic OID template and record NMS ownership. */
 function nms_graph_template_create($data_template_rrd_id, $graph_name, $vertical_label, $options = array()) {
 	$data_template_rrd_id = (int) $data_template_rrd_id;
 	$source = db_fetch_row_prepared('SELECT dt.id AS data_template_id, dt.name AS data_template_name,
@@ -69,6 +74,7 @@ function nms_graph_template_create($data_template_rrd_id, $graph_name, $vertical
 	try {
 		$graph_template_id = (int) api_duplicate_graph(0, $base_graph_template_id, $graph_name, false);
 		if ($graph_template_id < 1) throw new RuntimeException('Cacti could not create the graph template.');
+		nms_managed_object_record('graph_template', $graph_template_id);
 
 		db_execute_prepared('UPDATE graph_templates_graph SET title = ?, vertical_label = ?, width = ?, height = ?, base_value = ?,
 			image_format_id = ?, slope_mode = ?, auto_scale = ?, auto_scale_opts = ?, lower_limit = ?, upper_limit = ?,
@@ -84,9 +90,9 @@ function nms_graph_template_create($data_template_rrd_id, $graph_name, $vertical
 			WHERE graph_template_id = ? AND local_graph_id = 0 AND graph_type_id != 9',
 			array($style_options[$graph_style][0], $style_options[$graph_style][1], $color_id, $alpha, $cdef_id,
 				$consolidation_options[$consolidation], $graph_template_id));
-		db_execute_prepared('UPDATE graph_templates_item SET gprint_id = ?
+		db_execute_prepared('UPDATE graph_templates_item SET gprint_id = ?, cdef_id = ?
 			WHERE graph_template_id = ? AND local_graph_id = 0 AND graph_type_id = 9',
-			array($gprint_id, $graph_template_id));
+			array($gprint_id, $cdef_id, $graph_template_id));
 		db_execute_prepared("UPDATE graph_template_input SET name = ?
 			WHERE graph_template_id = ? AND column_name = 'task_item_id'",
 			array('Data Source [' . $source['data_source_name'] . ']', $graph_template_id));
@@ -129,4 +135,27 @@ function nms_graph_template_create($data_template_rrd_id, $graph_name, $vertical
 		db_execute('ROLLBACK');
 		throw $exception;
 	}
+}
+
+/** Validate ownership and usage before deleting an NMS-created graph template. */
+function nms_graph_template_delete($graph_template_id) {
+	$graph_template_id = (int) $graph_template_id;
+	if ($graph_template_id < 1 || !nms_managed_object_exists('graph_template', $graph_template_id)) {
+		throw new InvalidArgumentException('Only a graph template created through NMS can be deleted here.');
+	}
+	if ((int) db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_local WHERE graph_template_id = ?', array($graph_template_id)) > 0) {
+		throw new InvalidArgumentException('This graph template is in use. Remove its device graphs before deleting it.');
+	}
+	$input_ids = db_fetch_assoc_prepared('SELECT id FROM graph_template_input WHERE graph_template_id = ?', array($graph_template_id));
+	foreach ($input_ids as $input) {
+		db_execute_prepared('DELETE FROM graph_template_input_defs WHERE graph_template_input_id = ?', array((int) $input['id']));
+	}
+	foreach (array('graph_template_input', 'graph_templates_graph', 'graph_templates_item', 'host_template_graph', 'host_graph') as $table) {
+		db_execute_prepared('DELETE FROM ' . $table . ' WHERE graph_template_id = ?', array($graph_template_id));
+	}
+	db_execute_prepared('UPDATE plugin_nms_snmprec_oids SET graph_template_id = 0 WHERE graph_template_id = ?', array($graph_template_id));
+	db_execute_prepared('DELETE FROM graph_templates WHERE id = ?', array($graph_template_id));
+	nms_managed_object_forget('graph_template', $graph_template_id);
+	set_config_option('time_last_change_graph', time());
+	return $graph_template_id;
 }

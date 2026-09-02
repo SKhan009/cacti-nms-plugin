@@ -31,10 +31,13 @@
 }
 
 .nms-tooltip {
-	background: #173f28;
+	/* Slight transparency keeps the tooltip readable without obscuring the form beneath it. */
+	background: rgba(23, 63, 40, .84);
 	border: 1px solid rgba(255, 255, 255, .18);
 	border-radius: 7px;
-	box-shadow: 0 8px 24px rgba(13, 41, 25, .24);
+	box-shadow: 0 8px 24px rgba(13, 41, 25, .18);
+	backdrop-filter: blur(2px);
+	-webkit-backdrop-filter: blur(2px);
 	box-sizing: border-box;
 	color: #fff;
 	font-size: 13px;
@@ -65,12 +68,12 @@
 }
 
 .nms-tooltip[data-placement="top"]:after {
-	border-top-color: #173f28;
+	border-top-color: rgba(23, 63, 40, .84);
 	bottom: -12px;
 }
 
 .nms-tooltip[data-placement="bottom"]:after {
-	border-bottom-color: #173f28;
+	border-bottom-color: rgba(23, 63, 40, .84);
 	top: -12px;
 }
 

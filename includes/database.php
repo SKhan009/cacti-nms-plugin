@@ -1,5 +1,13 @@
 <?php
+/**
+ * @file database.php
+ * Create and migrate NMS-owned tables, translate legacy categories to Cacti Tree IDs, and seed fault configuration.
+ * The uninstall helper removes plugin storage without dropping Cacti core tables.
+ */
 
+require_once(__DIR__ . '/functions.php');
+
+/** Create or migrate plugin-owned storage and seed configuration alongside existing Cacti core tables. */
 function nms_setup_database() {
 	db_execute("CREATE TABLE IF NOT EXISTS plugin_nms_incidents (
 		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -49,6 +57,15 @@ function nms_setup_database() {
 		PRIMARY KEY (meta_key)
 	) ENGINE=InnoDB ROW_FORMAT=Dynamic");
 
+	/* Ownership is explicit: destructive controls are never inferred from a Cacti name at request time. */
+	db_execute("CREATE TABLE IF NOT EXISTS plugin_nms_managed_objects (
+		object_type VARCHAR(32) NOT NULL,
+		object_id INT UNSIGNED NOT NULL,
+		created_by INT UNSIGNED NOT NULL DEFAULT 0,
+		created_at DATETIME NOT NULL,
+		PRIMARY KEY (object_type, object_id),
+		KEY created_by (created_by)
+	) ENGINE=InnoDB ROW_FORMAT=Dynamic");
 	/* Cacti remains the source of device data. This table stores presentation only. */
 	db_execute("CREATE TABLE IF NOT EXISTS plugin_nms_topology (
 		host_id INT UNSIGNED NOT NULL,
@@ -190,7 +207,22 @@ function nms_setup_database() {
 	/* Upgrade existing imports without copying their test values into live inventory. */
 	db_execute("UPDATE plugin_nms_snmprec_oids SET inventory_key = 'serial_number'
 		WHERE inventory_key = '' AND graphable != 'on' AND
-		(oid IN ('1.3.6.1.4.1.9.3.6.3.0') OR LOWER(section_name) LIKE '%serial%')");
+		(oid = '1.3.6.1.4.1.9.3.6.3.0'
+			OR oid = '1.3.6.1.2.1.47.1.1.1.1.11' OR oid LIKE '1.3.6.1.2.1.47.1.1.1.1.11.%'
+			OR oid = '1.3.6.1.2.1.43.5.1.1.17' OR oid LIKE '1.3.6.1.2.1.43.5.1.1.17.%'
+			OR LOWER(section_name) REGEXP 'serial[[:space:]_-]*(number|no\\.?|#)'
+			OR LOWER(section_name) LIKE '%entphysicalserialnum%'
+			OR LOWER(section_name) REGEXP 'service[[:space:]_-]*tag')");
+
+	/* One-time compatibility ownership for objects produced by earlier NMS versions. */
+	db_execute("INSERT IGNORE INTO plugin_nms_managed_objects (object_type, object_id, created_by, created_at)
+		SELECT 'graph_template', id, 0, NOW() FROM graph_templates WHERE name LIKE 'NMS %'");
+	db_execute("INSERT IGNORE INTO plugin_nms_managed_objects (object_type, object_id, created_by, created_at)
+		SELECT DISTINCT 'graph_template', graph_template_id, 0, NOW() FROM plugin_nms_snmprec_oids WHERE graph_template_id > 0");
+	db_execute("INSERT IGNORE INTO plugin_nms_managed_objects (object_type, object_id, created_by, created_at)
+		SELECT 'device', id, 0, NOW() FROM host WHERE deleted = '' AND description LIKE 'NMS %'");
+	db_execute("INSERT IGNORE INTO plugin_nms_managed_objects (object_type, object_id, created_by, created_at)
+		SELECT DISTINCT 'tree', category_id, 0, NOW() FROM plugin_nms_category_templates WHERE category_id > 1");
 
 	nms_migrate_categories_to_cacti_trees();
 	nms_seed_fault_configuration();
@@ -219,8 +251,7 @@ function nms_migrate_categories_to_cacti_trees() {
 
 	$mapping = array();
 	$next_sequence = (int) db_fetch_cell('SELECT COALESCE(MAX(sequence), 0) + 1 FROM graph_tree');
-	$user_id = isset($_SESSION['sess_user_id']) ? (int) $_SESSION['sess_user_id'] : 1;
-	if ($user_id <= 0) $user_id = 1;
+	$user_id = nms_current_user_id(1);
 
 	foreach ($legacy_categories as $category) {
 		$tree_id = (int) db_fetch_cell_prepared('SELECT id FROM graph_tree WHERE name = ? ORDER BY id LIMIT 1',
@@ -233,6 +264,7 @@ function nms_migrate_categories_to_cacti_trees() {
 			$tree_id = (int) db_fetch_cell_prepared('SELECT id FROM graph_tree WHERE name = ? ORDER BY id DESC LIMIT 1',
 				array($category['name']));
 			if ($tree_id <= 0) throw new RuntimeException('Could not migrate device category to a Cacti Tree.');
+			nms_managed_object_record('tree', $tree_id, $user_id);
 			$next_sequence++;
 		}
 		$mapping[(int) $category['id']] = $tree_id;
@@ -257,6 +289,7 @@ function nms_migrate_categories_to_cacti_trees() {
 	if (function_exists('set_config_option')) set_config_option('time_last_change_tree', time());
 }
 
+/** Migrate legacy rule definitions and seed fault configuration for the current Cacti Trees. */
 function nms_seed_fault_configuration() {
 	nms_sync_template_categories();
 
@@ -279,6 +312,7 @@ function nms_seed_fault_configuration() {
 	}
 }
 
+/** Associate unassigned host templates with matching Cacti Trees using template-name families. */
 function nms_sync_template_categories() {
 	$templates = db_fetch_assoc('SELECT id, name FROM host_template ORDER BY id');
 	$category_rows = db_fetch_assoc('SELECT id, name FROM graph_tree');
@@ -319,6 +353,7 @@ function nms_sync_template_categories() {
 	}
 }
 
+/** Remove plugin-owned tables during uninstall; Cacti core tables are not dropped. */
 function nms_drop_database() {
 	db_execute('DROP TABLE IF EXISTS plugin_nms_device_inventory');
 	db_execute('DROP TABLE IF EXISTS plugin_nms_snmprec_oids');

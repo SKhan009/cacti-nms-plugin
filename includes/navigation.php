@@ -1,5 +1,10 @@
 <?php
+/**
+ * @file navigation.php
+ * Integrate NMS tabs and navigation labels into Cacti, respecting the registered access realm.
+ */
 
+/** Render the NMS navigation tab when permitted, reflecting the current page selection. */
 function nms_show_tab() {
 	global $config;
 
@@ -14,6 +19,7 @@ function nms_show_tab() {
 	print "<a id='tab-nms'$selected href='$url'><img src='$icon' alt='NMS'></a>";
 }
 
+/** Extend Cacti's navigation entries for the current NMS page and return the updated array. */
 function nms_draw_navigation_text($nav) {
 	if (in_array(get_current_page(), array('nms.php', 'devices.php', 'fault_config.php', 'topology.php'), true)) {
 		$nav['NMS'] = 'plugins/nms/nms.php';

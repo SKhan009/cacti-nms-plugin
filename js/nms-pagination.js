@@ -1,17 +1,23 @@
-(function () {
+/**
+ * @file nms-pagination.js
+ * Paginate existing rendered NMS lists in the browser without changing their underlying device or rule records.
+ */
+(/** Initialize client-side pagination for NMS tables and repeated lists. */ function () {
 	'use strict';
 
 	var DEFAULT_SIZE = 10;
 	var pageSizes = [5, 10, 25, 50, 100];
 
+	/** Return direct matching children while excluding empty-state placeholders. */
 	function directChildren(container, selector) {
-		return Array.prototype.filter.call(container.children, function (child) {
+		return Array.prototype.filter.call(container.children, /** Keep matching rows that do not contain an empty-state message. */ function (child) {
 			return child.matches(selector) && !child.querySelector('.nms-empty');
 		});
 	}
 
+	/** Build page-number tokens with ellipses around a large page range. */
 	function pageTokens(current, total) {
-		if (total <= 7) return Array.from({length: total}, function (_, index) { return index + 1; });
+		if (total <= 7) return Array.from({length: total}, /** Convert a zero-based array index into a displayed page number. */ function (_, index) { return index + 1; });
 		var pages = [1];
 		var start = Math.max(2, current - 1);
 		var end = Math.min(total - 1, current + 1);
@@ -22,6 +28,7 @@
 		return pages;
 	}
 
+	/** Create an accessible pagination button with the supplied state and click action. */
 	function createButton(label, title, disabled, active, onClick) {
 		var button = document.createElement('button');
 		button.type = 'button';
@@ -34,6 +41,7 @@
 		return button;
 	}
 
+	/** Attach pagination controls and track the container's current items, page, and page size. */
 	function Paginator(container, itemSelector, label) {
 		var self = this;
 		this.container = container;
@@ -52,7 +60,7 @@
 		this.actions.className = 'nms-pagination-actions';
 		this.controls.appendChild(this.summary);
 		this.controls.appendChild(this.actions);
-		container.addEventListener('nms:list-updated', function () {
+		container.addEventListener('nms:list-updated', /** Recapture changed list items and reset pagination to the first page. */ function () {
 			self.items = directChildren(container, itemSelector);
 			self.page = 1;
 			self.render();
@@ -62,13 +70,13 @@
 		this.render();
 	}
 
-	Paginator.prototype.go = function (page) {
+	Paginator.prototype.go = /** Clamp the requested page to the available range and redraw the list controls. */ function (page) {
 		var totalPages = Math.max(1, Math.ceil(this.items.length / this.pageSize));
 		this.page = Math.max(1, Math.min(totalPages, page));
 		this.render();
 	};
 
-	Paginator.prototype.render = function () {
+	Paginator.prototype.render = /** Show the current item slice and rebuild the summary, page-size selector, and navigation. */ function () {
 		var self = this;
 		var total = this.items.length;
 		if (!total) {
@@ -80,7 +88,7 @@
 		if (this.page > totalPages) this.page = totalPages;
 		var start = (this.page - 1) * this.pageSize;
 		var end = Math.min(start + this.pageSize, total);
-		this.items.forEach(function (item, index) {
+		this.items.forEach(/** Hide items whose index falls outside the current page slice. */ function (item, index) {
 			item.classList.toggle('nms-page-hidden', index < start || index >= end);
 		});
 		this.summary.textContent = 'Showing ' + (start + 1) + '–' + end + ' of ' + total;
@@ -91,22 +99,22 @@
 		sizeLabel.textContent = 'Rows';
 		var sizeSelect = document.createElement('select');
 		sizeSelect.setAttribute('aria-label', 'Rows per page');
-		pageSizes.forEach(function (size) {
+		pageSizes.forEach(/** Add a page-size choice and mark the current size as selected. */ function (size) {
 			var option = document.createElement('option');
 			option.value = size;
 			option.textContent = size;
 			option.selected = size === self.pageSize;
 			sizeSelect.appendChild(option);
 		});
-		sizeSelect.addEventListener('change', function () {
+		sizeSelect.addEventListener('change', /** Apply a new page size and return the list to its first page. */ function () {
 			self.pageSize = Number(sizeSelect.value);
 			self.page = 1;
 			self.render();
 		});
 		sizeLabel.appendChild(sizeSelect);
 		this.actions.appendChild(sizeLabel);
-		this.actions.appendChild(createButton('‹', 'Previous page', this.page === 1, false, function () { self.go(self.page - 1); }));
-		pageTokens(this.page, totalPages).forEach(function (token) {
+		this.actions.appendChild(createButton('‹', 'Previous page', this.page === 1, false, /** Navigate to the previous page. */ function () { self.go(self.page - 1); }));
+		pageTokens(this.page, totalPages).forEach(/** Render either a page button or an ellipsis gap for each navigation token. */ function (token) {
 			if (typeof token !== 'number') {
 				var gap = document.createElement('span');
 				gap.className = 'nms-page-gap';
@@ -114,22 +122,23 @@
 				self.actions.appendChild(gap);
 				return;
 			}
-			self.actions.appendChild(createButton(String(token), 'Page ' + token, false, token === self.page, function () { self.go(token); }));
+			self.actions.appendChild(createButton(String(token), 'Page ' + token, false, token === self.page, /** Navigate to the page represented by this numbered button. */ function () { self.go(token); }));
 		});
-		this.actions.appendChild(createButton('›', 'Next page', this.page === totalPages, false, function () { self.go(self.page + 1); }));
+		this.actions.appendChild(createButton('›', 'Next page', this.page === totalPages, false, /** Navigate to the next page. */ function () { self.go(self.page + 1); }));
 	};
 
+	/** Attach paginators to supported NMS tables, associations, rules, and inventory lists. */
 	function initialize() {
-		Array.prototype.forEach.call(document.querySelectorAll('.nms-table tbody'), function (container, index) {
+		Array.prototype.forEach.call(document.querySelectorAll('.nms-table tbody'), /** Paginate this table's direct body rows. */ function (container, index) {
 			new Paginator(container, 'tr', 'Table ' + (index + 1));
 		});
-		Array.prototype.forEach.call(document.querySelectorAll('.nms-association-table'), function (container, index) {
+		Array.prototype.forEach.call(document.querySelectorAll('.nms-association-table'), /** Paginate association entries without counting their heading row. */ function (container, index) {
 			new Paginator(container, '.nms-association-row:not(.heading)', 'Association list ' + (index + 1));
 		});
-		Array.prototype.forEach.call(document.querySelectorAll('.nms-existing-rules'), function (container) {
+		Array.prototype.forEach.call(document.querySelectorAll('.nms-existing-rules'), /** Paginate the compact fault-rule entries in this container. */ function (container) {
 			new Paginator(container, '.nms-compact-rule', 'Fault rules');
 		});
-		Array.prototype.forEach.call(document.querySelectorAll('.nms-popup-categories'), function (container) {
+		Array.prototype.forEach.call(document.querySelectorAll('.nms-popup-categories'), /** Paginate the device-category entries in this container. */ function (container) {
 			new Paginator(container, 'div', 'Device categories');
 		});
 		var inventory = document.getElementById('nmsTopologyInventory');

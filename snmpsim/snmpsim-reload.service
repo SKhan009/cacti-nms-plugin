@@ -1,8 +1,0 @@
-[Unit]
-Description=Activate SNMP records uploaded by NMS
-
-[Service]
-Type=oneshot
-ExecCondition=/usr/bin/test -f /var/lib/snmpsim/data/.reload.pending
-ExecStart=/usr/bin/systemctl try-restart snmpsim.service
-ExecStartPost=/usr/bin/rm -f /var/lib/snmpsim/data/.reload.pending

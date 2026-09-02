@@ -1,15 +1,23 @@
 <?php
+/**
+ * @file template_manager.php
+ * Convert imported OID definitions into reusable native Cacti host/data/graph templates and retain import associations.
+ * Recognized text identity OIDs are routed to inventory instead of numeric RRD data sources.
+ */
 
+require_once(__DIR__ . '/functions.php');
 require_once($config['base_path'] . '/lib/api_data_source.php');
 require_once($config['base_path'] . '/lib/api_graph.php');
 require_once($config['base_path'] . '/lib/template.php');
 
+/** Strip markup, normalize whitespace, and bound a required Cacti template name. */
 function nms_template_clean_name($value, $maximum = 150) {
 	$value = trim(preg_replace('/\s+/', ' ', strip_tags((string) $value)));
 	if ($value === '') throw new InvalidArgumentException('A Cacti template name is required.');
 	return substr($value, 0, $maximum);
 }
 
+/** Return an existing host template by name or create a new Cacti host-template record. */
 function nms_template_host($name) {
 	$name = nms_template_clean_name($name);
 	$existing = (int) db_fetch_cell_prepared('SELECT id FROM host_template WHERE name = ?', array($name));
@@ -19,11 +27,26 @@ function nms_template_host($name) {
 	return (int) $id;
 }
 
+/** Recognize supported chassis and indexed entity or printer serial-number OIDs. */
+function nms_template_is_serial_number_oid($oid) {
+	$oid = ltrim(trim((string) $oid), '.');
+	if ($oid === '1.3.6.1.4.1.9.3.6.3.0') return true; // OLD-CISCO-CHASSIS-MIB::chassisId
+	$indexed_serial_columns = array(
+		'1.3.6.1.2.1.47.1.1.1.1.11', // ENTITY-MIB::entPhysicalSerialNum
+		'1.3.6.1.2.1.43.5.1.1.17'   // Printer-MIB::prtGeneralSerialNumber
+	);
+	foreach ($indexed_serial_columns as $base_oid) {
+		if ($oid === $base_oid || strpos($oid, $base_oid . '.') === 0) return true;
+	}
+	return false;
+}
+
+/** Return a readable label for recognized inventory/system OIDs, or an empty string. */
 function nms_template_known_oid_label($oid) {
+	if (nms_template_is_serial_number_oid($oid)) return 'Chassis serial number';
 	$labels = array(
 		'1.3.6.1.2.1.1.3.0' => 'System uptime',
-		'1.3.6.1.2.1.1.5.0' => 'Device name',
-		'1.3.6.1.4.1.9.3.6.3.0' => 'Chassis serial number'
+		'1.3.6.1.2.1.1.5.0' => 'Device name'
 	);
 	return $labels[$oid] ?? '';
 }
@@ -37,12 +60,15 @@ function nms_template_inventory_key($record) {
 	if (!empty($record['graphable']) || (int) ($record['type'] ?? 0) !== 4) return '';
 	$oid = ltrim(trim((string) ($record['oid'] ?? '')), '.');
 	$section = strtolower(trim((string) ($record['section'] ?? '')));
-	if ($oid === '1.3.6.1.4.1.9.3.6.3.0' || strpos($section, 'serial') !== false) {
+	/* Do not match a product name such as "Serial Device Server CPU". */
+	$serial_heading = preg_match('/(?:serial[\s_-]*(?:number|no\.?|#)|entphysicalserialnum|service[\s_-]*tag)/', $section);
+	if (nms_template_is_serial_number_oid($oid) || $serial_heading) {
 		return 'serial_number';
 	}
 	return '';
 }
 
+/** Build a readable reading label from a known OID or section and reading index. */
 function nms_template_record_label($record) {
 	$known_label = nms_template_known_oid_label((string) $record['oid']);
 	if ($known_label !== '') return $known_label;
@@ -56,6 +82,7 @@ function nms_template_record_label($record) {
 	return substr($section, 0, 150);
 }
 
+/** Create a normalized, indexed RRD data-source name within the 19-character limit. */
 function nms_template_data_source_name($record) {
 	$label = strtolower(nms_template_record_label($record));
 	$label = trim(preg_replace('/[^a-z0-9]+/', '_', $label), '_');
@@ -65,6 +92,7 @@ function nms_template_data_source_name($record) {
 	return 'nms_' . substr($label, 0, 19 - 4 - strlen($suffix)) . $suffix;
 }
 
+/** Duplicate native Generic OID templates into a data/graph template pair for one imported numeric reading. */
 function nms_template_pair($template_name, $record) {
 	$base_data_template_id = (int) db_fetch_cell("SELECT id FROM data_template WHERE name = 'SNMP - Generic OID Template'");
 	$base_graph_template_id = (int) db_fetch_cell("SELECT id FROM graph_templates WHERE name = 'SNMP - Generic OID Template'");
@@ -120,9 +148,11 @@ function nms_template_pair($template_name, $record) {
 	return array('data_template_id' => $data_template_id, 'graph_template_id' => $graph_template_id);
 }
 
+/** Validate a record import, create its Cacti templates and metadata, and deploy the simulator community. */
 function nms_template_import($original_name, $community, $template_name, $category_id, $content, $records, $user_id) {
-	$category_exists = (int) db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_tree WHERE id = ?', array($category_id));
-	if (!$category_exists) throw new InvalidArgumentException('Select a valid Cacti Tree category.');
+	/* Fail before creating Cacti objects if this server has no usable simulator directory. */
+	nms_snmprec_runtime_dir();
+	if (!nms_cacti_tree_exists($category_id)) throw new InvalidArgumentException('Select a valid Cacti Tree category.');
 	$hash = hash('sha256', $content);
 	if ((int) db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_nms_snmprec_imports WHERE file_hash = ? OR community = ?', array($hash, $community))) {
 		throw new InvalidArgumentException('This file or simulator community has already been imported.');
@@ -143,9 +173,7 @@ function nms_template_import($original_name, $community, $template_name, $catego
 	db_execute('START TRANSACTION');
 	try {
 		$host_template_id = nms_template_host($template_name);
-		db_execute_prepared('INSERT INTO plugin_nms_category_templates (host_template_id, category_id, assigned_at)
-			VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE category_id = VALUES(category_id), assigned_at = NOW()',
-			array($host_template_id, $category_id));
+		nms_assign_template_tree($host_template_id, $category_id);
 		db_execute_prepared('INSERT INTO plugin_nms_snmprec_imports
 			(original_name, community, template_name, host_template_id, category_id, record_count,
 			graphable_count, file_hash, deployed_path, uploaded_by, created_at)
@@ -192,6 +220,7 @@ function nms_template_import($original_name, $community, $template_name, $catego
 	}
 }
 
+/** Apply the one-time readable-name migration to templates previously created by SNMP record imports. */
 function nms_template_upgrade_readable_names() {
 	$migration_key = 'readable_template_names_v2';
 	if ((string) db_fetch_cell_prepared('SELECT meta_value FROM plugin_nms_meta WHERE meta_key = ?', array($migration_key)) === 'done') return;

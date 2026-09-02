@@ -1,5 +1,13 @@
 <?php
+/**
+ * @file snmprec.php
+ * Parse bounded SNMP simulator record uploads, validate community filenames, and deploy new records to the configured data directory.
+ * Activation is queued for the managed service; PHP does not launch a responder.
+ */
 
+require_once(__DIR__ . '/snmpsim.php');
+
+/** Validate a bounded SNMP record upload and return typed OID records with section and graphability metadata. */
 function nms_snmprec_parse($content) {
 	if (!is_string($content) || trim($content) === '') {
 		throw new InvalidArgumentException('The SNMP record file is empty.');
@@ -61,6 +69,7 @@ function nms_snmprec_parse($content) {
 	return $records;
 }
 
+/** Validate a community string that can also safely identify its simulator record filename. */
 function nms_snmprec_community($value) {
 	$value = trim((string) $value);
 	if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/', $value)) {
@@ -69,11 +78,10 @@ function nms_snmprec_community($value) {
 	return $value;
 }
 
+/** Resolve the configured simulator directory and require writable access; never substitute another path. */
 function nms_snmprec_runtime_dir() {
-	$directory = (string) db_fetch_cell_prepared(
-		"SELECT meta_value FROM plugin_nms_meta WHERE meta_key = 'snmprec_runtime_dir'", array()
-	);
-	if ($directory === '') $directory = '/var/lib/snmpsim/data';
+	$settings = nms_snmpsim_config();
+	$directory = $settings['data_dir'];
 	$real = realpath($directory);
 	if ($real === false || !is_dir($real) || !is_writable($real)) {
 		throw new RuntimeException('The configured SNMPSim data directory is not available to NMS.');
@@ -81,7 +89,9 @@ function nms_snmprec_runtime_dir() {
 	return $real;
 }
 
+/** Write a new community record and queue activation; reject existing records and report filesystem failures. */
 function nms_snmprec_deploy($community, $content) {
+	$community = nms_snmprec_community($community);
 	$directory = nms_snmprec_runtime_dir();
 	$target = $directory . DIRECTORY_SEPARATOR . $community . '.snmprec';
 	if (file_exists($target)) {

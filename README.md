@@ -7,9 +7,20 @@ Data sources:
 - current device status from `host`;
 - actual device parameter definitions from Cacti data templates;
 - latest raw values returned by Cacti device collection, captured through `poller_output`;
+- live text inventory queried with Cacti's SNMP API because RRDtool cannot store strings;
 
-The plugin stores category mappings, fault-rule configuration, incident lifecycle, and audit
-events only in its own `plugin_nms_*` tables. Cacti core tables remain unchanged.
+The plugin stores tree mappings, fault-rule configuration, incident lifecycle, audit events,
+and only the latest required text-inventory baseline in its own `plugin_nms_*` tables.
+Numeric readings, devices, poller items, data sources, graphs, and category trees remain
+owned by Cacti core.
+
+Shared NMS policy is centralized in `includes/functions.php`: Cacti Tree validation and
+template assignment, fault comparisons and severity ordering, active incident scope,
+poll freshness, live fault-parameter discovery, rule validation, authenticated user lookup,
+page initialization, and versioned asset URLs. Device pages use the single reusable graph
+template builder in `includes/graph_template_manager.php`; the retired per-device duplicate
+builder is not used. This keeps controllers focused on requests and presentation while
+Cacti core remains authoritative for devices, trees, templates, collection, and graphs.
 
 ## Device categories and fault rules
 
@@ -22,7 +33,8 @@ fault rules.
 
 The configuration page has two compact tabs: **Fault values and severity** and **Cacti
 template mapping**. Parameter choices come only from data sources attached to real devices
-in the selected category. A rule can compare numeric readings, for example temperature
+in the selected category, plus live text-inventory status such as chassis serial-number
+`ok`, `changed`, or `failed`. A rule can compare numeric readings, for example temperature
 greater than `80` or free memory less than `500`, and text readings, for example interface
 state does not equal `up`. Unknown, empty, equals, not-equals, contains, greater-than and
 less-than conditions are supported. Threshold, unit, severity, name and enabled state are
@@ -30,7 +42,19 @@ editable. Multiple rules can monitor the same parameter at different severities.
 
 The plugin does not create generic poller or RRD-file faults. It records the latest raw
 device value in `plugin_nms_device_parameters`, evaluates it against category rules and
-stores only resulting incident state. It never inserts sample readings.
+stores only resulting incident state. A value older than two poll intervals is historical
+and is neither displayed nor evaluated as current. It never inserts sample readings or
+uses an imported `.snmprec` value as a live fallback.
+
+Interface and other indexed data sources retain Cacti's data-source name and SNMP index in
+their live display label. Category-wide rules still apply to every matching instance, but
+each resulting incident identifies the affected port, sensor, disk, or other indexed item.
+Parameter incidents are evaluated only while Cacti reports the device Up; when it is Down,
+the core device-state rule is authoritative and old parameter incidents are resolved.
+
+All native dropdowns in the NMS interface share one CSS chevron with fixed right and
+vertical alignment, including device forms, fault rules, topology controls, graph controls,
+and pagination page-size selectors.
 
 ## Dynamic topology
 
@@ -73,6 +97,12 @@ router, Linux server, and environmental sensor on the VM loopback interface for 
 real Cacti SNMP collection and NMS fault rules. See `snmpsim/README.md` for the endpoint,
 community names, readings, and VM layout.
 
+NMS 1.9.30 uses one validated, root-managed `/etc/cacti-nms/snmpsim.json` per server.
+Imported records use that endpoint automatically for new simulated devices; real devices
+keep their independent Cacti settings. PHP reports health and can perform an explicit live
+Cacti SNMP probe, but cannot launch the responder or control systemd. No path or reading
+fallback is used.
+
 ## Device management and SNMP record imports
 
 The **Devices** module provides a live inventory from Cacti's `host`, template, site,
@@ -90,10 +120,19 @@ installed **SNMP - Generic OID Template** through Cacti's template APIs and fixi
 template OID to the imported record. A single upload is limited to 64 graphable readings.
 
 Each import creates or reuses a named Cacti host template, links all generated graph
-templates to it, and maps it to one device category fetched from Cacti Graph Trees. The administrator can then use
-**Add device** with the imported community and host template. Uploading templates does not
-create synthetic Cacti readings: the poller must retrieve the actual OID from SNMPSim or
-the eventual real device.
+templates to it, and maps it to one category identified by `graph_tree.id`. When a device
+uses that template, NMS invokes Cacti's `create_complete_graph_from_template()` path to
+create native local graphs, data sources, and poller items. Existing matching devices are
+reconciled idempotently at the end of a poller run. Uploading templates does not create
+synthetic Cacti readings: the poller must retrieve the actual OID from SNMPSim or the
+eventual real device.
+
+OCTET STRING records whose section identifies a serial number are inventory, not graphs.
+Their OID is queried with the device credentials stored in Cacti. The first successful
+value becomes the baseline; a later mismatch opens an inventory incident. The inventory
+status is also available in Fault Configuration for tree-specific comparisons and severity.
+Until an explicit status rule is added, built-in changed/failed monitoring remains active.
+A timeout records a failed live check without substituting the value from the uploaded file.
 
 Use **Upload SNMP record → Download sample file** for a ready-to-import test record. The
 sample community can be `nms-device-demo`, with a host template such as **NMS Demo

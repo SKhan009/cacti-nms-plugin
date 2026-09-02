@@ -1,10 +1,15 @@
-<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-snmp-form.css?v=1.9.18'); ?>">
+<?php
+/**
+ * @file graphs.php
+ * Render the reusable graph-template builder and template usage list from Cacti data supplied by the device controller.
+ */
+?><link rel="stylesheet" href="<?php print nms_h(nms_asset_url('css/nms-snmp-form.css')); ?>">
 <?php
 $core_base = $config['url_path'];
 $source_item_count = count($graph_data_template_items);
 $graph_template_count = count($global_graph_templates);
 $data_template_count = count(array_unique(array_column($graph_data_template_items, 'data_template_id')));
-$graphs_using_count = array_sum(array_map(function ($template) { return (int) $template['graph_count']; }, $global_graph_templates));
+$graphs_using_count = array_sum(array_map(/** Extract each template's integer graph count for the usage total. */ function ($template) { return (int) $template['graph_count']; }, $global_graph_templates));
 ?>
 <section class="nms-panel nms-graph-device-picker">
 	<div><h2>Create graph template</h2><p>Create a reusable Cacti graph template from a data-template item. No device is selected or changed.</p></div>
@@ -32,7 +37,7 @@ $graphs_using_count = array_sum(array_map(function ($template) { return (int) $t
 		<section class="nms-graph-form-section">
 			<h3>Data source and graph item</h3>
 			<div class="nms-graph-section-grid">
-				<label class="source"><span>Cacti data-template item</span><span class="nms-searchable-select"><input id="nmsDataTemplateSearch" type="search" autocomplete="off" placeholder="Search this dropdown"><select id="nmsDataTemplateSelect" required name="data_template_rrd_id" <?php print !$source_item_count ? 'disabled' : ''; ?>><option value=""><?php print $source_item_count ? 'Select a reusable reading from Cacti' : 'Cacti has no reusable data-template items'; ?></option><?php foreach ($graph_data_template_items as $source_item) { $source_label = $source_item['data_template_name'] . ' — ' . $source_item['data_source_name'] . ((int) $source_item['graph_template_count'] > 0 ? ' — used by ' . (int) $source_item['graph_template_count'] . ' template(s)' : ' — not yet graphed'); ?><option value="<?php print (int) $source_item['data_template_rrd_id']; ?>"><?php print nms_h($source_label); ?></option><?php } ?></select></span><small><?php print $source_item_count ? 'Search by template or reading name, then choose from the filtered list.' : 'Cacti has no reusable data-template items.'; ?></small></label>
+				<label class="source"><span>Cacti data-template item</span><select class="nms-search-select" data-search-placeholder="Search by template or reading" required name="data_template_rrd_id" <?php print !$source_item_count ? 'disabled' : ''; ?>><option value=""><?php print $source_item_count ? 'Select a reusable reading from Cacti' : 'Cacti has no reusable data-template items'; ?></option><?php foreach ($graph_data_template_items as $source_item) { $source_label = $source_item['data_template_name'] . ' — ' . $source_item['data_source_name'] . ((int) $source_item['graph_template_count'] > 0 ? ' — used by ' . (int) $source_item['graph_template_count'] . ' template(s)' : ' — not yet graphed'); ?><option value="<?php print (int) $source_item['data_template_rrd_id']; ?>"><?php print nms_h($source_label); ?></option><?php } ?></select><small><?php print $source_item_count ? 'Open the selector and search by template or reading name.' : 'Cacti has no reusable data-template items.'; ?></small></label>
 				<label><span>Graph item style</span><select name="graph_style"><option value="line1">Line — 1 px</option><option value="line2">Line — 2 px</option><option value="line3">Line — 3 px</option><option value="area">Filled area</option></select></label>
 				<label><span>Data calculation</span><select name="consolidation"><option value="average">Average</option><option value="last">Current / last</option><option value="minimum">Minimum</option><option value="maximum">Maximum</option></select></label>
 				<label><span>Item color</span><span class="nms-color-select"><i id="nmsGraphColorSwatch" aria-hidden="true"></i><select id="nmsGraphColor" name="color_id"><?php foreach ($graph_colors as $color) { ?><option value="<?php print (int) $color['id']; ?>" data-hex="<?php print nms_h($color['hex']); ?>" <?php print (int) $color['id'] === 86 ? 'selected' : ''; ?>><?php print nms_h($color['name']); ?></option><?php } ?></select></span></label>
@@ -64,11 +69,11 @@ $graphs_using_count = array_sum(array_map(function ($template) { return (int) $t
 	</form>
 </section>
 
-<section class="nms-panel nms-standalone-graph-list">
+	<section class="nms-panel nms-standalone-graph-list" id="graph-template-list">
 	<div class="nms-panel-head"><div><h2>Current graph templates</h2><p>All reusable graph templates and their device-graph usage counts read directly from Cacti.</p></div><a class="nms-panel-action" href="<?php print nms_h($core_base . 'graph_templates.php'); ?>">Open graph templates</a></div>
 	<div class="nms-association-table nms-global-graph-table">
 		<div class="nms-association-row heading"><span>Graph template</span><span>ID</span><span>Graphs using</span><span>Size</span><span>Format</span><span>Vertical label</span><span>Action</span></div>
 		<?php if (!$global_graph_templates) { ?><div class="nms-association-empty">Cacti has no graph templates.</div><?php } ?>
-		<?php foreach ($global_graph_templates as $graph_template) { ?><div class="nms-association-row"><strong><?php print nms_h($graph_template['name']); ?></strong><span><?php print (int) $graph_template['id']; ?></span><span><?php print (int) $graph_template['graph_count']; ?></span><span><?php print (int) $graph_template['width']; ?> × <?php print (int) $graph_template['height']; ?></span><span><?php print (int) $graph_template['image_format_id'] === 3 ? 'SVG' : 'PNG'; ?></span><span><?php print nms_h($graph_template['vertical_label'] ?: 'Not set'); ?></span><a href="<?php print nms_h($core_base . 'graph_templates.php?action=template_edit&id=' . (int) $graph_template['id']); ?>">Open</a></div><?php } ?>
+			<?php foreach ($global_graph_templates as $graph_template) { ?><div class="nms-association-row"><strong><?php print nms_h($graph_template['name']); ?></strong><span><?php print (int) $graph_template['id']; ?></span><span><?php print (int) $graph_template['graph_count']; ?></span><span><?php print (int) $graph_template['width']; ?> × <?php print (int) $graph_template['height']; ?></span><span><?php print (int) $graph_template['image_format_id'] === 3 ? 'SVG' : 'PNG'; ?></span><span><?php print nms_h($graph_template['vertical_label'] ?: 'Not set'); ?></span><span class="nms-template-actions"><a href="<?php print nms_h($core_base . 'graph_templates.php?action=template_edit&id=' . (int) $graph_template['id']); ?>">Open</a><?php if (!empty($graph_template['nms_deletable']) && (int) $graph_template['graph_count'] === 0) { ?><form method="post" action="devices.php?tab=graphs#graph-template-list" onsubmit="return confirm('Permanently delete this unused NMS-created graph template?');"><input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>"><input type="hidden" name="nms_action" value="delete_graph_template"><input type="hidden" name="graph_template_id" value="<?php print (int) $graph_template['id']; ?>"><button class="nms-delete-x" type="submit" aria-label="Delete <?php print nms_h($graph_template['name']); ?>" title="Delete unused NMS-created template">×</button></form><?php } ?></span></div><?php } ?>
 	</div>
 </section>
