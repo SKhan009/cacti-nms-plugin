@@ -297,9 +297,6 @@ if ($tab === 'graphs') {
 		ORDER BY gt.name");
 }
 
-$device_counts = db_fetch_row("SELECT COUNT(*) AS total,
-	SUM(disabled = '') AS enabled, SUM(status = " . HOST_UP . " AND disabled = '') AS up,
-	SUM(status = " . HOST_DOWN . " AND disabled = '') AS down FROM host WHERE deleted = ''");
 $nms_csrf_token = csrf_get_tokens();
 $nms_asset_base = $config['url_path'] . 'plugins/nms/';
 $nms_backend_url = $config['url_path'] . 'index.php';
@@ -312,7 +309,6 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 <main class="nms-shell nms-devices-shell">
 	<div class="nms-heading">
 		<div><p class="nms-eyebrow">NMS / Device Management</p><h1>Devices and SNMP records</h1><p>Manage real Cacti devices and build templates from validated SNMPSim records.</p></div>
-		<div class="nms-health"><span class="nms-health-dot"></span><div><strong><?php print (int) $device_counts['up']; ?> devices up</strong><small><?php print (int) $device_counts['total']; ?> total in Cacti</small></div></div>
 	</div>
 
 	<?php if ($page_error !== '') { ?><div class="nms-form-message error"><strong>Could not complete the request</strong><span><?php print nms_h($page_error); ?></span></div><?php } ?>
