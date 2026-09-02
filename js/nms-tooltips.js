@@ -96,7 +96,11 @@
 
 	var tooltip;
 	var activeTarget;
+	var pointerX = 0;
+	var pointerY = 0;
+	var pointerMode = false;
 	var counter = 0;
+	var pointerTargets = '.nms-page-tabs a,.nms-primary-nav a,.nms-sidebar-link,.nms-sidebar-status,.nms-sidebar-toggle,.nms-brand,.nms-backend-button';
 
 	function cleanText(value) {
 		return (value || '').replace(/\s+/g, ' ').replace(/optional/gi, '').trim();
@@ -133,22 +137,44 @@
 		tooltip.setAttribute('data-placement', placement);
 	}
 
-	function show(target) {
+	function positionAtPointer() {
+		if (!tooltip) return;
+		var tipRect = tooltip.getBoundingClientRect();
+		var gap = 16;
+		var left = pointerX + gap;
+		var top = pointerY + gap;
+		if (left + tipRect.width > window.innerWidth - 12) left = pointerX - tipRect.width - gap;
+		if (top + tipRect.height > window.innerHeight - 12) top = pointerY - tipRect.height - gap;
+		left = Math.max(12, Math.min(left, window.innerWidth - tipRect.width - 12));
+		top = Math.max(12, Math.min(top, window.innerHeight - tipRect.height - 12));
+		tooltip.style.top = Math.round(top) + 'px';
+		tooltip.style.left = Math.round(left) + 'px';
+		tooltip.setAttribute('data-placement', 'pointer');
+	}
+
+	function show(target, event) {
 		var text = target.getAttribute('data-nms-tip');
 		if (!text) return;
 		ensureTooltip();
 		activeTarget = target;
+		pointerMode = !!(event && event.type !== 'focus' && target.matches(pointerTargets));
+		if (pointerMode) {
+			pointerX = event.clientX;
+			pointerY = event.clientY;
+		}
 		tooltip.innerHTML = '<strong>More information</strong>' + text.replace(/[&<>"']/g, function (character) {
 			return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character];
 		});
 		tooltip.classList.add('visible');
-		position(target);
+		if (pointerMode) positionAtPointer();
+		else position(target);
 	}
 
 	function hide(target) {
 		if (target && activeTarget !== target) return;
 		if (tooltip) tooltip.classList.remove('visible');
 		activeTarget = null;
+		pointerMode = false;
 	}
 
 	function bind(target) {
@@ -156,12 +182,19 @@
 		if (target.tagName === 'LABEL' && target.querySelector('.nms-help-icon')) return;
 		target.setAttribute('data-nms-tip-bound', '1');
 		target.classList.add('nms-tooltip-source');
+		if (target.matches(pointerTargets)) target.classList.add('nms-pointer-tooltip');
 		if (!target.matches('a,button,input,select,textarea,[tabindex]')) target.setAttribute('tabindex', '0');
 		if (!target.id) target.id = 'nmsHelpTarget' + (++counter);
 		target.setAttribute('aria-describedby', 'nmsGlobalTooltip');
-		target.addEventListener('mouseenter', function () { show(target); });
+		target.addEventListener('mouseenter', function (event) { show(target, event); });
+		target.addEventListener('mousemove', function (event) {
+			if (activeTarget !== target || !target.matches(pointerTargets)) return;
+			pointerX = event.clientX;
+			pointerY = event.clientY;
+			positionAtPointer();
+		});
 		target.addEventListener('mouseleave', function () { hide(target); });
-		target.addEventListener('focus', function () { show(target); });
+		target.addEventListener('focus', function (event) { show(target, event); });
 		target.addEventListener('blur', function () { hide(target); });
 		target.addEventListener('click', function (event) {
 			if (!target.classList.contains('nms-help-icon')) return;
@@ -227,8 +260,8 @@
 
 	document.addEventListener('keydown', function (event) { if (event.key === 'Escape') hide(); });
 	document.addEventListener('click', function (event) { if (activeTarget && !activeTarget.contains(event.target)) hide(); });
-	window.addEventListener('resize', function () { if (activeTarget) position(activeTarget); });
-	window.addEventListener('scroll', function () { if (activeTarget) position(activeTarget); }, true);
+	window.addEventListener('resize', function () { if (activeTarget) pointerMode ? positionAtPointer() : position(activeTarget); });
+	window.addEventListener('scroll', function () { if (activeTarget) pointerMode ? hide(activeTarget) : position(activeTarget); }, true);
 	document.addEventListener('DOMContentLoaded', function () {
 		ensureTooltip();
 		refresh(document);
