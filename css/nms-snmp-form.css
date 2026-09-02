@@ -354,11 +354,19 @@
 }
 
 .nms-graph-builder-form {
-	align-items: end;
+	align-items: start;
 	display: grid;
-	gap: 12px;
+	column-gap: 18px;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
+	row-gap: 16px;
 	padding: 16px 20px 20px;
+}
+
+.nms-graph-builder-form > label,
+.nms-graph-builder-form > fieldset {
+	align-self: start;
+	min-width: 0;
+	width: 100%;
 }
 
 .nms-graph-builder-form .source {
@@ -436,26 +444,34 @@
 }
 
 .nms-graph-options {
-	border: 1px solid #cedbd1;
-	border-radius: 7px;
+	border: 0;
+	border-radius: 0;
 	box-sizing: border-box;
 	margin: 0;
-	min-height: 58px;
-	padding: 7px 10px 9px;
+	min-height: 0;
+	padding: 0;
 }
 
 .nms-graph-options legend {
 	color: #657269;
+	display: block;
 	font-size: 10px;
 	font-weight: 800;
-	padding: 0 4px;
+	line-height: 14px;
+	margin: 0 0 6px;
+	padding: 0;
 }
 
 .nms-graph-options > div {
 	align-items: center;
+	background: #fff;
+	border: 1px solid #cedbd1;
+	border-radius: 7px;
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px 14px;
+	min-height: 38px;
+	padding: 7px 10px;
 }
 
 .nms-graph-options label {

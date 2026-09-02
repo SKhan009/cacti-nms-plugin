@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-snmp-form.css?v=1.9.7'); ?>">
+<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-snmp-form.css?v=1.9.10'); ?>">
 <?php
 $core_base = $config['url_path'];
 $source_item_count = count($graph_data_template_items);
