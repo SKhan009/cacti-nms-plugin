@@ -9,7 +9,7 @@ if (!isset($nms_page_title)) $nms_page_title = 'NMS';
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="robots" content="noindex,nofollow">
 	<title><?php print nms_h($nms_page_title); ?></title>
-	<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-v1.1.css?v=1.9.15'); ?>">
+	<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-v1.1.css?v=1.9.16'); ?>">
 	<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-tooltips.css?v=1.9.15'); ?>">
 	<?php if (!empty($nms_extra_css)) { ?><link rel="stylesheet" href="<?php print nms_h($nms_asset_base . $nms_extra_css); ?>"><?php } ?>
 </head>
@@ -17,7 +17,6 @@ if (!isset($nms_page_title)) $nms_page_title = 'NMS';
 	<header class="nms-app-header">
 		<div class="nms-header-start">
 			<button class="nms-sidebar-toggle" id="nmsSidebarToggle" type="button" aria-controls="nmsSidebar" aria-expanded="true" aria-label="Collapse sidebar" data-nms-tip="Open or collapse the NMS navigation sidebar."><span></span><span></span><span></span></button>
-			<a class="nms-brand" href="nms.php" aria-label="NMS dashboard" data-nms-tip="Return to the live NMS device readings dashboard."><span class="nms-brand-mark">N</span><span><strong>NMS</strong><small>Network Management System</small></span></a>
 		</div>
 		<nav class="nms-primary-nav" aria-label="NMS modules">
 			<a class="<?php print $nms_active_module === 'faults' ? 'selected' : ''; ?>" href="nms.php" data-nms-tip="View current device health and faults evaluated from live Cacti data.">Faults</a>
