@@ -55,3 +55,51 @@
 	privacyProtocol.addEventListener('change', updateSnmpFields);
 	updateSnmpFields();
 })();
+
+(function () {
+	'use strict';
+
+	var search = document.getElementById('nmsDataTemplateSearch');
+	var dataTemplateSelect = document.getElementById('nmsDataTemplateSelect');
+	if (search && dataTemplateSelect) {
+		var dataTemplateOptions = Array.prototype.slice.call(dataTemplateSelect.options, 1);
+		search.addEventListener('input', function () {
+			var term = search.value.toLowerCase().trim();
+			dataTemplateOptions.forEach(function (option) {
+				option.hidden = term !== '' && option.text.toLowerCase().indexOf(term) === -1;
+			});
+			if (dataTemplateSelect.selectedIndex > 0 && dataTemplateSelect.options[dataTemplateSelect.selectedIndex].hidden) dataTemplateSelect.value = '';
+		});
+	}
+
+	var color = document.getElementById('nmsGraphColor');
+	var swatch = document.getElementById('nmsGraphColorSwatch');
+	if (color && swatch) {
+		function updateColorSwatch() {
+			var option = color.options[color.selectedIndex];
+			var hex = option ? option.getAttribute('data-hex') : '';
+			if (hex && /^[0-9a-f]{6}$/i.test(hex)) swatch.style.backgroundColor = '#' + hex;
+		}
+		color.addEventListener('change', updateColorSwatch);
+		updateColorSwatch();
+	}
+
+	var scaleMethod = document.getElementById('nmsAutoScaleMethod');
+	var lowerLimit = document.getElementById('nmsLowerLimit');
+	var upperLimit = document.getElementById('nmsUpperLimit');
+	var scaleHelp = document.getElementById('nmsScaleHelp');
+	if (scaleMethod && lowerLimit && upperLimit) {
+		function updateScaleInputs() {
+			var method = scaleMethod.value;
+			lowerLimit.hidden = method === '1' || method === '3';
+			upperLimit.hidden = method === '1' || method === '2';
+			if (!scaleHelp) return;
+			if (method === '1') scaleHelp.textContent = 'Cacti calculates both limits from collected values.';
+			else if (method === '2') scaleHelp.textContent = 'Enter the lower limit; Cacti calculates the upper limit.';
+			else if (method === '3') scaleHelp.textContent = 'Enter the upper limit; Cacti calculates the lower limit.';
+			else scaleHelp.textContent = 'Enter both lower and upper limits.';
+		}
+		scaleMethod.addEventListener('change', updateScaleInputs);
+		updateScaleInputs();
+	}
+})();

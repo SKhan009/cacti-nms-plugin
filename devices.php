@@ -235,8 +235,8 @@ $available_graph_templates = array();
 $available_data_queries = array();
 $graph_data_template_items = array();
 $global_graph_templates = array();
-$graph_colors = db_fetch_assoc("SELECT id, hex, COALESCE(NULLIF(name, ''), CONCAT('#', hex)) AS name
-	FROM colors WHERE hex != 'FFFFFF' ORDER BY CASE WHEN name IS NULL OR name = '' THEN 1 ELSE 0 END, name, hex");
+$graph_colors = db_fetch_assoc("SELECT id, hex, COALESCE(NULLIF(name, ''), CONCAT('Cacti color ', id)) AS name
+	FROM colors ORDER BY CASE WHEN name IS NULL OR name = '' THEN 1 ELSE 0 END, name, hex");
 $graph_gprints = db_fetch_assoc('SELECT id, name, gprint_text FROM graph_templates_gprint ORDER BY name');
 $graph_cdefs = db_fetch_assoc('SELECT id, name FROM cdef ORDER BY name');
 if ($tab === 'edit') {
@@ -303,7 +303,7 @@ $nms_backend_url = $config['url_path'] . 'index.php';
 $nms_active_module = 'devices';
 $nms_page_title = 'NMS · Device Management';
 $nms_extra_css = 'css/nms-devices.css?v=1.1.0';
-$nms_extra_js = 'js/nms-devices.js?v=1.1.0';
+$nms_extra_js = 'js/nms-devices.js?v=1.9.12';
 require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 ?>
 <main class="nms-shell nms-devices-shell">
