@@ -354,16 +354,40 @@
 }
 
 .nms-graph-builder-form {
-	align-items: start;
-	display: grid;
-	column-gap: 18px;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	row-gap: 16px;
+	display: block;
 	padding: 16px 20px 20px;
 }
 
-.nms-graph-builder-form > label,
-.nms-graph-builder-form > fieldset {
+.nms-graph-form-section {
+	background: #fbfdfb;
+	border: 1px solid #d6e3d9;
+	border-radius: 8px;
+	margin-bottom: 16px;
+	overflow: hidden;
+}
+
+.nms-graph-form-section h3 {
+	background: linear-gradient(90deg, #1d693a, #2e7d48);
+	color: #fff;
+	font-size: 12px;
+	font-weight: 800;
+	letter-spacing: .02em;
+	line-height: 1.2;
+	margin: 0;
+	padding: 10px 14px;
+}
+
+.nms-graph-section-grid {
+	align-items: start;
+	column-gap: 18px;
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	padding: 16px;
+	row-gap: 16px;
+}
+
+.nms-graph-section-grid > label,
+.nms-graph-section-grid > fieldset {
 	align-self: start;
 	min-width: 0;
 	width: 100%;
@@ -373,10 +397,18 @@
 	grid-column: auto;
 }
 
-.nms-graph-builder-form > button {
-	grid-column: 2;
-	justify-self: end;
-	min-width: 210px;
+.nms-grid-wide {
+	grid-column: 1 / -1;
+}
+
+.nms-graph-submit {
+	display: flex;
+	justify-content: flex-end;
+	padding-top: 2px;
+}
+
+.nms-graph-submit button {
+	min-width: 240px;
 }
 
 .nms-inline-selects {
@@ -759,7 +791,7 @@
 		margin: 12px 16px;
 	}
 
-	.nms-graph-builder-form {
+	.nms-graph-section-grid {
 		grid-template-columns: minmax(300px, 1fr) 1fr;
 	}
 
@@ -783,7 +815,7 @@
 		grid-template-columns: 1fr;
 	}
 
-	.nms-graph-builder-form,
+	.nms-graph-section-grid,
 	.nms-graph-builder-steps {
 		grid-template-columns: 1fr;
 	}
@@ -792,9 +824,11 @@
 		grid-column: auto;
 	}
 
-	.nms-graph-builder-form > button {
+	.nms-grid-wide {
 		grid-column: auto;
-		justify-self: stretch;
+	}
+
+	.nms-graph-submit button {
 		width: 100%;
 	}
 
