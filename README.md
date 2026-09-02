@@ -90,7 +90,7 @@ installed **SNMP - Generic OID Template** through Cacti's template APIs and fixi
 template OID to the imported record. A single upload is limited to 64 graphable readings.
 
 Each import creates or reuses a named Cacti host template, links all generated graph
-templates to it, and maps it to one NMS device category. The administrator can then use
+templates to it, and maps it to one device category fetched from Cacti Graph Trees. The administrator can then use
 **Add device** with the imported community and host template. Uploading templates does not
 create synthetic Cacti readings: the poller must retrieve the actual OID from SNMPSim or
 the eventual real device.

@@ -178,6 +178,19 @@ function nms_comparison_label($comparison) {
 	return isset($labels[$comparison]) ? $labels[$comparison] : $comparison;
 }
 
+/**
+ * A retained value is historical once Cacti has missed more than two expected
+ * poll intervals.  Historical values must not be evaluated as current faults
+ * or displayed as a fallback when the SNMP endpoint is unavailable.
+ */
+function nms_parameter_is_fresh($last_seen) {
+	$poller_interval = (int) read_config_option('poller_interval');
+	if ($poller_interval < 30) $poller_interval = 300;
+	$maximum_age = max(120, $poller_interval * 2);
+	$timestamp = strtotime((string) $last_seen);
+	return $timestamp !== false && time() - $timestamp <= $maximum_age;
+}
+
 function nms_sync_device_faults() {
 	$core_rows = db_fetch_assoc("SELECT h.*, ht.name AS template_name,
 		c.id AS category_id, c.name AS category_name,
@@ -186,7 +199,7 @@ function nms_sync_device_faults() {
 		FROM host AS h
 		INNER JOIN host_template AS ht ON ht.id = h.host_template_id
 		INNER JOIN plugin_nms_category_templates AS ct ON ct.host_template_id = h.host_template_id
-		INNER JOIN plugin_nms_device_categories AS c ON c.id = ct.category_id
+		INNER JOIN graph_tree AS c ON c.id = ct.category_id
 		INNER JOIN plugin_nms_fault_rules AS r ON r.category_id = c.id
 			AND r.enabled = 'on' AND r.metric = 'core_status'
 		WHERE h.deleted = '' AND h.disabled = ''
@@ -219,7 +232,7 @@ function nms_sync_device_faults() {
 		FROM host AS h
 		INNER JOIN host_template AS ht ON ht.id = h.host_template_id
 		INNER JOIN plugin_nms_category_templates AS ct ON ct.host_template_id = h.host_template_id
-		INNER JOIN plugin_nms_device_categories AS c ON c.id = ct.category_id
+		INNER JOIN graph_tree AS c ON c.id = ct.category_id
 		INNER JOIN plugin_nms_fault_rules AS r ON r.category_id = c.id
 			AND r.enabled = 'on' AND r.metric = 'parameter'
 		INNER JOIN plugin_nms_device_parameters AS p ON p.host_id = h.id
@@ -228,6 +241,7 @@ function nms_sync_device_faults() {
 		ORDER BY h.id, r.sort_order, r.id, p.local_data_id");
 
 	foreach ($parameter_rows as $row) {
+		if (!nms_parameter_is_fresh($row['last_seen'])) continue;
 		if (!nms_parameter_matches($row['raw_value'], $row['comparison'], $row['threshold_value'])) continue;
 		$fingerprint = 'device-rule:' . $row['rule_id'] . ':host:' . $row['id'] . ':data:' . $row['local_data_id'];
 		$active[] = $fingerprint;
@@ -251,6 +265,43 @@ function nms_sync_device_faults() {
 	nms_resolve_missing('device', $active);
 }
 
+/** Evaluate the minimal plugin-owned text inventory that Cacti cannot RRD. */
+function nms_sync_inventory_faults() {
+	$rows = db_fetch_assoc("SELECT di.*, h.description, h.status AS host_status
+		FROM plugin_nms_device_inventory AS di
+		INNER JOIN host AS h ON h.id = di.host_id AND h.deleted = '' AND h.disabled = ''
+		WHERE di.status IN ('changed', 'failed')");
+	$active = array();
+
+	foreach ($rows as $row) {
+		/* Device-down is already a core Cacti status fault; avoid duplicate noise. */
+		if ($row['status'] === 'failed' && (int) $row['host_status'] !== HOST_UP) continue;
+		$fingerprint = 'inventory:host:' . (int) $row['host_id'] . ':' . $row['inventory_key'];
+		$active[] = $fingerprint;
+		if ($row['status'] === 'changed') {
+			$severity = 'major';
+			$title = $row['description'] . ' - ' . $row['display_name'] . ' changed';
+			$message = $row['display_name'] . ' changed from ' . $row['baseline_value'] .
+				' to ' . $row['observed_value'] . '. Live SNMP OID: ' . $row['oid'] . '.';
+		} else {
+			$severity = 'warning';
+			$title = $row['description'] . ' - inventory reading failed';
+			$message = $row['last_error'] . ' Live SNMP OID: ' . $row['oid'] . '.';
+		}
+		nms_open_incident(array(
+			'fingerprint' => $fingerprint,
+			'source_type' => 'inventory',
+			'source_key' => $row['host_id'] . ':' . $row['inventory_key'],
+			'host_id' => $row['host_id'],
+			'severity' => $severity,
+			'title' => $title,
+			'message' => $message
+		));
+	}
+
+	nms_resolve_missing('inventory', $active);
+}
+
 function nms_sync_all_faults($force = false) {
 	$last = (int) db_fetch_cell_prepared("SELECT meta_value FROM plugin_nms_meta WHERE meta_key = 'last_sync'", array());
 	if (!$force && $last > 0 && time() - $last < 30) {
@@ -258,9 +309,8 @@ function nms_sync_all_faults($force = false) {
 	}
 
 	nms_sync_device_faults();
-	nms_resolve_missing('poller', array());
-	nms_resolve_missing('rrd', array());
-	nms_resolve_missing('output', array());
+	nms_sync_inventory_faults();
+	/* Unsupported fault sources are not synthesized or silently auto-resolved. */
 
 	db_execute_prepared("INSERT INTO plugin_nms_meta (meta_key, meta_value, updated_at)
 		VALUES ('last_sync', ?, ?)

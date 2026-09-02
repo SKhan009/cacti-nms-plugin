@@ -8,7 +8,7 @@
 			<label class="nms-file-field"><span>SNMP record file</span><input required type="file" name="snmprec_file" accept=".snmprec,text/plain"><small>Try the sample above. Maximum 2 MB and 5,000 lines.</small></label>
 			<label><span>Simulator community</span><input required name="community" placeholder="serial-device-server"><small>The community becomes the SNMPSim record name.</small></label>
 			<label><span>New Cacti host template</span><input required name="template_name" placeholder="Serial Device Server"><small>If this exact template exists, NMS safely adds the new graphs to it.</small></label>
-			<label><span>Device category</span><select required name="category_id"><option value="">Select category</option><?php foreach ($categories as $category) { ?><option value="<?php print (int) $category['id']; ?>"><?php print nms_h($category['name']); ?></option><?php } ?></select></label>
+			<label><span>Device category (Cacti Tree)</span><select required name="category_id"><option value="">Select a Cacti Tree</option><?php foreach ($categories as $category) { ?><option value="<?php print (int) $category['id']; ?>"><?php print nms_h($category['name']); ?></option><?php } ?></select></label>
 		</div>
 		<div class="nms-form-actions"><button type="submit">Upload and create templates</button></div>
 	</form>

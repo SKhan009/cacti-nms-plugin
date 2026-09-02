@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 		$template_id = get_filter_request_var('host_template_id');
 		$category_id = get_filter_request_var('category_id');
 		$template_exists = (int) db_fetch_cell_prepared('SELECT COUNT(*) FROM host_template WHERE id = ?', array($template_id));
-		$category_exists = (int) db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_nms_device_categories WHERE id = ?', array($category_id));
+		$category_exists = (int) db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_tree WHERE id = ?', array($category_id));
 		if ($template_exists && $category_exists) {
 			db_execute_prepared('INSERT INTO plugin_nms_category_templates (host_template_id, category_id, assigned_at)
 				VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE category_id = VALUES(category_id), assigned_at = NOW()',
@@ -98,7 +98,7 @@ $categories = db_fetch_assoc("SELECT c.*,
 		INNER JOIN host AS h ON h.host_template_id = ct.host_template_id
 		WHERE ct.category_id = c.id AND h.deleted = '' AND h.disabled = '') AS device_count,
 	(SELECT COUNT(*) FROM plugin_nms_fault_rules AS r WHERE r.category_id = c.id AND r.enabled = 'on') AS active_rule_count
-	FROM plugin_nms_device_categories AS c ORDER BY c.sort_order, c.name");
+	FROM graph_tree AS c ORDER BY c.sequence, c.name");
 
 if ($category_id <= 0 && count($categories)) {
 	foreach ($categories as $category) {
@@ -166,15 +166,15 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 ?>
 <main class="nms-shell nms-config-shell">
 	<div class="nms-heading nms-config-heading">
-		<div><p class="nms-eyebrow">NMS / Fault Configuration</p><h1>Device fault rules</h1><p>Use actual Cacti device parameters and apply severity by device category.</p></div>
+		<div><p class="nms-eyebrow">NMS / Fault Configuration</p><h1>Device fault rules</h1><p>Use actual Cacti device parameters and apply severity by Cacti Tree category.</p></div>
 		<?php if (isset_request_var('saved')) { ?><div class="nms-saved">Saved and checked against live device values</div><?php } ?>
 	</div>
-	<div class="nms-config-stats"><span><strong><?php print count($categories); ?></strong> categories</span><span><strong><?php print count($templates); ?></strong> templates mapped</span><span><strong><?php print $linked_devices; ?></strong> linked devices</span><span><strong><?php print $enabled_rules; ?></strong> active rules</span><span><strong><?php print $known_parameters; ?></strong> latest parameter readings</span></div>
+	<div class="nms-config-stats"><span><strong><?php print count($categories); ?></strong> Cacti Trees</span><span><strong><?php print count($templates); ?></strong> templates mapped</span><span><strong><?php print $linked_devices; ?></strong> linked devices</span><span><strong><?php print $enabled_rules; ?></strong> active rules</span><span><strong><?php print $known_parameters; ?></strong> latest parameter readings</span></div>
 	<nav class="nms-config-tabs" aria-label="Fault configuration sections"><a class="<?php print $tab === 'rules' ? 'selected' : ''; ?>" href="?tab=rules&amp;category_id=<?php print $category_id; ?>">Fault values and severity</a><a class="<?php print $tab === 'templates' ? 'selected' : ''; ?>" href="?tab=templates">Cacti template mapping</a></nav>
 
 	<?php if ($tab === 'rules') { ?>
 	<section class="nms-panel nms-config-panel">
-		<div class="nms-config-bar"><div><h2>Fault values and severity</h2><p>A rule can use a number such as temperature &gt; 80, or text such as interface state does not equal up.</p></div><form method="get" action="fault_config.php"><input type="hidden" name="tab" value="rules"><label>Device category<select name="category_id" onchange="this.form.submit()"><?php foreach ($categories as $category) { ?><option value="<?php print (int) $category['id']; ?>" <?php print (int) $category['id'] === $category_id ? 'selected' : ''; ?>><?php print nms_h($category['name']); ?> (<?php print (int) $category['device_count']; ?>)</option><?php } ?></select></label></form></div>
+		<div class="nms-config-bar"><div><h2>Fault values and severity</h2><p>A rule can use a number such as temperature &gt; 80, or text such as interface state does not equal up.</p></div><form method="get" action="fault_config.php"><input type="hidden" name="tab" value="rules"><label>Device category (Cacti Tree)<select name="category_id" onchange="this.form.submit()"><?php foreach ($categories as $category) { ?><option value="<?php print (int) $category['id']; ?>" <?php print (int) $category['id'] === $category_id ? 'selected' : ''; ?>><?php print nms_h($category['name']); ?> (<?php print (int) $category['device_count']; ?>)</option><?php } ?></select></label></form></div>
 		<div class="nms-rule-note"><strong><?php print nms_h($selected_category ? $selected_category['name'] : 'Category'); ?></strong><span><?php print count($parameters); ?> actual parameters available from <?php print (int) ($selected_category ? $selected_category['device_count'] : 0); ?> linked devices. Temperature and other sensors appear automatically after Cacti collects them.</span></div>
 		<form class="nms-add-rule" method="post" action="fault_config.php">
 			<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>"><input type="hidden" name="nms_action" value="add_rule"><input type="hidden" name="category_id" value="<?php print $category_id; ?>">
@@ -191,7 +191,7 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 		<?php } ?></div>
 	</section>
 	<?php } else { ?>
-	<section class="nms-panel nms-config-panel"><div class="nms-config-bar"><div><h2>Cacti template mapping</h2><p>A mapping applies category fault rules to every current and future device using that Cacti host template.</p></div><button class="nms-category-popup-button" type="button" popovertarget="nmsCategorySummary">Category summary</button></div><div id="nmsCategorySummary" class="nms-category-popup" popover><div class="nms-popup-head"><div><strong>Device category summary</strong><small>Current Cacti templates and linked devices</small></div><button type="button" popovertarget="nmsCategorySummary" popovertargetaction="hide" aria-label="Close category summary">×</button></div><div class="nms-popup-categories"><?php foreach ($categories as $category) { ?><div><strong><?php print nms_h($category['name']); ?></strong><span><?php print (int) $category['template_count']; ?> templates · <?php print (int) $category['device_count']; ?> devices</span></div><?php } ?></div></div><div class="nms-table-wrap"><table class="nms-table nms-config-table"><thead><tr><th>Cacti host template</th><th>ID</th><th>Linked devices</th><th>Device category</th><th></th></tr></thead><tbody>
+	<section class="nms-panel nms-config-panel"><div class="nms-config-bar"><div><h2>Cacti template mapping</h2><p>Device categories come directly from Cacti Graph Trees. A mapping applies that tree's fault rules to every device using the selected host template.</p></div><button class="nms-category-popup-button" type="button" popovertarget="nmsCategorySummary">Tree summary</button></div><div id="nmsCategorySummary" class="nms-category-popup" popover><div class="nms-popup-head"><div><strong>Cacti Tree category summary</strong><small>Current Cacti templates and linked devices</small></div><button type="button" popovertarget="nmsCategorySummary" popovertargetaction="hide" aria-label="Close category summary">×</button></div><div class="nms-popup-categories"><?php foreach ($categories as $category) { ?><div><strong><?php print nms_h($category['name']); ?></strong><span><?php print (int) $category['template_count']; ?> templates · <?php print (int) $category['device_count']; ?> devices</span></div><?php } ?></div></div><div class="nms-table-wrap"><table class="nms-table nms-config-table"><thead><tr><th>Cacti host template</th><th>ID</th><th>Linked devices</th><th>Device category (Cacti Tree)</th><th></th></tr></thead><tbody>
 	<?php foreach ($templates as $template) { $mapping_form_id = 'nms-map-' . (int) $template['id']; ?><tr><td><strong><?php print nms_h($template['name']); ?></strong></td><td><?php print (int) $template['id']; ?></td><td><?php print (int) $template['device_count']; ?></td><td><form id="<?php print $mapping_form_id; ?>" method="post" action="fault_config.php"><input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>"><input type="hidden" name="nms_action" value="assign_template"><input type="hidden" name="host_template_id" value="<?php print (int) $template['id']; ?>"><select name="category_id" aria-label="Category for <?php print nms_h($template['name']); ?>"><?php foreach ($categories as $category) { ?><option value="<?php print (int) $category['id']; ?>" <?php print (int) $template['category_id'] === (int) $category['id'] ? 'selected' : ''; ?>><?php print nms_h($category['name']); ?></option><?php } ?></select></form></td><td><button class="nms-save-button" type="submit" form="<?php print $mapping_form_id; ?>">Save</button></td></tr><?php } ?>
 	</tbody></table></div></section>
 	<?php } ?>

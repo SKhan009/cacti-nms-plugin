@@ -65,16 +65,6 @@ function nms_setup_database() {
 		KEY parent_host_id (parent_host_id)
 	) ENGINE=InnoDB ROW_FORMAT=Dynamic");
 
-	db_execute("CREATE TABLE IF NOT EXISTS plugin_nms_device_categories (
-		id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-		name VARCHAR(100) NOT NULL,
-		slug VARCHAR(100) NOT NULL,
-		description VARCHAR(255) NOT NULL DEFAULT '',
-		sort_order INT UNSIGNED NOT NULL DEFAULT 0,
-		PRIMARY KEY (id),
-		UNIQUE KEY slug (slug)
-	) ENGINE=InnoDB ROW_FORMAT=Dynamic");
-
 	db_execute("CREATE TABLE IF NOT EXISTS plugin_nms_category_templates (
 		host_template_id MEDIUMINT UNSIGNED NOT NULL,
 		category_id INT UNSIGNED NOT NULL,
@@ -131,6 +121,28 @@ function nms_setup_database() {
 		KEY last_seen (last_seen)
 	) ENGINE=InnoDB ROW_FORMAT=Dynamic");
 
+	/*
+	 * Cacti/RRDtool owns numeric time-series data.  This table exists only for
+	 * live text inventory values (for example a chassis serial number) that
+	 * RRDtool cannot store.  It deliberately keeps one current value per field,
+	 * not a second history of device readings.
+	 */
+	db_execute("CREATE TABLE IF NOT EXISTS plugin_nms_device_inventory (
+		host_id MEDIUMINT UNSIGNED NOT NULL,
+		inventory_key VARCHAR(64) NOT NULL,
+		oid VARCHAR(255) NOT NULL,
+		display_name VARCHAR(150) NOT NULL,
+		baseline_value VARCHAR(512) NOT NULL DEFAULT '',
+		observed_value VARCHAR(512) NOT NULL DEFAULT '',
+		status VARCHAR(16) NOT NULL DEFAULT 'unknown',
+		last_attempt DATETIME NULL DEFAULT NULL,
+		last_success DATETIME NULL DEFAULT NULL,
+		last_error VARCHAR(255) NOT NULL DEFAULT '',
+		PRIMARY KEY (host_id, inventory_key),
+		KEY status (status),
+		KEY last_success (last_success)
+	) ENGINE=InnoDB ROW_FORMAT=Dynamic");
+
 	/* Upload history and generated Cacti object links. Uploaded values remain in SNMPSim. */
 	db_execute("CREATE TABLE IF NOT EXISTS plugin_nms_snmprec_imports (
 		id INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -159,43 +171,96 @@ function nms_setup_database() {
 		tag VARCHAR(64) NOT NULL,
 		raw_value VARCHAR(1024) NOT NULL,
 		section_name VARCHAR(255) NOT NULL DEFAULT '',
+		inventory_key VARCHAR(64) NOT NULL DEFAULT '',
 		graphable CHAR(2) NOT NULL DEFAULT '',
 		data_template_id MEDIUMINT UNSIGNED NOT NULL DEFAULT 0,
 		graph_template_id MEDIUMINT UNSIGNED NOT NULL DEFAULT 0,
 		PRIMARY KEY (id),
 		UNIQUE KEY import_oid (import_id, oid),
+		KEY inventory_key (inventory_key),
 		KEY data_template_id (data_template_id),
 		KEY graph_template_id (graph_template_id)
 	) ENGINE=InnoDB ROW_FORMAT=Dynamic");
+	if (!(int) db_fetch_cell("SELECT COUNT(*) FROM information_schema.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'plugin_nms_snmprec_oids' AND COLUMN_NAME = 'inventory_key'")) {
+		db_execute("ALTER TABLE plugin_nms_snmprec_oids
+			ADD inventory_key VARCHAR(64) NOT NULL DEFAULT '' AFTER section_name,
+			ADD KEY inventory_key (inventory_key)");
+	}
+	/* Upgrade existing imports without copying their test values into live inventory. */
+	db_execute("UPDATE plugin_nms_snmprec_oids SET inventory_key = 'serial_number'
+		WHERE inventory_key = '' AND graphable != 'on' AND
+		(oid IN ('1.3.6.1.4.1.9.3.6.3.0') OR LOWER(section_name) LIKE '%serial%')");
 
+	nms_migrate_categories_to_cacti_trees();
 	nms_seed_fault_configuration();
 }
 
-function nms_seed_fault_configuration() {
-	$categories = array(
-		array('voice-video', 'Voice / Video', 'VoIP servers, IP phones and IP cameras'),
-		array('security', 'Security', 'Encryption, data-diode and security systems'),
-		array('network', 'Network', 'Core, edge, access and wireless network devices'),
-		array('vsat', 'VSAT', 'Modems, BUCs, beacon trackers and antenna control'),
-		array('los', 'LOS', 'LOS radios, antenna positioning and masts'),
-		array('computers', 'Computers', 'Servers, workstations, storage and thin clients'),
-		array('power', 'Power', 'UPS, PDU and power infrastructure'),
-		array('timing', 'Timing', 'Time servers and timing clients'),
-		array('fire-prevention', 'Fire Prevention', 'Fire and gas detection systems'),
-		array('sensors-instrumentation', 'Sensors & Instrumentation', 'Environmental and instrumentation sensors')
-	);
+/**
+ * Move category names and all category relationships into Cacti Graph Trees.
+ *
+ * Older NMS releases owned a separate category table. Each legacy category is
+ * created as a real Cacti tree (or matched to an existing tree by name), then
+ * the plugin's relationships are translated in one statement so overlapping
+ * old/new numeric IDs cannot corrupt assignments. The legacy table is removed
+ * only after every relationship has been translated.
+ */
+function nms_migrate_categories_to_cacti_trees() {
+	$legacy_exists = (int) db_fetch_cell("SELECT COUNT(*) FROM information_schema.TABLES
+		WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'plugin_nms_device_categories'");
+	if (!$legacy_exists) return;
 
-	$order = 10;
-	foreach ($categories as $category) {
-		db_execute_prepared('INSERT INTO plugin_nms_device_categories (slug, name, description, sort_order)
-			VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description), sort_order = VALUES(sort_order)',
-			array($category[0], $category[1], $category[2], $order));
-		$order += 10;
+	$legacy_categories = db_fetch_assoc('SELECT id, name, sort_order
+		FROM plugin_nms_device_categories ORDER BY sort_order, id');
+	if (!count($legacy_categories)) {
+		db_execute('DROP TABLE plugin_nms_device_categories');
+		return;
 	}
 
+	$mapping = array();
+	$next_sequence = (int) db_fetch_cell('SELECT COALESCE(MAX(sequence), 0) + 1 FROM graph_tree');
+	$user_id = isset($_SESSION['sess_user_id']) ? (int) $_SESSION['sess_user_id'] : 1;
+	if ($user_id <= 0) $user_id = 1;
+
+	foreach ($legacy_categories as $category) {
+		$tree_id = (int) db_fetch_cell_prepared('SELECT id FROM graph_tree WHERE name = ? ORDER BY id LIMIT 1',
+			array($category['name']));
+		if ($tree_id <= 0) {
+				db_execute_prepared("INSERT INTO graph_tree
+				(name, enabled, locked, locked_date, sort_type, sequence, user_id, last_modified, modified_by)
+				VALUES (?, 'on', 0, NOW(), 1, ?, ?, NOW(), ?)",
+				array($category['name'], $next_sequence, $user_id, $user_id));
+			$tree_id = (int) db_fetch_cell_prepared('SELECT id FROM graph_tree WHERE name = ? ORDER BY id DESC LIMIT 1',
+				array($category['name']));
+			if ($tree_id <= 0) throw new RuntimeException('Could not migrate device category to a Cacti Tree.');
+			$next_sequence++;
+		}
+		$mapping[(int) $category['id']] = $tree_id;
+	}
+
+	if (count($mapping)) {
+		$cases = array();
+		$ids = array();
+		foreach ($mapping as $legacy_id => $tree_id) {
+			$cases[] = 'WHEN ' . (int) $legacy_id . ' THEN ' . (int) $tree_id;
+			$ids[] = (int) $legacy_id;
+		}
+		$case_sql = implode(' ', $cases);
+		$id_sql = implode(',', $ids);
+		foreach (array('plugin_nms_category_templates', 'plugin_nms_fault_rules', 'plugin_nms_snmprec_imports') as $table) {
+			db_execute('UPDATE ' . $table . ' SET category_id = CASE category_id ' . $case_sql .
+				' ELSE category_id END WHERE category_id IN (' . $id_sql . ')');
+		}
+	}
+
+	db_execute('DROP TABLE plugin_nms_device_categories');
+	if (function_exists('set_config_option')) set_config_option('time_last_change_tree', time());
+}
+
+function nms_seed_fault_configuration() {
 	nms_sync_template_categories();
 
-	$category_ids = db_fetch_assoc('SELECT id FROM plugin_nms_device_categories');
+	$category_ids = db_fetch_assoc('SELECT id FROM graph_tree');
 	db_execute("UPDATE plugin_nms_fault_rules SET metric = 'core_status', parameter_key = 'core:status',
 		comparison = 'not_equals', threshold_value = 'up', unit = '' WHERE metric = 'status_not_up'");
 	db_execute("DELETE FROM plugin_nms_fault_rules WHERE metric IN
@@ -216,10 +281,11 @@ function nms_seed_fault_configuration() {
 
 function nms_sync_template_categories() {
 	$templates = db_fetch_assoc('SELECT id, name FROM host_template ORDER BY id');
-	$category_rows = db_fetch_assoc('SELECT id, slug FROM plugin_nms_device_categories');
+	$category_rows = db_fetch_assoc('SELECT id, name FROM graph_tree');
 	$category_ids = array();
 	foreach ($category_rows as $category) {
-		$category_ids[$category['slug']] = (int) $category['id'];
+		$key = strtolower(trim(preg_replace('/[^a-z0-9]+/i', '-', $category['name']), '-'));
+		$category_ids[$key] = (int) $category['id'];
 	}
 
 	foreach ($templates as $template) {
@@ -254,6 +320,7 @@ function nms_sync_template_categories() {
 }
 
 function nms_drop_database() {
+	db_execute('DROP TABLE IF EXISTS plugin_nms_device_inventory');
 	db_execute('DROP TABLE IF EXISTS plugin_nms_snmprec_oids');
 	db_execute('DROP TABLE IF EXISTS plugin_nms_snmprec_imports');
 	db_execute('DROP TABLE IF EXISTS plugin_nms_events');
@@ -263,5 +330,6 @@ function nms_drop_database() {
 	db_execute('DROP TABLE IF EXISTS plugin_nms_fault_rules');
 	db_execute('DROP TABLE IF EXISTS plugin_nms_device_parameters');
 	db_execute('DROP TABLE IF EXISTS plugin_nms_category_templates');
+	/* Legacy NMS-owned storage only; Cacti graph_tree records are never removed. */
 	db_execute('DROP TABLE IF EXISTS plugin_nms_device_categories');
 }

@@ -22,9 +22,25 @@ function nms_template_host($name) {
 function nms_template_known_oid_label($oid) {
 	$labels = array(
 		'1.3.6.1.2.1.1.3.0' => 'System uptime',
-		'1.3.6.1.2.1.1.5.0' => 'Device name'
+		'1.3.6.1.2.1.1.5.0' => 'Device name',
+		'1.3.6.1.4.1.9.3.6.3.0' => 'Chassis serial number'
 	);
 	return $labels[$oid] ?? '';
+}
+
+/**
+ * Identify the small set of text OIDs that must be retained as live inventory.
+ * Numeric values remain wholly owned by Cacti data sources and RRDtool.  The
+ * imported value is never used as a live fallback when SNMP is unavailable.
+ */
+function nms_template_inventory_key($record) {
+	if (!empty($record['graphable']) || (int) ($record['type'] ?? 0) !== 4) return '';
+	$oid = ltrim(trim((string) ($record['oid'] ?? '')), '.');
+	$section = strtolower(trim((string) ($record['section'] ?? '')));
+	if ($oid === '1.3.6.1.4.1.9.3.6.3.0' || strpos($section, 'serial') !== false) {
+		return 'serial_number';
+	}
+	return '';
 }
 
 function nms_template_record_label($record) {
@@ -105,8 +121,8 @@ function nms_template_pair($template_name, $record) {
 }
 
 function nms_template_import($original_name, $community, $template_name, $category_id, $content, $records, $user_id) {
-	$category_exists = (int) db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_nms_device_categories WHERE id = ?', array($category_id));
-	if (!$category_exists) throw new InvalidArgumentException('Select a valid device category.');
+	$category_exists = (int) db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_tree WHERE id = ?', array($category_id));
+	if (!$category_exists) throw new InvalidArgumentException('Select a valid Cacti Tree category.');
 	$hash = hash('sha256', $content);
 	if ((int) db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_nms_snmprec_imports WHERE file_hash = ? OR community = ?', array($hash, $community))) {
 		throw new InvalidArgumentException('This file or simulator community has already been imported.');
@@ -143,6 +159,7 @@ function nms_template_import($original_name, $community, $template_name, $catego
 		foreach ($records as $record) {
 			$data_template_id = 0;
 			$graph_template_id = 0;
+			$inventory_key = nms_template_inventory_key($record);
 			if ($record['graphable']) {
 				$section_key = strtolower(trim((string) $record['section']));
 				$section_positions[$section_key] = ($section_positions[$section_key] ?? 0) + 1;
@@ -155,10 +172,10 @@ function nms_template_import($original_name, $community, $template_name, $catego
 					array($host_template_id, $graph_template_id));
 			}
 			db_execute_prepared('INSERT INTO plugin_nms_snmprec_oids
-				(import_id, oid, tag, raw_value, section_name, graphable, data_template_id, graph_template_id)
-				VALUES (?, ?, ?, ?, ?, ?, ?, ?)', array(
+				(import_id, oid, tag, raw_value, section_name, inventory_key, graphable, data_template_id, graph_template_id)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', array(
 				$import_id, $record['oid'], $record['tag'], $record['value'], $record['section'],
-				$record['graphable'] ? 'on' : '', $data_template_id, $graph_template_id
+				$inventory_key, $record['graphable'] ? 'on' : '', $data_template_id, $graph_template_id
 			));
 		}
 

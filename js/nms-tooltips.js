@@ -58,7 +58,7 @@
 		snmprec_file: 'A validated SNMPSim .snmprec text file containing OID, type, and value records.',
 		community: 'Safe record name and SNMP community used by SNMPSim for this uploaded file.',
 		template_name: 'Name of the native Cacti host template created or reused for this simulated device type.',
-		category_id: 'NMS device category applied to the host template and every linked device.',
+		category_id: 'Cacti Graph Tree used as the device category for the host template and every linked device.',
 		graph_template_id: 'An eligible graph template read directly from Cacti and associated with this device.',
 		snmp_query_id: 'An eligible indexed data query read directly from Cacti.',
 		reindex_method: 'When Cacti refreshes indexed rows: manually, after uptime changes, after row-count changes, or after field verification.',
@@ -90,7 +90,7 @@
 		'Cacti devices': 'Live Cacti inventory for the selected site. Drag a device onto the map to place it.',
 		'Network topology': 'Interactive site map. Positions and parent links are stored by NMS; device health stays live from Cacti.',
 		'Fault values and severity': 'Rules compare live device parameters with configured values and assign operational severity.',
-		'Cacti template mapping': 'Maps each Cacti host template to an NMS device category.'
+		'Cacti template mapping': 'Maps each Cacti host template to a device category fetched from Cacti Graph Trees.'
 	};
 
 	var tooltip;

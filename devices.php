@@ -196,16 +196,16 @@ $devices = db_fetch_assoc("SELECT h.id, h.description, h.hostname, h.status, h.d
 	LEFT JOIN sites AS s ON s.id = h.site_id
 	LEFT JOIN poller AS p ON p.id = h.poller_id
 	LEFT JOIN plugin_nms_category_templates AS ct ON ct.host_template_id = h.host_template_id
-	LEFT JOIN plugin_nms_device_categories AS c ON c.id = ct.category_id
+	LEFT JOIN graph_tree AS c ON c.id = ct.category_id
 	WHERE h.deleted = '' ORDER BY h.description");
 
 $host_templates = db_fetch_assoc('SELECT id, name FROM host_template ORDER BY name');
 $sites = db_fetch_assoc('SELECT id, name FROM sites ORDER BY name');
 $pollers = db_fetch_assoc('SELECT id, name FROM poller ORDER BY id');
-$categories = db_fetch_assoc('SELECT id, name FROM plugin_nms_device_categories ORDER BY sort_order, name');
+$categories = db_fetch_assoc('SELECT id, name FROM graph_tree ORDER BY sequence, name');
 $imports = db_fetch_assoc("SELECT i.*, c.name AS category_name, ht.name AS host_template_name,
 	u.username AS uploaded_by_name FROM plugin_nms_snmprec_imports AS i
-	LEFT JOIN plugin_nms_device_categories AS c ON c.id = i.category_id
+	LEFT JOIN graph_tree AS c ON c.id = i.category_id
 	LEFT JOIN host_template AS ht ON ht.id = i.host_template_id
 	LEFT JOIN user_auth AS u ON u.id = i.uploaded_by ORDER BY i.id DESC");
 

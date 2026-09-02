@@ -23,7 +23,7 @@ function nms_topology_devices($site_id) {
 		FROM host AS h
 		LEFT JOIN host_template AS ht ON ht.id = h.host_template_id
 		LEFT JOIN plugin_nms_category_templates AS ct ON ct.host_template_id = h.host_template_id
-		LEFT JOIN plugin_nms_device_categories AS c ON c.id = ct.category_id
+		LEFT JOIN graph_tree AS c ON c.id = ct.category_id
 		LEFT JOIN plugin_nms_topology AS l ON l.host_id = h.id
 		LEFT JOIN (
 			SELECT host_id, COUNT(*) AS fault_count,

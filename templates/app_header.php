@@ -9,7 +9,7 @@ if (!isset($nms_page_title)) $nms_page_title = 'NMS';
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="robots" content="noindex,nofollow">
 	<title><?php print nms_h($nms_page_title); ?></title>
-	<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-v1.1.css?v=1.9.16'); ?>">
+	<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-v1.1.css?v=1.9.17'); ?>">
 	<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-tooltips.css?v=1.9.15'); ?>">
 	<?php if (!empty($nms_extra_css)) { ?><link rel="stylesheet" href="<?php print nms_h($nms_asset_base . $nms_extra_css); ?>"><?php } ?>
 </head>
@@ -32,7 +32,7 @@ if (!isset($nms_page_title)) $nms_page_title = 'NMS';
 				<p class="nms-sidebar-label">Monitoring</p>
 				<a class="nms-sidebar-link <?php print $nms_active_module === 'faults' ? 'selected' : ''; ?>" href="nms.php" data-nms-tip="Device health and active fault readings evaluated from Cacti core."><span class="nms-sidebar-icon">●</span><span class="nms-sidebar-copy"><strong>Device readings</strong><small>Health from Cacti core</small></span></a>
 				<a class="nms-sidebar-link <?php print $nms_active_module === 'devices' ? 'selected' : ''; ?>" href="devices.php" data-nms-tip="Device inventory, creation, editing, graphs, data queries, and SNMP record import."><span class="nms-sidebar-icon">＋</span><span class="nms-sidebar-copy"><strong>Device management</strong><small>Add devices and SNMP records</small></span></a>
-				<a class="nms-sidebar-link <?php print $nms_active_module === 'configuration' ? 'selected' : ''; ?>" href="fault_config.php" data-nms-tip="Map Cacti templates to categories and configure fault values and severity."><span class="nms-sidebar-icon">⚙</span><span class="nms-sidebar-copy"><strong>Fault configuration</strong><small>Categories and severity</small></span></a>
+				<a class="nms-sidebar-link <?php print $nms_active_module === 'configuration' ? 'selected' : ''; ?>" href="fault_config.php" data-nms-tip="Map Cacti host templates to Cacti Tree categories and configure fault values and severity."><span class="nms-sidebar-icon">⚙</span><span class="nms-sidebar-copy"><strong>Fault configuration</strong><small>Cacti Trees and severity</small></span></a>
 				<a class="nms-sidebar-link <?php print $nms_active_module === 'topology' ? 'selected' : ''; ?>" href="topology.php" data-nms-tip="Interactive topology built from enabled devices in each Cacti site."><span class="nms-sidebar-icon">⌘</span><span class="nms-sidebar-copy"><strong>Topology</strong><small>Configured device map</small></span></a>
 			</div>
 			<div class="nms-sidebar-status" data-nms-tip="NMS is reading device state and collection information directly from Cacti."><span></span><div class="nms-sidebar-copy"><strong>Live monitoring</strong><small>Reading Cacti devices</small></div></div>

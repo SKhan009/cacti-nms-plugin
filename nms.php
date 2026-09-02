@@ -55,7 +55,7 @@ $devices = db_fetch_assoc_prepared("SELECT h.*, s.name AS site_name,
 	LEFT JOIN sites AS s ON s.id = h.site_id
 	LEFT JOIN host_template AS ht ON ht.id = h.host_template_id
 	LEFT JOIN plugin_nms_category_templates AS ct ON ct.host_template_id = h.host_template_id
-	LEFT JOIN plugin_nms_device_categories AS c ON c.id = ct.category_id
+	LEFT JOIN graph_tree AS c ON c.id = ct.category_id
 	LEFT JOIN plugin_nms_incidents AS i ON i.id = (SELECT ii.id FROM plugin_nms_incidents AS ii
 		WHERE ii.host_id = h.id AND ii.source_type = 'device' AND ii.status IN ('open', 'acknowledged')
 		ORDER BY FIELD(ii.status, 'open', 'acknowledged'), FIELD(ii.severity, 'critical', 'major', 'warning'), ii.id LIMIT 1)
