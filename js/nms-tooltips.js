@@ -117,7 +117,7 @@
 		if (target.matches('input[type="search"],.nms-search,.nms-topology-search')) return true;
 		if (target.closest('.nms-search,.nms-topology-search,.nms-toolbar,.nms-site-picker')) return true;
 		if (target.closest('form[method="get"]')) return true;
-		return target.tagName === 'LABEL' && !!target.querySelector('input[type="search"]');
+		return false;
 	}
 
 	function ensureTooltip() {
@@ -229,7 +229,8 @@
 	function enhanceLabel(label) {
 		if (label.getAttribute('data-nms-help-ready') === '1') return;
 		if (isSearchOrFilter(label)) return;
-		var control = label.querySelector('input:not([type="hidden"]),select,textarea');
+		var control = label.querySelector('select[name],textarea[name],input[name]:not([type="hidden"])');
+		if (!control) control = label.querySelector('input:not([type="hidden"]),select,textarea');
 		if (!control) return;
 		var name = control.getAttribute('name') || '';
 		var title = labelText(label) || control.getAttribute('aria-label') || name.replace(/_/g, ' ');

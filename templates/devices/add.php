@@ -47,7 +47,7 @@ sort($timeout_options, SORT_NUMERIC);
 sort($max_oid_options, SORT_NUMERIC);
 sort($device_thread_options, SORT_NUMERIC);
 ?>
-<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-snmp-form.css?v=1.8.0'); ?>">
+<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-snmp-form.css?v=1.9.18'); ?>">
 <section class="nms-panel nms-form-panel">
 	<div class="nms-panel-head"><div><h2><?php print $device_form_is_edit ? 'Edit ' . nms_h($device_values['description']) : 'Add a Cacti device'; ?></h2><p><?php print $device_form_is_edit ? 'Live settings from Cacti core. Saving updates this device directly.' : 'Uses the same Cacti device API as the core console.'; ?></p></div><?php if ($device_form_is_edit) { ?><span class="nms-device-id">Device ID <?php print (int) $device_values['id']; ?></span><?php } ?></div>
 	<form method="post" action="devices.php?tab=<?php print $device_form_is_edit ? 'edit&id=' . (int) $device_values['id'] : 'add'; ?>" class="nms-device-form">

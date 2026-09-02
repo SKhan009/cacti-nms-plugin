@@ -617,19 +617,29 @@
 	grid-template-columns: minmax(0, 1.4fr) minmax(240px, .6fr) auto;
 }
 
-.nms-association-add label,
-.nms-association-add label span {
+.nms-association-add label {
 	display: block;
 }
 
-.nms-association-add label span {
+.nms-association-add label > span:first-child {
+	align-items: center;
 	color: #657269;
+	display: inline-flex;
 	font-size: 10px;
 	font-weight: 800;
+	gap: 6px;
 	margin-bottom: 6px;
 }
 
-.nms-association-add select {
+.nms-association-add label > span:first-child .nms-help-icon {
+	display: inline-flex;
+	margin-bottom: 0;
+	margin-left: 0;
+	top: 0;
+}
+
+.nms-association-add select,
+.nms-association-add input[type="search"] {
 	background: #fff;
 	border: 1px solid #cedbd1;
 	border-radius: 7px;
@@ -639,6 +649,11 @@
 	height: 38px;
 	padding: 0 10px;
 	width: 100%;
+}
+
+.nms-association-add input[type="search"] {
+	background: #f7faf8;
+	padding: 0 12px;
 }
 
 .nms-association-add button {
@@ -654,7 +669,8 @@
 }
 
 .nms-association-add button:disabled,
-.nms-association-add select:disabled {
+.nms-association-add select:disabled,
+.nms-association-add input[type="search"]:disabled {
 	cursor: not-allowed;
 	opacity: .55;
 }

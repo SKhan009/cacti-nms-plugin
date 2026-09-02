@@ -59,18 +59,23 @@
 (function () {
 	'use strict';
 
-	var search = document.getElementById('nmsDataTemplateSearch');
-	var dataTemplateSelect = document.getElementById('nmsDataTemplateSelect');
-	if (search && dataTemplateSelect) {
-		var dataTemplateOptions = Array.prototype.slice.call(dataTemplateSelect.options, 1);
+	function bindSelectSearch(searchId, selectId) {
+		var search = document.getElementById(searchId);
+		var select = document.getElementById(selectId);
+		if (!search || !select) return;
+		var options = Array.prototype.slice.call(select.options, 1);
 		search.addEventListener('input', function () {
 			var term = search.value.toLowerCase().trim();
-			dataTemplateOptions.forEach(function (option) {
+			options.forEach(function (option) {
 				option.hidden = term !== '' && option.text.toLowerCase().indexOf(term) === -1;
 			});
-			if (dataTemplateSelect.selectedIndex > 0 && dataTemplateSelect.options[dataTemplateSelect.selectedIndex].hidden) dataTemplateSelect.value = '';
+			if (select.selectedIndex > 0 && select.options[select.selectedIndex].hidden) select.value = '';
 		});
 	}
+
+	bindSelectSearch('nmsDataTemplateSearch', 'nmsDataTemplateSelect');
+	bindSelectSearch('nmsGraphTemplateSearch', 'nmsGraphTemplateSelect');
+	bindSelectSearch('nmsDataQuerySearch', 'nmsDataQuerySelect');
 
 	var color = document.getElementById('nmsGraphColor');
 	var swatch = document.getElementById('nmsGraphColorSwatch');
