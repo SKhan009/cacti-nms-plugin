@@ -10,6 +10,7 @@
 		});
 	})();
 	</script>
+	<link rel="stylesheet" href="<?php print nms_h($nms_asset_base . 'css/nms-typography.css?v=1.9.19'); ?>">
 	<?php if (!empty($nms_extra_js)) { ?><script src="<?php print nms_h($nms_asset_base . $nms_extra_js); ?>"></script><?php } ?>
 	<script src="<?php print nms_h($nms_asset_base . 'js/nms-pagination.js?v=1.9.17'); ?>"></script>
 	<script src="<?php print nms_h($nms_asset_base . 'js/nms-tooltips.js?v=1.9.18'); ?>"></script>
