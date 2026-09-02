@@ -62,7 +62,6 @@
 		graph_template_id: 'An eligible graph template read directly from Cacti and associated with this device.',
 		snmp_query_id: 'An eligible indexed data query read directly from Cacti.',
 		reindex_method: 'When Cacti refreshes indexed rows: manually, after uptime changes, after row-count changes, or after field verification.',
-		search: 'Filters the visible live device readings without changing data in Cacti.',
 		parameter_key: 'The live Cacti parameter evaluated by this fault rule.',
 		name: 'A short operator-friendly name for this rule.',
 		comparison: 'The comparison applied to the current device value.',
@@ -110,6 +109,15 @@
 		var clone = label.cloneNode(true);
 		Array.prototype.forEach.call(clone.querySelectorAll('input,select,textarea,button,small,.nms-help-icon'), function (node) { node.remove(); });
 		return cleanText(clone.textContent);
+	}
+
+	function isSearchOrFilter(target) {
+		if (!target || !target.matches) return false;
+		if (target.closest('[data-nms-no-tooltip]')) return true;
+		if (target.matches('input[type="search"],.nms-search,.nms-topology-search')) return true;
+		if (target.closest('.nms-search,.nms-topology-search,.nms-toolbar,.nms-site-picker')) return true;
+		if (target.closest('form[method="get"]')) return true;
+		return target.tagName === 'LABEL' && !!target.querySelector('input[type="search"]');
 	}
 
 	function ensureTooltip() {
@@ -179,6 +187,7 @@
 
 	function bind(target) {
 		if (!target || target.getAttribute('data-nms-tip-bound') === '1') return;
+		if (isSearchOrFilter(target)) return;
 		if (target.tagName === 'LABEL' && target.querySelector('.nms-help-icon')) return;
 		target.setAttribute('data-nms-tip-bound', '1');
 		target.classList.add('nms-tooltip-source');
@@ -219,6 +228,7 @@
 
 	function enhanceLabel(label) {
 		if (label.getAttribute('data-nms-help-ready') === '1') return;
+		if (isSearchOrFilter(label)) return;
 		var control = label.querySelector('input:not([type="hidden"]),select,textarea');
 		if (!control) return;
 		var name = control.getAttribute('name') || '';
@@ -249,6 +259,9 @@
 
 	function refresh(scope) {
 		scope = scope && scope.querySelectorAll ? scope : document;
+		Array.prototype.forEach.call(scope.querySelectorAll('[data-nms-tip]'), function (target) {
+			if (isSearchOrFilter(target)) target.removeAttribute('data-nms-tip');
+		});
 		Array.prototype.forEach.call(scope.querySelectorAll('[title]:not([data-nms-tip])'), function (target) {
 			target.setAttribute('data-nms-tip', target.getAttribute('title'));
 			target.removeAttribute('title');

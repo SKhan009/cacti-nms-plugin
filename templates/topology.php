@@ -37,7 +37,7 @@
 	<div class="nms-topology-grid">
 		<aside class="nms-panel nms-inventory-panel">
 			<div class="nms-topology-panel-head"><span>INVENTORY</span><h2>Cacti devices</h2><p>Drag an item onto the map.</p></div>
-			<label class="nms-topology-search" data-nms-tip="Filter the site inventory by device name, address, category, template, poller, or SNMP identity."><span>⌕</span><input id="nmsTopologySearch" type="search" placeholder="Search name, IP or poller"></label>
+			<label class="nms-topology-search"><span>⌕</span><input id="nmsTopologySearch" type="search" placeholder="Search name, IP or poller"></label>
 			<div id="nmsTopologyInventory" class="nms-inventory-list"></div>
 		</aside>
 		<section class="nms-panel nms-map-panel">

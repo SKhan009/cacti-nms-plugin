@@ -207,7 +207,7 @@ $imports = db_fetch_assoc("SELECT i.*, c.name AS category_name, ht.name AS host_
 	u.username AS uploaded_by_name FROM plugin_nms_snmprec_imports AS i
 	LEFT JOIN plugin_nms_device_categories AS c ON c.id = i.category_id
 	LEFT JOIN host_template AS ht ON ht.id = i.host_template_id
-	LEFT JOIN user_auth AS u ON u.id = i.uploaded_by ORDER BY i.id DESC LIMIT 50");
+	LEFT JOIN user_auth AS u ON u.id = i.uploaded_by ORDER BY i.id DESC");
 
 $cacti_device_defaults = array(
 	'snmp_version' => (int) read_config_option('snmp_version'),

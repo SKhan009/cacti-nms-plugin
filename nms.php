@@ -61,8 +61,7 @@ $devices = db_fetch_assoc_prepared("SELECT h.*, s.name AS site_name,
 		ORDER BY FIELD(ii.status, 'open', 'acknowledged'), FIELD(ii.severity, 'critical', 'major', 'warning'), ii.id LIMIT 1)
 	LEFT JOIN user_auth AS ua ON ua.id = i.acknowledged_by
 	WHERE " . implode(' AND ', $where) . "
-	ORDER BY (i.id IS NULL) ASC, h.description ASC
-	LIMIT 250", $params);
+	ORDER BY (i.id IS NULL) ASC, h.description ASC", $params);
 
 $counts = db_fetch_row("SELECT COUNT(*) AS total_count,
 	SUM(h.status = " . HOST_UP . ") AS up_count,

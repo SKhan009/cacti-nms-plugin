@@ -116,6 +116,7 @@
 			card.addEventListener('dragstart', function (event) { event.dataTransfer.setData('text/nms-host-id', device.id); event.dataTransfer.effectAllowed = 'move'; });
 			inventory.appendChild(card);
 		});
+		inventory.dispatchEvent(new CustomEvent('nms:list-updated'));
 	}
 
 	function defaultPosition(device) {
