@@ -57,6 +57,14 @@ try {
 	portable_check(strpos($html, 'nms-snmpsim-details-popup') !== false && strpos($html, 'Administrator-managed') !== false, 'Manual activation details not available');
 	portable_check(strpos($html, 'SNMPSim configuration and health') === false && strpos($html, 'One server configuration') === false, 'Legacy simulator health panel remains visible');
 	portable_check(strpos($html, 'Activation queue:') === false && strpos($html, 'Executable:') === false, 'Linux-only health rendered in manual mode');
+	$import_template = file_get_contents(__DIR__ . '/../templates/devices/import.php');
+	$configure_position = strpos($import_template, '>Configure templates</a>');
+	$check_position = strpos($import_template, '>Check live SNMP</button>');
+	$add_position = strpos($import_template, '>Add device</a>');
+	portable_check($configure_position !== false && $check_position !== false && $add_position !== false
+		&& $configure_position < $check_position && $check_position < $add_position,
+		'Imported-record workflow must configure templates and verify SNMP before adding a device');
+	portable_check(strpos($import_template, 'host_templates.php?action=template_edit&id=') !== false, 'Template configuration must open the imported native Cacti host template');
 	try { nms_snmprec_deploy('portable-test', 'replacement'); throw new LogicException('Overwrote record'); }
 	catch (RuntimeException $e) { /* Existing records are protected. */ }
 	portable_check(file_get_contents($file) === $content, 'Existing record changed');

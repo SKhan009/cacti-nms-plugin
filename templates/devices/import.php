@@ -41,7 +41,7 @@ $simulator_ready = $simulator_health['error'] === ''
 </section>
 <section class="nms-panel nms-form-panel">
 	<div class="nms-panel-head"><div><h2>Upload an SNMP record</h2><p>Deploy a simulator community and generate native Cacti templates for numeric OIDs.</p></div><a class="nms-panel-action" download href="<?php print nms_h(nms_asset_url('snmpsim/examples/nms-device-demo.snmprec')); ?>">Download sample file</a></div>
-	<div class="nms-import-explainer"><div><strong>1. Validate</strong><span>NMS checks every OID, type, value, filename, size, and community.</span></div><div><strong>2. Build templates</strong><span>Each numeric reading gets a Cacti Generic OID data-source and graph template.</span></div><div><strong>3. Activate</strong><span>The record is deployed to SNMPSim and linked to its Cacti host template and category.</span></div></div>
+	<div class="nms-import-explainer nms-import-workflow"><div><strong>1. Validate</strong><span>NMS checks every OID, type, value, filename, size, and community.</span></div><div><strong>2. Build data sources</strong><span>Numeric readings receive native Cacti data-source and starter graph templates automatically.</span></div><div><strong>3. Configure templates</strong><span>Review graph and device-template settings before creating a device.</span></div><div><strong>4. Verify and add</strong><span>Check live SNMP, then add the device as the final step.</span></div></div>
 	<form method="post" action="devices.php?tab=import" enctype="multipart/form-data" class="nms-device-form nms-import-form">
 		<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>">
 		<input type="hidden" name="nms_action" value="import_snmprec">
@@ -66,13 +66,14 @@ $simulator_ready = $simulator_health['error'] === ''
 		<td data-label="Records"><strong><?php print (int) $import['record_count']; ?> OIDs</strong><small><?php print (int) $import['graphable_count']; ?> numeric readings</small></td>
 		<td data-label="Generated templates"><strong><?php print (int) $import['graphable_count']; ?> data-source</strong><small><?php print (int) $import['graphable_count']; ?> graph templates</small></td>
 		<td data-label="Imported"><?php print nms_h(nms_time_ago($import['created_at'])); ?><small>by <?php print nms_h($import['uploaded_by_name'] ?: 'system'); ?></small></td>
-		<td data-label="Next step"><div class="nms-import-actions"><a class="nms-row-link" href="?tab=add&amp;snmpsim_import_id=<?php print (int) $import['id']; ?>">Add device</a>
+		<td data-label="Next step"><div class="nms-import-actions"><a class="nms-row-link" href="<?php print nms_h('templates.php?section=device&core=' . rawurlencode('host_templates.php?action=template_edit&id=' . (int) $import['host_template_id'])); ?>">Configure templates</a>
 		<form method="post" action="devices.php?tab=import">
 			<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>">
 			<input type="hidden" name="nms_action" value="check_snmpsim">
 			<input type="hidden" name="import_id" value="<?php print (int) $import['id']; ?>">
 			<button class="nms-row-link" type="submit">Check live SNMP</button>
-		</form></div></td>
+		</form>
+		<a class="nms-row-link" href="?tab=add&amp;snmpsim_import_id=<?php print (int) $import['id']; ?>">Add device</a></div></td>
 	</tr><?php } ?>
 	</tbody></table></div>
 </section>
