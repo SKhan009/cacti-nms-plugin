@@ -1,0 +1,27 @@
+/* Physical planning shares the monochrome shell; only operational states use color. */
+.nms-topology-config .nms-panel { margin: 20px 0; }
+.nms-config-form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; padding: 20px; }
+.nms-config-picker { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; }
+.nms-config-picker label { flex: 1 1 240px; }
+.nms-topology-config label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; min-width: 0; }
+.nms-topology-config :is(input:not([type=hidden]), select) { width: 100%; min-width: 0; box-sizing: border-box; height: 40px; border: 1px solid #d7d7d7; border-radius: 6px; padding: 8px 12px; background-color: #ffffff; color: #252525; font: inherit; }
+.nms-topology-config select { padding-right: 36px; }
+.nms-topology-config small { font-weight: 400; color: #666666; }
+.nms-topology-config :is(button,.nms-button) { display: inline-flex; align-items: center; min-height: 38px; padding: 8px 12px; border: 1px solid #181818; border-radius: 6px; background: #181818; color: #ffffff; font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; }
+.nms-config-actions { grid-column: 1/-1; }
+.nms-config-notice,.nms-config-error { padding: 14px; margin: 12px 0; border-radius: 6px; }
+.nms-config-notice { background: #e6f4eb; color: #176535; }
+.nms-config-error { background: #fff0ee; color: #a92720; }
+.nms-topology-config .nms-table { width: 100%; table-layout: fixed; }
+.nms-topology-config .nms-table :is(td,th) { overflow-wrap: anywhere; padding: 10px; }
+.nms-rack-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 18px; padding: 20px; }
+.nms-rack { border: 2px solid #333333; border-radius: 6px; min-width: 0; overflow: hidden; }
+.nms-rack h3 { margin: 0; padding: 12px; background: #eeeeee; font-size: 13px; }
+.nms-rack-units { display: grid; grid-template-columns: 38px minmax(0,1fr); gap: 0; padding: 4px; background: #f5f5f5; }
+.nms-unit-number { grid-column: 1; font-size: 11px; text-align: center; padding-top: 6px; color: #666666; }
+.nms-unit-empty { grid-column: 2; border: 1px solid #dddddd; background: #ffffff; }
+.nms-rack-device { grid-column: 2; z-index: 1; margin: 1px; padding: 4px 6px; display: flex; align-items: center; justify-content: space-between; gap: 6px; border-left: 4px solid #777777; background: #eeeeee; min-width: 0; font-size: 11px; }
+.nms-rack-device span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nms-rack-device.up { border-color: #208747; background: #e6f4eb; }
+.nms-rack-device.down { border-color: #ca3027; background: #fff0ee; }
+@media(max-width:700px) { .nms-config-form { grid-template-columns: minmax(0,1fr); padding: 12px; } .nms-rack-grid { grid-template-columns: minmax(0,1fr); } }

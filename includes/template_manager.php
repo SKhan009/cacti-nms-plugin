@@ -152,7 +152,7 @@ function nms_template_pair($template_name, $record) {
 function nms_template_import($original_name, $community, $template_name, $category_id, $content, $records, $user_id) {
 	/* Fail before creating Cacti objects if this server has no usable simulator directory. */
 	nms_snmprec_runtime_dir();
-	if (!nms_cacti_tree_exists($category_id)) throw new InvalidArgumentException('Select a valid Cacti Tree category.');
+	if (!nms_category_exists($category_id)) throw new InvalidArgumentException('Select a valid equipment category.');
 	$hash = hash('sha256', $content);
 	if ((int) db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_nms_snmprec_imports WHERE file_hash = ? OR community = ?', array($hash, $community))) {
 		throw new InvalidArgumentException('This file or simulator community has already been imported.');
@@ -173,7 +173,7 @@ function nms_template_import($original_name, $community, $template_name, $catego
 	db_execute('START TRANSACTION');
 	try {
 		$host_template_id = nms_template_host($template_name);
-		nms_assign_template_tree($host_template_id, $category_id);
+		nms_assign_template_category($host_template_id, $category_id);
 		db_execute_prepared('INSERT INTO plugin_nms_snmprec_imports
 			(original_name, community, template_name, host_template_id, category_id, record_count,
 			graphable_count, file_hash, deployed_path, uploaded_by, created_at)
@@ -220,49 +220,7 @@ function nms_template_import($original_name, $community, $template_name, $catego
 	}
 }
 
-/** Apply the one-time readable-name migration to templates previously created by SNMP record imports. */
+/** Retired automatic rename migration: preserve operator edits and RRD data-source identities. */
 function nms_template_upgrade_readable_names() {
-	$migration_key = 'readable_template_names_v2';
-	if ((string) db_fetch_cell_prepared('SELECT meta_value FROM plugin_nms_meta WHERE meta_key = ?', array($migration_key)) === 'done') return;
-
-	$rows = db_fetch_assoc("SELECT o.id, o.import_id, o.oid, o.section_name AS section,
-		o.data_template_id, o.graph_template_id, i.template_name
-		FROM plugin_nms_snmprec_oids AS o
-		INNER JOIN plugin_nms_snmprec_imports AS i ON i.id = o.import_id
-		WHERE o.graphable = 'on' AND o.data_template_id > 0 AND o.graph_template_id > 0
-		ORDER BY o.import_id, o.id");
-	$totals = array();
-	foreach ($rows as $row) {
-		$key = (int) $row['import_id'] . ':' . strtolower(trim((string) $row['section']));
-		$totals[$key] = ($totals[$key] ?? 0) + 1;
-	}
-
-	$positions = array();
-	foreach ($rows as $row) {
-		$key = (int) $row['import_id'] . ':' . strtolower(trim((string) $row['section']));
-		$positions[$key] = ($positions[$key] ?? 0) + 1;
-		$record = array(
-			'oid' => $row['oid'], 'section' => $row['section'],
-			'reading_index' => $positions[$key], 'reading_total' => $totals[$key]
-		);
-		$label = nms_template_record_label($record);
-		$prefix = preg_match('/^NMS\b/i', $row['template_name']) ? $row['template_name'] : 'NMS ' . $row['template_name'];
-		$object_name = substr($prefix . ' - ' . $label, 0, 190);
-		$data_template_id = (int) $row['data_template_id'];
-		$graph_template_id = (int) $row['graph_template_id'];
-
-		db_execute_prepared('UPDATE data_template SET name = ? WHERE id = ?', array($object_name, $data_template_id));
-		db_execute_prepared('UPDATE data_template_data SET name = ? WHERE data_template_id = ? AND local_data_id = 0',
-			array('|host_description| - ' . $label, $data_template_id));
-		db_execute_prepared('UPDATE data_template_rrd SET data_source_name = ? WHERE data_template_id = ? AND local_data_id = 0',
-			array(nms_template_data_source_name($record), $data_template_id));
-		db_execute_prepared('UPDATE graph_templates SET name = ? WHERE id = ?', array($object_name, $graph_template_id));
-		db_execute_prepared('UPDATE graph_templates_graph SET title = ?, vertical_label = ? WHERE graph_template_id = ? AND local_graph_id = 0',
-			array('|host_description| - ' . $label, substr($label, 0, 20), $graph_template_id));
-		db_execute_prepared("UPDATE graph_template_input SET name = ? WHERE graph_template_id = ? AND column_name = 'task_item_id'",
-			array('Data Source [' . $label . ']', $graph_template_id));
-	}
-
-	db_execute_prepared("INSERT INTO plugin_nms_meta (meta_key, meta_value, updated_at) VALUES (?, 'done', NOW())
-		ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value), updated_at = NOW()", array($migration_key));
+	throw new LogicException('Automatic imported-template renaming is retired. Review names in the native Cacti template editors; no template or data-source identity was changed.');
 }

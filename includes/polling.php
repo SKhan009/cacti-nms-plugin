@@ -5,14 +5,38 @@
  * The poller-output hook returns the original Cacti payload unchanged.
  */
 
-/** Reconcile imported native templates, collect live text inventory, and synchronize faults after polling. */
+require_once(__DIR__ . '/database.php');
+
+/** Isolate NMS failures from Cacti's core poll cycle; missing schemas never trigger DDL here. */
 function nms_poller_bottom() {
+	try {
+		if (!nms_poller_schema_ready()) return;
+		nms_process_poller_bottom();
+	} catch (Throwable $error) {
+		cacti_log('NMS post-poll processing failed (' . get_class($error) . '). Check the NMS schema and Cacti database logs; Cacti polling continues.', false, 'NMS');
+	}
+}
+
+/** Check every hook invocation; emit one actionable warning per process while upgrade is incomplete. */
+function nms_poller_schema_ready() {
+	static $warned = false;
+	if (nms_database_ready()) {
+		$warned = false;
+		return true;
+	}
+	if (!$warned) cacti_log('NMS collection skipped: database upgrade is incomplete. Back up the database and upgrade NMS through Cacti Plugin Management. Native Cacti polling is unchanged.', false, 'NMS');
+	$warned = true;
+	return false;
+}
+
+/** Reconcile imported native templates, collect live text inventory, and synchronize faults after polling. */
+function nms_process_poller_bottom() {
 	global $config;
 
 	include_once($config['base_path'] . '/plugins/nms/includes/functions.php');
 	include_once($config['base_path'] . '/plugins/nms/includes/inventory.php');
 	include_once($config['base_path'] . '/plugins/nms/includes/device_manager.php');
-	db_execute("DELETE p FROM plugin_nms_device_parameters AS p
+	nms_category_execute("DELETE p FROM plugin_nms_device_parameters AS p
 		LEFT JOIN host AS h ON h.id = p.host_id
 		LEFT JOIN poller_item AS pi ON pi.host_id = p.host_id AND pi.local_data_id = p.local_data_id
 		WHERE h.id IS NULL OR h.deleted != '' OR h.disabled != '' OR pi.local_data_id IS NULL");
@@ -23,8 +47,18 @@ function nms_poller_bottom() {
 	nms_sync_all_faults(true);
 }
 
-/** Store latest observed values with device and indexed-source identity; return Cacti's poller payload unchanged. */
+/** Always return the original native payload, even if plugin storage or migration is unavailable. */
 function nms_poller_output($rrd_update_array) {
+	try {
+		if (nms_poller_schema_ready()) nms_capture_poller_output($rrd_update_array);
+	} catch (Throwable $error) {
+		cacti_log('NMS reading capture failed (' . get_class($error) . '). Check the NMS schema and Cacti database logs; native RRD updates continue.', false, 'NMS');
+	}
+	return $rrd_update_array;
+}
+
+/** Store actual collection timestamps and values with device and indexed-source identity. */
+function nms_capture_poller_output($rrd_update_array) {
 	global $config;
 
 	include_once($config['base_path'] . '/plugins/nms/includes/functions.php');
@@ -42,7 +76,13 @@ function nms_poller_output($rrd_update_array) {
 			continue;
 		}
 
-		foreach ($rrd_data['times'] as $fields) {
+		foreach ($rrd_data['times'] as $sample_time => $fields) {
+			// Core supplies the collection Unix timestamp. Replayed/Boost data is not fresh now.
+			if (!is_numeric($sample_time) || (int) $sample_time <= 0 || (int) $sample_time > time()) {
+				cacti_log('Ignored NMS sample with an invalid collection timestamp for data source ' . (int) $item['local_data_id'], false, 'NMS');
+				continue;
+			}
+			$observed_at = date('Y-m-d H:i:s', (int) $sample_time);
 			foreach ($fields as $field => $value) {
 				$definition = db_fetch_row_prepared("SELECT dtr.local_data_template_rrd_id,
 					dtr.data_template_id, dtr.data_source_name, dt.name AS template_name
@@ -68,15 +108,18 @@ function nms_poller_output($rrd_update_array) {
 				$numeric_value = is_numeric($raw_value) ? $raw_value : null;
 
 				/* This hook records only values returned by this Cacti poller run. */
-				db_execute_prepared("INSERT INTO plugin_nms_device_parameters
+				nms_category_execute("INSERT INTO plugin_nms_device_parameters
 					(host_id, local_data_id, parameter_key, parameter_name, display_name,
 					raw_value, numeric_value, last_seen)
-					VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
-					ON DUPLICATE KEY UPDATE parameter_name = VALUES(parameter_name),
-						display_name = VALUES(display_name), raw_value = VALUES(raw_value),
-						numeric_value = VALUES(numeric_value), last_seen = VALUES(last_seen)", array(
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+					ON DUPLICATE KEY UPDATE
+						parameter_name = IF(VALUES(last_seen) >= last_seen, VALUES(parameter_name), parameter_name),
+						display_name = IF(VALUES(last_seen) >= last_seen, VALUES(display_name), display_name),
+						raw_value = IF(VALUES(last_seen) >= last_seen, VALUES(raw_value), raw_value),
+						numeric_value = IF(VALUES(last_seen) >= last_seen, VALUES(numeric_value), numeric_value),
+						last_seen = GREATEST(last_seen, VALUES(last_seen))", array(
 					$item['host_id'], $item['local_data_id'], $parameter_key, $field,
-					$display_name, $raw_value, $numeric_value
+					$display_name, $raw_value, $numeric_value, $observed_at
 				));
 			}
 		}

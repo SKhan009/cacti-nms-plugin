@@ -3,22 +3,22 @@
 }
 
 .nms-snmp-mode-note {
-	color: #718078;
+	color: #7c7c7c;
 	font-size: 12px;
 	margin: -2px 0 14px;
 }
 
 .nms-form-grid label small {
-	color: #849087;
+	color: #8d8d8d;
 	font-size: 10px;
 	font-weight: 500;
 	margin-top: 4px;
 }
 
 .nms-device-id {
-	background: #edf5ef;
+	background: #f3f3f3;
 	border-radius: 999px;
-	color: #287743;
+	color: #181818;
 	font-size: 11px;
 	font-weight: 800;
 	padding: 7px 11px;
@@ -31,15 +31,15 @@
 }
 
 .nms-row-link.secondary {
-	background: #fff;
-	color: #657169;
+	background: #ffffff;
+	color: #6e6e6e;
 }
 
 .nms-device-overview {
 	margin-bottom: 18px;
 	overflow: visible;
 	position: relative;
-	z-index: 20;
+	z-index: 1;
 }
 
 .nms-device-facts {
@@ -48,7 +48,7 @@
 }
 
 .nms-device-facts > div {
-	border-right: 1px solid #e1e9e3;
+	border-right: 1px solid #e7e7e7;
 	padding: 16px 20px;
 }
 
@@ -62,7 +62,7 @@
 }
 
 .nms-device-facts span {
-	color: #7d8981;
+	color: #868686;
 	font-size: 10px;
 	font-weight: 700;
 	text-transform: uppercase;
@@ -74,7 +74,7 @@
 }
 
 .nms-snmp-information {
-	border-top: 1px solid #e1e9e3;
+	border-top: 1px solid #e7e7e7;
 	padding: 14px 20px 16px;
 }
 
@@ -97,7 +97,7 @@
 
 .nms-snmp-information-head p,
 .nms-snmp-information-head small {
-	color: #7d8981;
+	color: #868686;
 	font-size: 11px;
 	font-weight: 500;
 }
@@ -118,7 +118,7 @@
 }
 
 .nms-snmp-information dt {
-	color: #7d8981;
+	color: #868686;
 	font-size: 10px;
 	font-weight: 800;
 	letter-spacing: .04em;
@@ -126,7 +126,7 @@
 }
 
 .nms-snmp-information dd {
-	color: #17231b;
+	color: #202020;
 	font-size: 12px;
 	font-weight: 650;
 	line-height: 1.45;
@@ -146,17 +146,17 @@
 }
 
 .nms-device-action-grid a {
-	background: #f8faf8;
-	border: 1px solid #dce6de;
+	background: #f9f9f9;
+	border: 1px solid #e3e3e3;
 	border-radius: 9px;
-	color: #17231b;
+	color: #202020;
 	padding: 15px;
 	text-decoration: none;
 }
 
 .nms-device-action-grid a:hover {
-	border-color: #2b8048;
-	box-shadow: 0 4px 12px rgba(27, 74, 43, .08);
+	border-color: #181818;
+	box-shadow: 0 4px 12px rgba(24,24,24, .08);
 }
 
 .nms-device-action-grid strong,
@@ -176,9 +176,9 @@
 
 .nms-device-tools-menu summary {
 	align-items: center;
-	background: #174e2d;
+	background: #181818;
 	border-radius: 7px;
-	color: #fff;
+	color: #ffffff;
 	cursor: pointer;
 	display: flex;
 	font-size: 11px;
@@ -194,17 +194,17 @@
 }
 
 .nms-device-tools-menu summary small {
-	background: rgba(255, 255, 255, .15);
+	background: rgba(255,255,255, .15);
 	border-radius: 999px;
 	font-size: 9px;
 	padding: 4px 6px;
 }
 
 .nms-device-tools-menu nav {
-	background: #fff;
-	border: 1px solid #dce6de;
+	background: #ffffff;
+	border: 1px solid #e3e3e3;
 	border-radius: 9px;
-	box-shadow: 0 14px 35px rgba(18, 55, 31, .16);
+	box-shadow: 0 14px 35px rgba(24,24,24, .16);
 	display: grid;
 	position: absolute;
 	padding: 8px;
@@ -221,10 +221,10 @@
 	align-items: center;
 	background: transparent;
 	border: 0;
-	border-bottom: 1px solid #e4ebe6;
+	border-bottom: 1px solid #e9e9e9;
 	border-radius: 0;
 	box-sizing: border-box;
-	color: #36443b;
+	color: #404040;
 	display: flex;
 	font-size: 11px;
 	font-weight: 700;
@@ -245,13 +245,13 @@
 
 .nms-device-tools-menu nav a:hover,
 .nms-device-tools-menu nav button:hover {
-	background: #f0f6f2;
-	color: #267740;
+	background: #f4f4f4;
+	color: #181818;
 }
 
 .nms-device-tools-menu nav a span,
 .nms-device-tools-menu nav button span {
-	color: #2b8048;
+	color: #181818;
 }
 
 .nms-device-associations {
@@ -279,7 +279,7 @@
 }
 
 .nms-graph-device-picker p {
-	color: #7d8981;
+	color: #868686;
 	font-size: 10px;
 	margin-top: 4px;
 }
@@ -289,7 +289,7 @@
 }
 
 .nms-graph-device-picker label span {
-	color: #657269;
+	color: #6f6f6f;
 	display: block;
 	font-size: 9px;
 	font-weight: 800;
@@ -297,8 +297,8 @@
 }
 
 .nms-graph-device-picker select {
-	background: #fff;
-	border: 1px solid #cedbd1;
+	background: #ffffff;
+	border: 1px solid #d8d8d8;
 	border-radius: 7px;
 	font: inherit;
 	font-size: 11px;
@@ -308,13 +308,13 @@
 }
 
 .nms-graph-device-empty {
-	color: #7d8981;
+	color: #868686;
 	padding: 45px 20px;
 	text-align: center;
 }
 
 .nms-graph-device-empty h2 {
-	color: #26342b;
+	color: #303030;
 	font-size: 16px;
 	margin: 0 0 6px;
 }
@@ -336,17 +336,17 @@
 }
 
 .nms-global-graph-table .nms-association-row > a {
-	color: #287743;
+	color: #181818;
 	font-size: 10px;
 	font-weight: 800;
 	text-decoration: none;
 }
 
 .nms-template-actions { align-items: center; display: flex; gap: 8px; }
-.nms-template-actions a { color: #287743; font-size: 10px; font-weight: 800; text-decoration: none; }
+.nms-template-actions a { color: #181818; font-size: 10px; font-weight: 800; text-decoration: none; }
 
 .nms-graph-device-summary > div {
-	border-right: 1px solid #e1e9e3;
+	border-right: 1px solid #e7e7e7;
 	padding: 13px 16px;
 }
 
@@ -357,7 +357,7 @@
 }
 
 .nms-graph-device-summary span {
-	color: #7e8981;
+	color: #868686;
 	font-size: 8px;
 	font-weight: 800;
 	letter-spacing: .06em;
@@ -370,7 +370,7 @@
 }
 
 .nms-graph-device-summary small {
-	color: #859188;
+	color: #8e8e8e;
 	font-size: 9px;
 	margin-top: 2px;
 }
@@ -386,15 +386,15 @@
 }
 
 .nms-graph-builder-steps {
-	background: #f8faf8;
-	border-top: 1px solid #e1e9e3;
+	background: #f9f9f9;
+	border-top: 1px solid #e7e7e7;
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
 }
 
 .nms-graph-builder-steps > div {
 	align-items: center;
-	border-right: 1px solid #e1e9e3;
+	border-right: 1px solid #e7e7e7;
 	display: flex;
 	gap: 10px;
 	padding: 12px 18px;
@@ -406,9 +406,9 @@
 
 .nms-graph-builder-steps b {
 	align-items: center;
-	background: #e4f1e8;
+	background: #eeeeee;
 	border-radius: 50%;
-	color: #287c45;
+	color: #181818;
 	display: flex;
 	font-size: 10px;
 	height: 24px;
@@ -426,7 +426,7 @@
 }
 
 .nms-graph-builder-steps small {
-	color: #829087;
+	color: #8c8c8c;
 	font-size: 9px;
 	margin-top: 2px;
 }
@@ -437,22 +437,50 @@
 }
 
 .nms-graph-form-section {
-	background: #fbfdfb;
-	border: 1px solid #d6e3d9;
+	background: #fcfcfc;
+	border: 1px solid #e0e0e0;
 	border-radius: 8px;
 	margin-bottom: 16px;
 	overflow: hidden;
 }
 
-.nms-graph-form-section h3 {
-	background: linear-gradient(90deg, #1d693a, #2e7d48);
-	color: #fff;
+.nms-graph-form-section h3,
+.nms-device-form > fieldset > legend {
+	background: linear-gradient(90deg, #181818, #181818);
+	color: #ffffff;
 	font-size: 12px;
 	font-weight: 800;
 	letter-spacing: .02em;
 	line-height: 1.2;
 	margin: 0;
 	padding: 10px 14px;
+}
+
+/* Keep native fieldset semantics while sharing the graph-builder section bars. */
+.nms-device-form > fieldset {
+	background: #fcfcfc;
+	border: 1px solid #e0e0e0;
+	border-radius: 8px;
+	margin: 0 0 16px;
+	min-width: 0;
+	padding: 0;
+}
+
+.nms-device-form > fieldset > legend {
+	border-radius: 7px 7px 0 0;
+	float: left;
+	width: 100%;
+}
+
+.nms-device-form > fieldset > .nms-form-grid {
+	clear: both;
+	padding: 16px;
+}
+
+.nms-device-form > fieldset > .nms-snmp-mode-note {
+	clear: both;
+	margin: 0;
+	padding: 12px 16px 0;
 }
 
 .nms-graph-section-grid {
@@ -502,21 +530,21 @@
 }
 
 .nms-graph-builder-form label > span {
-	color: #657269;
+	color: #6f6f6f;
 	font-size: 12px;
 	font-weight: 800;
 	margin-bottom: 6px;
 }
 
 .nms-graph-builder-form label > span em {
-	color: #8a958e;
+	color: #929292;
 	font-size: 9px;
 	font-style: normal;
 	font-weight: 600;
 }
 
 .nms-graph-builder-form label > small {
-	color: #859188;
+	color: #8e8e8e;
 	font-size: 9px;
 	line-height: 1.35;
 	margin-top: 5px;
@@ -524,11 +552,11 @@
 
 .nms-graph-builder-form input,
 .nms-graph-builder-form select {
-	background: #fff;
-	border: 1px solid #cedbd1;
+	background: #ffffff;
+	border: 1px solid #d8d8d8;
 	border-radius: 7px;
 	box-sizing: border-box;
-	color: #26342b;
+	color: #303030;
 	font: inherit;
 	font-size: 12px;
 	height: 38px;
@@ -537,10 +565,10 @@
 }
 
 .nms-graph-builder-form button {
-	background: #287c45;
+	background: #181818;
 	border: 0;
 	border-radius: 7px;
-	color: #fff;
+	color: #ffffff;
 	cursor: pointer;
 	font-size: 12px;
 	font-weight: 800;
@@ -563,7 +591,7 @@
 }
 
 .nms-graph-options legend {
-	color: #657269;
+	color: #6f6f6f;
 	display: block;
 	font-size: 12px;
 	font-weight: 800;
@@ -574,8 +602,8 @@
 
 .nms-graph-options > div {
 	align-items: center;
-	background: #fff;
-	border: 1px solid #cedbd1;
+	background: #ffffff;
+	border: 1px solid #d8d8d8;
 	border-radius: 7px;
 	display: flex;
 	flex-wrap: wrap;
@@ -602,19 +630,19 @@
 }
 
 .nms-graph-options label > span {
-	color: #4d5c52;
+	color: #585858;
 	font-size: 10px;
 	font-weight: 700;
 	margin: 0;
 }
 
 .nms-association-table {
-	border-top: 1px solid #e1e9e3;
+	border-top: 1px solid #e7e7e7;
 }
 
 .nms-association-row {
 	align-items: center;
-	border-bottom: 1px solid #e7ede8;
+	border-bottom: 1px solid #ebebeb;
 	display: grid;
 	grid-template-columns: minmax(0, 1.5fr) minmax(180px, .5fr);
 	min-height: 52px;
@@ -630,8 +658,8 @@
 }
 
 .nms-association-row.heading {
-	background: #f8faf8;
-	color: #7b8780;
+	background: #f9f9f9;
+	color: #848484;
 	font-size: 9px;
 	font-weight: 800;
 	letter-spacing: .09em;
@@ -644,12 +672,12 @@
 }
 
 .nms-association-row > span {
-	color: #6f7c74;
+	color: #797979;
 	font-size: 11px;
 }
 
 .nms-association-row small {
-	color: #859188;
+	color: #8e8e8e;
 	display: block;
 	font-size: 9px;
 	margin-top: 3px;
@@ -675,15 +703,15 @@
 }
 
 .nms-association-empty {
-	color: #7d8981;
+	color: #868686;
 	font-size: 12px;
 	padding: 22px 20px;
 }
 
 .nms-association-add {
 	align-items: end;
-	background: #f8faf8;
-	border-top: 1px solid #e1e9e3;
+	background: #f9f9f9;
+	border-top: 1px solid #e7e7e7;
 	display: grid;
 	gap: 12px;
 	grid-template-columns: minmax(0, 1fr) auto;
@@ -691,8 +719,8 @@
 }
 
 .nms-association-add.top {
-	border-bottom: 1px solid #e1e9e3;
-	border-top: 1px solid #e1e9e3;
+	border-bottom: 1px solid #e7e7e7;
+	border-top: 1px solid #e7e7e7;
 }
 
 .nms-association-add.query {
@@ -705,7 +733,7 @@
 
 .nms-association-add label > span:first-child {
 	align-items: center;
-	color: #657269;
+	color: #6f6f6f;
 	display: inline-flex;
 	font-size: 10px;
 	font-weight: 800;
@@ -722,10 +750,10 @@
 
 .nms-association-add select,
 .nms-association-add input[type="search"] {
-	background: #fff;
-	border: 1px solid #cedbd1;
+	background: #ffffff;
+	border: 1px solid #d8d8d8;
 	border-radius: 7px;
-	color: #26342b;
+	color: #303030;
 	font: inherit;
 	font-size: 11px;
 	height: 38px;
@@ -734,15 +762,15 @@
 }
 
 .nms-association-add input[type="search"] {
-	background: #f7faf8;
+	background: #f9f9f9;
 	padding: 0 12px;
 }
 
 .nms-association-add button {
-	background: #287c45;
+	background: #181818;
 	border: 0;
 	border-radius: 7px;
-	color: #fff;
+	color: #ffffff;
 	cursor: pointer;
 	font-size: 11px;
 	font-weight: 800;
@@ -774,10 +802,10 @@
 }
 
 .nms-reindex-options label {
-	background: #f5f7f5;
-	border: 1px solid #d5dfd7;
+	background: #f6f6f6;
+	border: 1px solid #dcdcdc;
 	border-radius: 5px;
-	color: #657169;
+	color: #6e6e6e;
 	cursor: pointer;
 	font-size: 9px;
 	font-weight: 700;
@@ -785,13 +813,13 @@
 }
 
 .nms-reindex-options input:checked + label {
-	background: #287c45;
-	border-color: #287c45;
-	color: #fff;
+	background: #181818;
+	border-color: #181818;
+	color: #ffffff;
 }
 
 .nms-reindex-options input:focus-visible + label {
-	outline: 2px solid #80b991;
+	outline: 2px solid #aaaaaa;
 	outline-offset: 2px;
 }
 
@@ -809,10 +837,10 @@
 
 .nms-query-actions button,
 .nms-query-actions a {
-	background: #fff;
-	border: 1px solid #cedbd1;
+	background: #ffffff;
+	border: 1px solid #d8d8d8;
 	border-radius: 5px;
-	color: #267740;
+	color: #181818;
 	cursor: pointer;
 	display: inline-block;
 	font: inherit;
@@ -826,30 +854,33 @@
 .nms-search-select-control { display: block !important; margin: 0 !important; position: relative; }
 .nms-search-select-source { height: 1px !important; opacity: 0; pointer-events: none; position: absolute; width: 1px !important; }
 .nms-search-select-trigger {
-	background: #fff !important; border: 1px solid #cedbd1 !important; border-radius: 7px !important;
-	color: #26342b !important; cursor: pointer; font-size: 11px !important; font-weight: 500 !important;
+	background: #ffffff !important; border: 1px solid #d8d8d8 !important; border-radius: 7px !important;
+	color: #303030 !important; cursor: pointer; font-size: 11px !important; font-weight: 500 !important;
 	height: 38px !important; overflow: hidden; padding: 0 34px 0 10px !important; position: relative;
 	text-align: left; text-overflow: ellipsis; white-space: nowrap; width: 100%;
 }
 .nms-search-select-trigger::after { content: '⌄'; font-size: 15px; position: absolute; right: 12px; top: 8px; }
 .nms-search-select-trigger.invalid { border-color: #c83e32 !important; box-shadow: 0 0 0 2px rgba(200, 62, 50, .14); }
 .nms-search-select-panel {
-	background: #fff; border: 1px solid #cbd7ce; border-radius: 9px; box-shadow: 0 14px 32px rgba(26, 54, 36, .18);
+	background: #ffffff; border: 1px solid #d4d4d4; border-radius: 9px; box-shadow: 0 14px 32px rgba(47,47,47, .18);
 	left: 0; padding: 8px; position: absolute; top: calc(100% + 5px); width: 100%; z-index: 40;
 }
 .nms-search-select-panel[hidden] { display: none !important; }
 .nms-search-select-panel input[type="search"] {
-	background: #f7faf8; border: 1px solid #cedbd1; border-radius: 7px; box-sizing: border-box;
+	background: #f9f9f9; border: 1px solid #d8d8d8; border-radius: 7px; box-sizing: border-box;
 	font-size: 11px; height: 36px; margin-bottom: 6px; padding: 0 10px; width: 100%;
 }
 .nms-search-select-options { display: block !important; margin: 0 !important; max-height: 280px; overflow-y: auto; }
 .nms-search-select-option {
-	background: transparent !important; border: 0 !important; border-radius: 6px !important; color: #26342b !important;
+	background: transparent !important; border: 0 !important; border-radius: 6px !important; color: #303030 !important;
 	display: block; font-size: 11px !important; font-weight: 600 !important; height: auto !important;
 	line-height: 1.35 !important; padding: 9px 10px !important; text-align: left; width: 100%;
 }
-.nms-search-select-option:hover, .nms-search-select-option:focus-visible { background: #e9f3ec !important; color: #176536 !important; }
-.nms-search-select-empty { color: #7d8981; display: block; font-size: 11px; padding: 12px 10px; }
+.nms-search-select-option:hover, .nms-search-select-option:focus-visible { background: #f0f0f0 !important; color: #181818 !important; }
+.nms-option-color-swatch { display: inline-block; width: 16px; height: 16px; margin-right: 7px; vertical-align: middle; border: 1px solid rgba(0,0,0,.18); }
+.nms-search-select-option[aria-selected="true"] { background: #f0f0f0 !important; }
+.nms-graph-section-grid > [hidden] { display: none !important; }
+.nms-search-select-empty { color: #868686; display: block; font-size: 11px; padding: 12px 10px; }
 .nms-search-select-option[hidden],
 .nms-search-select-empty[hidden] { display: none !important; }
 
@@ -894,12 +925,12 @@
 .nms-icon-action, .nms-template-actions form, .nms-row-actions form { margin: 0; }
 
 .nms-device-action-grid strong {
-	color: #267740;
+	color: #181818;
 	font-size: 12px;
 }
 
 .nms-device-action-grid span {
-	color: #7d8981;
+	color: #868686;
 	font-size: 10px;
 	line-height: 1.5;
 	margin-top: 5px;
@@ -956,7 +987,7 @@
 	}
 
 	.nms-graph-builder-steps > div {
-		border-bottom: 1px solid #e1e9e3;
+		border-bottom: 1px solid #e7e7e7;
 		border-right: 0;
 	}
 
@@ -988,7 +1019,7 @@
 	}
 
 	.nms-device-facts > div {
-		border-bottom: 1px solid #e1e9e3;
+		border-bottom: 1px solid #e7e7e7;
 		border-right: 0;
 	}
 
@@ -1005,3 +1036,7 @@
 		grid-template-columns: 1fr;
 	}
 }
+.nms-core-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.nms-core-field > small { color: #6f6f6f; line-height: 1.45; }
+.nms-core-field .nms-core-override { display: flex; flex-direction: row; align-items: center; gap: 8px; font-size: 0.85em; }
+.nms-core-field input[type="checkbox"] { width: 16px; height: 16px; padding: 0; align-self: flex-start; flex-shrink: 0; }

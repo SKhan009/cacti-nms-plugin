@@ -106,6 +106,7 @@ function nms_snmprec_deploy($community, $content) {
 		@unlink($temporary);
 		throw new RuntimeException('NMS could not activate the uploaded simulator record.');
 	}
+	if ((nms_snmpsim_config()['activation'] ?? '') === 'manual') return $target;
 	$pending = $directory . DIRECTORY_SEPARATOR . '.reload.pending';
 	if (file_put_contents($pending, (string) time(), LOCK_EX) === false) {
 		@unlink($target);

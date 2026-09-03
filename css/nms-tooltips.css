@@ -1,10 +1,10 @@
 .nms-help-icon {
 	align-items: center;
-	background: #eef7f0;
-	border: 1px solid #9cc9a8;
+	background: #f5f5f5;
+	border: 1px solid #bdbdbd;
 	border-radius: 50%;
 	box-sizing: border-box;
-	color: #247a43;
+	color: #181818;
 	cursor: help;
 	display: inline-flex;
 	font-family: Arial, sans-serif;
@@ -23,29 +23,42 @@
 
 .nms-help-icon:hover,
 .nms-help-icon:focus-visible {
-	background: #247a43;
-	border-color: #247a43;
-	color: #fff;
-	outline: 3px solid rgba(36, 122, 67, .18);
+	background: #181818;
+	border-color: #181818;
+	color: #ffffff;
+	outline: 3px solid rgba(24,24,24, .18);
 	outline-offset: 1px;
 }
 
-.nms-tooltip {
-	/* Slight transparency keeps the tooltip readable without obscuring the form beneath it. */
-	background: rgba(23, 63, 40, .84);
-	border: 1px solid rgba(255, 255, 255, .18);
+.nms-tooltip,
+.nms-core-workspace .ui-tooltip {
+	/* Apply transparency to the background, never to the readable text. */
+	--nms-tooltip-background: rgba(0,0,0, .78);
+	background: var(--nms-tooltip-background);
+	border: 1px solid rgba(255,255,255, .18);
 	border-radius: 7px;
-	box-shadow: 0 8px 24px rgba(13, 41, 25, .18);
+	box-shadow: 0 8px 24px rgba(34,34,34, .18);
 	backdrop-filter: blur(2px);
 	-webkit-backdrop-filter: blur(2px);
 	box-sizing: border-box;
-	color: #fff;
+	color: #ffffff;
 	font-size: 13px;
 	font-weight: 500;
 	line-height: 1.45;
 	max-width: 310px;
-	opacity: 0;
 	padding: 10px 12px;
+	z-index: 10000;
+}
+
+.nms-core-workspace .ui-tooltip-content {
+	background: transparent;
+	color: #ffffff;
+	font: inherit;
+	line-height: inherit;
+}
+
+.nms-tooltip {
+	opacity: 0;
 	pointer-events: none;
 	position: fixed;
 	transform: translateY(3px);
@@ -68,12 +81,12 @@
 }
 
 .nms-tooltip[data-placement="top"]:after {
-	border-top-color: rgba(23, 63, 40, .84);
+	border-top-color: var(--nms-tooltip-background);
 	bottom: -12px;
 }
 
 .nms-tooltip[data-placement="bottom"]:after {
-	border-bottom-color: rgba(23, 63, 40, .84);
+	border-bottom-color: var(--nms-tooltip-background);
 	top: -12px;
 }
 
@@ -82,7 +95,7 @@
 }
 
 .nms-tooltip strong {
-	color: #bfe7c8;
+	color: #dcdcdc;
 	display: block;
 	font-size: 11px;
 	letter-spacing: .06em;
@@ -95,12 +108,13 @@
 .nms-tooltip-source:is(a, button) { cursor: pointer; }
 
 .nms-tooltip-source:focus-visible {
-	outline: 2px solid #78d194;
+	outline: 2px solid #bababa;
 	outline-offset: 3px;
 }
 
 @media (max-width: 700px) {
-	.nms-tooltip { max-width: calc(100vw - 24px); }
+	.nms-tooltip,
+	.nms-core-workspace .ui-tooltip { max-width: min(310px, calc(100vw - 24px)); }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -108,7 +108,7 @@
 		body.set('nms_action', action);
 		body.set('host_id', device.id);
 		Object.keys(extra || {}).forEach(/** Append each extra action field to the submitted form body. */ function (key) { body.set(key, extra[key]); });
-		return fetch(config.saveUrl, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, body: body.toString() })
+		return fetch(config.saveUrl, { method: 'POST', mode: 'same-origin', credentials: 'same-origin', headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' }, body: body.toString() })
 			.then(/** Reject failed HTTP responses before decoding the topology response JSON. */ function (response) { if (!response.ok) throw new Error('Cacti rejected the topology update.'); return response.json(); })
 			.then(/** Reject unsuccessful topology actions even when their HTTP request succeeded. */ function (result) { if (!result.ok) throw new Error('The device configuration is not valid for this Cacti site.'); return result; });
 	}
@@ -123,7 +123,7 @@
 			var card = document.createElement('button');
 			card.type = 'button';
 			card.className = 'nms-inventory-card' + (selectedId === device.id ? ' selected' : '');
-			card.setAttribute('data-nms-tip', device.mapped ? 'Select this live Cacti device to inspect or update its topology connection.' : 'Drag this live Cacti device onto the map, or select it to inspect its details.');
+			card.setAttribute('data-nms-tip', device.mapped ? 'Select this live Cacti device to inspect its Cacti state and recorded connections.' : 'Drag this live Cacti device onto the map, or select it to inspect its details.');
 			card.draggable = !device.locked;
 			card.innerHTML = '<span class="nms-device-glyph ' + healthClass(device) + '">' + (device.locked ? 'SW' : 'DV') + '</span>' +
 				'<span class="nms-inventory-copy"><strong>' + escapeHtml(device.name) + '</strong><small>' + escapeHtml(device.hostname) + ' · ' + escapeHtml(device.category || 'Unmapped') + '</small></span>' +
@@ -162,45 +162,38 @@
 		requestAnimationFrame(renderLinks);
 	}
 
-	/** Redraw SVG links between mapped child devices and their configured parents. */
+	/** Draw only explicit connection records; a layout parent or default root is not connectivity. */
 	function renderLinks() {
 		var bounds = canvas.getBoundingClientRect();
 		links.setAttribute('viewBox', '0 0 ' + bounds.width + ' ' + bounds.height);
 		links.innerHTML = '';
-		config.devices.filter(/** Select mapped non-root devices that can have parent links. */ function (device) { return device.mapped && !device.locked; }).forEach(/** Draw a child-to-parent line when its configured or root parent is mapped. */ function (device) {
-			var parent = deviceById[device.parent_id] || deviceById[config.rootId];
-			if (!parent || !parent.mapped) return;
-			var childPoint = device.x == null ? defaultPosition(device) : device;
-			var parentPoint = parent.x == null ? defaultPosition(parent) : parent;
+		(config.relationships || []).forEach(function (edge) {
+			var source = deviceById[edge.source], target = deviceById[edge.target];
+			if (!source || !target || !source.mapped || !target.mapped) return;
+			var start = source.x == null ? defaultPosition(source) : source;
+			var end = target.x == null ? defaultPosition(target) : target;
 			var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-			line.setAttribute('x1', bounds.width * parentPoint.x / 100); line.setAttribute('y1', bounds.height * parentPoint.y / 100);
-			line.setAttribute('x2', bounds.width * childPoint.x / 100); line.setAttribute('y2', bounds.height * childPoint.y / 100);
+			line.setAttribute('x1', bounds.width * start.x / 100); line.setAttribute('y1', bounds.height * start.y / 100);
+			line.setAttribute('x2', bounds.width * end.x / 100); line.setAttribute('y2', bounds.height * end.y / 100);
+			if (edge.identityState !== 'recorded') line.setAttribute('stroke-dasharray', '5 5');
+			var title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+			title.textContent = edge.type + ' · ' + edge.provenance + ' · ' + edge.identityState + ' (not link health)';
+			line.appendChild(title);
 			links.appendChild(line);
 		});
 	}
 
-	/** Render selected-device facts and controls for its parent, port, and map membership. */
+	/** Render selected-device facts and layout controls; connections have their own editor. */
 	function renderDetail() {
 		var device = deviceById[selectedId];
 		if (!device) return;
-		var parentOptions = config.devices.filter(/** Allow mapped devices other than the selected device as parent choices. */ function (item) { return item.mapped && item.id !== device.id; }).map(/** Render an escaped parent option and mark the current parent selected. */ function (item) {
-			var chosen = (device.parent_id || config.rootId) === item.id ? ' selected' : '';
-			return '<option value="' + item.id + '"' + chosen + '>' + escapeHtml(item.name) + '</option>';
-		}).join('');
-		var parentDevice = deviceById[device.parent_id || config.rootId];
-		var portOptions = parentDevice ? parentDevice.interface_options.map(/** Render an escaped parent-interface option using its SNMP index as the value. */ function (item) {
-			return '<option value="' + escapeHtml(item.index) + '"' + (device.parent_snmp_index === item.index ? ' selected' : '') + '>' + escapeHtml(item.label) + '</option>';
-		}).join('') : '';
 		detail.innerHTML = '<div class="nms-detail-title"><span class="nms-device-glyph ' + healthClass(device) + '">' + (device.locked ? 'SW' : 'DV') + '</span><div><small>CACTI DEVICE #' + device.id + '</small><h2>' + escapeHtml(device.name) + '</h2></div></div>' +
 			'<span class="nms-live-status ' + healthClass(device) + '">● ' + escapeHtml(healthLabel(device)) + '</span><dl>' +
 			'<div><dt>Address</dt><dd>' + escapeHtml(device.hostname) + '</dd></div><div><dt>Serial number</dt><dd>' + escapeHtml(device.serial_number || 'Not available') + (device.serial_status === 'changed' ? ' (changed)' : '') + '</dd></div><div><dt>Category</dt><dd>' + escapeHtml(device.category || 'Unmapped') + '</dd></div><div><dt>Template</dt><dd>' + escapeHtml(device.template || 'None') + '</dd></div><div><dt>Cacti status</dt><dd>' + escapeHtml(device.status) + '</dd></div><div><dt>Availability</dt><dd>' + device.availability + '%</dd></div><div><dt>Active faults</dt><dd>' + device.fault_count + '</dd></div><div><dt>SNMP</dt><dd>Version ' + device.snmp_version + '</dd></div><div><dt>Interfaces</dt><dd>' + device.interfaces + '</dd></div><div><dt>Graphs</dt><dd>' + device.graphs + '</dd></div></dl>' +
-			(device.locked ? '<p class="nms-fixed-note">This root device is fixed.</p>' : '<label class="nms-parent-select" data-nms-tip="The mapped Cacti device this node connects to. Changing it redraws and saves the link.">Connected to device<select id="nmsParentDevice">' + parentOptions + '</select></label><label class="nms-parent-select" data-nms-tip="Optional SNMP interface on the parent device used for this topology connection.">Parent switch port<select id="nmsParentPort"><option value="">Not configured</option>' + portOptions + '</select></label>') +
+			'<p class="nms-fixed-note">Configured physical ports: ' + (device.physical_ports == null ? 'Not configured' : escapeHtml(device.physical_ports)) + '. Capacity is not a count of discovered interfaces.</p>' +
+			'<p class="nms-fixed-note">Connections are managed in the Connections section below. Dragging changes layout only.</p>' +
 			(device.fault_count > 0 ? '<a class="nms-detail-action" data-nms-tip="Open active faults for this device." href="' + escapeHtml(device.faults_url) + '">Open device faults</a>' : '') + '<a class="nms-detail-secondary" data-nms-tip="Open graphs for this device in the Cacti console." href="' + escapeHtml(device.graphs_url) + '">Open Cacti graphs</a><a class="nms-detail-secondary" data-nms-tip="Open the live device configuration in the Cacti console." href="' + escapeHtml(device.device_url) + '">Configure in Cacti</a>' +
 			(!device.locked && device.mapped ? '<button id="nmsRemoveFromMap" class="nms-remove-map" data-nms-tip="Remove only the saved map placement. The Cacti device is not deleted." type="button">Remove from topology</button>' : '');
-		var parentSelect = document.getElementById('nmsParentDevice');
-		if (parentSelect) parentSelect.addEventListener('change', /** Change the parent, clear its old port selection, and save the updated mapping. */ function () { device.parent_id = Number(parentSelect.value); device.parent_snmp_index = ''; renderDetail(); saveDevice(device).catch(showError); });
-		var parentPort = document.getElementById('nmsParentPort');
-		if (parentPort) parentPort.addEventListener('change', /** Save the newly selected parent-interface index. */ function () { device.parent_snmp_index = parentPort.value; saveDevice(device).catch(showError); });
 		var remove = document.getElementById('nmsRemoveFromMap');
 		if (remove) remove.addEventListener('click', /** Request removal of this device's visual mapping and report save errors. */ function () { post('remove_device', device).then(/** Reflect successful map removal locally and select the root device. */ function () { device.mapped = false; selectedId = config.rootId; renderAll(); }).catch(showError); });
 	}

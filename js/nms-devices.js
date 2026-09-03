@@ -35,7 +35,7 @@
 		if (!authenticationEnabled && privacyProtocol) privacyProtocol.value = '[None]';
 		var privacyEnabled = authenticationEnabled && privacyProtocol.value !== '[None]';
 
-		setFieldState(community, !isV3, !isV3);
+		setFieldState(community, version.value === '1' || version.value === '2', version.value === '1' || version.value === '2');
 		setFieldState(username, isV3, isV3);
 		setFieldState(authProtocol, isV3, false);
 		setFieldState(authPassword, authenticationEnabled, authenticationEnabled);
@@ -45,7 +45,9 @@
 		setFieldState(engineId, isV3, false);
 
 		if (!modeNote) return;
-		if (!isV3) {
+		if (version.value === '0') {
+			modeNote.textContent = 'SNMP is not in use for this device.';
+		} else if (!isV3) {
 			modeNote.textContent = 'Version ' + version.value + ' uses a community string.';
 		} else if (!authenticationEnabled) {
 			modeNote.textContent = 'SNMP v3 username only (no authentication or encryption).';
@@ -98,10 +100,24 @@
 		empty.textContent = 'No matching options';
 		empty.hidden = true;
 
+		/** Show the core label and a validated color swatch for color options. */
+		function renderOption(target, option) {
+			target.textContent = option ? option.text : 'Select an option';
+			if (option && /^[0-9a-f]{6}$/i.test(option.dataset.hex || '')) {
+				var chip = document.createElement('i');
+				chip.className = 'nms-option-color-swatch';
+				chip.setAttribute('aria-hidden', 'true');
+				chip.style.backgroundColor = '#' + option.dataset.hex;
+				target.prepend(chip);
+			}
+		}
 		/** Copy the selected option's text into the searchable selector trigger. */
 		function syncLabel() {
 			var option = select.options[select.selectedIndex] || select.options[0];
-			trigger.textContent = option ? option.text : 'Select an option';
+			renderOption(trigger, option);
+			list.querySelectorAll('[role="option"]').forEach(function (choice) {
+				choice.setAttribute('aria-selected', String(choice.dataset.value === select.value));
+			});
 		}
 		/** Close the options panel and update its accessibility state. */
 		function close() {
@@ -109,11 +125,13 @@
 			trigger.setAttribute('aria-expanded', 'false');
 		}
 
-		Array.prototype.slice.call(select.options, 1).forEach(/** Create a selectable button for each native option. */ function (option) {
+		Array.prototype.slice.call(select.options).forEach(/** Create a selectable button for each native option. */ function (option) {
+			if (option.value === '') return;
 			var choice = document.createElement('button');
 			choice.type = 'button';
 			choice.className = 'nms-search-select-option';
-			choice.textContent = option.text;
+			renderOption(choice, option);
+			choice.disabled = option.disabled;
 			choice.dataset.value = option.value;
 			choice.setAttribute('role', 'option');
 			choice.addEventListener('click', /** Commit the chosen native value, notify listeners, and return focus to the trigger. */ function () {
@@ -147,7 +165,7 @@
 		wrapper.addEventListener('keydown', /** Close the options panel on Escape and restore trigger focus. */ function (event) { if (event.key === 'Escape') { close(); trigger.focus(); } });
 		document.addEventListener('click', /** Close the selector when a click occurs outside its wrapper. */ function (event) { if (!wrapper.contains(event.target)) close(); });
 		if (wasRequired && select.form) select.form.addEventListener('submit', /** Prevent submission of an empty required selector and focus its invalid trigger. */ function (event) {
-			if (select.value === '') { event.preventDefault(); trigger.classList.add('invalid'); trigger.focus(); }
+			if (!select.disabled && select.value === '') { event.preventDefault(); trigger.classList.add('invalid'); trigger.focus(); }
 		});
 
 		select.parentNode.insertBefore(wrapper, select);
@@ -157,10 +175,64 @@
 		panel.appendChild(list);
 		panel.appendChild(empty);
 		wrapper.appendChild(panel);
+		select.addEventListener('change', syncLabel);
 		syncLabel();
 	}
 
 	document.querySelectorAll('select.nms-search-select').forEach(upgradeSearchSelect);
+
+	var itemStyle = document.getElementById('nmsGraphItemStyle');
+	if (itemStyle) {
+		var itemForm = itemStyle.form;
+		function showItemField(name, visible) {
+			var input = itemForm.elements.namedItem(name);
+			if (!input) return;
+			var field = input.closest('[data-item-field]') || input.closest('.nms-core-field') || input.closest('label');
+			field.hidden = !visible;
+			input.disabled = !visible;
+			var trigger = field.querySelector('.nms-search-select-trigger');
+			if (trigger) trigger.disabled = !visible;
+		}
+		/** Mirror the fields relevant to each native Cacti graph item type. */
+		function updateItemFields() {
+			var type = itemStyle.value;
+			var line = type.indexOf('LINE') === 0;
+			var plot = line || type === 'AREA' || type === 'AREA:STACK';
+			var print = type.indexOf('GPRINT') === 0;
+			var legend = type === 'LEGEND' || type === 'LEGEND_CAMM';
+			var rule = type === 'HRULE' || type === 'VRULE';
+			var tick = type === 'TICK';
+			var numeric = plot || print || legend || tick;
+			var fields = {color_id: plot || rule || tick, alpha: plot || tick,
+				consolidation_function_id: plot || type === 'GPRINT', cdef_id: numeric, vdef_id: numeric,
+				gprint_id: plot || print || legend, text_format: !legend && type !== 'TEXTALIGN',
+				item_value: rule || tick, line_width: line, dashes: line || rule, dash_offset: line || rule,
+				textalign: type === 'TEXTALIGN', hard_return: !legend && type !== 'TEXTALIGN',
+				shift: plot, shift_seconds: plot && itemForm.elements.namedItem('shift').value === 'on',
+				stack_source_id: type.indexOf(':STACK') !== -1};
+			Object.keys(fields).forEach(function (name) { showItemField(name, fields[name]); });
+			var legendGroup = itemForm.elements.namedItem('show_current').closest('fieldset');
+			legendGroup.hidden = !plot;
+			legendGroup.querySelectorAll('input').forEach(function (input) { input.disabled = !plot; });
+			var valueInput = itemForm.elements.namedItem('item_value');
+			valueInput.required = rule || tick;
+			document.getElementById('nmsGraphItemValueLabel').textContent = tick ? 'Tick fraction' : (type === 'VRULE' ? 'Unix timestamp' : 'Rule value');
+			document.getElementById('nmsGraphItemValueHelp').textContent = tick ? 'Graph-height fraction between -1 and 1, for example 0.1.' : (type === 'VRULE' ? 'Time in Unix seconds at which to draw the vertical line.' : 'Numeric value at which to draw the horizontal line.');
+			document.getElementById('nmsGraphItemHelp').textContent = legend ? 'Creates the native GPRINT legend items; this type does not draw a line.' : (print ? 'Prints the selected reading in the legend; no plotted line is added.' : (type.indexOf(':STACK') !== -1 ? 'Choose a base reading below. Cacti draws the base before this stacked item.' : (type === 'COMMENT' || type === 'TEXTALIGN' || rule ? 'Creates this annotation item only. Other items can be added in Cacti.' : 'Creates this plotted item and the checked legend values.')));
+		}
+		itemStyle.addEventListener('change', updateItemFields);
+		itemForm.elements.namedItem('shift').addEventListener('change', updateItemFields);
+		itemForm.addEventListener('submit', function (event) {
+			var stack = itemForm.elements.namedItem('stack_source_id');
+			if (!stack.disabled && !stack.value) {
+				event.preventDefault();
+				var trigger = stack.parentElement.querySelector('.nms-search-select-trigger');
+				trigger.classList.add('invalid');
+				trigger.focus();
+			}
+		});
+		updateItemFields();
+	}
 
 	var color = document.getElementById('nmsGraphColor');
 	var swatch = document.getElementById('nmsGraphColorSwatch');
@@ -175,23 +247,17 @@
 		updateColorSwatch();
 	}
 
-	var scaleMethod = document.getElementById('nmsAutoScaleMethod');
-	var lowerLimit = document.getElementById('nmsLowerLimit');
-	var upperLimit = document.getElementById('nmsUpperLimit');
-	var scaleHelp = document.getElementById('nmsScaleHelp');
-	if (scaleMethod && lowerLimit && upperLimit) {
-		/** Show the limits and help text appropriate to Cacti's selected autoscale method. */
-		function updateScaleInputs() {
-			var method = scaleMethod.value;
-			lowerLimit.hidden = method === '1' || method === '3';
-			upperLimit.hidden = method === '1' || method === '2';
-			if (!scaleHelp) return;
-			if (method === '1') scaleHelp.textContent = 'Cacti calculates both limits from collected values.';
-			else if (method === '2') scaleHelp.textContent = 'Enter the lower limit; Cacti calculates the upper limit.';
-			else if (method === '3') scaleHelp.textContent = 'Enter the upper limit; Cacti calculates the lower limit.';
-			else scaleHelp.textContent = 'Enter both lower and upper limits.';
+	// Native scale descriptions remain visible; never hide values that still get saved.
+	var logarithmic = document.getElementById('nmsCore_auto_scale_log');
+	var logUnits = document.getElementById('nmsCore_scale_log_units');
+	if (logarithmic && logUnits) {
+		/** Match the native editor's dependency for SI units on logarithmic graphs. */
+		function updateLogUnits() {
+			logUnits.disabled = !logarithmic.checked;
+			var override = logUnits.form.elements.namedItem('t_scale_log_units');
+			if (override) override.disabled = !logarithmic.checked;
 		}
-		scaleMethod.addEventListener('change', updateScaleInputs);
-		updateScaleInputs();
+		logarithmic.addEventListener('change', updateLogUnits);
+		updateLogUnits();
 	}
 })();

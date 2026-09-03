@@ -5,6 +5,8 @@
  * Imported templates are activated through core graph creation so the Cacti poller, not import records, supplies readings.
  */
 
+require_once(__DIR__ . '/device_metadata.php');
+require_once(__DIR__ . '/core_form_options.php');
 require_once($config['base_path'] . '/lib/api_device.php');
 require_once($config['base_path'] . '/lib/api_automation.php');
 require_once($config['base_path'] . '/lib/api_graph.php');
@@ -55,9 +57,15 @@ function nms_device_add_data_query($device_id, $data_query_id, $reindex_method) 
 	$data_query_id = (int) $data_query_id;
 	$reindex_method = (int) $reindex_method;
 	$snmp_version = (int) db_fetch_cell_prepared("SELECT snmp_version FROM host WHERE id = ? AND deleted = ''", array($device_id));
-	$sql = 'SELECT COUNT(*) FROM snmp_query WHERE id = ?';
-	if ($snmp_version === 0) $sql .= ' AND data_input_id != 2';
-	if ($data_query_id < 1 || !(int) db_fetch_cell_prepared($sql, array($data_query_id))) {
+	// Input record IDs vary by installation; protocol is identified by native input type.
+	$sql = 'SELECT COUNT(*) FROM snmp_query AS sq INNER JOIN data_input AS di ON di.id = sq.data_input_id WHERE sq.id = ?';
+	$params = array($data_query_id);
+	if ($snmp_version === 0) {
+		$sql .= ' AND di.type_id NOT IN (?, ?)';
+		$params[] = DATA_INPUT_TYPE_SNMP;
+		$params[] = DATA_INPUT_TYPE_SNMP_QUERY;
+	}
+	if ($data_query_id < 1 || !(int) db_fetch_cell_prepared($sql, $params)) {
 		throw new InvalidArgumentException('Select a valid Cacti data query for this device.');
 	}
 	if (!isset($reindex_types[$reindex_method])) throw new InvalidArgumentException('Select a valid re-index method.');
@@ -119,20 +127,36 @@ function nms_device_remove_data_query($device_id, $data_query_id) {
 
 /** Validate imported simulator settings when present, then create the device through the shared save path. */
 function nms_device_create($input) {
+	$category_id = nms_new_device_category($input['equipment_category_id'] ?? '', $input['host_template_id']);
+	$device_type = nms_classification_text($input['device_type'] ?? '', 150);
+	$device_role = nms_classification_text($input['device_role'] ?? '', 150);
+	// Reject malformed metadata before creating a core device. It is never passed to Cacti's device API.
+	$manual_serial = nms_manual_serial_validate($input['manual_serial_number'] ?? '');
 	if (!empty($input['snmpsim_import_id'])) {
 		require_once(__DIR__ . '/snmpsim.php');
 		$defaults = nms_snmpsim_import_defaults($input['snmpsim_import_id']);
-		foreach (array('hostname', 'snmp_port', 'snmp_community', 'host_template_id', 'snmp_version') as $field) {
+		foreach (array('hostname', 'snmp_port', 'snmp_community', 'host_template_id', 'snmp_version', 'poller_id') as $field) {
 			if ((string) $input[$field] !== (string) $defaults[$field]) {
 				throw new InvalidArgumentException('Simulator connection settings changed. Reopen Add device from the imported record. Use normal Add device for a real SNMP target.');
 			}
 		}
-		if (strpos($defaults['hostname'], '127.') === 0 && (int) $input['poller_id'] !== 1) {
-			throw new InvalidArgumentException('A loopback simulator must use the local Cacti collector. Configure a reachable client address for remote collectors.');
-		}
 		$input['proxy'] = true;
 	}
-	return nms_device_save(0, $input);
+	$device_id = nms_device_save(0, $input);
+	try {
+		nms_device_classification_save($device_id, $category_id, $device_type, $device_role);
+	} catch (Throwable $exception) {
+		throw new RuntimeException('Device ' . $device_id . ' was created, but its classification was not saved. Open Edit device for this ID; do not create a duplicate.', 0, $exception);
+	}
+	if ($manual_serial !== '') {
+		try {
+			nms_manual_serial_save($device_id, $manual_serial);
+		} catch (Throwable $exception) {
+			// The core API has already saved the host; do not encourage creating a duplicate on retry.
+			throw new RuntimeException('Device ' . $device_id . ' was created, but its manual serial was not saved. Open Edit device for this ID and save the serial there.', 0, $exception);
+		}
+	}
+	return $device_id;
 }
 
 /** Require an existing device before passing submitted fields to the shared Cacti save path. */
@@ -148,7 +172,7 @@ function nms_device_delete($device_id) {
 		throw new InvalidArgumentException('Only a device created through NMS can be deleted here.');
 	}
 	api_device_remove($device_id);
-	foreach (array('plugin_nms_topology', 'plugin_nms_device_parameters', 'plugin_nms_device_inventory') as $table) {
+	foreach (array('plugin_nms_topology', 'plugin_nms_device_parameters', 'plugin_nms_device_inventory', 'plugin_nms_device_metadata') as $table) {
 		db_execute_prepared('DELETE FROM ' . $table . ' WHERE host_id = ?', array($device_id));
 	}
 	nms_managed_object_forget('device', $device_id);
@@ -225,6 +249,7 @@ function nms_device_reconcile_imported_templates() {
 
 /** Validate device, collector, and protocol settings, then persist them using Cacti's device workflow. */
 function nms_device_save($device_id, $input) {
+	global $snmp_versions, $snmp_auth_protocols, $snmp_priv_protocols, $availability_options, $ping_methods, $fields_host_edit;
 	$device_id = (int) $device_id;
 	$is_new_device = $device_id === 0;
 	$description = trim((string) $input['description']);
@@ -242,15 +267,18 @@ function nms_device_save($device_id, $input) {
 	$snmp_priv_protocol = trim((string) $input['snmp_priv_protocol']);
 	$snmp_priv_passphrase = (string) $input['snmp_priv_passphrase'];
 	$proxy = !empty($input['proxy']);
+	foreach (array('max_oids', 'device_threads') as $field_name) {
+		$input[$field_name] = nms_core_field_value($field_name, $fields_host_edit[$field_name], $input[$field_name]);
+	}
 
 	if ($description === '' || $hostname === '') throw new InvalidArgumentException('Device name and hostname are required.');
-	if (!in_array($snmp_version, array(1, 2, 3), true)) throw new InvalidArgumentException('Select SNMP version 1, 2c, or 3.');
+	if (!array_key_exists($snmp_version, $snmp_versions)) throw new InvalidArgumentException('Select an SNMP version supported by Cacti.');
 	if ($snmp_port < 1 || $snmp_port > 65535) throw new InvalidArgumentException('SNMP port must be between 1 and 65535.');
-	if ($snmp_timeout < 100 || $snmp_timeout > 10000) throw new InvalidArgumentException('SNMP timeout must be between 100 and 10000 milliseconds.');
-	if ($snmp_version < 3 && $community === '') throw new InvalidArgumentException('Enter the SNMP community for version 1 or 2c.');
+	if ($snmp_timeout < 1) throw new InvalidArgumentException('SNMP timeout must be positive.');
+	if (in_array($snmp_version, array(1, 2), true) && $community === '') throw new InvalidArgumentException('Enter the SNMP community for version 1 or 2c.');
 	if ($snmp_version === 3) {
-		$allowed_auth_protocols = array('[None]', 'MD5', 'SHA', 'SHA224', 'SHA256', 'SHA392', 'SHA512');
-		$allowed_priv_protocols = array('[None]', 'DES', 'AES', 'AES128', 'AES192', 'AES192C', 'AES256', 'AES256C');
+		$allowed_auth_protocols = array_keys($snmp_auth_protocols);
+		$allowed_priv_protocols = array_keys($snmp_priv_protocols);
 		if ($snmp_username === '') throw new InvalidArgumentException('Enter the SNMP v3 username.');
 		if (!in_array($snmp_auth_protocol, $allowed_auth_protocols, true)) throw new InvalidArgumentException('Select a valid SNMP v3 authentication method.');
 		if (!in_array($snmp_priv_protocol, $allowed_priv_protocols, true)) throw new InvalidArgumentException('Select a valid SNMP v3 privacy method.');
@@ -265,7 +293,7 @@ function nms_device_save($device_id, $input) {
 		$snmp_priv_protocol = '[None]';
 		$snmp_priv_passphrase = '';
 	}
-	if (!(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM host_template WHERE id = ?', array($template_id))) throw new InvalidArgumentException('Select a valid Cacti host template.');
+	if ($template_id !== 0 && !(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM host_template WHERE id = ?', array($template_id))) throw new InvalidArgumentException('Select a valid Cacti host template.');
 	if (!(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM poller WHERE id = ?', array($poller_id))) throw new InvalidArgumentException('Select a valid data collector.');
 	if ((int) db_fetch_cell_prepared("SELECT COUNT(*) FROM host WHERE description = ? AND id != ? AND deleted = ''", array($description, $device_id))) throw new InvalidArgumentException('A Cacti device already uses this name.');
 	if (!$proxy && (int) db_fetch_cell_prepared("SELECT COUNT(*) FROM host WHERE hostname = ? AND snmp_port = ? AND snmp_community = ? AND id != ? AND deleted = ''",
@@ -274,10 +302,10 @@ function nms_device_save($device_id, $input) {
 	}
 
 	$availability = (int) $input['availability_method'];
-	$allowed_availability = array(AVAIL_NONE, AVAIL_PING, AVAIL_SNMP, AVAIL_SNMP_AND_PING, AVAIL_SNMP_OR_PING);
-	if (!in_array($availability, $allowed_availability, true)) $availability = AVAIL_SNMP;
+	if (!array_key_exists($availability, $availability_options)) throw new InvalidArgumentException('Select an availability method from Cacti.');
 	$ping_method = (int) $input['ping_method'];
-	if (!in_array($ping_method, array(PING_ICMP, PING_TCP, PING_UDP), true)) $ping_method = PING_ICMP;
+	if (!array_key_exists($ping_method, $ping_methods)) throw new InvalidArgumentException('Select a ping method from Cacti.');
+	if ((int) $input['ping_port'] < 0 || (int) $input['ping_port'] > 65535 || (int) $input['ping_timeout'] < 1 || (int) $input['ping_retries'] < 0) throw new InvalidArgumentException('Invalid ping port, timeout, or retries.');
 
 	$saved_device_id = api_device_save($device_id, $template_id, $description, $hostname,
 		$community, $snmp_version,

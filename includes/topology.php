@@ -9,9 +9,10 @@ require_once(__DIR__ . '/functions.php');
 
 /** List Cacti sites containing enabled, nondeleted devices with their device counts. */
 function nms_topology_sites() {
+	$visible = nms_visible_host_sql();
 	return db_fetch_assoc("SELECT s.id, s.name, COUNT(h.id) AS device_count
 		FROM sites AS s
-		LEFT JOIN host AS h ON h.site_id = s.id AND h.deleted = '' AND h.disabled = ''
+		LEFT JOIN host AS h ON h.site_id = s.id AND h.deleted = '' AND h.disabled = '' AND $visible
 		GROUP BY s.id, s.name
 		HAVING COUNT(h.id) > 0
 		ORDER BY s.name");
@@ -19,6 +20,7 @@ function nms_topology_sites() {
 
 /** Read a site's core device facts together with NMS layout, inventory, and active-fault summaries. */
 function nms_topology_devices($site_id) {
+	$visible = nms_visible_host_sql();
 	$incident_sources_sql = nms_monitored_incident_sources_sql();
 	$active_statuses_sql = nms_active_incident_statuses_sql();
 	$severity_rank_sql = nms_severity_rank_sql('severity');
@@ -27,7 +29,8 @@ function nms_topology_devices($site_id) {
 			h.last_updated, h.site_id, h.snmp_sysName, h.snmp_sysDescr,
 			h.snmp_version, h.host_template_id,
 			ht.name AS template_name, c.name AS category_name,
-			di.observed_value AS serial_number, di.status AS serial_status,
+			COALESCE(pt.physical_ports, pd.physical_ports) AS physical_ports,
+			di.observed_value AS serial_number, di.status AS serial_status, di.last_success AS serial_last_success,
 			COALESCE(g.graph_count, 0) AS graph_count,
 			COALESCE(i.interface_count, 0) AS interface_count,
 			COALESCE(f.fault_count, 0) AS fault_count, COALESCE(f.fault_rank, 0) AS fault_rank,
@@ -35,8 +38,10 @@ function nms_topology_devices($site_id) {
 			CASE WHEN l.host_id IS NULL THEN 0 ELSE 1 END AS is_mapped
 		FROM host AS h
 		LEFT JOIN host_template AS ht ON ht.id = h.host_template_id
-		LEFT JOIN plugin_nms_category_templates AS ct ON ct.host_template_id = h.host_template_id
-		LEFT JOIN graph_tree AS c ON c.id = ct.category_id
+		LEFT JOIN plugin_nms_device_classification AS ct ON ct.host_id = h.id
+		LEFT JOIN plugin_nms_categories AS c ON c.id = ct.category_id
+		LEFT JOIN plugin_nms_port_profiles AS pt ON pt.category_id = ct.category_id AND pt.device_type = ct.device_type
+		LEFT JOIN plugin_nms_port_profiles AS pd ON pd.category_id = ct.category_id AND pd.device_type = ''
 		LEFT JOIN plugin_nms_device_inventory AS di ON di.host_id = h.id AND di.inventory_key = 'serial_number'
 		LEFT JOIN plugin_nms_topology AS l ON l.host_id = h.id
 		LEFT JOIN (
@@ -54,7 +59,7 @@ function nms_topology_devices($site_id) {
 			WHERE field_name IN ('ifName', 'ifDescr')
 			GROUP BY host_id
 		) AS i ON i.host_id = h.id
-		WHERE h.deleted = '' AND h.disabled = '' AND h.site_id = ?
+		WHERE h.deleted = '' AND h.disabled = '' AND h.site_id = ? AND $visible
 		ORDER BY (l.locked = 'on') DESC, h.description", array((int) $site_id));
 }
 
@@ -81,13 +86,14 @@ function nms_topology_set_root($host_id, $site_id, $user_id) {
 
 /** Group Cacti's cached interface indexes and readable labels by device for a site's port selectors. */
 function nms_topology_interfaces($site_id) {
+	$visible = nms_visible_host_sql();
 	$rows = db_fetch_assoc_prepared("SELECT c.host_id, c.snmp_index,
 		MAX(CASE WHEN c.field_name = 'ifName' THEN c.field_value ELSE '' END) AS if_name,
 		MAX(CASE WHEN c.field_name = 'ifDescr' THEN c.field_value ELSE '' END) AS if_description,
 		MAX(CASE WHEN c.field_name = 'ifAlias' THEN c.field_value ELSE '' END) AS if_alias
 		FROM host_snmp_cache AS c
 		INNER JOIN host AS h ON h.id = c.host_id AND h.site_id = ? AND h.deleted = '' AND h.disabled = ''
-		WHERE c.field_name IN ('ifName', 'ifDescr', 'ifAlias')
+		WHERE c.field_name IN ('ifName', 'ifDescr', 'ifAlias') AND $visible
 		GROUP BY c.host_id, c.snmp_index
 		ORDER BY c.host_id, c.snmp_index", array((int) $site_id));
 	$result = array();
@@ -104,6 +110,7 @@ function nms_topology_interfaces($site_id) {
 
 /** Validate site membership and save clamped layout coordinates plus the chosen parent and interface index. */
 function nms_topology_save_position($host_id, $site_id, $parent_host_id, $parent_snmp_index, $x, $y, $user_id) {
+	if ((int) $host_id === (int) $parent_host_id) return false;
 	if (!nms_topology_device_belongs_to_site($host_id, $site_id)) return false;
 	if ($parent_host_id > 0 && !nms_topology_device_belongs_to_site($parent_host_id, $site_id)) return false;
 
@@ -130,6 +137,8 @@ function nms_topology_remove_device($host_id, $site_id) {
 function nms_topology_json_devices($devices, $interfaces, $url_path) {
 	$result = array();
 	foreach ($devices as $device) {
+		$device['serial_status'] = nms_serial_observation_state($device['serial_status'], $device['serial_last_success'], $device['status'], $device['disabled'] ?? '', $device['last_updated']);
+		if (!in_array($device['serial_status'], array('ok', 'changed'), true)) $device['serial_number'] = '';
 		$fault_severity = nms_severity_from_rank($device['fault_rank']);
 		$result[] = array(
 			'id' => (int) $device['id'],
@@ -137,7 +146,7 @@ function nms_topology_json_devices($devices, $interfaces, $url_path) {
 			'hostname' => (string) $device['hostname'],
 			'sys_name' => (string) $device['snmp_sysName'],
 			'sys_description' => (string) $device['snmp_sysDescr'],
-			'status' => nms_host_status_name((int) $device['status']),
+			'status' => nms_device_status_name($device),
 			'category' => (string) $device['category_name'],
 			'template' => (string) $device['template_name'],
 			'fault_count' => (int) $device['fault_count'],
@@ -149,6 +158,7 @@ function nms_topology_json_devices($devices, $interfaces, $url_path) {
 			'serial_status' => (string) $device['serial_status'],
 			'graphs' => (int) $device['graph_count'],
 			'interfaces' => (int) $device['interface_count'],
+			'physical_ports' => isset($device['physical_ports']) ? (int) $device['physical_ports'] : null,
 			'mapped' => (bool) $device['is_mapped'],
 			'locked' => $device['locked'] === 'on',
 			'parent_id' => (int) $device['parent_host_id'],

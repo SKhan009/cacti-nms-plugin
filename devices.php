@@ -5,21 +5,31 @@
  * Device facts and reusable templates belong to Cacti core; NMS stores import metadata and its own configuration.
  */
 
-require('../../include/auth.php');
+require(__DIR__ . '/../../include/auth.php');
+// Load at global scope so the native definitions retain access to Cacti's option arrays.
+require_once($config['base_path'] . '/include/global_form.php');
 require_once($config['base_path'] . '/plugins/nms/includes/functions.php');
 require_once($config['base_path'] . '/plugins/nms/includes/database.php');
 require_once($config['base_path'] . '/plugins/nms/includes/snmprec.php');
 require_once($config['base_path'] . '/plugins/nms/includes/template_manager.php');
 require_once($config['base_path'] . '/plugins/nms/includes/device_manager.php');
 require_once($config['base_path'] . '/plugins/nms/includes/graph_template_manager.php');
+require_once(__DIR__ . '/includes/groups.php');
+require_once(__DIR__ . '/includes/capabilities.php');
 
-// Ensure plugin storage and one-time readable-template naming migrations are ready for this request.
-nms_setup_database();
-nms_template_upgrade_readable_names();
+// Require an explicit lifecycle upgrade; viewing devices never renames core templates.
+nms_require_database();
 
 // Whitelist the view name before dispatching to its template and initializing page messages.
 $allowed_tabs = array('inventory', 'add', 'edit', 'graphs', 'import');
 $tab = isset_request_var('tab') ? get_nfilter_request_var('tab') : 'inventory';
+$template_workspace = defined('NMS_TEMPLATE_WORKSPACE') && NMS_TEMPLATE_WORKSPACE;
+if ($template_workspace) $tab = 'graphs';
+if (!$template_workspace && ($tab === 'graphs' || in_array(get_nfilter_request_var('nms_action'), array('create_graph_template', 'delete_graph_template'), true))) {
+	// Preserve legacy bookmarks and POST bodies while moving the workflow out of Devices.
+	header('Location: templates.php?section=graph&view=builder', true, $_SERVER['REQUEST_METHOD'] === 'POST' ? 307 : 302);
+	exit;
+}
 if (!in_array($tab, $allowed_tabs, true)) $tab = 'inventory';
 $page_error = '';
 $simulator_message = '';
@@ -27,7 +37,36 @@ $simulator_message = '';
 // Handle writes before page output; shared helpers perform validation and use Cacti's core object workflows.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 	$action = get_nfilter_request_var('nms_action');
+	if ($template_workspace && !in_array($action, array('create_graph_template', 'delete_graph_template'), true)) {
+		http_response_code(400);
+		die('Unsupported template action.');
+	}
 	try {
+		// The NMS view realm is not write permission for native Cacti objects.
+		$action_realm = in_array($action, array('create_graph_template', 'delete_graph_template'), true) ? 10 : 3;
+		nms_require_management($action_realm);
+		if (isset_request_var('id')) nms_require_device_access(get_filter_request_var('id'));
+		if ($action === 'save_groups') {
+			$device_id = get_filter_request_var('id');
+			nms_group_membership_save($device_id, isset_request_var('group_ids') ? get_nfilter_request_var('group_ids') : array());
+			header('Location: devices.php?tab=edit&id=' . (int) $device_id . '&groups_saved=1#operational-groups');
+			exit;
+		}
+		if ($action === 'save_classification') {
+			$device_id = get_filter_request_var('id');
+			nms_device_classification_save($device_id, get_filter_request_var('equipment_category_id'),
+				get_nfilter_request_var('device_type'), get_nfilter_request_var('device_role'));
+			header('Location: devices.php?tab=edit&id=' . (int) $device_id . '&classification_saved=1#classification');
+			exit;
+		}
+		if ($action === 'save_manual_serial') {
+			// Dedicated metadata action: no Cacti device-save API, SNMP poll, or fault-baseline write.
+			$device_id = get_filter_request_var('id');
+			if (!isset_request_var('manual_serial_number')) throw new InvalidArgumentException('The serial number field was not submitted.');
+			nms_manual_serial_save($device_id, get_nfilter_request_var('manual_serial_number'));
+			header('Location: devices.php?tab=edit&id=' . (int) $device_id . '&serial_saved=1#manual-serial');
+			exit;
+		}
 		if ($action === 'check_snmpsim') {
 			$tab = 'import';
 			$simulator_message = nms_snmpsim_probe_import(get_filter_request_var('import_id'));
@@ -56,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 
 		if ($action === 'delete_graph_template') {
 			$template_id = nms_graph_template_delete(get_filter_request_var('graph_template_id'));
-			header('Location: devices.php?tab=graphs&graph_template_deleted=' . $template_id . '#graph-template-list');
+			header('Location: templates.php?section=graph&view=builder&graph_template_deleted=' . $template_id . '#graph-template-list');
 			exit;
 		}
 
@@ -66,32 +105,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 				get_filter_request_var('data_template_rrd_id'),
 				get_nfilter_request_var('graph_name'),
 				get_nfilter_request_var('vertical_label'),
-				array(
+				array_merge(nms_core_graph_request(), array(
 					'graph_style' => get_nfilter_request_var('graph_style'),
-					'consolidation' => get_nfilter_request_var('consolidation'),
-					'color_id' => get_filter_request_var('color_id'),
-					'alpha_percent' => get_filter_request_var('alpha_percent'),
-					'cdef_id' => get_filter_request_var('cdef_id'),
-					'gprint_id' => get_filter_request_var('gprint_id'),
+					'text_format' => get_nfilter_request_var('text_format'),
+					'item_value' => get_nfilter_request_var('item_value'),
+					'line_width' => get_nfilter_request_var('line_width'),
+					'dashes' => get_nfilter_request_var('dashes'),
+					'dash_offset' => get_nfilter_request_var('dash_offset'),
+					'textalign' => get_nfilter_request_var('textalign'),
+					'hard_return' => get_nfilter_request_var('hard_return') === 'on',
+					'shift' => get_nfilter_request_var('shift') === 'on',
+					'shift_seconds' => get_nfilter_request_var('shift_seconds'),
+					'stack_source_id' => get_filter_request_var('stack_source_id'),
+					'vdef_id' => isset_request_var('vdef_id') ? get_nfilter_request_var('vdef_id') : $struct_graph_item['vdef_id']['default'],
+					'consolidation_function_id' => isset_request_var('consolidation_function_id') ? get_nfilter_request_var('consolidation_function_id') : array_key_first($consolidation_functions),
+					'color_id' => isset_request_var('color_id') ? get_nfilter_request_var('color_id') : $struct_graph_item['color_id']['default'],
+					'alpha' => isset_request_var('alpha') ? get_nfilter_request_var('alpha') : $struct_graph_item['alpha']['default'],
+					'cdef_id' => isset_request_var('cdef_id') ? get_nfilter_request_var('cdef_id') : $struct_graph_item['cdef_id']['default'],
+					'gprint_id' => isset_request_var('gprint_id') ? get_nfilter_request_var('gprint_id') : $struct_graph_item['gprint_id']['default'],
 					'show_current' => isset_request_var('show_current'),
 					'show_minimum' => isset_request_var('show_minimum'),
 					'show_average' => isset_request_var('show_average'),
-					'show_maximum' => isset_request_var('show_maximum'),
-					'width' => get_filter_request_var('width'),
-					'height' => get_filter_request_var('height'),
-					'base_value' => get_filter_request_var('base_value'),
-					'image_format_id' => get_filter_request_var('image_format_id'),
-					'slope_mode' => isset_request_var('slope_mode'),
-					'auto_scale' => isset_request_var('auto_scale'),
-					'auto_scale_opts' => get_filter_request_var('auto_scale_opts'),
-					'lower_limit' => get_nfilter_request_var('lower_limit'),
-					'upper_limit' => get_nfilter_request_var('upper_limit'),
-					'auto_scale_log' => isset_request_var('auto_scale_log'),
-					'auto_scale_rigid' => isset_request_var('auto_scale_rigid'),
-					'auto_padding' => isset_request_var('auto_padding')
-				)
+					'show_maximum' => isset_request_var('show_maximum')
+				))
 			);
-			header('Location: devices.php?tab=graphs&graph_template_created=' . $graph_template_id . '#graph-builder');
+			header('Location: templates.php?section=graph&view=builder&graph_template_created=' . $graph_template_id . '#graph-builder');
 			exit;
 		}
 
@@ -133,6 +171,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 		if ($action === 'add_device') {
 			// Read protocol and availability settings for the shared save helper; simulator imports get explicit checks.
 			$device_id = nms_device_create(array(
+				'equipment_category_id' => get_nfilter_request_var('equipment_category_id'),
+				'device_type' => get_nfilter_request_var('device_type'),
+				'device_role' => get_nfilter_request_var('device_role'),
+				'manual_serial_number' => isset_request_var('manual_serial_number') ? get_nfilter_request_var('manual_serial_number') : '',
 				'snmpsim_import_id' => isset_request_var('snmpsim_import_id') ? get_filter_request_var('snmpsim_import_id') : 0,
 				'description' => get_nfilter_request_var('description'),
 				'hostname' => get_nfilter_request_var('hostname'),
@@ -163,7 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 				'proxy' => isset_request_var('proxy'),
 				'disabled' => isset_request_var('disabled')
 			));
-			header('Location: devices.php?tab=inventory&device_created=' . $device_id);
+			header('Location: devices.php?tab=edit&id=' . $device_id . '&device_created=' . $device_id . '#graph-templates');
 			 exit;
 		}
 
@@ -229,10 +271,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 	}
 	if ($page_error !== '' && $action === 'check_snmpsim') $tab = 'import';
 	if ($page_error !== '' && $action === 'add_device') $tab = 'add';
+	if ($page_error !== '' && $action === 'save_manual_serial') $tab = 'edit';
 }
 
-// The inventory starts with Cacti hosts and decorates them with template, collector, Tree, and import metadata.
+// Reuse native device visibility for both inventory rows and their summary counts.
+$visible_hosts = nms_visible_host_sql();
+// Decorate core devices with independent classification and import metadata.
 $devices = db_fetch_assoc("SELECT h.id, h.description, h.hostname, h.status, h.disabled, h.availability,
+	(SELECT m.serial_number FROM plugin_nms_device_metadata AS m WHERE m.host_id = h.id) AS manual_serial_number,
 	h.cur_time, h.avg_time, h.total_polls, h.failed_polls, h.status_last_error, h.last_updated,
 	h.snmp_version, h.snmp_port, h.snmp_sysName, h.snmp_sysLocation, h.snmp_sysDescr,
 	ht.name AS template_name, s.name AS site_name, p.name AS poller_name,
@@ -241,6 +287,8 @@ $devices = db_fetch_assoc("SELECT h.id, h.description, h.hostname, h.status, h.d
 		WHERE di.host_id = h.id AND di.inventory_key = 'serial_number') AS serial_number,
 	(SELECT di.status FROM plugin_nms_device_inventory AS di
 		WHERE di.host_id = h.id AND di.inventory_key = 'serial_number') AS serial_status,
+	(SELECT di.last_success FROM plugin_nms_device_inventory AS di
+		WHERE di.host_id = h.id AND di.inventory_key = 'serial_number') AS serial_last_success,
 	(SELECT di.oid FROM plugin_nms_device_inventory AS di
 		WHERE di.host_id = h.id AND di.inventory_key = 'serial_number') AS serial_oid,
 	EXISTS (SELECT 1 FROM plugin_nms_snmprec_imports AS si
@@ -254,41 +302,33 @@ $devices = db_fetch_assoc("SELECT h.id, h.description, h.hostname, h.status, h.d
 	LEFT JOIN host_template AS ht ON ht.id = h.host_template_id
 	LEFT JOIN sites AS s ON s.id = h.site_id
 	LEFT JOIN poller AS p ON p.id = h.poller_id
-	LEFT JOIN plugin_nms_category_templates AS ct ON ct.host_template_id = h.host_template_id
-	LEFT JOIN graph_tree AS c ON c.id = ct.category_id
-	WHERE h.deleted = '' ORDER BY h.description");
+	LEFT JOIN plugin_nms_device_classification AS ct ON ct.host_id = h.id
+	LEFT JOIN plugin_nms_categories AS c ON c.id = ct.category_id
+	WHERE h.deleted = '' AND $visible_hosts ORDER BY h.description");
 $device_counts = nms_device_inventory_counts($devices);
+foreach ($devices as &$device) {
+	$device['serial_status'] = nms_serial_observation_state($device['serial_status'], $device['serial_last_success'], $device['status'], $device['disabled'], $device['last_updated']);
+	if (!in_array($device['serial_status'], array('ok', 'changed'), true)) $device['serial_number'] = '';
+}
+unset($device);
 
-// Populate selection lists from core records; category values are graph_tree IDs.
+// Populate selection lists from core records; equipment categories use plugin IDs.
 $host_templates = db_fetch_assoc('SELECT id, name FROM host_template ORDER BY name');
 $sites = db_fetch_assoc('SELECT id, name FROM sites ORDER BY name');
 $pollers = db_fetch_assoc('SELECT id, name FROM poller ORDER BY id');
-$categories = db_fetch_assoc('SELECT id, name FROM graph_tree ORDER BY sequence, name');
+$categories = nms_categories();
 $imports = db_fetch_assoc("SELECT i.*, c.name AS category_name, ht.name AS host_template_name,
 	u.username AS uploaded_by_name FROM plugin_nms_snmprec_imports AS i
-	LEFT JOIN graph_tree AS c ON c.id = i.category_id
+	LEFT JOIN plugin_nms_categories AS c ON c.id = i.category_id
 	LEFT JOIN host_template AS ht ON ht.id = i.host_template_id
 	LEFT JOIN user_auth AS u ON u.id = i.uploaded_by ORDER BY i.id DESC");
 
 // Seed normal device forms from Cacti settings before applying any explicit imported-simulator defaults.
-$cacti_device_defaults = array(
-	'snmp_version' => (int) read_config_option('snmp_version'),
-	'snmp_community' => (string) read_config_option('snmp_community'),
-	'snmp_port' => (int) read_config_option('snmp_port'),
-	'snmp_timeout' => (int) read_config_option('snmp_timeout'),
-	'snmp_username' => (string) read_config_option('snmp_username'),
-	'snmp_password' => (string) read_config_option('snmp_password'),
-	'snmp_auth_protocol' => (string) read_config_option('snmp_auth_protocol'),
-	'snmp_priv_protocol' => (string) read_config_option('snmp_priv_protocol'),
-	'snmp_priv_passphrase' => (string) read_config_option('snmp_priv_passphrase'),
-	'availability_method' => (int) read_config_option('availability_method'),
-	'ping_method' => (int) read_config_option('ping_method'),
-	'ping_port' => (int) read_config_option('ping_port'),
-	'ping_timeout' => (int) read_config_option('ping_timeout'),
-	'ping_retries' => (int) read_config_option('ping_retries'),
-	'max_oids' => (int) read_config_option('max_get_size'),
-	'device_threads' => (int) read_config_option('device_threads')
-);
+// Reuse configured defaults from the installed device form, including site/template/poller.
+$cacti_device_defaults = array();
+foreach ($fields_host_edit as $field_name => $field) {
+	if (array_key_exists('default', $field)) $cacti_device_defaults[$field_name] = $field['default'];
+}
 
 /* Only the explicit imported-record workflow uses simulator defaults. Real devices are untouched. */
 // Only Add device links carrying an import ID opt into the configured simulator endpoint and record community.
@@ -309,10 +349,9 @@ $available_graph_templates = array();
 $available_data_queries = array();
 $graph_data_template_items = array();
 $global_graph_templates = array();
-$graph_colors = db_fetch_assoc("SELECT id, hex, COALESCE(NULLIF(name, ''), CONCAT('Cacti color ', id)) AS name
-	FROM colors ORDER BY CASE WHEN name IS NULL OR name = '' THEN 1 ELSE 0 END, name, hex");
-$graph_gprints = db_fetch_assoc('SELECT id, name, gprint_text FROM graph_templates_gprint ORDER BY name');
-$graph_cdefs = db_fetch_assoc('SELECT id, name FROM cdef ORDER BY name');
+// Preset selectors query their native form definitions only when the graph form is rendered.
+$graph_colors = $tab === 'graphs' ? db_fetch_assoc("SELECT id, hex, CONCAT(COALESCE(NULLIF(name, ''), 'Cacti Color'), ' (', hex, ')') AS name
+	FROM colors ORDER BY SUBSTRING(hex,1,2), SUBSTRING(hex,3,2), SUBSTRING(hex,5,2)") : array();
 // Load the selected host and its existing core associations; offer only templates/queries not already attached.
 if ($tab === 'edit') {
 	$edit_device_id = isset_request_var('id') ? (int) get_filter_request_var('id') : 0;
@@ -327,11 +366,24 @@ if ($tab === 'edit') {
 		FROM host AS h LEFT JOIN host_template AS ht ON ht.id = h.host_template_id
 		LEFT JOIN poller AS p ON p.id = h.poller_id LEFT JOIN sites AS s ON s.id = h.site_id
 		LEFT JOIN plugin_nms_device_inventory AS di ON di.host_id = h.id AND di.inventory_key = 'serial_number'
-		WHERE h.id = ? AND h.deleted = ''", array($edit_device_id));
+		WHERE h.id = ? AND h.deleted = '' AND $visible_hosts", array($edit_device_id));
 	if (!$edit_device && $tab === 'edit') {
 		$page_error = 'The selected Cacti device was not found.';
 		$tab = 'inventory';
 	} elseif ($edit_device) {
+		nms_require_device_access($edit_device_id);
+		$device_classification = db_fetch_row_prepared('SELECT * FROM plugin_nms_device_classification WHERE host_id = ?', array($edit_device_id));
+		$native_template_class = db_fetch_cell_prepared('SELECT class FROM host_template WHERE id = ?', array($edit_device['host_template_id']));
+		$operational_groups = nms_groups();
+		$device_group_rows = db_fetch_assoc_prepared('SELECT group_id FROM plugin_nms_group_members WHERE host_id = ?', array($edit_device_id));
+		$device_group_ids = array_map('intval', array_column($device_group_rows, 'group_id'));
+		$device_capabilities = nms_device_capabilities($edit_device);
+		$edit_device['manual_serial_number'] = nms_manual_serial_get($edit_device_id);
+		// Link suggestions through this host's current imported serial OID, never another device or file sample.
+		$serial_reading = nms_device_serial_reading($edit_device_id);
+		$edit_device['serial_status'] = nms_serial_observation_state($serial_reading['status'] ?? '', $serial_reading['last_success'] ?? '', $edit_device['status'], $edit_device['disabled'], $edit_device['last_updated']);
+		$edit_device['serial_number'] = in_array($edit_device['serial_status'], array('ok', 'changed'), true) ? ($serial_reading['observed_value'] ?? '') : '';
+		$serial_prefill = nms_serial_form_prefill($edit_device['manual_serial_number'], $serial_reading, !isset_request_var('serial_saved'));
 		$device_graph_templates = db_fetch_assoc_prepared("SELECT gt.id, gt.name,
 			MAX(gl.id) AS graph_local_id, COUNT(DISTINCT gl.id) AS graph_count
 			FROM host_graph AS hg INNER JOIN graph_templates AS gt ON gt.id = hg.graph_template_id
@@ -350,10 +402,18 @@ if ($tab === 'edit') {
 			WHERE sqg.name IS NULL AND gti.local_graph_id = 0 AND dtr.local_data_id = 0
 			AND gt.id NOT IN (SELECT graph_template_id FROM host_graph WHERE host_id = ?)
 			ORDER BY gt.name", array($edit_device_id));
-		$data_query_filter = (int) $edit_device['snmp_version'] === 0 ? ' AND sq.data_input_id != 2' : '';
+		// Match the save-path protocol check using native input types, never a seeded row ID.
+		$data_query_filter = '';
+		$data_query_params = array($edit_device_id);
+		if ((int) $edit_device['snmp_version'] === 0) {
+			$data_query_filter = ' AND di.type_id NOT IN (?, ?)';
+			$data_query_params[] = DATA_INPUT_TYPE_SNMP;
+			$data_query_params[] = DATA_INPUT_TYPE_SNMP_QUERY;
+		}
 		$available_data_queries = db_fetch_assoc_prepared("SELECT sq.id, sq.name FROM snmp_query AS sq
+			INNER JOIN data_input AS di ON di.id = sq.data_input_id
 			WHERE sq.id NOT IN (SELECT snmp_query_id FROM host_snmp_query WHERE host_id = ?)$data_query_filter
-			ORDER BY sq.name", array($edit_device_id));
+			ORDER BY sq.name", $data_query_params);
 	}
 }
 
@@ -380,16 +440,18 @@ if ($tab === 'graphs') {
 		ORDER BY gt.name");
 }
 
-nms_prepare_page('devices', 'NMS · Device Management', 'css/nms-devices.css', 'js/nms-devices.js');
+nms_prepare_page($template_workspace ? 'templates' : 'devices', $template_workspace ? 'NMS · Graph Templates' : 'NMS · Device Management', 'css/nms-devices.css', 'js/nms-devices.js');
 require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 ?>
 <main class="nms-shell nms-devices-shell">
 	<div class="nms-heading">
+		<?php if ($template_workspace) { ?><div><p class="nms-eyebrow">NMS / Templates</p><h1>Create graph template</h1><p>Use an existing data-source template item to create a reusable Cacti graph template.</p><a href="templates.php?section=graph">All graph templates and native editor</a></div><?php } else { ?>
 		<div><p class="nms-eyebrow">NMS / Device Management</p><h1>Devices and SNMP records</h1><p>Manage real Cacti devices and build templates from validated SNMPSim records.</p></div>
+		<?php } ?>
 	</div>
 
 	<?php if ($page_error !== '') { ?><div class="nms-form-message error"><strong>Could not complete the request</strong><span><?php print nms_h($page_error); ?></span></div><?php } ?>
-	<?php if (isset_request_var('device_created')) { ?><div class="nms-form-message success"><strong>Device created</strong><span>Cacti device <?php print (int) get_filter_request_var('device_created'); ?> and its imported templates are ready for the next live poll.</span></div><?php } ?>
+	<?php if (isset_request_var('device_created')) { ?><div class="nms-form-message success"><strong>Device created</strong><span>Cacti device <?php print (int) get_filter_request_var('device_created'); ?> was saved. Review its graph templates and data queries below.</span></div><?php } ?>
 	<?php if (isset_request_var('device_deleted')) { ?><div class="nms-form-message success"><strong>Device deleted</strong><span>The NMS-created Cacti device and its local graphs and data sources were removed.</span></div><?php } ?>
 	<?php if (isset_request_var('device_updated')) { ?><div class="nms-form-message success"><strong>Device updated</strong><span>The live Cacti device settings were saved successfully.</span></div><?php } ?>
 	<?php if (isset_request_var('device_reindexed')) { $reindex_query_count = (int) get_filter_request_var('reindex_queries'); $reindex_item_count = (int) get_filter_request_var('reindex_items'); $reindex_seconds = max(0, (float) get_nfilter_request_var('reindex_seconds')); ?><div class="nms-form-message success"><strong>Device re-index completed</strong><span>Cacti refreshed <?php print $reindex_item_count; ?> indexed item<?php print $reindex_item_count === 1 ? '' : 's'; ?> from <?php print $reindex_query_count; ?> associated data quer<?php print $reindex_query_count === 1 ? 'y' : 'ies'; ?> in <?php print nms_h(number_format($reindex_seconds, 2)); ?> seconds.</span></div><?php } ?>
@@ -403,13 +465,12 @@ require($config['base_path'] . '/plugins/nms/templates/app_header.php');
 	<?php if (isset_request_var('data_query_removed')) { ?><div class="nms-form-message success"><strong>Data query removed</strong><span>The association and its indexed cache were removed from this device.</span></div><?php } ?>
 	<?php if (isset_request_var('imported')) { ?><div class="nms-form-message success"><strong>SNMP record imported</strong><span>The simulator file and Cacti templates were created successfully.</span></div><?php } ?>
 
-	<div class="nms-page-tabs" role="tablist" aria-label="Device management views">
+	<?php if (!$template_workspace) { ?><div class="nms-page-tabs" role="tablist" aria-label="Device management views">
 		<a class="<?php print $tab === 'inventory' ? 'selected' : ''; ?>" href="?tab=inventory" data-nms-tip="View live Cacti device status, polling totals, data-source counts, graph counts, and management actions.">Device dashboard</a>
 		<a class="<?php print $tab === 'add' ? 'selected' : ''; ?>" href="?tab=add" data-nms-tip="Create a real device in Cacti using the same core fields and defaults.">Add device</a>
 		<?php if ($tab === 'edit') { ?><a class="selected" href="?tab=edit&id=<?php print (int) $edit_device['id']; ?>" data-nms-tip="Edit this live Cacti device and manage its graph templates and data queries.">Edit device</a><?php } ?>
-		<a class="<?php print $tab === 'graphs' ? 'selected' : ''; ?>" href="?tab=graphs" data-nms-tip="Create a reusable native Cacti graph template from a global data-template item; no device is selected or changed.">Create graph template</a>
 		<a class="<?php print $tab === 'import' ? 'selected' : ''; ?>" href="?tab=import" data-nms-tip="Upload a validated SNMPSim record and create the corresponding Cacti templates.">Upload SNMP record</a>
-	</div>
+	</div><?php } ?>
 
 	<?php require($config['base_path'] . '/plugins/nms/templates/devices/' . $tab . '.php'); ?>
 </main>

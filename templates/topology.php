@@ -6,7 +6,7 @@
  */
 ?><main class="nms-shell nms-topology-shell">
 	<div class="nms-heading nms-topology-heading">
-		<div><p class="nms-eyebrow">NMS / Dynamic Topology</p><h1><?php print $selected_site ? nms_h($selected_site['name']) : 'Topology'; ?></h1><p>Device facts come directly from Cacti. Only map position and parent connection are stored by this plugin.</p></div>
+		<div><p class="nms-eyebrow">NMS / Dynamic Topology</p><h1><?php print $selected_site ? nms_h($selected_site['name']) : 'Topology'; ?></h1><p>Cacti owns devices and interfaces. NMS keeps layout separate from explicit connections. A line is a recorded relationship, not proof of link health.</p></div>
 		<form class="nms-site-picker" method="get" action="topology.php">
 			<label for="site_id" data-nms-tip="Select the real Cacti site whose enabled devices should appear on this topology map.">Cacti site</label>
 			<select id="site_id" name="site_id" onchange="this.form.submit()">
@@ -15,6 +15,7 @@
 		</form>
 	</div>
 
+	<?php if ($page_error !== '') { ?><section class="nms-panel" role="alert"><p><?php print nms_h($page_error); ?></p></section><?php } ?>
 	<?php if (!count($sites)) { ?>
 	<section class="nms-panel nms-configuration-required"><h2>No Cacti site with devices is available</h2><p>Create a Site and assign enabled devices under <strong>Cacti → Management → Devices</strong>. This plugin intentionally does not create demo or fallback devices.</p><a href="<?php print nms_h($config['url_path'] . 'sites.php'); ?>">Open Cacti Sites</a></section>
 	<?php } elseif (!count($topology_devices)) { ?>
@@ -28,11 +29,11 @@
 	</div>
 
 	<section class="nms-panel nms-root-config">
-		<div><h2>Topology root</h2><p>Select the main switch or gateway. It remains fixed while other Cacti devices can be dragged around it.</p></div>
+		<div class="nms-panel-head"><div><h2>Topology root</h2><p>Select the main switch or gateway. It remains fixed while other Cacti devices can be dragged around it.</p></div></div>
 		<form method="post" action="topology.php?site_id=<?php print $site_id; ?>">
 			<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>">
 			<input type="hidden" name="nms_action" value="set_root">
-			<select name="host_id" required data-nms-tip="Choose the main switch or gateway. This device stays fixed and becomes the default parent for newly mapped devices."><option value="">Choose a Cacti device</option><?php foreach ($topology_devices as $device) { ?><option value="<?php print (int) $device['id']; ?>" <?php print $root_device && (int) $root_device['id'] === (int) $device['id'] ? 'selected' : ''; ?>><?php print nms_h($device['description']); ?> · <?php print nms_h($device['hostname']); ?></option><?php } ?></select>
+			<select name="host_id" required data-nms-tip="Choose a fixed layout anchor. This does not create any physical or logical connection."><option value="">Choose a Cacti device</option><?php foreach ($topology_devices as $device) { ?><option value="<?php print (int) $device['id']; ?>" <?php print $root_device && (int) $root_device['id'] === (int) $device['id'] ? 'selected' : ''; ?>><?php print nms_h($device['description']); ?> · <?php print nms_h($device['hostname']); ?></option><?php } ?></select>
 			<button type="submit" data-nms-tip="Save the selected root for this Cacti site.">Save root device</button>
 		</form>
 	</section>
@@ -64,5 +65,21 @@
 		<aside class="nms-panel nms-device-detail" id="nmsTopologyDetail"><div class="nms-detail-empty">Select a mapped device to see its Cacti information.</div></aside>
 	</div>
 	<?php } ?>
+	<?php } ?>
+	<?php if ($site_id > 0) { ?>
+	<section class="nms-panel nms-form-panel" id="connections">
+		<div class="nms-panel-head"><div><h2>Connections</h2><p>Record network, power and containment relationships independently of map placement. Multiple connections and cross-site endpoints are supported. LLDP/CDP discovery is not connected; manual records never get a discovered timestamp.</p></div></div>
+		<form method="post" action="topology.php?site_id=<?php print $site_id; ?>#connections" class="nms-device-form">
+			<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>"><input type="hidden" name="nms_action" value="save_relationship">
+			<div class="nms-form-grid"><?php foreach (array('source' => 'Source / supplying / containing endpoint', 'target' => 'Target / supplied / contained endpoint') as $key => $label) { ?><label><?php print nms_h($label); ?><select name="<?php print $key; ?>_endpoint" required><option value="">Select a device or interface</option><?php foreach ($relationship_options as $value => $name) { ?><option value="<?php print nms_h($value); ?>"><?php print nms_h($name); ?></option><?php } ?></select></label><?php } ?>
+			<label>Relationship type<select name="relation_type"><option value="network">Network</option><option value="power">Power supply</option><option value="containment">Containment</option></select></label></div>
+			<p>Interface choices contain a Cacti data-query ID and SNMP interface index, not UDP/TCP ports. Only connections whose two endpoints are mapped on this site are drawn; cross-site connections remain in the list.</p>
+			<div class="nms-form-actions"><button type="submit">Save manual connection</button></div>
+		</form>
+		<div class="nms-table-wrap"><table class="nms-table"><thead><tr><th>Source</th><th>Target</th><th>Type / source</th><th>Evidence</th><th>Action</th></tr></thead><tbody>
+		<?php if (!$relationships) { ?><tr><td colspan="5">No explicit connections recorded. Old layout parents are retained as layout metadata, not promoted to verified network links.</td></tr><?php } ?>
+		<?php foreach ($relationships as $edge) { ?><tr><td><?php print nms_h($edge['source_name']); ?><small><?php print nms_h($edge['source_identity']); ?></small></td><td><?php print nms_h($edge['target_name']); ?><small><?php print nms_h($edge['target_identity']); ?></small></td><td><?php print nms_h($edge['relation_type'] . ' · ' . $edge['provenance']); ?></td><td><?php print nms_h($edge['identity_state']); ?><small><?php print $edge['last_seen'] ? 'Last observed: ' . nms_h($edge['last_seen']) : 'Manual record; not discovered'; ?></small><small>Recorded: <?php print nms_h($edge['updated_at']); ?></small></td><td><?php if ($edge['provenance'] === 'manual') { ?><form method="post" action="topology.php?site_id=<?php print $site_id; ?>#connections"><input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>"><input type="hidden" name="nms_action" value="archive_relationship"><input type="hidden" name="relationship_id" value="<?php print (int) $edge['id']; ?>"><button type="submit">Archive</button></form><?php } ?></td></tr><?php } ?>
+		</tbody></table></div><p>Archived manual connections remain in NMS storage. Saving the same endpoints and type restores the record.</p>
+	</section>
 	<?php } ?>
 </main>

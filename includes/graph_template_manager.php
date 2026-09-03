@@ -6,9 +6,14 @@
 
 require_once($config['base_path'] . '/lib/api_graph.php');
 require_once($config['base_path'] . '/lib/template.php');
+require_once($config['base_path'] . '/include/global_form.php');
+require_once(__DIR__ . '/graph_item_options.php');
+require_once(__DIR__ . '/core_form_options.php');
 
-/** Create a styled reusable graph template from Cacti's Generic OID template and record NMS ownership. */
+/** Create a styled reusable graph template using Cacti's native tables and form metadata and record NMS ownership. */
 function nms_graph_template_create($data_template_rrd_id, $graph_name, $vertical_label, $options = array()) {
+	global $graph_item_types, $struct_graph_item, $fields_graph_template_template_edit;
+	if (!is_scalar($graph_name)) throw new InvalidArgumentException('Enter a graph template name.');
 	$data_template_rrd_id = (int) $data_template_rrd_id;
 	$source = db_fetch_row_prepared('SELECT dt.id AS data_template_id, dt.name AS data_template_name,
 		dtr.id AS data_template_rrd_id, dtr.data_source_name, dtd.name AS data_source_title
@@ -18,116 +23,72 @@ function nms_graph_template_create($data_template_rrd_id, $graph_name, $vertical
 		WHERE dtr.id = ? AND dtr.local_data_id = 0', array($data_template_rrd_id));
 	if (!$source) throw new InvalidArgumentException('Select a reusable Cacti data-template item.');
 
-	$default_name = 'NMS ' . $source['data_template_name'] . ' - ' . $source['data_source_name'];
+	$name_length = (int) $fields_graph_template_template_edit['name']['max_length'];
+	$default_name = mb_substr('NMS ' . $source['data_template_name'] . ' - ' . $source['data_source_name'], 0, $name_length);
 	if (trim((string) $graph_name) === '') {
 		$graph_name = $default_name;
 		$suffix = 2;
 		while ((int) db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates WHERE name = ?', array($graph_name))) {
-			$graph_name = substr($default_name, 0, 184) . ' ' . $suffix++;
+			$ending = ' ' . $suffix++;
+			$graph_name = mb_substr($default_name, 0, $name_length - strlen($ending)) . $ending;
 		}
 	} else {
-		$graph_name = nms_template_clean_name($graph_name, 190);
+		$graph_name = trim((string) $graph_name);
 	}
-	$vertical_label = trim((string) $vertical_label);
-	if ($vertical_label === '') $vertical_label = substr($source['data_source_name'], 0, 20);
-	$vertical_label = substr(preg_replace('/[^A-Za-z0-9 _\/%.-]/', '', $vertical_label), 0, 20);
-	if ($vertical_label === '') $vertical_label = 'Value';
+	// Preserve native labels (including Unicode) and use Cacti's actual length limit.
+	$options['vertical_label'] = $vertical_label;
+	if (!array_key_exists('title', $options)) $options['title'] = '|host_description| - ' . $graph_name;
+	$graph_values = nms_core_graph_values($options);
+	$graph_name = nms_core_field_value('name', $fields_graph_template_template_edit['name'], $graph_name);
 	if ((int) db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates WHERE name = ?', array($graph_name))) {
 		throw new InvalidArgumentException('A Cacti graph template with this name already exists. Choose another name.');
 	}
 
-	$style_options = array('line1' => array(4, 1), 'line2' => array(5, 2), 'line3' => array(6, 3), 'area' => array(7, 0));
-	$consolidation_options = array('average' => 1, 'minimum' => 2, 'maximum' => 3, 'last' => 4);
-	$graph_style = isset($style_options[$options['graph_style'] ?? '']) ? $options['graph_style'] : 'line1';
-	$consolidation = isset($consolidation_options[$options['consolidation'] ?? '']) ? $options['consolidation'] : 'average';
-	$color_id = (int) ($options['color_id'] ?? 86);
-	if (!(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM colors WHERE id = ?', array($color_id))) $color_id = 86;
-	$alpha_percent = max(0, min(100, (int) ($options['alpha_percent'] ?? 100)));
-	$alpha = strtoupper(str_pad(dechex((int) round(255 * $alpha_percent / 100)), 2, '0', STR_PAD_LEFT));
-	$cdef_id = (int) ($options['cdef_id'] ?? 0);
-	if ($cdef_id > 0 && !(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM cdef WHERE id = ?', array($cdef_id))) $cdef_id = 0;
-	$gprint_id = (int) ($options['gprint_id'] ?? 2);
-	if (!(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates_gprint WHERE id = ?', array($gprint_id))) $gprint_id = 2;
-	$legend_values = array(
-		1 => !array_key_exists('show_average', $options) || !empty($options['show_average']),
-		2 => !array_key_exists('show_minimum', $options) || !empty($options['show_minimum']),
-		3 => !array_key_exists('show_maximum', $options) || !empty($options['show_maximum']),
-		4 => !array_key_exists('show_current', $options) || !empty($options['show_current'])
-	);
-	$width = in_array((int) ($options['width'] ?? 700), array(300, 500, 700, 900, 1200), true) ? (int) $options['width'] : 700;
-	$height = in_array((int) ($options['height'] ?? 200), array(120, 160, 200, 300, 400), true) ? (int) $options['height'] : 200;
-	$base_value = in_array((int) ($options['base_value'] ?? 1000), array(1000, 1024), true) ? (int) $options['base_value'] : 1000;
-	$image_format_id = in_array((int) ($options['image_format_id'] ?? 3), array(1, 3), true) ? (int) $options['image_format_id'] : 3;
-	$slope_mode = !array_key_exists('slope_mode', $options) || !empty($options['slope_mode']) ? 'on' : '';
-	$auto_scale = !array_key_exists('auto_scale', $options) || !empty($options['auto_scale']) ? 'on' : '';
-	$auto_scale_opts = in_array((int) ($options['auto_scale_opts'] ?? 2), array(1, 2, 3, 4), true) ? (int) $options['auto_scale_opts'] : 2;
-	$lower_limit = is_numeric($options['lower_limit'] ?? '0') ? (string) $options['lower_limit'] : '0';
-	$upper_limit = is_numeric($options['upper_limit'] ?? '100') ? (string) $options['upper_limit'] : '100';
-	$auto_scale_log = !empty($options['auto_scale_log']) ? 'on' : '';
-	$auto_scale_rigid = !empty($options['auto_scale_rigid']) ? 'on' : '';
-	$auto_padding = !array_key_exists('auto_padding', $options) || !empty($options['auto_padding']) ? 'on' : '';
-
-	$base_graph_template_id = (int) db_fetch_cell("SELECT id FROM graph_templates WHERE name = 'SNMP - Generic OID Template'");
-	if ($base_graph_template_id < 1) throw new RuntimeException('Cacti Generic OID graph template is not installed.');
-
+	// Native defaults and database choices must not silently turn into fixed IDs.
+	foreach (array('color_id', 'cdef_id', 'gprint_id', 'vdef_id') as $key) {
+		$field = $struct_graph_item[$key];
+		$value = $options[$key] ?? $field['default'];
+		if ($key === 'color_id') {
+			if (!is_scalar($value) || !ctype_digit((string) $value) || ((int) $value && !db_fetch_cell_prepared('SELECT id FROM colors WHERE id = ?', array($value)))) throw new InvalidArgumentException('Select a color from Cacti.');
+		} else {
+			$value = nms_core_field_value($key, $field, $value);
+		}
+		$options[$key] = $value;
+	}
+	$options['alpha'] = nms_core_field_value('alpha', $struct_graph_item['alpha'], $options['alpha'] ?? $struct_graph_item['alpha']['default']);
+	if (isset($options['consolidation_function_id'])) $options['consolidation_function_id'] = nms_core_field_value('consolidation_function_id', $struct_graph_item['consolidation_function_id'], $options['consolidation_function_id']);
+	$item_rows = nms_graph_item_rows($graph_item_types, $data_template_rrd_id, $source['data_source_name'], $options);
+	foreach ($item_rows as $item_row) {
+		if ($item_row['task_item_id'] && !(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM data_template_rrd WHERE id = ? AND local_data_id = 0', array($item_row['task_item_id']))) {
+			throw new InvalidArgumentException('Select a reusable data-template item for the stack base.');
+		}
+	}
+	// Match the native editor: save core records directly; no named seed template is required.
 	db_execute('START TRANSACTION');
 	try {
-		$graph_template_id = (int) api_duplicate_graph(0, $base_graph_template_id, $graph_name, false);
-		if ($graph_template_id < 1) throw new RuntimeException('Cacti could not create the graph template.');
+		$parent = array('id' => 0, 'hash' => get_hash_graph_template(0), 'name' => $graph_name);
+		foreach (array('multiple', 'test_source') as $key) $parent[$key] = nms_core_field_value($key, $fields_graph_template_template_edit[$key], $options[$key] ?? '');
+		$graph_template_id = (int) sql_save($parent, 'graph_templates');
+		if (!$graph_template_id) throw new RuntimeException('Cacti could not create the graph template.');
 		nms_managed_object_record('graph_template', $graph_template_id);
-
-		db_execute_prepared('UPDATE graph_templates_graph SET title = ?, vertical_label = ?, width = ?, height = ?, base_value = ?,
-			image_format_id = ?, slope_mode = ?, auto_scale = ?, auto_scale_opts = ?, lower_limit = ?, upper_limit = ?,
-			auto_scale_log = ?, auto_scale_rigid = ?, auto_padding = ?
-			WHERE graph_template_id = ? AND local_graph_id = 0',
-			array('|host_description| - ' . $graph_name, $vertical_label, $width, $height, $base_value,
-				$image_format_id, $slope_mode, $auto_scale, $auto_scale_opts, $lower_limit, $upper_limit,
-				$auto_scale_log, $auto_scale_rigid, $auto_padding, $graph_template_id));
-		db_execute_prepared('UPDATE graph_templates_item SET task_item_id = ?
-			WHERE graph_template_id = ? AND local_graph_id = 0',
-			array($data_template_rrd_id, $graph_template_id));
-		db_execute_prepared('UPDATE graph_templates_item SET graph_type_id = ?, line_width = ?, color_id = ?, alpha = ?, cdef_id = ?, consolidation_function_id = ?
-			WHERE graph_template_id = ? AND local_graph_id = 0 AND graph_type_id != 9',
-			array($style_options[$graph_style][0], $style_options[$graph_style][1], $color_id, $alpha, $cdef_id,
-				$consolidation_options[$consolidation], $graph_template_id));
-		db_execute_prepared('UPDATE graph_templates_item SET gprint_id = ?, cdef_id = ?
-			WHERE graph_template_id = ? AND local_graph_id = 0 AND graph_type_id = 9',
-			array($gprint_id, $cdef_id, $graph_template_id));
-		db_execute_prepared("UPDATE graph_template_input SET name = ?
-			WHERE graph_template_id = ? AND column_name = 'task_item_id'",
-			array('Data Source [' . $source['data_source_name'] . ']', $graph_template_id));
-
-		$minimum_item = db_fetch_row_prepared('SELECT * FROM graph_templates_item
-			WHERE graph_template_id = ? AND local_graph_id = 0 AND graph_type_id = 9 AND consolidation_function_id = 1 LIMIT 1',
-			array($graph_template_id));
-		if ($minimum_item) {
-			db_execute_prepared('UPDATE graph_templates_item SET sequence = sequence + 1
-				WHERE graph_template_id = ? AND local_graph_id = 0 AND sequence >= 3', array($graph_template_id));
-			$minimum_item['id'] = 0;
-			$minimum_item['hash'] = get_hash_graph_template(0, 'graph_template_item');
-			$minimum_item['text_format'] = 'Minimum:';
-			$minimum_item['consolidation_function_id'] = 2;
-			$minimum_item['sequence'] = 3;
-			$minimum_item_id = (int) sql_save($minimum_item, 'graph_templates_item');
-			$data_source_input_id = (int) db_fetch_cell_prepared("SELECT id FROM graph_template_input
-				WHERE graph_template_id = ? AND column_name = 'task_item_id' LIMIT 1", array($graph_template_id));
-			if ($minimum_item_id > 0 && $data_source_input_id > 0) {
-				db_execute_prepared('INSERT IGNORE INTO graph_template_input_defs
-					(graph_template_input_id, graph_template_item_id) VALUES (?, ?)',
-					array($data_source_input_id, $minimum_item_id));
+		$graph_values += array('id' => 0, 'graph_template_id' => $graph_template_id, 'local_graph_id' => 0, 'local_graph_template_graph_id' => 0);
+		if (!sql_save($graph_values, 'graph_templates_graph')) throw new RuntimeException('Cacti could not save graph options.');
+		$seed = array('graph_template_id' => $graph_template_id, 'local_graph_id' => 0, 'local_graph_template_item_id' => 0);
+		$input_ids = array();
+		foreach ($item_rows as $index => $item_row) {
+			$item = array_merge($seed, $item_row, array('id' => 0, 'hash' => get_hash_graph_template(0, 'graph_template_item'), 'sequence' => $index + 1));
+			$item_id = (int) sql_save($item, 'graph_templates_item');
+			if (!$item_id) throw new RuntimeException('Cacti could not save the graph item.');
+			$task_id = (int) $item['task_item_id'];
+			if (!$task_id) continue;
+			if (!isset($input_ids[$task_id])) {
+				$ds_name = db_fetch_cell_prepared('SELECT data_source_name FROM data_template_rrd WHERE id = ?', array($task_id));
+				$input_ids[$task_id] = (int) sql_save(array('id' => 0, 'hash' => get_hash_graph_template(0, 'graph_template_input'),
+					'graph_template_id' => $graph_template_id, 'name' => 'Data Source [' . $ds_name . ']', 'column_name' => 'task_item_id'), 'graph_template_input');
+				if (!$input_ids[$task_id]) throw new RuntimeException('Cacti could not save the graph input.');
 			}
+			db_execute_prepared('INSERT INTO graph_template_input_defs (graph_template_input_id, graph_template_item_id) VALUES (?, ?)', array($input_ids[$task_id], $item_id));
 		}
-
-		$gprint_items = db_fetch_assoc_prepared('SELECT id, consolidation_function_id FROM graph_templates_item
-			WHERE graph_template_id = ? AND local_graph_id = 0 AND graph_type_id = 9', array($graph_template_id));
-		foreach ($gprint_items as $gprint_item) {
-			$cf_id = (int) $gprint_item['consolidation_function_id'];
-			if (isset($legend_values[$cf_id]) && !$legend_values[$cf_id]) {
-				db_execute_prepared('DELETE FROM graph_template_input_defs WHERE graph_template_item_id = ?', array((int) $gprint_item['id']));
-				db_execute_prepared('DELETE FROM graph_templates_item WHERE id = ?', array((int) $gprint_item['id']));
-			}
-		}
-
 		set_config_option('time_last_change_graph', time());
 		db_execute('COMMIT');
 		return $graph_template_id;

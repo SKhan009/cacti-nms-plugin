@@ -4,6 +4,7 @@ import argparse
 import importlib.util
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -27,8 +28,10 @@ class SimulatorTests(unittest.TestCase):
         self.data = self.root / 'data'
         self.data.mkdir()
         self.args = argparse.Namespace(executable=str(self.executable), data_dir=str(self.data),
-            listen_address='127.0.0.1', client_address='127.0.0.1', port=1162,
-            user='bstc', group='bstc', service_name='lab-simulator', output_dir=str(self.root / 'bundle'))
+            listen_address='127.0.0.1', client_address='127.0.0.1', port=1162, poller_id=7,
+            user='simuser', group='simgroup', service_name='lab-simulator', output_dir=str(self.root / 'bundle'),
+            python=sys.executable, systemctl=str(self.executable), helper_dir=str(self.root / 'helpers with spaces'),
+            config_path=str(self.root / 'server configuration.json'), lock_path=str(self.root / 'activation.lock'))
 
     # Verify generated JSON and systemd units consistently use the supplied installation settings.
     def test_custom_configuration_generates_matching_units(self):
@@ -36,9 +39,15 @@ class SimulatorTests(unittest.TestCase):
         import json
         config = json.loads((output / 'snmpsim.json').read_text())
         self.assertEqual(config['port'], 1162)
+        self.assertEqual(config['poller_id'], 7)
         self.assertEqual(config['data_dir'], str(self.data))
         self.assertEqual(config['service'], 'lab-simulator.service')
-        self.assertIn('User=bstc', (output / config['service']).read_text())
+        self.assertIn('User=simuser', (output / config['service']).read_text())
+        self.assertEqual(config['activation'], 'systemd')
+        self.assertEqual(config['systemctl'], str(self.executable))
+        self.assertIn('--config "' + self.args.config_path + '"', (output / config['service']).read_text())
+        self.assertNotIn('/usr/local/libexec', (output / config['service']).read_text())
+        self.assertEqual(configure.systemd_arg('/srv/test%instance'), '"/srv/test%%instance"')
         self.assertIn('Unit=lab-simulator-reload.service', (output / 'lab-simulator-reload.timer').read_text())
         self.assertNotIn('1161', (output / config['service']).read_text())
         with self.assertRaises(FileExistsError):
@@ -54,6 +63,7 @@ class SimulatorTests(unittest.TestCase):
     # Verify unsafe or invalid simulator settings are rejected rather than silently replaced.
     def test_invalid_configuration_fails_closed(self):
         for field, value in [('port', 0), ('port', 65536), ('user', 'root'),
+                             ('poller_id', 0), ('poller_id', True), ('poller_id', '7'),
                              ('client_address', '0.0.0.0'), ('listen_address', 'bad'),
                              ('service_name', 'test;evil'), ('data_dir', '/missing-path'),
                              ('executable', '/missing-executable')]:
@@ -70,7 +80,7 @@ class SimulatorTests(unittest.TestCase):
         def restart(*args, **kwargs):
             pending.touch()
         with patch.object(reload_helper.subprocess, 'run', side_effect=restart) as run:
-            reload_helper.activate({'data_dir': str(self.data), 'service': 'lab-simulator.service'})
+            reload_helper.activate({'data_dir': str(self.data), 'service': 'lab-simulator.service', 'systemctl': str(self.executable)})
         self.assertEqual(run.call_count, 2)
         self.assertTrue(pending.exists())
         self.assertFalse((self.data / '.reload.processing').exists())
@@ -80,13 +90,13 @@ class SimulatorTests(unittest.TestCase):
         (self.data / '.reload.pending').touch()
         with patch.object(reload_helper.subprocess, 'run', side_effect=subprocess.CalledProcessError(3, 'systemctl')):
             with self.assertRaises(subprocess.CalledProcessError):
-                reload_helper.activate({'data_dir': str(self.data), 'service': 'lab-simulator.service'})
+                reload_helper.activate({'data_dir': str(self.data), 'service': 'lab-simulator.service', 'systemctl': str(self.executable)})
         self.assertTrue((self.data / '.reload.processing').exists())
 
     # Verify the reload helper does not control the service without a pending upload.
     def test_no_request_does_not_restart(self):
         with patch.object(reload_helper.subprocess, 'run') as run:
-            reload_helper.activate({'data_dir': str(self.data), 'service': 'lab-simulator.service'})
+            reload_helper.activate({'data_dir': str(self.data), 'service': 'lab-simulator.service', 'systemctl': str(self.executable)})
         run.assert_not_called()
 
 

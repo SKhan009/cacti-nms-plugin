@@ -4,15 +4,33 @@
  * Integrate NMS tabs and navigation labels into Cacti, respecting the registered access realm.
  */
 
+/** Add native Console menu links; Cacti filters them using the registered page realms. */
+function nms_config_arrays() {
+	global $menu, $menu_glyphs;
+
+	// Cacti keeps config_arrays active even while a plugin is disabled.
+	if (!api_plugin_is_enabled('nms')) return;
+	require_once(__DIR__ . '/template_native.php');
+	nms_native_template_request();
+
+	$menu['NMS']['plugins/nms/nms.php'] = 'Device readings';
+	$menu['NMS']['plugins/nms/devices.php'] = 'Devices';
+	$menu['NMS']['plugins/nms/fault_config.php'] = 'Fault Configuration';
+	$menu['NMS']['plugins/nms/topology.php'] = 'Topology';
+	$menu['NMS']['plugins/nms/graphs.php'] = 'Graphs';
+	$menu['NMS']['plugins/nms/templates.php'] = 'Templates';
+	$menu_glyphs['NMS'] = 'fas fa-network-wired';
+}
+
 /** Render the NMS navigation tab when permitted, reflecting the current page selection. */
 function nms_show_tab() {
 	global $config;
 
-	if (!api_user_realm_auth('nms.php')) {
+	if (!api_plugin_is_enabled('nms') || !api_user_realm_auth('nms.php')) {
 		return;
 	}
 
-	$selected = in_array(get_current_page(), array('nms.php', 'devices.php', 'fault_config.php', 'topology.php'), true) ? " class='selected'" : '';
+	$selected = in_array(get_current_page(), array('nms.php', 'devices.php', 'fault_config.php', 'topology.php', 'graphs.php', 'templates.php'), true) ? " class='selected'" : '';
 	$url = html_escape($config['url_path'] . 'plugins/nms/nms.php');
 	$icon = html_escape($config['url_path'] . 'plugins/nms/images/nms.svg');
 
@@ -21,17 +39,11 @@ function nms_show_tab() {
 
 /** Extend Cacti's navigation entries for the current NMS page and return the updated array. */
 function nms_draw_navigation_text($nav) {
-	if (in_array(get_current_page(), array('nms.php', 'devices.php', 'fault_config.php', 'topology.php'), true)) {
-		$nav['NMS'] = 'plugins/nms/nms.php';
-		if (get_current_page() === 'topology.php') {
-			$nav['Topology'] = 'plugins/nms/topology.php';
-		} elseif (get_current_page() === 'fault_config.php') {
-			$nav['Fault Configuration'] = 'plugins/nms/fault_config.php';
-		} elseif (get_current_page() === 'devices.php') {
-			$nav['Device Management'] = 'plugins/nms/devices.php';
-		} else {
-			$nav['Fault Management'] = 'plugins/nms/nms.php';
-		}
+	global $config;
+	foreach (array('nms.php' => 'Device readings', 'devices.php' => 'Devices',
+		'fault_config.php' => 'Fault Configuration', 'topology.php' => 'Topology', 'graphs.php' => 'Graphs', 'templates.php' => 'Templates') as $page => $title) {
+		$nav[$page . ':'] = array('title' => $title, 'mapping' => 'index.php:',
+			'url' => $config['url_path'] . 'plugins/nms/' . $page, 'level' => '1');
 	}
 
 	return $nav;

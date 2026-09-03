@@ -1,96 +1,129 @@
-# NMS SNMP simulator
+# Optional NMS SNMP simulator
 
-This directory is the version-controlled backup for the SNMPSim instance used by the
-Cacti VM. It does not change Cacti core. The simulator listens only inside the VM on
-`127.0.0.1:1161`; the existing Net-SNMP daemon keeps port `161`.
+SNMPSim is a separate lab dependency, not a requirement for real-device monitoring.
+The plugin never launches a responder from a web request. Record values become
+observations only after an actual SNMP response; imported samples do not mask failure.
 
-## Simulated devices
+No endpoint is activated by installing this directory. Files in `data/` and
+`examples/` are development fixtures, not a list of devices installed on your server.
 
-| Cacti device | Address | SNMP | Community | Main readings |
-| --- | --- | --- | --- | --- |
-| NMS Simulated Router | `127.0.0.1:1161` | v2c | `sim-router` | state, interfaces, traffic and errors |
-| NMS Simulated Server | `127.0.0.1:1161` | v2c | `sim-server` | memory, swap, load and CPU |
-| NMS Simulated Sensor | `127.0.0.1:1161` | v2c | `sim-sensor` | temperature, humidity and alarm text |
+## Portable manual activation
 
-Each `.snmprec` filename is its SNMP community. This lets Cacti represent multiple
-devices through one loopback simulator endpoint.
+Follow [generic installation](../docs/GENERIC_INSTALL.md) to select an explicit
+administrator-owned JSON file through `NMS_SNMPSIM_CONFIG`. Use `activation:
+manual`, your actual record directory, reachable IPv4 client address, integer
+UDP port and integer `poller_id` selected from Cacti's Data Collectors. NMS validates
+that this collector exists and is enabled; it never assumes collector 1. The responder must separately be configured to serve that directory and
+endpoint. An optional executable path is metadata in manual mode, not permission
+for PHP to execute it.
 
-## Dynamic server configuration
+Each uploaded record has its own reviewed community/filename and native template
+link. New simulated devices use that record's mapping. Existing real devices keep
+their native Cacti settings. Changing the configured simulator endpoint does not
+silently rewrite existing Cacti hosts.
 
-There are no embedded responder, account, directory, address, or port defaults. Generate
-a separate bundle on each server. For the existing `bstc` lab:
+The current fixture importer uses SNMP v2c communities; this is not an SNMPv3
+credential provisioning system. Keep lab communities off public networks and out
+of diagnostic reports. Bind/listen addresses and client addresses have different
+purposes. A loopback address is correct only for a querying process on that host.
 
-```sh
-python3 configure.py \
-  --executable /home/bstc/.local/bin/snmpsim-command-responder \
-  --data-dir /usr/share/cacti/snmpsim/data/ups-device/ups \
-  --listen-address 127.0.0.1 --client-address 127.0.0.1 --port 1161 \
-  --user bstc --group bstc --service-name snmpsim \
-  --output-dir /tmp/nms-snmpsim-install
+After upload, activate/reload the responder through your OS's normal administrator
+workflow and use **Check live SNMP**. The displayed result is an actual protocol
+check, not proof that every imported OID or remote collector is operational.
+The web probe runs only when the web process's native Cacti collector ID matches
+the configured simulator collector. Otherwise it explains that verification must
+use that collector's actual poll cycle; it does not test a different network vantage
+point. Probe timeout/retries use native Cacti settings. Remote record deployment
+still requires review. An import-based Add device pins the reviewed collector along
+with the endpoint/community; use normal device management for intentional changes.
+
+## Optional Linux/systemd generator
+
+This generator is Linux-only. It writes a new bundle without installing it, changing
+permissions or starting services. Use approved offline dependencies when the target
+has no internet access. Do not reinstall a working responder merely to change NMS.
+
+Determine the actual account, group, executable and storage paths first. All bracketed
+values below are required placeholders, not defaults or literal shell commands:
+
+```text
+<PYTHON_EXECUTABLE> configure.py
+  --executable "<RESPONDER_EXECUTABLE>"
+  --data-dir "<EXISTING_RECORD_DIRECTORY>"
+  --listen-address "<BIND_IPV4>"
+  --client-address "<REACHABLE_IPV4>"
+  --port <CHOSEN_UDP_PORT>
+  --poller-id <EXISTING_ENABLED_CACTI_COLLECTOR_ID>
+  --user <EXISTING_UNPRIVILEGED_SERVICE_USER>
+  --group <EXISTING_UNPRIVILEGED_SERVICE_GROUP>
+  --service-name <CHOSEN_SERVICE_BASENAME>
+  --python "<PYTHON_EXECUTABLE>"
+  --systemctl "<SYSTEMCTL_EXECUTABLE>"
+  --helper-dir "<ADMINISTRATOR_OWNED_HELPER_DIRECTORY>"
+  --config-path "<ADMINISTRATOR_OWNED_JSON_FILE>"
+  --lock-path "<LOCK_FILE_IN_ADMINISTRATOR_OWNED_DIRECTORY>"
+  --output-dir "<NEW_BUNDLE_DIRECTORY>"
 ```
 
-`listen-address` is the bind address. `client-address` is the address Cacti collectors
-use. Loopback is valid only for the local collector. Review the generated files, then:
+Paths may contain spaces. The generator validates paths and installed executables,
+checks the selected account, and refuses to overwrite an output bundle. Inspect the
+generated JSON, responder service, reload service/timer, and all three Python files:
+`nms-snmpsim-run.py`, `nms-snmpsim-reload.py`, and `runtime_config.py`.
 
-```sh
-sudo install -d -o root -g root -m 0755 /etc/cacti-nms /usr/local/libexec
-sudo install -o root -g root -m 0644 /tmp/nms-snmpsim-install/snmpsim.json /etc/cacti-nms/snmpsim.json
-sudo install -o root -g root -m 0755 /tmp/nms-snmpsim-install/nms-snmpsim-*.py /usr/local/libexec/
-sudo install -o root -g root -m 0644 /tmp/nms-snmpsim-install/*.service /tmp/nms-snmpsim-install/*.timer /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now snmpsim.service snmpsim-reload.timer
-sudo systemctl restart snmpsim.service
-sudo systemctl status snmpsim.service
-```
+Installation is an administrator action:
 
-The generator validates inputs, refuses to overwrite a bundle, and changes no system
-state. The web application accepts only a root-owned, non-writable configuration. PHP
-displays health and performs explicit live SNMP checks, but never executes the responder
-or controls systemd. The timer consumes `.reload.pending` without losing uploads that
-arrive during restart and respects an administrator stop. Apache needs no sudo access.
-The data directory must be writable by Apache and readable by the configured service user.
-Use a shared group with set-group-ID directories and appropriate SELinux policy on RHEL.
-There is no saved-value fallback.
+1. Back up existing configuration, units, helpers and record metadata. Confirm no
+   manually launched responder already owns the selected address/port.
+2. Install the generated JSON at exactly `--config-path`, and all three Python files
+   in exactly `--helper-dir`. Configuration, helper code and their directories must
+   be root-owned and not writable by the web or simulator accounts.
+3. Provision the selected lock parent directory as root-owned and non-group/world
+   writable. If it is under volatile runtime storage, arrange recreation at boot
+   through the platform's supported mechanism. The reload helper creates its lock
+   file with mode 0600 and refuses symlinks.
+4. Install the units in the actual systemd administrator-unit directory. Review their
+   hardening and runtime access on the installed systemd version. The responder runs
+   unprivileged; the reload timer helper runs as administrator with a fixed,
+   administrator-controlled configuration.
+5. Grant import-write access only to record storage, and responder-read access to
+   those records, using reviewed groups/ACLs. Keep storage outside the web root.
+   Maintain SELinux enforcing and configure only the necessary labels/policy.
+6. Explicitly select the same JSON for PHP through `NMS_SNMPSIM_CONFIG`. PHP-FPM
+   service/pool environment and CLI environments may differ; verify both as needed.
+   There is no automatic lookup of an old `/etc` path. No Cacti core edit is needed.
+7. Have the administrator reload systemd units and intentionally enable/start the
+   reviewed responder and timer. Verify logs, service identities, access and actual
+   SNMP results using the configured endpoint. Do not grant Apache sudo privileges.
 
-Stop any manually launched responder on the selected port before starting the managed
-service. Existing record files are reused; do not reinstall SNMPSim or recreate devices.
+The timer consumes upload markers and uses try-restart: it must not start a service
+that an administrator stopped. Requests arriving during a restart retain their own
+pending marker. Failed or inactive checks retain processing state. PHP may query
+service status through the explicitly configured systemctl executable but cannot
+control service state. A service being active is not proof of a successful SNMP poll.
 
-Upgrade note: install this configuration before using imports on NMS 1.9.30. The old
-database `snmprec_runtime_dir` value is no longer used. Existing Cacti hosts are not
-rewritten when the endpoint changes; review them explicitly in Cacti. Back up existing
-service files before replacing them. If using another service name, disable the old
-timer/service after review to prevent two responders competing for the same port.
+When upgrading older managed installations, supply explicit `poller_id`, `activation`,
+`systemctl` and `lock_path` settings as well as the other generated fields. Preserve
+records and pending markers. Review obsolete timers/units before replacing them;
+do not leave multiple responders competing for the same endpoint.
 
-After import, **Add device** uses this record's community/template and the shared configured
-endpoint. Every community is a separate simulated device on that endpoint. **Check live
-SNMP** verifies an actual response; record values are never returned as fallback.
+## Verification
 
-Regression tests:
+Local standalone checks from this directory:
 
 ```sh
 python3 -m unittest -v test_configure.py
 php ../tests/snmpsim_config_test.php
+php ../tests/portable_config_test.php
+php ../tests/snmpsim_collector_test.php
 ```
 
-Useful checks:
+The PHP and Python executable names above refer to your verified local tools, not
+hardcoded application paths. Generator/marker tests do not prove a running systemd
+service, native PHP-FPM access, SNMP communication, remote collector behavior, or
+SELinux compatibility. Those remain mandatory target-VM acceptance tests.
 
-```sh
-sudo systemctl status snmpsim
-snmpwalk -v2c -c sim-router 127.0.0.1:1161 1.3.6.1.2.1.1
-snmpwalk -v2c -c sim-server 127.0.0.1:1161 1.3.6.1.4.1.2021
-snmpwalk -v2c -c sim-sensor 127.0.0.1:1161 1.3.6.1.2.1.99
-```
-
-The readings are deterministic lab data. Change the value field in a record and restart
-`snmpsim` to reproduce a healthy or faulty device state for NMS rule testing.
-
-The `examples/` directory contains small files intended for testing the NMS upload page.
-They are not loaded merely by deploying the plugin; importing one validates it, creates
-the Cacti templates, and then activates its community in the simulator.
-
-`examples/nms-device-demo.snmprec` is the general UI test file. It has 24 records and 18
-graphable readings. Download it directly from the Upload SNMP Record page, then use:
-
-- simulator community: `nms-device-demo`
-- host template: `NMS Demo Environmental Device`
-- category: `Sensors & Instrumentation`
+Use a reviewed example record to test a new community/device through Cacti. Record
+a successful poll timestamp, intentionally stop the lab responder, and verify that
+later collection is failed/stale without a sample-file substitution. Restart only
+through the authorized lifecycle and verify genuine recovery. Never stop a
+production SNMP daemon as part of this simulator check.
