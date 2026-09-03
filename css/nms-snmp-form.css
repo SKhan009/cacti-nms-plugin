@@ -679,8 +679,8 @@
 	border-bottom: 1px solid #ebebeb;
 	display: grid;
 	grid-template-columns: minmax(0, 1.5fr) minmax(180px, .5fr);
-	min-height: 52px;
-	padding: 0 20px;
+	min-height: 42px;
+	padding: 0 16px;
 }
 
 .nms-association-row.query {
@@ -697,24 +697,27 @@
 	font-size: 9px;
 	font-weight: 800;
 	letter-spacing: .09em;
-	min-height: 38px;
+	min-height: 32px;
 	text-transform: uppercase;
 }
 
 .nms-association-row strong {
-	font-size: 12px;
+	font-size: 11px;
 }
 
 .nms-association-row > span {
+	align-items: center;
 	color: #797979;
+	display: flex;
 	font-size: 11px;
+	gap: 7px;
 }
 
 .nms-association-row small {
 	color: #8e8e8e;
 	display: block;
 	font-size: 9px;
-	margin-top: 3px;
+	margin-top: 0;
 }
 
 .nms-association-state {
@@ -723,7 +726,7 @@
 	font-size: 9px;
 	font-style: normal;
 	font-weight: 800;
-	padding: 4px 7px;
+	padding: 3px 6px;
 }
 
 .nms-association-state.active {
@@ -749,7 +752,20 @@
 	display: grid;
 	gap: 12px;
 	grid-template-columns: minmax(0, 1fr) auto;
-	padding: 16px 20px;
+	padding: 12px 16px;
+}
+
+.nms-device-associations .nms-panel-head {
+	padding: 14px 16px 12px;
+}
+
+.nms-association-row.graph.heading > span:last-child,
+.nms-association-row.graph > .nms-icon-action {
+	justify-self: center;
+}
+
+.nms-device-associations .nms-pagination {
+	padding: 7px 12px;
 }
 
 .nms-association-add.top {
@@ -843,7 +859,7 @@
 	cursor: pointer;
 	font-size: 9px;
 	font-weight: 700;
-	padding: 5px 7px;
+	padding: 4px 6px;
 }
 
 .nms-reindex-options input:checked + label {
@@ -881,7 +897,7 @@
 	font-size: 9px;
 	font-weight: 800;
 	line-height: 1;
-	padding: 7px 8px;
+	padding: 6px 7px;
 	text-decoration: none;
 }
 
@@ -954,7 +970,7 @@
 
 .nms-x-action, .nms-delete-x, .nms-icon-action button {
 	background: transparent !important; border: 0 !important; color: #cf2f28 !important; cursor: pointer;
-	font-size: 20px !important; font-weight: 800 !important; height: 30px !important; line-height: 1 !important; padding: 2px 7px !important;
+	font-size: 18px !important; font-weight: 800 !important; height: 24px !important; line-height: 1 !important; padding: 1px 6px !important;
 }
 .nms-icon-action, .nms-template-actions form, .nms-row-actions form { margin: 0; }
 
