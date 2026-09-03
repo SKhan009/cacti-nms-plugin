@@ -69,7 +69,7 @@ $simulator_ready = $simulator_health['error'] === ''
 		<td data-label="Records"><strong><?php print (int) $import['record_count']; ?> OIDs</strong><small><?php print (int) $import['graphable_count']; ?> numeric readings</small></td>
 		<td data-label="Generated templates"><strong><?php print (int) $import['graphable_count']; ?> data-source</strong><small><?php print (int) $import['graphable_count']; ?> graph templates</small></td>
 		<td data-label="Imported"><?php print nms_h(nms_time_ago($import['created_at'])); ?><small>by <?php print nms_h($import['uploaded_by_name'] ?: 'system'); ?></small></td>
-		<td data-label="Next step"><div class="nms-import-actions"><a class="nms-row-link nms-import-primary" href="templates.php?section=graph&amp;view=builder#graph-builder">Create graph template</a>
+		<td data-label="Next step"><div class="nms-import-actions"><a class="nms-row-link nms-import-primary" href="templates.php?section=graph&amp;view=builder#graph-builder" title="Create or configure a Cacti graph template">Configure graph</a>
 		<a class="nms-row-link" href="<?php print nms_h('templates.php?section=device&core=' . rawurlencode('host_templates.php?action=template_edit&id=' . (int) $import['host_template_id'])); ?>" title="Open the imported Cacti host template">Device template</a>
 		<form method="post" action="devices.php?tab=import">
 			<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>">
