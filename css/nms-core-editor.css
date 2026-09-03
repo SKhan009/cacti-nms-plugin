@@ -174,7 +174,7 @@ html.nms-core-workspace { overflow: auto !important; height: auto !important; }
  * content-sized and give names the remaining width without clipping the table. */
 .nms-core-workspace #main.nms-native-list { padding: 0 16px 24px !important; }
 .nms-core-workspace .nms-native-list form:has(table.cactiTable th.tableSubHeaderCheckbox) {
-	box-sizing: border-box; margin-left: auto; margin-right: auto; max-width: 1080px; width: 100%;
+	box-sizing: border-box; margin-left: 0; margin-right: 0; max-width: none; width: 100%;
 }
 .nms-core-workspace .nms-native-list table.cactiTable:has(th.tableSubHeaderCheckbox) {
 	table-layout: auto; width: 100% !important; min-width: 0 !important;
