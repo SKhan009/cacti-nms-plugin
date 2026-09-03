@@ -10,9 +10,9 @@ const guard = add.indexOf('<?php if (!$device_form_is_edit) { ?>');
 assert(guard > 0, 'Only unsaved devices should get the save-first panels');
 for (const id of ['graph-templates', 'data-queries']) {
  assert(add.slice(guard).includes(`id="${id}"`), `Add device must expose ${id}`);
- assert(edit.includes(`href="#${id}"`), `Edit device needs a shortcut for ${id}`);
  assert(edit.includes(`id="${id}"`), `Keep the working ${id} section`);
 }
+assert(!edit.includes('aria-label="Device sections"'), 'Redundant in-page device section tabs must stay removed');
 assert(add.includes('id="nms-device-form"'), 'Save-first links must target the form');
 assert(controller.includes("header('Location: devices.php?tab=edit&id=' . $device_id . '&device_created=' . $device_id . '#graph-templates');"), 'New devices must open their own association controls');
 assert(edit.includes('value="add_graph_template"') && edit.includes('value="add_data_query"'), 'Keep association actions');

@@ -30,12 +30,6 @@ $device_actions = array(
 	array('Graph List', $core_base . 'graphs.php?reset=true&host_id=' . $device_id . '&graph_rows=30&filter=&template_id=-1&page=1', 'View all Cacti graphs linked to this device.')
 );
 ?>
-<nav class="nms-page-tabs" aria-label="Device sections">
-	<a href="#device-overview">Device overview</a>
-	<a href="#nms-device-form">Device settings</a>
-	<a href="#graph-templates">Graph templates</a>
-	<a href="#data-queries">Data queries</a>
-</nav>
 <section class="nms-panel nms-device-overview" id="device-overview">
 	<div class="nms-panel-head">
 		<div><h2>Device overview</h2><p>Current state and collection details read directly from Cacti.</p></div>
