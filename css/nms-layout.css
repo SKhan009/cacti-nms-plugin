@@ -312,6 +312,9 @@ body.nms-standalone .nms-config-table select { min-width: 0; }
 body.nms-standalone .nms-root-config { display: block; padding: 0; }
 .nms-root-config > form { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr) auto; padding: var(--nms-panel-space); }
 .nms-root-config select { min-width: 0; width: 100%; }
+.nms-form-panel > .nms-device-form .nms-form-grid { margin-bottom:16px; }
+.nms-form-panel > .nms-device-form > p { margin:0 0 16px; }
+.nms-form-panel > .nms-device-form > .nms-form-actions { justify-content:flex-end; padding-top:14px; border-top:1px solid var(--nms-line); }
 .nms-site-picker { align-items: stretch; display: grid; gap: 6px; min-width: 200px; }
 .nms-map-head, .nms-map-actions { flex-wrap: wrap; }
 .nms-inventory-panel, .nms-device-detail { min-height: 0; }
