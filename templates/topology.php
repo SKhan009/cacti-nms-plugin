@@ -28,16 +28,6 @@
 		<div><span>Configured faults</span><strong><?php print (int) $fault_count; ?> devices</strong></div>
 	</div>
 
-	<section class="nms-panel nms-root-config">
-		<div class="nms-panel-head"><div><h2>Topology root</h2><p>Select the main switch or gateway. It remains fixed while other Cacti devices can be dragged around it.</p></div></div>
-		<form method="post" action="topology.php?site_id=<?php print $site_id; ?>">
-			<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>">
-			<input type="hidden" name="nms_action" value="set_root">
-			<select name="host_id" required data-nms-tip="Choose a fixed layout anchor. This does not create any physical or logical connection."><option value="">Choose a Cacti device</option><?php foreach ($topology_devices as $device) { ?><option value="<?php print (int) $device['id']; ?>" <?php print $root_device && (int) $root_device['id'] === (int) $device['id'] ? 'selected' : ''; ?>><?php print nms_h($device['description']); ?> · <?php print nms_h($device['hostname']); ?></option><?php } ?></select>
-			<button type="submit" data-nms-tip="Save the selected root for this Cacti site.">Save root device</button>
-		</form>
-	</section>
-
 	<?php if (!$root_device) { ?>
 	<section class="nms-panel nms-configuration-required"><h2>Select a topology root to continue</h2><p>No device is guessed automatically. Select the actual core switch or gateway above, then drag other devices from Inventory.</p></section>
 	<?php } else { ?>
