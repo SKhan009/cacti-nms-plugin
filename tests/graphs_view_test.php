@@ -14,4 +14,5 @@ $header = substr($navigation, strpos($navigation, '<header'), strpos($navigation
 foreach (array('Topology', 'Devices', 'Graphs') as $label) graph_view_assert(strpos($header, '>' . $label . '</a>') !== false, 'Header item missing: ' . $label);
 graph_view_assert(strpos($header, '>Faults</a>') === false && strpos($header, '>Fault Configuration</a>') === false, 'Fault links remain in header');
 graph_view_assert(strpos($navigation, 'aria-label="Fault sections"') !== false, 'Fault submenu missing');
+graph_view_assert(strpos($navigation, 'href="capabilities.php"') !== false, 'FCAPS page missing from Fault submenu');
 print "Core-backed graph browser and navigation checks passed.\n";

@@ -15,7 +15,6 @@ require_once($config['base_path'] . '/plugins/nms/includes/template_manager.php'
 require_once($config['base_path'] . '/plugins/nms/includes/device_manager.php');
 require_once($config['base_path'] . '/plugins/nms/includes/graph_template_manager.php');
 require_once(__DIR__ . '/includes/groups.php');
-require_once(__DIR__ . '/includes/capabilities.php');
 
 // Require an explicit lifecycle upgrade; viewing devices never renames core templates.
 nms_require_database();
@@ -240,7 +239,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset_request_var('nms_action')) {
 				'proxy' => isset_request_var('proxy'),
 				'disabled' => isset_request_var('disabled')
 			));
-			header('Location: devices.php?tab=edit&id=' . $device_id . '&device_updated=1');
+			// Classification and the manually recorded serial belong to NMS metadata, but
+			// are edited alongside the device identity so operators have one coherent form.
+			nms_device_classification_save($device_id, get_filter_request_var('equipment_category_id'),
+				get_nfilter_request_var('device_type'), get_nfilter_request_var('device_role'));
+			if (!isset_request_var('manual_serial_number')) throw new InvalidArgumentException('The serial number field was not submitted.');
+			nms_manual_serial_save($device_id, get_nfilter_request_var('manual_serial_number'));
+			header('Location: devices.php?tab=edit&id=' . $device_id . '&device_updated=1#nms-device-form');
 			exit;
 		}
 
@@ -374,10 +379,6 @@ if ($tab === 'edit') {
 		nms_require_device_access($edit_device_id);
 		$device_classification = db_fetch_row_prepared('SELECT * FROM plugin_nms_device_classification WHERE host_id = ?', array($edit_device_id));
 		$native_template_class = db_fetch_cell_prepared('SELECT class FROM host_template WHERE id = ?', array($edit_device['host_template_id']));
-		$operational_groups = nms_groups();
-		$device_group_rows = db_fetch_assoc_prepared('SELECT group_id FROM plugin_nms_group_members WHERE host_id = ?', array($edit_device_id));
-		$device_group_ids = array_map('intval', array_column($device_group_rows, 'group_id'));
-		$device_capabilities = nms_device_capabilities($edit_device);
 		$edit_device['manual_serial_number'] = nms_manual_serial_get($edit_device_id);
 		// Link suggestions through this host's current imported serial OID, never another device or file sample.
 		$serial_reading = nms_device_serial_reading($edit_device_id);

@@ -22,6 +22,12 @@ $selected_ping_timeout = isset_request_var('ping_timeout') ? (int) get_filter_re
 $selected_ping_retries = isset_request_var('ping_retries') ? (int) get_filter_request_var('ping_retries') : (int) $device_values['ping_retries'];
 $selected_max_oids = isset_request_var('max_oids') ? (int) get_filter_request_var('max_oids') : (int) $device_values['max_oids'];
 $selected_device_threads = isset_request_var('device_threads') ? (int) get_filter_request_var('device_threads') : (int) $device_values['device_threads'];
+$selected_category_id = isset_request_var('equipment_category_id') ? (string) get_nfilter_request_var('equipment_category_id') : (string) ($device_classification['category_id'] ?? '0');
+$selected_device_type = isset_request_var('device_type') ? get_nfilter_request_var('device_type') : ($device_classification['device_type'] ?? '');
+$selected_device_role = isset_request_var('device_role') ? get_nfilter_request_var('device_role') : ($device_classification['device_role'] ?? '');
+$manual_serial_value = isset_request_var('manual_serial_number')
+	? get_nfilter_request_var('manual_serial_number')
+	: ($device_form_is_edit ? ($serial_prefill['value'] ?? ($device_values['manual_serial_number'] ?? '')) : '');
 
 // Discrete choices belong to Cacti; ports, retries and timeouts remain editable numbers.
 $max_oid_options = array_keys($fields_snmp_item_with_oids['max_oids']['array']);
@@ -39,14 +45,10 @@ $device_thread_options = array_keys($fields_host_edit['device_threads']['array']
 		<?php } ?>
 		<?php if ($device_form_is_edit) { ?><input type="hidden" name="id" value="<?php print (int) $device_values['id']; ?>"><?php } ?>
 		<fieldset><legend>Device identity</legend><div class="nms-form-grid">
-			<?php if (!$device_form_is_edit) { ?>
-			<label><span>Equipment category</span><select name="equipment_category_id" required><option value="">Select a category</option><option value="0">Unclassified (no category rules)</option><option value="template">Use selected template's saved suggestion</option><?php foreach ($categories as $category) { ?><option value="<?php print (int) $category['id']; ?>" <?php print isset_request_var('equipment_category_id') && (string) get_nfilter_request_var('equipment_category_id') === (string) $category['id'] ? 'selected' : ''; ?>><?php print nms_h($category['name']); ?></option><?php } ?></select><small>Independent of site and Cacti tree. An explicit template suggestion is copied once.</small></label>
-			<label><span>Device type</span><input name="device_type" maxlength="150" placeholder="UPS, switch, sensor" value="<?php print nms_h(isset_request_var('device_type') ? get_nfilter_request_var('device_type') : ''); ?>"></label>
-			<label><span>Device role</span><input name="device_role" maxlength="150" placeholder="Access, core, backup power" value="<?php print nms_h(isset_request_var('device_role') ? get_nfilter_request_var('device_role') : ''); ?>"></label>
-			<?php } ?>
-			<?php if (!$device_form_is_edit) { /* Edit uses a separate metadata-only form so saving a serial cannot change core settings. */ ?>
-			<label><span>Serial number (manual)</span><input name="manual_serial_number" maxlength="191" value="<?php print nms_h(isset_request_var('manual_serial_number') && is_string(get_nfilter_request_var('manual_serial_number')) ? get_nfilter_request_var('manual_serial_number') : ''); ?>" placeholder="Serial printed on the device"><small>Optional. Stored in NMS only. With a linked imported serial OID, Edit device can prefill this after the first successful SNMP poll.</small></label>
-			<?php } ?>
+			<label><span>Equipment category</span><select name="equipment_category_id" required><?php if (!$device_form_is_edit) { ?><option value="">Select a category</option><?php } ?><option value="0" <?php print $selected_category_id === '0' ? 'selected' : ''; ?>>Unclassified (no category rules)</option><?php if (!$device_form_is_edit) { ?><option value="template" <?php print $selected_category_id === 'template' ? 'selected' : ''; ?>>Use selected template's saved suggestion</option><?php } ?><?php foreach ($categories as $category) { ?><option value="<?php print (int) $category['id']; ?>" <?php print $selected_category_id === (string) $category['id'] ? 'selected' : ''; ?>><?php print nms_h($category['name']); ?></option><?php } ?></select><small>Used by device fault-rule scope; independent of Cacti site and graph tree.</small></label>
+			<label><span>Device type</span><input name="device_type" maxlength="150" placeholder="UPS, switch, sensor" value="<?php print nms_h($selected_device_type); ?>"></label>
+			<label><span>Device role</span><input name="device_role" maxlength="150" placeholder="Access, core, backup power" value="<?php print nms_h($selected_device_role); ?>"></label>
+			<label><span>Serial number (manual)</span><input id="nmsManualSerial" name="manual_serial_number" maxlength="191" value="<?php print nms_h(is_string($manual_serial_value) ? $manual_serial_value : ''); ?>" placeholder="Serial printed on the device"><small>Optional NMS metadata. A fresh mapped SNMP serial can prefill this value, but never overwrites a saved value automatically.</small></label>
 			<label><span>Device name</span><input required name="description" value="<?php print nms_h(isset_request_var('description') ? get_nfilter_request_var('description') : ($device_values['description'] ?? '')); ?>" placeholder="Branch router 01"></label>
 			<label><span>Hostname or IP</span><input required name="hostname" value="<?php print nms_h(isset_request_var('hostname') ? get_nfilter_request_var('hostname') : ($device_values['hostname'] ?? '')); ?>" placeholder="192.0.2.10"></label>
 			<label><span>Cacti host template</span><select name="host_template_id"><option value="0">None</option><?php foreach ($host_templates as $template) { ?><option value="<?php print (int) $template['id']; ?>" <?php print $selected_template_id === (int) $template['id'] ? 'selected' : ''; ?>><?php print nms_h($template['name']); ?></option><?php } ?></select></label>

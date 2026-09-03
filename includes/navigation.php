@@ -16,6 +16,7 @@ function nms_config_arrays() {
 	$menu['NMS']['plugins/nms/nms.php'] = 'Device readings';
 	$menu['NMS']['plugins/nms/devices.php'] = 'Devices';
 	$menu['NMS']['plugins/nms/fault_config.php'] = 'Fault Configuration';
+	$menu['NMS']['plugins/nms/capabilities.php'] = 'FCAPS Capabilities';
 	$menu['NMS']['plugins/nms/topology.php'] = 'Topology';
 	$menu['NMS']['plugins/nms/graphs.php'] = 'Graphs';
 	$menu['NMS']['plugins/nms/templates.php'] = 'Templates';
@@ -30,7 +31,7 @@ function nms_show_tab() {
 		return;
 	}
 
-	$selected = in_array(get_current_page(), array('nms.php', 'devices.php', 'fault_config.php', 'topology.php', 'graphs.php', 'templates.php'), true) ? " class='selected'" : '';
+	$selected = in_array(get_current_page(), array('nms.php', 'devices.php', 'fault_config.php', 'capabilities.php', 'topology.php', 'graphs.php', 'templates.php'), true) ? " class='selected'" : '';
 	$url = html_escape($config['url_path'] . 'plugins/nms/nms.php');
 	$icon = html_escape($config['url_path'] . 'plugins/nms/images/nms.svg');
 
@@ -41,7 +42,7 @@ function nms_show_tab() {
 function nms_draw_navigation_text($nav) {
 	global $config;
 	foreach (array('nms.php' => 'Device readings', 'devices.php' => 'Devices',
-		'fault_config.php' => 'Fault Configuration', 'topology.php' => 'Topology', 'graphs.php' => 'Graphs', 'templates.php' => 'Templates') as $page => $title) {
+		'fault_config.php' => 'Fault Configuration', 'capabilities.php' => 'FCAPS Capabilities', 'topology.php' => 'Topology', 'graphs.php' => 'Graphs', 'templates.php' => 'Templates') as $page => $title) {
 		$nav[$page . ':'] = array('title' => $title, 'mapping' => 'index.php:',
 			'url' => $config['url_path'] . 'plugins/nms/' . $page, 'level' => '1');
 	}

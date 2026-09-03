@@ -20,11 +20,12 @@
 				<?php foreach (array('map' => 'Network topology', 'racks' => 'Rack topology', 'configuration' => 'Topology configuration') as $key => $label) { ?>
 				<a href="topology.php?tab=<?php print $key; ?>" <?php if ($nms_active_module === 'topology' && ($topology_tab ?? 'map') === $key) print 'aria-current="page"'; ?>><?php print $label; ?></a>
 				<?php } ?></nav></details>
-				<details class="nms-template-menu" <?php if (in_array($nms_active_module, array('faults', 'configuration'), true)) print 'open'; ?>>
-				<summary aria-label="Faults" class="nms-sidebar-link <?php print in_array($nms_active_module, array('faults', 'configuration'), true) ? 'selected' : ''; ?>"><span class="nms-sidebar-icon">●</span><span class="nms-sidebar-copy"><strong>Faults</strong></span><span class="nms-submenu-arrow" aria-hidden="true">⌄</span></summary>
+				<details class="nms-template-menu" <?php if (in_array($nms_active_module, array('faults', 'configuration', 'capabilities'), true)) print 'open'; ?>>
+				<summary aria-label="Faults" class="nms-sidebar-link <?php print in_array($nms_active_module, array('faults', 'configuration', 'capabilities'), true) ? 'selected' : ''; ?>"><span class="nms-sidebar-icon">●</span><span class="nms-sidebar-copy"><strong>Faults</strong></span><span class="nms-submenu-arrow" aria-hidden="true">⌄</span></summary>
 				<nav class="nms-template-subnav" aria-label="Fault sections">
 					<a href="nms.php" <?php if ($nms_active_module === 'faults') print 'aria-current="page"'; ?>>Device readings</a>
 					<a href="fault_config.php" <?php if ($nms_active_module === 'configuration') print 'aria-current="page"'; ?>>Fault configuration</a>
+					<a href="capabilities.php" <?php if ($nms_active_module === 'capabilities') print 'aria-current="page"'; ?>>FCAPS capabilities</a>
 				</nav></details>
 				<a class="nms-sidebar-link <?php print $nms_active_module === 'devices' ? 'selected' : ''; ?>" href="devices.php"><span class="nms-sidebar-icon">＋</span><span class="nms-sidebar-copy"><strong>Device management</strong></span></a>
 				<details class="nms-template-menu" <?php if ($nms_active_module === 'templates') print 'open'; ?>>

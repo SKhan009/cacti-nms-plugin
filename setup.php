@@ -21,7 +21,7 @@ function nms_setup_registration() {
 	api_plugin_register_hook('nms', 'poller_output', 'nms_poller_output', 'includes/polling.php');
 	api_plugin_register_hook('nms', 'poller_bottom', 'nms_poller_bottom', 'includes/polling.php');
 
-	api_plugin_register_realm('nms', 'nms.php,devices.php,fault_config.php,topology.php,graphs.php,templates.php', 'View NMS Faults, Devices, Rules, Topology, Graphs, and Templates', 1);
+	api_plugin_register_realm('nms', 'nms.php,devices.php,fault_config.php,capabilities.php,topology.php,graphs.php,templates.php', 'View NMS Faults, Devices, Rules, Capabilities, Topology, Graphs, and Templates', 1);
 
 	// Registering config hooks can activate existing hooks. Restore lifecycle state explicitly.
 	if ($enabled) {
@@ -79,7 +79,7 @@ function nms_page_head() {
 	require_once(__DIR__ . '/includes/template_native.php');
 	nms_native_template_head();
 
-	if (in_array(get_current_page(), array('nms.php', 'devices.php', 'fault_config.php', 'topology.php', 'graphs.php'), true)) {
+	if (in_array(get_current_page(), array('nms.php', 'devices.php', 'fault_config.php', 'capabilities.php', 'topology.php', 'graphs.php'), true)) {
 		require_once($config['base_path'] . '/plugins/nms/includes/functions.php');
 		print '<link rel="stylesheet" href="' . html_escape(nms_asset_url('css/nms-v1.1.css')) . '">';
 	}

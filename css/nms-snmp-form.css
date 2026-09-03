@@ -50,6 +50,33 @@
 .nms-device-facts > div {
 	border-right: 1px solid #e7e7e7;
 	padding: 16px 20px;
+	position: relative;
+}
+
+.nms-device-facts > div::before {
+	background: #9a9a9a;
+	content: "";
+	height: 3px;
+	left: 20px;
+	position: absolute;
+	right: 20px;
+	top: 0;
+}
+
+.nms-device-facts > .success::before { background: #27884a; }
+.nms-device-facts > .warning::before { background: #b87900; }
+.nms-device-facts > .danger::before { background: #c53b32; }
+.nms-device-facts > .muted::before { background: #9a9a9a; }
+.nms-device-facts > .success strong { color: #176b37; }
+.nms-device-facts > .warning strong { color: #8a5b00; }
+.nms-device-facts > .danger strong { color: #a72c25; }
+.nms-device-facts > .muted strong { color: #696969; }
+.nms-device-facts > div small {
+	color: #737373;
+	display: block;
+	font-size: 9px;
+	line-height: 1.35;
+	margin-top: 4px;
 }
 
 .nms-device-facts > div:last-child {
@@ -110,8 +137,15 @@
 }
 
 .nms-snmp-information dl > div {
+	border-left: 3px solid #9a9a9a;
+	border-radius: 4px;
 	min-width: 0;
+	padding: 7px 10px;
 }
+
+.nms-snmp-information dl > .success { background: #f3faf5; border-left-color: #27884a; }
+.nms-snmp-information dl > .warning { background: #fff8e8; border-left-color: #b87900; }
+.nms-snmp-information dl > .danger { background: #fff0ee; border-left-color: #c53b32; }
 
 .nms-snmp-information dl > .system {
 	grid-column: 1 / -1;

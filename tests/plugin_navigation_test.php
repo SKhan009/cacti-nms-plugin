@@ -55,14 +55,14 @@ foreach (array(0, 4, 1) as $status) {
 	nms_setup_registration();
 	verify_menu($hooks === $first, 'Registration must be repeatable without duplicates');
 	verify_menu($hooks['top_graph_header_tabs']['status'] === ($status === 1 ? 1 : 4), 'Disabled plugin accidentally activated');
-	verify_menu(count($realm) === 6 && in_array('graphs.php', $realm, true), 'Incomplete access realm');
+	verify_menu(count($realm) === 7 && in_array('graphs.php', $realm, true) && in_array('capabilities.php', $realm, true), 'Incomplete access realm');
 	$menu = array('Management' => array('host.php' => 'Devices'));
 	$menu_glyphs = array();
 	nms_config_arrays();
 	nms_config_arrays();
 	verify_menu(isset($menu['Management']['host.php']), 'Core menu overwritten');
 	verify_menu(isset($menu['NMS']) === ($status === 1), 'Incorrect disabled menu visibility');
-	if ($status === 1) verify_menu(count($menu['NMS']) === 6, 'Missing or duplicate sidebar link');
+	if ($status === 1) verify_menu(count($menu['NMS']) === 7, 'Missing or duplicate sidebar link');
 }
 foreach (array(false, true) as $allowed) {
 	foreach (array(4, 1) as $status) {

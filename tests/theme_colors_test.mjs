@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 const cssDir = new URL('../css/', import.meta.url);
-const semantic = /(?:\.nms-(?:form-message|config-error|saved|state\b|severity\b|ok\b|health-dot\b|association-state\b|live-status\b|device-glyph\b|summary-(?:total|open|critical|ack|resolved)\b|remove-map\b|delete-x\b|x-action\b|icon-action\b)|\.nms-sidebar-status\s*>\s*span|\.nms-topology-node[^{}]*\si\b|\.nms-map-label\.mapped|\.nms-color-select\s+i\b|\.nms-option-color-swatch\b|\.nms-search-select-trigger\.invalid|\.nms-query-actions\s+\.(?:remove|verbose))/;
+const semantic = /(?:\.nms-(?:form-message|config-error|saved|state\b|severity\b|ok\b|health-dot\b|association-state\b|live-status\b|device-glyph\b|summary-(?:total|open|critical|ack|resolved)\b|remove-map\b|delete-x\b|x-action\b|icon-action\b)|\.nms-sidebar-status\s*>\s*span|\.nms-topology-node[^{}]*\si\b|\.nms-map-label\.mapped|\.nms-color-select\s+i\b|\.nms-option-color-swatch\b|\.nms-search-select-trigger\.invalid|\.nms-query-actions\s+\.(?:remove|verbose)|\.nms-device-facts\s*>\s*\.(?:success|warning|danger|muted)|\.nms-snmp-information[^{}]*\.(?:success|warning|danger)|\.nms-capability[^{}]*\.(?:success|warning|danger))/;
 let rules = 0;
 const files = Object.fromEntries(readdirSync(cssDir).filter(n => n.endsWith('.css')).map(n => [n, readFileSync(new URL(n, cssDir), 'utf8')]));
 for (const [name, css] of Object.entries(files)) {
