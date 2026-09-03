@@ -75,6 +75,8 @@
   window.addEventListener('popstate', syncSection);
   history.replaceState(history.state, '', workspaceURL(location.href));
   function decorate() {
+   var listTable = main.querySelector('table.cactiTable th.tableSubHeaderCheckbox');
+   main.classList.toggle('nms-native-list', Boolean(listTable));
    // Move the original controls, not copies: Cacti keeps its selected rows,
    // submit handlers, CSRF fields and confirmation workflow in the same form.
    main.querySelectorAll('.actionsDropdown').forEach(function (actions) {
