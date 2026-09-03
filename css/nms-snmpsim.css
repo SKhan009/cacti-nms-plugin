@@ -71,17 +71,68 @@ body.nms-standalone .nms-import-table .nms-import-actions {
 	grid-template-columns: repeat(2, minmax(0, 1fr));
 	width: 100%;
 }
-body.nms-standalone .nms-import-table .nms-import-actions > .nms-row-link:first-child { grid-column: 1 / -1; }
+body.nms-standalone .nms-import-table th:last-child { width: 280px; }
 body.nms-standalone .nms-import-table .nms-import-actions form,
 body.nms-standalone .nms-import-table .nms-import-actions .nms-row-link { min-width: 0; width: 100%; }
 body.nms-standalone .nms-import-table .nms-import-actions .nms-row-link {
 	align-items: center;
 	display: flex;
-	font-size: 8px;
+	font-size: var(--nms-type-caption, 11px);
 	justify-content: center;
-	padding: 6px;
+	padding: 7px 8px;
 	white-space: nowrap;
 }
+body.nms-standalone .nms-import-table .nms-import-actions .nms-import-primary,
+body.nms-standalone .nms-import-table .nms-import-actions .nms-import-primary:hover {
+	background: #181818;
+	border-color: #181818;
+	color: #ffffff;
+}
+
+.nms-upload-trigger {
+	background: color-mix(in srgb, var(--nms-success) 12%, #fff);
+	border: 1px solid color-mix(in srgb, var(--nms-success) 28%, #fff);
+	border-radius: 6px;
+	color: var(--nms-success);
+	cursor: pointer;
+	flex-shrink: 0;
+	font: inherit;
+	font-size: var(--nms-type-body, 12px);
+	font-weight: 800;
+	padding: 9px 13px;
+}
+.nms-upload-trigger:hover { background: color-mix(in srgb, var(--nms-success) 18%, #fff); border-color: color-mix(in srgb, var(--nms-success) 38%, #fff); }
+.nms-upload-dialog {
+	background: #ffffff;
+	border: 0;
+	border-radius: 10px;
+	box-shadow: 0 22px 65px rgba(0, 0, 0, .28);
+	color: var(--nms-text);
+	max-height: min(88vh, 760px);
+	max-width: 940px;
+	padding: 0;
+	width: calc(100vw - 36px);
+}
+.nms-upload-dialog::backdrop { background: rgba(0, 0, 0, .42); }
+.nms-upload-dialog-head { border-radius: 10px 10px 0 0; }
+.nms-upload-dialog-close {
+	align-items: center;
+	background: rgba(255, 255, 255, .14);
+	border: 1px solid rgba(255, 255, 255, .28);
+	border-radius: 5px;
+	color: #ffffff;
+	cursor: pointer;
+	display: inline-flex;
+	font-size: 20px;
+	height: 32px;
+	justify-content: center;
+	line-height: 1;
+	width: 32px;
+}
+.nms-upload-dialog-body { position: relative; }
+.nms-download-sample { margin: 14px 16px 0; }
+.nms-upload-dialog .nms-import-workflow { margin-top: 14px; }
+.nms-upload-dialog .nms-device-form { padding-bottom: 18px; }
 
 @media (max-width: 700px) {
 	.nms-snmpsim-status-copy { align-items: flex-start; flex-direction: column; }
@@ -90,4 +141,6 @@ body.nms-standalone .nms-import-table .nms-import-actions .nms-row-link {
 	.nms-snmpsim-status-copy small { margin-left: 16px; }
 	.nms-snmpsim-details-popup { width: min(320px, calc(100vw - 52px)); }
 	body.nms-standalone .nms-import-workflow { grid-template-columns: 1fr; }
+	.nms-upload-trigger { width: 100%; }
+	.nms-upload-dialog { width: calc(100vw - 20px); }
 }
