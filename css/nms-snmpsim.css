@@ -1,0 +1,74 @@
+.nms-snmpsim-status {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	overflow: visible;
+	padding: 11px 14px;
+	position: relative;
+}
+
+.nms-snmpsim-status-copy {
+	align-items: center;
+	display: flex;
+	gap: 8px;
+	min-width: 0;
+}
+
+.nms-snmpsim-status-copy > span {
+	background: var(--nms-success);
+	border-radius: 50%;
+	box-shadow: 0 0 0 3px #e4f3e8;
+	flex: 0 0 8px;
+	height: 8px;
+	width: 8px;
+}
+
+.nms-snmpsim-status.warning .nms-snmpsim-status-copy > span {
+	background: var(--nms-amber);
+	box-shadow: 0 0 0 3px #fff1d7;
+}
+
+.nms-snmpsim-status-copy strong { font-size: 11px; }
+.nms-snmpsim-status-copy small { color: var(--nms-muted); font-size: 9px; }
+.nms-snmpsim-details { margin-left: 14px; position: relative; }
+
+.nms-snmpsim-details summary {
+	border: 1px solid #d7d7d7;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 10px;
+	font-weight: 750;
+	list-style: none;
+	padding: 7px 10px;
+}
+
+.nms-snmpsim-details summary::-webkit-details-marker { display: none; }
+.nms-snmpsim-details[open] summary { background: #181818; border-color: #181818; color: #fff; }
+
+.nms-snmpsim-details-popup {
+	background: rgba(24, 24, 24, .94);
+	border-radius: 8px;
+	box-shadow: 0 12px 30px rgba(0, 0, 0, .22);
+	color: #fff;
+	padding: 14px;
+	position: absolute;
+	right: 0;
+	top: calc(100% + 7px);
+	width: min(390px, calc(100vw - 80px));
+	z-index: 20;
+}
+
+.nms-snmpsim-details-popup > strong { display: block; font-size: 11px; margin-bottom: 8px; }
+.nms-snmpsim-details-popup p { font-size: 9px; line-height: 1.45; margin: 7px 0; overflow-wrap: anywhere; }
+.nms-snmpsim-details-popup p span { color: #bdbdbd; display: block; font-size: 8px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+.nms-snmpsim-details-popup small { color: #d0d0d0; display: block; font-size: 8px; line-height: 1.4; margin-top: 9px; }
+.nms-snmpsim-message { flex-basis: 100%; font-size: 10px; margin: 8px 0 0; }
+
+@media (max-width: 700px) {
+	.nms-snmpsim-status-copy { align-items: flex-start; flex-direction: column; }
+	.nms-snmpsim-status-copy > span { position: absolute; }
+	.nms-snmpsim-status-copy strong,
+	.nms-snmpsim-status-copy small { margin-left: 16px; }
+	.nms-snmpsim-details-popup { width: min(320px, calc(100vw - 52px)); }
+}

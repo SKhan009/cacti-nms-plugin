@@ -4,26 +4,40 @@
  * Render SNMP-record upload, prior import details, and explicit simulator-health/probe controls.
  * Record samples describe a simulator; live device readings still require successful SNMP polling.
  */
-?><?php $simulator_health = nms_snmpsim_health(); ?>
-<section class="nms-panel nms-form-panel">
-	<div class="nms-panel-head"><div><h2>SNMPSim configuration and health</h2><p>One server configuration for all newly imported simulated devices. No responder is launched by this page.</p></div></div>
-	<div class="nms-device-form">
-	<?php if ($simulator_health['error'] !== '') { ?>
-		<p><?php print nms_h($simulator_health['error']); ?></p>
-	<?php } else { $simulator_config = $simulator_health['config']; ?>
-		<?php if ($simulator_health['service_state'] === 'manual') { ?>
-		<p>Activation: administrator-managed. After each import, reload your SNMPSim responder using your operating system's service manager, then use Check live SNMP. NMS does not start services or queue automatic reloads in this mode.</p>
-		<?php } else { ?>
-		<p>Executable: <?php print nms_h($simulator_config['executable']); ?> — <?php print $simulator_health['executable'] ? 'accessible' : 'missing or not executable by the web user'; ?></p>
-		<p>Service: <?php print nms_h($simulator_config['service'] . ' — ' . $simulator_health['service_state']); ?></p>
-		<p>Activation queue: <?php print $simulator_health['reload_pending'] ? 'pending' : 'no pending marker'; ?>. Service status alone does not confirm SNMP; use Check live SNMP for a record below.</p>
-		<?php } ?>
-		<p>Data directory: <?php print nms_h($simulator_config['data_dir']); ?> — <?php print $simulator_health['data_writable'] ? 'writable' : 'missing or not writable'; ?></p>
-		<p>Client endpoint: <?php print nms_h($simulator_config['client_address'] . ':' . $simulator_config['port']); ?></p>
-		<?php if ($simulator_health['service_state'] === 'unavailable') { ?><p>Service status cannot be read by the web process. This does not mean SNMP is offline. Use Check live SNMP below; an administrator can verify the service on the server.</p><?php } ?>
-	<?php } ?>
-	<?php if ($simulator_message !== '') { ?><p role="status"><?php print nms_h($simulator_message); ?></p><?php } ?>
+?><?php
+$simulator_health = nms_snmpsim_health();
+$simulator_config = $simulator_health['error'] === '' ? $simulator_health['config'] : array();
+$simulator_ready = $simulator_health['error'] === ''
+	&& !empty($simulator_health['data_writable'])
+	&& ($simulator_health['service_state'] === 'manual' || !empty($simulator_health['executable']));
+?>
+<section class="nms-panel nms-snmpsim-status<?php print $simulator_ready ? ' ready' : ' warning'; ?>">
+	<div class="nms-snmpsim-status-copy">
+		<span aria-hidden="true"></span>
+		<strong><?php print $simulator_ready ? 'SNMPSim is working' : 'SNMPSim needs attention'; ?></strong>
+		<small>Use Check live SNMP below to verify an imported record.</small>
 	</div>
+	<details class="nms-snmpsim-details">
+		<summary>Details</summary>
+		<div class="nms-snmpsim-details-popup">
+			<strong>SNMPSim details</strong>
+			<?php if ($simulator_health['error'] !== '') { ?>
+				<p><?php print nms_h($simulator_health['error']); ?></p>
+			<?php } else { ?>
+				<?php if ($simulator_health['service_state'] === 'manual') { ?>
+				<p><span>Activation</span>Administrator-managed</p>
+				<?php } else { ?>
+				<p><span>Executable</span><?php print nms_h($simulator_config['executable']); ?> — <?php print $simulator_health['executable'] ? 'accessible' : 'missing or inaccessible'; ?></p>
+				<p><span>Service</span><?php print nms_h($simulator_config['service'] . ' — ' . $simulator_health['service_state']); ?></p>
+				<p><span>Activation queue</span><?php print $simulator_health['reload_pending'] ? 'pending' : 'no pending marker'; ?></p>
+				<?php } ?>
+				<p><span>Data directory</span><?php print nms_h($simulator_config['data_dir']); ?> — <?php print $simulator_health['data_writable'] ? 'writable' : 'missing or not writable'; ?></p>
+				<p><span>Client endpoint</span><?php print nms_h($simulator_config['client_address'] . ':' . $simulator_config['port']); ?></p>
+				<?php if ($simulator_health['service_state'] === 'unavailable') { ?><small>The web process cannot read service status. Verify individual records with Check live SNMP.</small><?php } ?>
+			<?php } ?>
+		</div>
+	</details>
+	<?php if ($simulator_message !== '') { ?><p class="nms-snmpsim-message" role="status"><?php print nms_h($simulator_message); ?></p><?php } ?>
 </section>
 <section class="nms-panel nms-form-panel">
 	<div class="nms-panel-head"><div><h2>Upload an SNMP record</h2><p>Deploy a simulator community and generate native Cacti templates for numeric OIDs.</p></div><a class="nms-panel-action" download href="<?php print nms_h(nms_asset_url('snmpsim/examples/nms-device-demo.snmprec')); ?>">Download sample file</a></div>

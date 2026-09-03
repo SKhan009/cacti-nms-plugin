@@ -53,7 +53,9 @@ try {
 	$categories = $imports = array();
 	$simulator_message = $nms_csrf_token = '';
 	ob_start(); include __DIR__ . '/../templates/devices/import.php'; $html = ob_get_clean();
-	portable_check(strpos($html, 'Activation: administrator-managed') !== false, 'Manual activation not explained');
+	portable_check(strpos($html, 'SNMPSim is working') !== false, 'Compact simulator status not rendered');
+	portable_check(strpos($html, 'nms-snmpsim-details-popup') !== false && strpos($html, 'Administrator-managed') !== false, 'Manual activation details not available');
+	portable_check(strpos($html, 'SNMPSim configuration and health') === false && strpos($html, 'One server configuration') === false, 'Legacy simulator health panel remains visible');
 	portable_check(strpos($html, 'Activation queue:') === false && strpos($html, 'Executable:') === false, 'Linux-only health rendered in manual mode');
 	try { nms_snmprec_deploy('portable-test', 'replacement'); throw new LogicException('Overwrote record'); }
 	catch (RuntimeException $e) { /* Existing records are protected. */ }

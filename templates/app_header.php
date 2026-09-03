@@ -16,6 +16,7 @@ if (!isset($nms_page_title)) $nms_page_title = 'NMS';
 	<title><?php print nms_h($nms_page_title); ?></title>
 	<link rel="stylesheet" href="<?php print nms_h(nms_asset_url('css/nms-v1.1.css')); ?>">
 	<link rel="stylesheet" href="<?php print nms_h(nms_asset_url('css/nms-tooltips.css')); ?>">
+	<link rel="stylesheet" href="<?php print nms_h(nms_asset_url('css/nms-snmpsim.css')); ?>">
 	<?php if (!empty($nms_extra_css)) { ?><link rel="stylesheet" href="<?php print nms_h(nms_asset_url($nms_extra_css)); ?>"><?php } ?>
 </head>
 <body class="nms-standalone">
