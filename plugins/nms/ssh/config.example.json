@@ -1,0 +1,8 @@
+{
+  "control_socket": "/run/nms-ssh/control.sock",
+  "store_dir": "/var/lib/nms-ssh/secrets",
+  "master_key": "/var/lib/nms-ssh/master.key",
+  "origin": "https://cacti.example.internal",
+  "poller_id": 1,
+  "guacd_listen": "127.0.0.1:4822"
+}

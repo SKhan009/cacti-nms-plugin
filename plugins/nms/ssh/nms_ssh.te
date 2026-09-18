@@ -1,0 +1,18 @@
+policy_module(nms_ssh, 1.0)
+
+gen_require(`
+    type httpd_t;
+    type unconfined_service_t;
+')
+
+type nms_ssh_runtime_t;
+files_pid_file(nms_ssh_runtime_t)
+type nms_ssh_port_t;
+corenet_port(nms_ssh_port_t)
+
+# DAC restricts the local socket to the selected web group; tickets authorize each request.
+allow httpd_t nms_ssh_runtime_t:dir { getattr search };
+allow httpd_t nms_ssh_runtime_t:sock_file { getattr write };
+allow httpd_t unconfined_service_t:unix_stream_socket connectto;
+# Only the designated loopback gateway port is permitted; do not enable broad httpd networking.
+allow httpd_t nms_ssh_port_t:tcp_socket name_connect;

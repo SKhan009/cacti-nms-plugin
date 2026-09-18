@@ -1,0 +1,8 @@
+[info]
+name = NMS
+version = 1.10.58
+longname = NMS Device, Fault, and Dynamic Topology Management
+author = NMS Project
+homepage = https://www.cacti.net/
+email = admin@localhost
+compat = 1.2.31

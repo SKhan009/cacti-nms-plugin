@@ -1,0 +1,36 @@
+[Unit]
+Description=NMS SSH credential broker and collection scheduler
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@SERVICE_USER@
+Group=@WEB_GROUP@
+ExecStart="@PHP_BINARY@" "@PLUGIN_PATH@/ssh/gateway.php"
+WorkingDirectory="@CACTI_PATH@"
+RuntimeDirectory=nms-ssh
+RuntimeDirectoryMode=0750
+StateDirectory=nms-ssh
+StateDirectoryMode=0700
+UMask=0077
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+TimeoutStopSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/run/nms-ssh /var/lib/nms-ssh "@CACTI_LOG@"
+TasksMax=64
+MemoryMax=512M
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target

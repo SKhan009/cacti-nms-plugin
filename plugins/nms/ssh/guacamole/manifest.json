@@ -1,0 +1,12 @@
+{
+  "ssh/assets/guacamole-1.6.0.js": "0ed08efab099807a60a09f7a85e3a9f790350e0648cf8662ab68fb7deb54d154",
+  "ssh/guacamole/strict-auth.patch": "d3b938e8db69ca8d7fc7b4870df475e25cd5be028243123c4b7a8b9b2be1fe83",
+  "ssh/composer.lock": "24bdc434350809180eed8a39334e2f9f1b500906b5b69d8acce84cd8f7642755",
+  "upstream": {
+    "version": "1.6.0",
+    "source": "https://downloads.apache.org/guacamole/1.6.0/source/",
+    "server_sha256": "8bc45675da96d7b6f39728160181e3d4ff3c08f460f6d26de5805b642bf13f2b",
+    "client_sha256": "81f9fd5a7b4377fb0ee295d0d4fec92e9667f2aafaa3d0ed8937f535deabdee4",
+    "client_build": "common/license.js followed by sorted common/modules/*.js from upstream source"
+  }
+}

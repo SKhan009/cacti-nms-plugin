@@ -1,0 +1,52 @@
+--- a/src/common-ssh/ssh.c
++++ b/src/common-ssh/ssh.c
+@@ -305,9 +305,9 @@
+ 
+     /* If auth list is NULL, then authentication has succeeded with NONE */
+     if (user_authlist == NULL) {
+-        guac_client_log(client, GUAC_LOG_DEBUG,
+-            "SSH NONE authentication succeeded.");
+-        return 0;
++        guac_client_abort(client, GUAC_PROTOCOL_STATUS_CLIENT_UNAUTHORIZED,
++            "NMS requires explicit password or key authentication.");
++        return 1;
+     }
+ 
+     guac_client_log(client, GUAC_LOG_DEBUG,
+@@ -375,7 +375,7 @@
+         }
+ 
+         /* Check if keyboard-interactive auth is supported on the server */
+-        if (strstr(user_authlist, "keyboard-interactive") != NULL) {
++        if (0) { /* NMS: never switch authentication methods. */
+ 
+             /* Attempt keyboard-interactive auth using provided password */
+             if (libssh2_userauth_keyboard_interactive(session, user->username,
+@@ -450,6 +450,27 @@
+         libssh2_session_method_pref(session, LIBSSH2_METHOD_CRYPT_SC, FIPS_COMPLIANT_CIPHERS);
+     }
+ 
++    /* NMS: explicit algorithms only; no weakened negotiation fallback. */
++    if (libssh2_session_method_pref(session, LIBSSH2_METHOD_KEX,
++            "curve25519-sha256,ecdh-sha2-nistp256,diffie-hellman-group14-sha256")
++        || libssh2_session_method_pref(session, LIBSSH2_METHOD_HOSTKEY,
++            "ssh-ed25519,ecdsa-sha2-nistp256,rsa-sha2-512,rsa-sha2-256")
++        || libssh2_session_method_pref(session, LIBSSH2_METHOD_CRYPT_CS,
++            "aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes128-ctr")
++        || libssh2_session_method_pref(session, LIBSSH2_METHOD_CRYPT_SC,
++            "aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes128-ctr")
++        || libssh2_session_method_pref(session, LIBSSH2_METHOD_MAC_CS,
++            "hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha2-256")
++        || libssh2_session_method_pref(session, LIBSSH2_METHOD_MAC_SC,
++            "hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha2-256")) {
++        guac_client_abort(client, GUAC_PROTOCOL_STATUS_SERVER_ERROR,
++                "NMS SSH algorithm policy is unavailable.");
++        libssh2_session_free(session);
++        guac_mem_free(common_session);
++        close(fd);
++        return NULL;
++    }
++
+     /* Perform handshake */
+     if (libssh2_session_handshake(session, fd)) {
+         guac_client_abort(client, GUAC_PROTOCOL_STATUS_UPSTREAM_ERROR,

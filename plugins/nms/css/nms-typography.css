@@ -1,0 +1,141 @@
+/*
+ * Shared NMS typography scale.
+ *
+ * This stylesheet is loaded after every page-specific stylesheet so the same
+ * UI role has the same readable size on dashboards, forms, graph builders,
+ * configuration screens, and topology views.
+ */
+:root {
+	--nms-type-caption: 11px;
+	--nms-type-body: 12px;
+	--nms-type-nav: 13px;
+	--nms-type-section: 14px;
+	--nms-type-panel: 18px;
+}
+
+body.nms-standalone {
+	font-size: var(--nms-type-body);
+}
+
+/* Navigation and page tabs */
+body.nms-standalone .nms-primary-nav a,
+body.nms-standalone .nms-page-tabs a,
+body.nms-standalone .nms-config-tabs a {
+	font-size: var(--nms-type-nav);
+}
+
+body.nms-standalone .nms-sidebar-copy strong,
+body.nms-standalone .nms-sidebar-status .nms-sidebar-copy strong,
+body.nms-standalone .nms-backend-button {
+	font-size: var(--nms-type-body);
+}
+
+body.nms-standalone .nms-sidebar-label,
+body.nms-standalone .nms-sidebar-copy small,
+body.nms-standalone .nms-sidebar-status .nms-sidebar-copy small {
+	font-size: var(--nms-type-caption);
+}
+
+/* Headings retain hierarchy while using the same sizes on every template. */
+body.nms-standalone .nms-heading h1 {
+	font-size: 30px;
+}
+
+body.nms-standalone .nms-panel-head h2,
+body.nms-standalone .nms-config-bar h2,
+body.nms-standalone .nms-configuration-required h2 {
+	font-size: var(--nms-type-panel);
+}
+
+body.nms-standalone .nms-device-form legend,
+body.nms-standalone .nms-graph-form-section h3,
+body.nms-standalone .nms-topology-panel-head h2,
+body.nms-standalone .nms-root-config h2,
+body.nms-standalone .nms-detail-title h2 {
+	font-size: var(--nms-type-section);
+}
+
+/* Body copy, labels, actions, inputs, and list rows */
+body.nms-standalone :is(button, input, select, textarea),
+body.nms-standalone :is(.nms-panel-action, .nms-row-link, .nms-save-button),
+body.nms-standalone :is(.nms-state-links a, .nms-form-actions a),
+body.nms-standalone :is(.nms-device-form label > span, .nms-file-field > span),
+body.nms-standalone :is(.nms-config-bar label, .nms-add-rule > label),
+body.nms-standalone :is(.nms-site-picker label, .nms-parent-select),
+body.nms-standalone :is(.nms-association-row, .nms-query-actions),
+body.nms-standalone :is(.nms-inventory-copy strong, .nms-topology-node strong),
+body.nms-standalone :is(.nms-device-detail dt, .nms-device-detail dd),
+body.nms-standalone :is(.nms-detail-action, .nms-detail-secondary, .nms-remove-map),
+body.nms-standalone :is(.nms-rule-note strong, .nms-add-rule-title strong),
+body.nms-standalone :is(.nms-popup-categories strong, .nms-popup-categories span),
+body.nms-standalone .nms-table td,
+body.nms-standalone .nms-table td > strong,
+body.nms-standalone .nms-incident strong {
+	font-size: var(--nms-type-body);
+}
+
+/* Supporting text and compact metadata use one minimum readable size. */
+body.nms-standalone small,
+body.nms-standalone .nms-eyebrow,
+body.nms-standalone .nms-panel-head p,
+body.nms-standalone .nms-heading p:not(.nms-eyebrow),
+body.nms-standalone .nms-summary span,
+body.nms-standalone .nms-summary small,
+body.nms-standalone .nms-health small,
+body.nms-standalone .nms-import-explainer span,
+body.nms-standalone .nms-rule-note span,
+body.nms-standalone .nms-add-rule-title small,
+body.nms-standalone .nms-compact-rule small,
+body.nms-standalone .nms-category-strip span,
+body.nms-standalone .nms-category-strip strong,
+body.nms-standalone .nms-popup-head small,
+body.nms-standalone .nms-topology-summary span,
+body.nms-standalone .nms-root-config p,
+body.nms-standalone .nms-topology-panel-head > span,
+body.nms-standalone .nms-map-head > div > span,
+body.nms-standalone .nms-topology-panel-head p,
+body.nms-standalone .nms-inventory-copy small,
+body.nms-standalone .nms-topology-node small,
+body.nms-standalone .nms-map-label,
+body.nms-standalone .nms-drop-guide,
+body.nms-standalone .nms-detail-title small,
+body.nms-standalone .nms-fixed-note,
+body.nms-standalone .nms-pagination-summary,
+body.nms-standalone .nms-pagination-size,
+body.nms-standalone .nms-page-button,
+body.nms-standalone .nms-page-gap {
+	font-size: var(--nms-type-caption);
+}
+
+/* Table headings, state labels, and other compact badges share one scale. */
+body.nms-standalone .nms-table th,
+body.nms-standalone .nms-rule-table-head,
+body.nms-standalone :is(.nms-source, .nms-state, .nms-ok, .nms-live-status),
+body.nms-standalone .nms-device-glyph,
+body.nms-standalone .nms-zoom-controls output,
+body.nms-standalone .nms-map-head .nms-zoom-controls button.fit {
+	font-size: var(--nms-type-caption);
+}
+
+/* Preserve prominent values and help popovers. */
+body.nms-standalone .nms-summary strong {
+	font-size: 29px;
+}
+
+body.nms-standalone .nms-topology-summary strong {
+	font-size: 16px;
+}
+
+body.nms-standalone .nms-tooltip {
+	font-size: 13px;
+}
+
+body.nms-standalone .nms-tooltip strong {
+	font-size: var(--nms-type-caption);
+}
+
+@media (max-width: 700px) {
+	body.nms-standalone .nms-heading h1 {
+		font-size: 26px;
+	}
+}

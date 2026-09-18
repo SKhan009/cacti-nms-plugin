@@ -1,0 +1,168 @@
+/* Physical planning shares the monochrome shell; only operational states use color. */
+.nms-topology-config .nms-panel { margin: 16px 0; }
+.nms-config-form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-items:start; gap: 16px 18px; padding: 18px; }
+.nms-config-picker { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)) auto; align-items:end; gap:12px 16px; box-sizing:border-box; margin:16px 0; padding:16px; border:1px solid #dddddd; border-radius:8px; background:#ffffff; }
+.nms-config-picker label { min-width:0; }
+.nms-topology-config label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; min-width: 0; }
+.nms-topology-config :is(input:not([type=hidden]), select) { width: 100%; min-width: 0; box-sizing: border-box; height: 40px; border: 1px solid #d7d7d7; border-radius: 6px; padding: 8px 12px; background-color: #ffffff; color: #252525; font: inherit; }
+.nms-topology-config select { padding-right: 36px; }
+.nms-topology-config small { font-weight: 400; color: #666666; }
+.nms-topology-config :is(button,.nms-button) { display: inline-flex; align-items: center; min-height: 38px; padding: 8px 12px; border: 1px solid #181818; border-radius: 6px; background: #181818; color: #ffffff; font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; }
+.nms-config-actions { grid-column:1/-1; display:flex; justify-content:flex-end; padding-top:14px; border-top:1px solid #eeeeee; }
+.nms-config-notice,.nms-config-error { padding: 14px; margin: 12px 0; border-radius: 6px; }
+.nms-config-notice { background: #e6f4eb; color: #176535; }
+.nms-config-error { background: #fff0ee; color: #a92720; }
+.nms-topology-config .nms-table { width: 100%; table-layout: fixed; }
+.nms-topology-config .nms-table :is(td,th) { overflow-wrap:anywhere; padding:8px 12px; line-height:1.4; vertical-align:middle; }
+.nms-topology-config .nms-table th { font-size:11px; }
+.nms-topology-config .nms-table td form { margin:0; }
+.nms-topology-config .nms-table :is(input:not([type=hidden]),select) { height:36px; }
+.nms-port-profile-table :is(th,td):last-child,
+.nms-rack-capacity-table :is(th,td):last-child { width:92px; text-align:right; }
+.nms-rack-capacity-table :is(th,td):first-child { width:72px; }
+.nms-rack-capacity-table :is(th,td):nth-child(3) { width:120px; }
+.nms-device-capacity-table :is(th,td):nth-child(1) { width:22%; }
+.nms-device-capacity-table :is(th,td):nth-child(2) { width:22%; }
+.nms-device-capacity-table :is(th,td):nth-child(3) { width:22%; }
+.nms-device-capacity-table :is(th,td):nth-child(4) { width:26%; }
+.nms-device-capacity-table :is(th,td):last-child { width:8%; min-width:76px; text-align:right; }
+.nms-rack-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 18px; padding: 20px; }
+.nms-rack { border: 2px solid #333333; border-radius: 6px; min-width: 0; overflow: hidden; }
+.nms-rack h3 { margin: 0; padding: 12px; background: #eeeeee; font-size: 13px; }
+.nms-rack-units { display: grid; grid-template-columns: 38px minmax(0,1fr); gap: 0; padding: 4px; background: #f5f5f5; }
+.nms-unit-number { grid-column: 1; font-size: 11px; text-align: center; padding-top: 6px; color: #666666; }
+.nms-unit-empty { grid-column: 2; border: 1px solid #dddddd; background: #ffffff; }
+.nms-rack-device { grid-column: 2; z-index: 1; margin: 1px; padding: 4px 6px; display: flex; align-items: center; justify-content: space-between; gap: 6px; border-left: 4px solid #777777; background: #eeeeee; min-width: 0; font-size: 11px; }
+.nms-rack-device span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nms-rack-device.up { border-color: #208747; background: #e6f4eb; }
+.nms-rack-device.down { border-color: #ca3027; background: #fff0ee; }
+@media(max-width:900px) { .nms-config-picker { grid-template-columns:repeat(2,minmax(0,1fr)); } .nms-config-picker>button { grid-column:1/-1; justify-self:end; } }
+@media(max-width:700px) { .nms-config-picker,.nms-config-form { grid-template-columns:minmax(0,1fr); padding:12px; } .nms-config-picker>button,.nms-config-actions { grid-column:1; width:100%; justify-content:center; } .nms-rack-grid { grid-template-columns:minmax(0,1fr); } }
+
+.nms-discovery-tabs {display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid #ddd;margin:16px 0;}
+.nms-discovery-tabs a {padding:12px 18px;color:#333;text-decoration:none;border-bottom:3px solid transparent;font-weight:600;}
+.nms-discovery-tabs a[aria-current=page] {border-bottom-color:#181818;background:#eee;}
+.nms-discovery-tabs a:focus-visible {outline:2px solid #326f4b;outline-offset:2px;}
+
+.nms-config-picker.nms-live-picker{grid-template-columns:minmax(0,1fr) auto;}
+.nms-live-flow{padding:16px 32px 0 42px;line-height:1.7;}
+.nms-live-flow li{margin-bottom:8px;}
+.nms-live-help{padding:0 20px 16px;color:#555;}
+
+.nms-hybrid{border:1px solid #d8dce1;border-radius:10px;background:white;overflow:hidden;}
+.nms-canvas-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px;border-bottom:1px solid #ddd;}
+.nms-canvas-toolbar label{min-width:220px;margin-right:auto;}
+#nms-canvas-notice{padding:10px 16px;margin:0;color:#465261;font-size:13px;}
+.nms-canvas-viewport{height:65vh;min-height:420px;overflow:auto;background:#fff;}
+#nms-canvas-svg{width:100%;height:100%;min-width:0;touch-action:none;user-select:none;}
+.nms-canvas-node{cursor:grab;font:14px system-ui;}.nms-canvas-node:active{cursor:grabbing;}.nms-canvas-node:focus{outline:none;}.nms-canvas-node:focus rect{stroke-width:4;}
+.nms-node-address,.nms-edge-label{font:11px system-ui;fill:#52606c;}.nms-edge-label{paint-order:stroke;stroke:#fff;stroke-width:4px;fill:#344251;}
+.nms-canvas-legend{display:flex;gap:18px;flex-wrap:wrap;padding:14px;font-size:12px;border-top:1px solid #ddd;}
+.nms-canvas-legend .up{color:#228848}.nms-canvas-legend .down{color:#cf3535}.nms-canvas-legend .recovering{color:#a87600}.nms-canvas-legend .unknown{color:#7d8790}
+.nms-canvas-workspace{display:grid;grid-template-columns:230px minmax(0,1fr)}
+.nms-device-palette{padding:16px;border-right:1px solid #dce2e8;max-height:65vh;overflow:auto;background:#fff}
+.nms-device-palette h3{margin:0 0 12px}.nms-device-palette input{width:100%;box-sizing:border-box;margin-bottom:12px}
+.nms-device-palette #nms-device-list button{display:block;width:100%;text-align:left;margin:0 0 8px;padding:10px;background:#f6f8fa;color:#243342;border:1px solid #dde3e9;border-radius:4px;cursor:grab;white-space:normal}
+#nms-port-details{padding:16px 22px;border-top:1px solid #dde3e9;background:#fff}#nms-port-details h3{margin:0 0 8px}#nms-port-details p{margin:6px 0;overflow-wrap:anywhere}
+@media(max-width:850px){.nms-canvas-workspace{grid-template-columns:180px minmax(0,1fr)}}
+
+.nms-canvas-toolbar .nms-canvas-controls{display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0;}
+
+/* Hardware-inspired topology, backed only by discovered connection evidence. */
+.nms-hybrid .nms-canvas-viewport{background:#fff;overflow:hidden;}
+.nms-hybrid .nms-device-name{font:600 12px system-ui;fill:#172b42;paint-order:stroke;stroke:#fff;stroke-width:3px;}
+.nms-device-chassis{filter:drop-shadow(0 3px 3px #0f172a18);}
+.nms-topology-wire{stroke-linejoin:round;stroke-linecap:round;cursor:pointer;}
+.nms-topology-wire:hover{stroke-width:4;}
+.nms-observed-port:hover,.nms-observed-port:focus{fill:#2563eb;stroke:#172b42;stroke-width:2;outline:none;}
+.nms-hybrid .nms-device-palette{background:#fff;}
+.nms-hybrid .nms-device-palette #nms-device-list button{background:#fff;border-radius:7px;font-size:12px;}
+.nms-hybrid .nms-device-palette #nms-device-list button:hover{background:#f0f7ff;}
+@media(max-width:600px){.nms-canvas-workspace{grid-template-columns:1fr}.nms-device-palette{max-height:180px;border-right:0;border-bottom:1px solid #e2e8f0}.nms-canvas-viewport{min-height:420px}.nms-canvas-toolbar{gap:6px}.nms-canvas-controls{margin-left:auto}}
+
+/* Discovery lists and popup configuration match the NMS tabbed workspace. */
+.nms-preset-tabs { display:flex; flex-wrap:wrap; gap:4px; background:#e9e9e9; padding:5px; border:1px solid #ddd; border-radius:9px; margin:20px 0; width:fit-content; }
+.nms-preset-tabs a { padding:12px 18px; color:#555; text-decoration:none; font-weight:600; border-radius:7px; }
+.nms-preset-tabs a.active { background:#fff; color:#171717; box-shadow:0 1px 4px #0001; }
+.nms-config-dialog { box-sizing:border-box; width:min(900px,94vw); max-height:90vh; overflow:auto; padding:0; border:1px solid #d9dce0; border-radius:12px; background:#fff; color:#222; box-shadow:0 18px 60px #0004; }
+.nms-config-dialog::backdrop { background:rgb(0 0 0 / 45%); }
+.nms-config-dialog .nms-panel-head { display:flex; align-items:center; justify-content:space-between; gap:16px; background:#191919; color:white; padding:20px 24px; }
+.nms-config-dialog h2 { margin:0; font-size:21px; }
+.nms-config-dialog .nms-panel-head button { border:0; background:transparent; color:white; font-size:28px; cursor:pointer; }
+.nms-config-dialog .nms-config-form { padding:24px; }
+.nms-config-dialog .nms-config-form label { min-width:0; }
+.nms-config-dialog .nms-config-form input, .nms-config-dialog select { box-sizing:border-box; max-width:100%; }
+.nms-config-error,.nms-config-note { margin:20px 24px; overflow-wrap:anywhere; }
+.nms-config-error { color:#a82020; }
+.nms-topology-config .nms-table { width:100%; min-width:0; table-layout:fixed; }
+.nms-topology-config .nms-table td,.nms-topology-config .nms-table th { white-space:normal; overflow-wrap:anywhere; }
+@media(max-width:650px){.nms-config-dialog .nms-config-form { grid-template-columns:1fr; padding:16px; }.nms-preset-tabs a { padding:10px; }}
+
+.nms-topology-config .nms-panel-head .nms-panel-action { display:inline-flex; padding:10px 16px; border:1px solid #d4d8dc; border-radius:7px; background:#fff; color:#222; text-decoration:none; font:inherit; font-weight:600; cursor:pointer; }
+.nms-config-dialog .nms-panel-head [data-nms-config-close] { padding:0; width:32px; height:32px; border:0; border-radius:4px; }
+.nms-topology-config .nms-config-dialog .nms-config-form [data-nms-config-close] { background:#fff; color:#111; border:1px solid #111; }
+
+/* Discovery preset dialog: keep fields, help and actions aligned as one form. */
+.nms-config-dialog .nms-panel-head [data-nms-config-close]{align-items:center;background:transparent;border:2px solid #fff;box-sizing:border-box;color:#fff;display:inline-flex;font-size:32px;height:42px;justify-content:center;line-height:1;padding:0;width:42px}
+.nms-config-dialog .nms-panel-head [data-nms-config-close]:hover{background:#fff;color:#191919}
+.nms-config-dialog .nms-discovery-preset-form{display:grid;gap:22px;grid-template-columns:minmax(0,1fr);padding:28px 34px}
+.nms-discovery-preset-intro{align-items:start;display:grid;gap:26px;grid-template-columns:minmax(0,1fr) minmax(260px,.95fr)}
+.nms-discovery-preset-intro>label,.nms-discovery-preset-settings label{display:grid;gap:8px;font-weight:700}
+.nms-discovery-methods{border:0;margin:0;min-inline-size:0;padding:0}
+.nms-discovery-methods legend{font-weight:700;margin:0 0 11px;padding:0}
+.nms-config-dialog .nms-discovery-methods label{align-items:center;display:flex;font-weight:600;gap:9px;margin:0 0 9px}
+.nms-config-dialog .nms-discovery-methods input[type=checkbox]{height:18px;margin:0;min-height:18px;min-width:18px;padding:0;width:18px}
+.nms-discovery-preset-settings{display:grid;gap:18px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.nms-discovery-preset-help{border-top:1px solid #e1e4e8;color:#4d5560;display:grid;gap:12px;grid-template-columns:minmax(0,.75fr) minmax(0,1.25fr);padding-top:17px}
+.nms-discovery-preset-help p{line-height:1.45;margin:0}
+.nms-discovery-preset-help strong{color:#171717}
+.nms-discovery-preset-actions{display:flex;gap:14px;justify-content:flex-end}
+.nms-discovery-preset-actions button{box-sizing:border-box;min-height:48px;padding:0 22px}
+.nms-discovery-preset-actions button[type=submit]{margin-right:auto}
+.nms-config-dialog .nms-diagnostic-profile-form{display:grid;gap:22px;grid-template-columns:minmax(0,1fr);padding:28px 34px}
+.nms-diagnostic-profile-form>label,.nms-diagnostic-limits label{display:grid;gap:8px;font-weight:700}
+.nms-diagnostic-limits{display:grid;gap:18px;grid-template-columns:repeat(3,minmax(0,1fr))}
+.nms-diagnostic-profile-form .nms-discovery-methods{display:grid;gap:0;grid-template-columns:repeat(3,minmax(0,1fr))}
+.nms-diagnostic-profile-form .nms-discovery-methods legend{grid-column:1/-1}
+@media(max-width:650px){.nms-config-dialog .nms-diagnostic-profile-form{padding:20px}.nms-diagnostic-limits,.nms-diagnostic-profile-form .nms-discovery-methods{grid-template-columns:1fr}}
+.nms-diagnostic-readiness-grid{display:grid;gap:14px;grid-template-columns:repeat(3,minmax(0,1fr));padding:20px}
+.nms-diagnostic-readiness-grid article{border:1px solid #d9dce0;border-left:4px solid #7d8790;border-radius:7px;padding:15px}
+.nms-diagnostic-readiness-grid article.ready{border-left-color:#228848;background:#f5fbf7}
+.nms-diagnostic-readiness-grid article.unavailable{border-left-color:#b7791f;background:#fffaf0}
+.nms-diagnostic-readiness-grid h3{font-size:16px;margin:0 0 7px}
+.nms-diagnostic-readiness-grid strong{display:block;font-size:13px;color:#246b3a}
+.nms-diagnostic-readiness-grid .unavailable strong{color:#8a5b00}
+.nms-diagnostic-readiness-grid p{margin:10px 0 6px}
+.nms-diagnostic-readiness-grid small{color:#58636d;line-height:1.35}
+@media(max-width:900px){.nms-diagnostic-readiness-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){.nms-diagnostic-readiness-grid{grid-template-columns:1fr}}
+@media(max-width:650px){.nms-config-dialog .nms-discovery-preset-form{padding:20px}.nms-discovery-preset-intro,.nms-discovery-preset-settings,.nms-discovery-preset-help{grid-template-columns:1fr}.nms-discovery-preset-actions{flex-direction:column}.nms-discovery-preset-actions button[type=submit]{margin-right:0}}
+
+.nms-topology-popup{position:fixed;z-index:100000;pointer-events:none;width:300px;max-width:calc(100vw - 24px);box-sizing:border-box;padding:16px;background:#fff;color:#172b42;border:1px solid #94a3b8;border-radius:9px;box-shadow:0 8px 24px #0f172a33;font:13px system-ui;overflow-wrap:anywhere;}
+.nms-topology-popup[hidden]{display:none}.nms-topology-popup strong{display:block;font-size:15px;padding-bottom:10px;margin-bottom:8px;border-bottom:1px solid #e2e8f0}.nms-topology-popup div{display:flex;gap:12px;justify-content:space-between;margin:7px 0}.nms-topology-popup span{color:#52606c;flex-shrink:0}.nms-topology-popup b{text-align:right;font-weight:500}
+
+.nms-core-fixed,.nms-core-fixed:active{cursor:default}.nms-hybrid #nms-port-details[hidden],.nms-hybrid #nms-canvas-notice[hidden]{display:none}.nms-topology-popup{max-height:70vh;overflow:auto;pointer-events:none}.nms-topology-popup:hover{display:block}
+/* Keep individual sockets legible when the whole chassis receives keyboard focus. */
+.nms-canvas-node:focus rect{stroke-width:1.5}.nms-canvas-node:focus .nms-device-chassis{filter:drop-shadow(0 0 3px #2563eb)}
+
+.nms-catalog-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding:24px}.nms-catalog-form h3{grid-column:1/-1}.nms-catalog-form label{display:grid;gap:8px}.nms-catalog-form input,.nms-catalog-form select{width:100%;min-height:40px;box-sizing:border-box}.nms-catalog-scroll{overflow-x:auto}.nms-catalog-scroll table{width:100%;border-collapse:collapse}.nms-catalog-scroll td,.nms-catalog-scroll th{padding:14px;text-align:left;border-bottom:1px solid #ddd;vertical-align:top;overflow-wrap:anywhere}.nms-catalog-scroll form{margin-top:8px}@media(max-width:650px){.nms-catalog-form{grid-template-columns:1fr}}
+
+.nms-topology-config .nms-catalog-scroll td{vertical-align:top}.nms-catalog-scroll details{max-width:340px}.nms-catalog-scroll summary{cursor:pointer;font-weight:600}.nms-catalog-form button,.nms-catalog-scroll button{border:1px solid #171717;background:#fff;color:#171717;border-radius:5px;padding:8px 12px}
+/* Supplied standalone switch: metal rack, SFP sockets and LEDs. */
+.nms-reference-rack{filter:drop-shadow(0 20px 25px rgba(0,0,0,.5));}
+.nms-observed-port:hover,.nms-observed-port:focus{stroke:#cbd5e1;stroke-width:1.5px;filter:brightness(1.5);cursor:crosshair;}
+.nms-rack-led{animation:nms-rack-glow 2s infinite alternate;}
+@keyframes nms-rack-glow{from{filter:brightness(1) drop-shadow(0 0 2px currentColor);}to{filter:brightness(1.3) drop-shadow(0 0 5px currentColor);}}
+@media(prefers-reduced-motion:reduce){.nms-rack-led{animation:none;}}
+.nms-appearance-list .nms-panel-head{display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.nms-topology-config .nms-catalog-button{display:inline-flex;align-items:center;justify-content:center;padding:9px 15px;min-height:40px;background:#fff!important;border:1px solid #171717!important;border-radius:7px;color:#171717!important;text-decoration:none;font-size:14px;font-weight:600;white-space:nowrap;}
+.nms-catalog-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}.nms-catalog-actions form{margin:0;}
+.nms-preset-tabs a.active{background:white;border-radius:7px;box-shadow:0 1px 4px #0001;color:#171717;}
+.nms-icon-preview{display:inline-flex;vertical-align:middle;margin-right:10px;}.nms-icon-preview svg{width:36px;height:36px;}
+.nms-color-swatch{display:inline-block;width:18px;height:18px;border:1px solid #bbb;border-radius:4px;margin-right:8px;vertical-align:middle;}
+.nms-appearance-dialog{padding:0;width:min(800px,calc(100vw - 32px));max-height:85vh;overflow:auto;border:1px solid #ccc;border-radius:12px;background:white;color:#171717;box-shadow:0 20px 60px #0004;}
+.nms-appearance-dialog::backdrop{background:#0007;}.nms-appearance-dialog .nms-panel-head{display:flex;align-items:center;justify-content:space-between;background:#171717;color:white;padding:18px 24px;}.nms-appearance-dialog h2{font-size:20px;margin:0;}
+.nms-appearance-dialog .nms-catalog-form{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:24px;}.nms-catalog-form label{min-width:0;}.nms-catalog-form small{display:block;color:#666;margin-top:8px;}
+.nms-icon-picker{grid-column:1/-1;border:0;padding:0;min-width:0;}.nms-icon-picker legend{font-weight:700;}.nms-icon-picker p{margin:8px 0 16px;color:#666;}.nms-icon-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;}.nms-icon-grid label{position:relative;cursor:pointer;}.nms-icon-grid input{position:absolute;opacity:0;width:1px;height:1px;}.nms-icon-grid span{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;border:1px solid #d5d5d5;border-radius:8px;padding:12px 5px;min-height:95px;background:#fff;}.nms-icon-grid svg{width:38px;height:38px;}.nms-icon-grid b{font-size:12px;text-align:center;}.nms-icon-grid input:checked+span{border:2px solid #171717;background:#f1f5f9;padding:11px 4px;}.nms-icon-grid input:focus-visible+span{outline:3px solid #2563eb;outline-offset:2px;}
+.nms-catalog-footer{grid-column:1/-1;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid #ddd;padding-top:18px;}.nms-catalog-footer button{width:auto!important;}.nms-catalog-error{margin:20px 24px;padding:12px;color:#a11;background:#fff1f1;border-radius:6px;}
+@media(max-width:600px){.nms-appearance-dialog .nms-catalog-form{grid-template-columns:1fr;}.nms-icon-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
+.nms-appearance-dialog .nms-panel-head{position:sticky;top:0;z-index:2;}.nms-appearance-dialog .nms-catalog-footer{position:sticky;bottom:-24px;background:white;padding-bottom:16px;z-index:1;}

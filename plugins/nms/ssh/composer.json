@@ -1,0 +1,31 @@
+{
+    "name": "nms/ssh-backend",
+    "description": "Single SSH backend for the Cacti NMS plugin",
+    "type": "project",
+    "license": "GPL-2.0-only",
+    "require": {
+        "php": ">=8.0",
+        "ext-openssl": "*",
+        "ext-json": "*",
+        "phpseclib/phpseclib": "3.0.57",
+        "react/child-process": "^0.6",
+        "ext-sockets": "*",
+        "react/event-loop": "1.6.0",
+        "react/socket": "1.17.0"
+    },
+    "config": {
+        "platform": {
+            "php": "8.0.30"
+        },
+        "sort-packages": true,
+        "allow-plugins": false
+    },
+    "scripts": {
+        "post-install-cmd": "@php patch-dependencies.php",
+        "post-update-cmd": "@php patch-dependencies.php"
+    },
+    "suggest": {
+        "ext-posix": "Required for Linux and macOS service identities",
+        "ext-pcntl": "Required for Linux and macOS signal deadlines; Windows uses gateway supervision"
+    }
+}

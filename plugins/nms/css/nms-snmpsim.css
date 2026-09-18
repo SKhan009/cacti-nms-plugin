@@ -1,0 +1,183 @@
+.nms-snmpsim-status {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 12px 20px;
+	overflow: visible;
+	padding: 11px 14px;
+	position: relative;
+}
+
+.nms-snmpsim-status-copy {
+	flex: 1 1 320px;
+	flex-wrap: wrap;
+	align-items: center;
+	display: flex;
+	gap: 8px;
+	min-width: 0;
+}
+
+.nms-snmpsim-status-copy > span {
+	background: var(--nms-success);
+	border-radius: 50%;
+	box-shadow: 0 0 0 3px #e4f3e8;
+	flex: 0 0 8px;
+	height: 8px;
+	width: 8px;
+}
+
+.nms-snmpsim-status.warning .nms-snmpsim-status-copy > span {
+	background: var(--nms-amber);
+	box-shadow: 0 0 0 3px #fff1d7;
+}
+.nms-snmpsim-status.offline .nms-snmpsim-status-copy > span { background: #c93434; box-shadow: 0 0 0 3px #fce7e7; }
+
+.nms-snmpsim-status-copy strong { font-size: 11px; }
+.nms-snmpsim-status-copy small { color: var(--nms-muted); font-size: 9px; }
+.nms-snmpsim-details { margin: 0; position: relative; }
+
+body.nms-standalone .nms-snmpsim-toolbar { display: flex; align-items: flex-start; gap: 8px; margin-left: auto; max-width: 100%; }
+body.nms-standalone .nms-snmpsim-toolbar .nms-simulator-controls { display: grid; grid-template-columns: repeat(3, auto); gap: 6px 8px; width: auto; }
+body.nms-standalone .nms-snmpsim-toolbar .nms-simulator-controls small { grid-column: 1 / -1; text-align: right; overflow-wrap: anywhere; }
+body.nms-standalone .nms-snmpsim-toolbar button,
+body.nms-standalone .nms-snmpsim-toolbar summary { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; height: 36px; margin: 0; padding: 0 12px; font-size: 12px; font-weight: 700; line-height: 1; white-space: nowrap; }
+@media (max-width: 480px) {
+ body.nms-standalone .nms-snmpsim-toolbar { margin-left: 0; gap: 6px; }
+ body.nms-standalone .nms-snmpsim-toolbar button,
+ body.nms-standalone .nms-snmpsim-toolbar summary { padding: 0 8px; }
+}
+
+.nms-snmpsim-details summary {
+	border: 1px solid #d7d7d7;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 10px;
+	font-weight: 750;
+	list-style: none;
+	padding: 7px 10px;
+}
+
+.nms-snmpsim-details summary::-webkit-details-marker { display: none; }
+.nms-snmpsim-details[open] summary { background: #181818; border-color: #181818; color: #fff; }
+
+.nms-snmpsim-details-popup {
+	background: rgba(24, 24, 24, .94);
+	border-radius: 8px;
+	box-shadow: 0 12px 30px rgba(0, 0, 0, .22);
+	color: #fff;
+	padding: 14px;
+	position: absolute;
+	right: 0;
+	top: calc(100% + 7px);
+	width: min(390px, calc(100vw - 80px));
+	z-index: 20;
+}
+
+.nms-snmpsim-details-popup > strong { display: block; font-size: 11px; margin-bottom: 8px; }
+.nms-snmpsim-details-popup p { font-size: 9px; line-height: 1.45; margin: 7px 0; overflow-wrap: anywhere; }
+.nms-snmpsim-details-popup p span { color: #bdbdbd; display: block; font-size: 8px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+.nms-snmpsim-details-popup small { color: #d0d0d0; display: block; font-size: 8px; line-height: 1.4; margin-top: 9px; }
+.nms-snmpsim-message { flex-basis: 100%; font-size: 10px; margin: 8px 0 0; }
+body.nms-standalone .nms-import-workflow { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+body.nms-standalone .nms-import-table .nms-import-actions {
+	display: grid;
+	gap: 5px;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	width: 100%;
+}
+body.nms-standalone .nms-import-table.nms-table th:last-child { width: 340px; }
+body.nms-standalone .nms-import-table .nms-import-actions form,
+body.nms-standalone .nms-import-table .nms-import-actions .nms-row-link { min-width: 0; width: 100%; }
+body.nms-standalone .nms-import-table .nms-import-actions .nms-row-link {
+	align-items: center;
+	display: flex;
+	font-size: var(--nms-type-caption, 11px);
+	justify-content: center;
+	padding: 7px 8px;
+	white-space: nowrap;
+}
+body.nms-standalone .nms-import-table .nms-import-actions .nms-import-primary,
+body.nms-standalone .nms-import-table .nms-import-actions .nms-import-primary:hover {
+	background: #181818;
+	border-color: #181818;
+	color: #ffffff;
+}
+
+.nms-upload-trigger {
+	background: color-mix(in srgb, var(--nms-success) 12%, #fff);
+	border: 1px solid color-mix(in srgb, var(--nms-success) 28%, #fff);
+	border-radius: 6px;
+	color: var(--nms-success);
+	cursor: pointer;
+	flex-shrink: 0;
+	font: inherit;
+	font-size: var(--nms-type-body, 12px);
+	font-weight: 800;
+	padding: 9px 13px;
+}
+.nms-upload-trigger:hover { background: color-mix(in srgb, var(--nms-success) 18%, #fff); border-color: color-mix(in srgb, var(--nms-success) 38%, #fff); }
+.nms-upload-dialog {
+	position: fixed;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	margin: 0;
+	overflow-y: auto;
+	z-index: 1000;
+	background: #ffffff;
+	border: 0;
+	border-radius: 10px;
+	box-shadow: 0 22px 65px rgba(0, 0, 0, .28);
+	color: var(--nms-text);
+	max-height: 88vh;
+	max-height: min(88vh, 760px);
+	max-width: 940px;
+	padding: 0;
+	width: calc(100vw - 36px);
+}
+.nms-upload-dialog[hidden] { display: none !important; }
+body.nms-upload-open { overflow: hidden; }
+.nms-upload-backdrop { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0,0,0,.42); z-index: 999; }
+.nms-upload-backdrop[hidden] { display: none !important; }
+.nms-upload-dialog.nms-upload-inline { position: static; transform: none; width: 100%; max-height: none; margin-bottom: 20px; }
+/* Older Firefox ESR ignores color-mix; keep semantic actions readable. */
+.nms-upload-trigger { background: #e3f3e8; color: #195c34; border-color: #add3ba; }
+.nms-upload-trigger:hover { background: #d2eadb; border-color: #8abd9c; }
+.nms-upload-dialog::backdrop { background: rgba(0, 0, 0, .42); }
+.nms-upload-dialog-head { border-radius: 10px 10px 0 0; }
+.nms-upload-dialog-close {
+	align-items: center;
+	background: rgba(255, 255, 255, .14);
+	border: 1px solid rgba(255, 255, 255, .28);
+	border-radius: 5px;
+	color: #ffffff;
+	cursor: pointer;
+	display: inline-flex;
+	font-size: 20px;
+	height: 32px;
+	justify-content: center;
+	line-height: 1;
+	width: 32px;
+}
+.nms-upload-dialog-body { position: relative; }
+.nms-download-sample { margin: 14px 16px 0; }
+.nms-upload-dialog .nms-import-workflow { margin-top: 14px; }
+.nms-upload-dialog .nms-device-form { padding-bottom: 18px; }
+
+@media (max-width: 700px) {
+	.nms-snmpsim-status-copy { align-items: flex-start; flex-direction: column; }
+	.nms-snmpsim-status-copy > span { position: absolute; }
+	.nms-snmpsim-status-copy strong,
+	.nms-snmpsim-status-copy small { margin-left: 16px; }
+	.nms-snmpsim-details-popup { width: min(320px, calc(100vw - 52px)); }
+	body.nms-standalone .nms-import-workflow { grid-template-columns: 1fr; }
+	.nms-upload-trigger { width: 100%; }
+	.nms-upload-dialog { width: calc(100vw - 20px); }
+}
+.nms-simulator-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0; }
+.nms-simulator-controls button { padding: 8px 14px; border: 1px solid #ccc; border-radius: 6px; background: #191919; color: #fff; font: inherit; cursor: pointer; }
+.nms-simulator-controls button[value="start"] { background: #e4f2e9; color: #196c37; }
+.nms-simulator-controls button[value="stop"] { background: #fff0f0; color: #a51e1e; }
+.nms-simulator-controls button:disabled { opacity: .5; cursor: not-allowed; }
+.nms-simulator-controls small { flex-basis: 100%; }
