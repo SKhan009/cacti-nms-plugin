@@ -312,7 +312,12 @@ function nms_readings_load_live_rrd_values($readings)
 		if (!ctype_digit($timestamp) || count($names) !== count($sample)) {
 			continue;
 		}
-		$sample_sets[$resolved] = ['seen' => date('Y-m-d H:i:s', (int) $timestamp), 'values' => array_combine($names, $sample)];
+		$sample_sets[$resolved] = [
+			'seen' => date('Y-m-d H:i:s', (int) $timestamp),
+			'values' => array_combine($names, $sample),
+			'command' => 'sudo -u apache /usr/bin/rrdtool lastupdate ' . $resolved,
+			'output' => implode("\n", $output),
+		];
 	}
 
 	foreach ($readings as &$reading) {
@@ -325,10 +330,28 @@ function nms_readings_load_live_rrd_values($readings)
 		$reading['raw_value'] = $sample_sets[$resolved]['values'][$name];
 		$reading['numeric_value'] = is_numeric($reading['raw_value']) ? (float) $reading['raw_value'] : null;
 		$reading['last_seen'] = $sample_sets[$resolved]['seen'];
+		$reading['collector_command'] = $sample_sets[$resolved]['command'];
+		$reading['collector_output'] = $sample_sets[$resolved]['output'];
 	}
 	unset($reading);
 
 	return $readings;
+}
+
+/** Return the exact safe collector command and output for each RRD used on this page. */
+function nms_reading_collector_evidence($readings)
+{
+	$blocks = [];
+	foreach ($readings as $reading) {
+		$command = trim((string) ($reading['collector_command'] ?? ''));
+		$output = trim((string) ($reading['collector_output'] ?? ''));
+		if ($command === '' || $output === '' || isset($blocks[$command])) {
+			continue;
+		}
+		$blocks[$command] = '$ ' . $command . "\n" . $output;
+	}
+
+	return $blocks ? implode("\n\n", $blocks) : 'No readable RRD command output is available for this device yet.';
 }
 
 /** Render only the device facts actually captured by Cacti, without exposing internal parameter IDs. */

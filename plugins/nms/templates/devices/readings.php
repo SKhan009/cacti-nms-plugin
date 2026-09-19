@@ -78,4 +78,16 @@ $lastRead = $device_readings ? $device_readings[0]['last_seen'] : ($edit_device[
 	</tbody></table></div>
 </section>
 
-<section class="nms-panel nms-reading-raw"><div class="nms-panel-head"><div><h2>Actual collected evidence</h2><p>Stored poller OIDs and discovery values from Cacti. Internal parameter IDs and credentials are excluded.</p></div></div><pre><?php print nms_h(nms_reading_raw_evidence($device_readings, $device_discovery_readings)); ?></pre></section>
+<section class="nms-panel nms-reading-raw">
+	<div class="nms-panel-head">
+		<div>
+			<h2>Actual collector command and output</h2>
+			<p>Each command reproduces the displayed RRD values on this Cacti collector. Stored SNMP OIDs and discovery evidence follow; credentials are excluded.</p>
+		</div>
+	</div>
+	<pre><?php print nms_h(
+		nms_reading_collector_evidence($device_readings) .
+		"\n\n[Stored poller OIDs and discovery evidence]\n" .
+		nms_reading_raw_evidence($device_readings, $device_discovery_readings),
+	); ?></pre>
+</section>
