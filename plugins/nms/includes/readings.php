@@ -215,3 +215,51 @@ function nms_reading_action($reading)
 	if (str_starts_with($name, 'sscpu') || str_starts_with($name, 'load_')) return 'Stores the sample for device health monitoring.';
 	return 'Retains the exact poller value and makes its condition visible.';
 }
+
+/** Replace stored parameter snapshots with the latest sample from each authorized Cacti RRD file. */
+function nms_readings_load_live_rrd_values($readings)
+{
+	global $config;
+
+	$rra_path = realpath((string) ($config['rra_path'] ?? ''));
+	if (!$rra_path) {
+		return $readings;
+	}
+
+	$sample_sets = [];
+	foreach ($readings as $reading) {
+		$path = str_replace('<path_rra>', $rra_path, (string) ($reading['rrd_path'] ?? ''));
+		$resolved = realpath($path);
+		if (!$resolved || strpos($resolved, $rra_path . DIRECTORY_SEPARATOR) !== 0 || isset($sample_sets[$resolved])) {
+			continue;
+		}
+		$output = [];
+		$status = 1;
+		exec('/usr/bin/rrdtool lastupdate ' . escapeshellarg($resolved), $output, $status);
+		if ($status !== 0 || count($output) < 2) {
+			continue;
+		}
+		$names = preg_split('/\s+/', trim($output[0]));
+		$sample = preg_split('/\s+/', trim($output[count($output) - 1]));
+		$timestamp = rtrim((string) array_shift($sample), ':');
+		if (!ctype_digit($timestamp) || count($names) !== count($sample)) {
+			continue;
+		}
+		$sample_sets[$resolved] = ['seen' => date('Y-m-d H:i:s', (int) $timestamp), 'values' => array_combine($names, $sample)];
+	}
+
+	foreach ($readings as &$reading) {
+		$path = str_replace('<path_rra>', $rra_path, (string) ($reading['rrd_path'] ?? ''));
+		$resolved = realpath($path);
+		$name = (string) $reading['parameter_name'];
+		if (!$resolved || !isset($sample_sets[$resolved]['values'][$name])) {
+			continue;
+		}
+		$reading['raw_value'] = $sample_sets[$resolved]['values'][$name];
+		$reading['numeric_value'] = is_numeric($reading['raw_value']) ? (float) $reading['raw_value'] : null;
+		$reading['last_seen'] = $sample_sets[$resolved]['seen'];
+	}
+	unset($reading);
+
+	return $readings;
+}

@@ -48,7 +48,12 @@ $lastRead = $device_readings ? $device_readings[0]['last_seen'] : ($edit_device[
 	</div>
 </section>
 
-<section class="nms-reading-live"><strong>● Live reading</strong><span>Checking interfaces, traffic, IP information, neighbours, and current RRD-backed values.</span><code>Last response: <?php print nms_h($lastRead); ?></code></section>
+<section class="nms-reading-live"><strong>● Live reading</strong><span>Values come from each graph data source’s latest RRD sample.</span><code>Last response: <?php print nms_h($lastRead); ?></code></section>
+
+<section class="nms-panel nms-reading-graphs">
+	<div class="nms-panel-head"><div><h2>Actual Cacti graph readings</h2><p>Every graph assigned to this device, rendered live by Cacti from its RRD files.</p></div><a class="nms-panel-action" href="<?php print nms_h(nms_cacti_url('graph_view.php?action=tree&host_id=' . (int) $edit_device['id'])); ?>">Open in Cacti</a></div>
+	<?php if (!$device_graphs) { ?><p class="nms-empty">No graphs are assigned to this device.</p><?php } else { ?><div class="nms-reading-graph-grid"><?php foreach ($device_graphs as $graph) { $graph_id = (int) ($graph['local_graph_id'] ?? 0); if ($graph_id < 1) continue; $title = trim((string) ($graph['title_cache'] ?? '')) ?: 'Graph ' . $graph_id; ?><article><a href="<?php print nms_h(nms_cacti_url('graph.php?action=view&local_graph_id=' . $graph_id)); ?>"><img loading="lazy" src="<?php print nms_h(nms_cacti_url('graph_image.php?local_graph_id=' . $graph_id . '&rra_id=0&graph_start=' . (time() - 86400) . '&graph_end=' . time() . '&disable_cache=1')); ?>" alt="<?php print nms_h($title); ?>"></a><strong><?php print nms_h($title); ?></strong></article><?php } ?></div><?php } ?>
+</section>
 
 <section class="nms-panel nms-reading-table-panel">
 	<div class="nms-panel-head"><div><h2>Readings, discovery &amp; diagnosis</h2><p>One combined view of values, topology evidence, and collection failures.</p></div></div>

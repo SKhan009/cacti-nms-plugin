@@ -47,3 +47,13 @@
 /* Keep all five device-reading facts aligned on wide screens. */
 .nms-reading-facts { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 @media (max-width: 850px) { .nms-reading-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Native Cacti graph images are dynamic RRD visualizations for the selected device. */
+.nms-reading-graphs { margin-top: 18px; }
+.nms-reading-graph-grid { display:grid; gap:16px; grid-template-columns:repeat(2,minmax(0,1fr)); padding:16px; }
+.nms-reading-graph-grid article { background:#fff; border:1px solid #d9d9d9; border-radius:7px; display:grid; gap:8px; min-width:0; padding:10px; }
+.nms-reading-graph-grid a { display:block; }
+.nms-reading-graph-grid img { display:block; height:auto; width:100%; }
+.nms-reading-graph-grid strong { font-size:13px; overflow-wrap:anywhere; }
+.nms-reading-graphs .nms-empty { margin:0; padding:16px; }
+@media (max-width: 900px) { .nms-reading-graph-grid { grid-template-columns:1fr; } }

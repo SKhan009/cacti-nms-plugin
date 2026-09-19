@@ -52,3 +52,21 @@ function nms_graph_node_count($nodes)
 	}
 	return $count;
 }
+
+/** Return a device's graph instances when Cacti's tree authorization has no matching branch. */
+function nms_device_graphs($host_id)
+{
+	$graphs = nms_graphs_for_host($host_id);
+	if ($graphs) {
+		return $graphs;
+	}
+
+	return db_fetch_assoc_prepared(
+		"SELECT gl.id AS local_graph_id, gtg.title_cache
+		FROM graph_local AS gl
+		INNER JOIN graph_templates_graph AS gtg ON gtg.local_graph_id = gl.id
+		WHERE gl.host_id = ?
+		ORDER BY gtg.title_cache, gl.id",
+		[(int) $host_id]
+	);
+}
