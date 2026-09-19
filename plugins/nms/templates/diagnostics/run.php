@@ -1,3 +1,28 @@
+<section class="nms-panel nms-diagnostic-readiness">
+	<div class="nms-panel-head">
+		<div>
+			<h2>Collector tool readiness</h2>
+			<p>Live availability on this collector. A profile controls which checks are available for each device.</p>
+		</div>
+	</div>
+
+	<div class="nms-diagnostic-readiness-grid">
+		<?php foreach (nms_diag_labels() as $key => $label) {
+			$tool = $nms_diagnostic_readiness[$key]; ?>
+			<article class="<?php print $tool["ready"] ? "ready" : "unavailable"; ?>">
+				<h3><?php print nms_h($label); ?></h3>
+				<strong><?php print $tool["ready"] ? "Ready on collector" : "Offline package needed"; ?></strong>
+				<p><?php print nms_h($tool["purpose"]); ?></p>
+				<small><?php print nms_h($tool["requirement"]); ?></small>
+				<?php if (!$tool["ready"] && $key === "netperf") { ?>
+					<code>sudo dnf install -y ./netperf*.rpm</code>
+				<?php } ?>
+			</article>
+		<?php } ?>
+	</div>
+</section>
+
+
 <?php
 /** Render the on-demand diagnostic form, collector readiness and last result. */
 ?>
@@ -31,7 +56,7 @@
 				Tool
 				<select id="nmsDiagnosticTool" name="tool" required>
 					<?php foreach (nms_diag_labels() as $key => $label) { ?>
-						<option value="<?php print nms_h($key); ?>"><?php print nms_h($label); ?></option>
+						<option value="<?php print nms_h($key); ?>" <?php print $key === $selected_diagnostic_tool ? "selected" : ""; ?>><?php print nms_h($label); ?></option>
 					<?php } ?>
 				</select>
 			</label>
@@ -44,31 +69,6 @@
 			<button type="submit">Run selected test</button>
 		</form>
 	<?php } ?>
-</section>
-
-<section class="nms-panel nms-diagnostic-readiness">
-	<div class="nms-panel-head">
-		<div>
-			<h2>Collector tool readiness</h2>
-			<p>Live availability on this collector. A profile controls which checks are available for each device.</p>
-		</div>
-	</div>
-
-	<div class="nms-diagnostic-readiness-grid">
-		<?php foreach (nms_diag_labels() as $key => $label) {
-  	$tool = $nms_diagnostic_readiness[$key]; ?>
-			<article class="<?php print $tool["ready"] ? "ready" : "unavailable"; ?>">
-				<h3><?php print nms_h($label); ?></h3>
-				<strong><?php print $tool["ready"] ? "Ready on collector" : "Offline package needed"; ?></strong>
-				<p><?php print nms_h($tool["purpose"]); ?></p>
-				<small><?php print nms_h($tool["requirement"]); ?></small>
-				<?php if (!$tool["ready"] && $key === "netperf") { ?>
-					<code>sudo dnf install -y ./netperf*.rpm</code>
-				<?php } ?>
-			</article>
-		<?php
-  } ?>
-	</div>
 </section>
 
 <?php if ($result) { ?>

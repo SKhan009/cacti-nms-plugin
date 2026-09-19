@@ -16,8 +16,10 @@ if (!in_array($section, ["run", "profiles"], true)) {
 	$section = "run";
 }
 
-$error = "";
+$error = '';
 $result = null;
+$selected_diagnostic_host_id = isset_request_var('host_id') ? (int) get_filter_request_var('host_id') : 0;
+$selected_diagnostic_tool = isset_request_var('tool') ? get_nfilter_request_var('tool') : 'ping';
 $notice = $_SESSION["nms_diagnostic_notice"] ?? "";
 unset($_SESSION["nms_diagnostic_notice"]);
 
@@ -36,7 +38,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 		}
 
 		if ($action === "run_diagnostic") {
-			$result = nms_diag_run((int) ($_POST["host_id"] ?? 0), (string) ($_POST["tool"] ?? ""));
+			$selected_diagnostic_host_id = (int) ($_POST['host_id'] ?? 0);
+			$selected_diagnostic_tool = (string) ($_POST['tool'] ?? 'ping');
+			$result = nms_diag_run($selected_diagnostic_host_id, $selected_diagnostic_tool);
 		} else {
 			throw new RuntimeException("Unsupported diagnostic action.");
 		}
@@ -46,7 +50,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 }
 
 $profiles = db_fetch_assoc("SELECT * FROM plugin_nms_diagnostic_profiles ORDER BY name");
-$selected_diagnostic_host_id = isset_request_var("host_id") ? (int) get_filter_request_var("host_id") : 0;
 $devices = db_fetch_assoc(
 	"SELECT h.id, h.description, h.hostname, p.id AS profile_id, p.name AS profile_name, p.tools
 	FROM host AS h
