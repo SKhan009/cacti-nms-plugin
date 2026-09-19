@@ -43,3 +43,7 @@
 .nms-inventory-filters > p { grid-column:2 / -1; margin:0; align-self:center; }
 @media(max-width:900px){.nms-inventory-filters {grid-template-columns:repeat(2,minmax(0,1fr));}.nms-inventory-filters > p {grid-column:auto;}}
 @media(max-width:550px){.nms-inventory-filters {grid-template-columns:1fr;}}
+
+/* Keep all five device-reading facts aligned on wide screens. */
+.nms-reading-facts { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 850px) { .nms-reading-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
