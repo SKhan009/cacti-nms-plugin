@@ -10,6 +10,7 @@ require __DIR__ . "/../../include/auth.php";
 require_once $config["base_path"] . "/include/global_form.php";
 require_once $config["base_path"] . "/plugins/nms/includes/functions.php";
 require_once $config["base_path"] . "/plugins/nms/includes/database.php";
+require_once $config["base_path"] . "/plugins/nms/includes/readings.php";
 require_once $config["base_path"] . "/plugins/nms/includes/snmprec.php";
 require_once $config["base_path"] . "/plugins/nms/includes/template_manager.php";
 require_once __DIR__ . "/includes/mib_import.php";
@@ -29,7 +30,7 @@ if ($_SERVER["REQUEST_METHOD"] === "GET" && get_nfilter_request_var("nms_status"
 }
 
 // Whitelist the view name before dispatching to its template and initializing page messages.
-$allowed_tabs = ["inventory", "add", "edit", "graphs", "import"];
+$allowed_tabs = ["inventory", "add", "edit", "readings", "graphs", "import"];
 $tab = isset_request_var("tab") ? get_nfilter_request_var("tab") : "inventory";
 $template_workspace = defined("NMS_TEMPLATE_WORKSPACE") && NMS_TEMPLATE_WORKSPACE;
 $repository_workspace = defined("NMS_FILE_REPOSITORY") && NMS_FILE_REPOSITORY;
@@ -615,6 +616,7 @@ if ($snmpsim_import_id > 0) {
 }
 
 $edit_device = [];
+$device_readings = [];
 $device_graph_templates = [];
 $device_data_queries = [];
 $available_graph_templates = [];
@@ -628,7 +630,7 @@ $graph_colors =
 	FROM colors ORDER BY SUBSTRING(hex,1,2), SUBSTRING(hex,3,2), SUBSTRING(hex,5,2)")
 		: [];
 // Load the selected host and its existing core associations; offer only templates/queries not already attached.
-if ($tab === "edit") {
+if (in_array($tab, ["edit", "readings"], true)) {
 	$edit_device_id = isset_request_var("id") ? (int) get_filter_request_var("id") : 0;
 	if ($edit_device_id > 0) {
 		$edit_device = db_fetch_row_prepared(
@@ -647,11 +649,14 @@ if ($tab === "edit") {
 			[$edit_device_id],
 		);
 	}
-	if (!$edit_device && $tab === "edit") {
+	if (!$edit_device) {
 		$page_error = "The selected Cacti device was not found.";
 		$tab = "inventory";
 	} elseif ($edit_device) {
 		nms_require_device_access($edit_device_id);
+		if ($tab === "readings") {
+			$device_readings = nms_device_readings($edit_device_id);
+		}
 		$device_classification = db_fetch_row_prepared(
 			"SELECT * FROM plugin_nms_device_classification WHERE host_id = ?",
 			[$edit_device_id],
@@ -841,6 +846,9 @@ require $config["base_path"] . "/plugins/nms/templates/app_header.php";
 		<?php if ($tab === "edit") { ?><a class="selected" href="?tab=edit&id=<?php print (int) $edit_device[
 	"id"
 ]; ?>" data-nms-tip="Edit this live Cacti device and manage its graph templates and data queries.">Edit device</a><?php } ?>
+		<?php if ($tab === "readings") { ?><a class="selected" href="?tab=readings&id=<?php print (int) $edit_device[
+	"id"
+]; ?>" data-nms-tip="See the latest actual RRD-backed values in plain language and diagnose unknown readings.">Device readings</a><?php } ?>
 	</div><?php } ?>
 
 	<?php require $config["base_path"] .
