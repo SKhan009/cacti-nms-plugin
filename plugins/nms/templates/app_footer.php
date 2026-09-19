@@ -27,8 +27,8 @@
 	})();
 	</script>
 	<script src="<?php print nms_h(nms_asset_url("js/nms-upload.js")); ?>"></script>
-	<?php if (!empty($nms_extra_js)) { ?><script src="<?php print nms_h(
-	nms_asset_url($nms_extra_js),
+	<?php foreach (array_filter(array_map("trim", explode(",", (string) $nms_extra_js))) as $nms_script) { ?><script src="<?php print nms_h(
+	nms_asset_url($nms_script),
 ); ?>"></script><?php } ?>
 	<script src="<?php print nms_h(nms_asset_url("js/nms-pagination.js")); ?>"></script>
 	<script src="<?php print nms_h(nms_asset_url("js/nms-tooltips.js")); ?>"></script>
