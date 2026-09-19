@@ -9,7 +9,7 @@ foreach ($device_readings as $reading) {
 	$category = nms_reading_category($reading);
 	$interfaces += $category === 'interfaces';
 	$traffic += $category === 'traffic';
-	$unknown += nms_reading_is_unknown($reading['raw_value']);
+	$unknown += nms_reading_is_actionable_problem($reading);
 	$stale += !nms_reading_is_unknown($reading['raw_value']) && !nms_parameter_is_fresh($reading['last_seen']);
 }
 
@@ -72,7 +72,7 @@ $lastRead = $device_readings ? $device_readings[0]['last_seen'] : ($edit_device[
 			$source = nms_reading_source($reading);
 			$action = nms_reading_action($reading);
 		?>
-			<tr data-reading-row data-category="<?php print nms_h($category); ?>" data-protocol="snmp" data-problem="<?php print $p['tone'] === 'success' ? '0' : '1'; ?>">
+			<tr data-reading-row data-category="<?php print nms_h($category); ?>" data-protocol="snmp" data-problem="<?php print $p['tone'] === 'warning' ? '1' : '0'; ?>">
 				<td><span class="nms-reading-state <?php print nms_h($p['tone']); ?>"><?php print nms_h($p['state']); ?></span></td><td><?php print nms_h($label); ?></td><td><code><?php print nms_h($source); ?></code></td><td><strong><?php print nms_h($p['value']); ?></strong></td><td><strong><?php print nms_h($p['meaning']); ?></strong><small><?php print nms_h($p['next']); ?></small></td><td><?php print nms_h($action); ?></td><td><?php print nms_h($reading['last_seen']); ?></td>
 			</tr>
 		<?php } foreach ($device_discovery_readings as $snapshot) { $isFailed = $snapshot['status'] !== 'success'; ?>

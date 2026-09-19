@@ -139,6 +139,18 @@ function nms_reading_is_unknown($value)
 	return in_array(strtolower(trim((string) $value)), ['', 'u', 'unknown', 'nan', 'null'], true);
 }
 
+/** Identify optional legacy counters that some compliant SNMP agents do not implement. */
+function nms_reading_is_optional($reading)
+{
+	return in_array(strtolower((string) $reading['parameter_name']), ['nonunicast_in', 'nonunicast_out'], true);
+}
+
+/** Count only collection failures that affect a supported device metric. */
+function nms_reading_is_actionable_problem($reading)
+{
+	return nms_reading_is_unknown($reading['raw_value']) && !nms_reading_is_optional($reading);
+}
+
 /** Format a numeric sample with readable scale while preserving the exact raw value separately. */
 function nms_reading_human_number($value)
 {
@@ -172,6 +184,13 @@ function nms_reading_presentation($reading)
 {
 	$raw = trim((string) $reading['raw_value']);
 	$label = nms_reading_label($reading);
+	if (nms_reading_is_unknown($raw) && nms_reading_is_optional($reading)) {
+		return [
+			'tone' => 'info', 'state' => 'Not supported', 'value' => 'Not provided',
+			'meaning' => $label . ' is an optional legacy SNMP counter that this device does not provide.',
+			'next' => 'No action is required. Current traffic counters remain available through IF-MIB 64-bit octet counters.',
+		];
+	}
 	if (nms_reading_is_unknown($raw)) {
 		return [
 			'tone' => 'warning', 'state' => 'Warning', 'value' => 'Unknown (NaN)',
