@@ -39,7 +39,6 @@ $snmp_contact_tone = $snmp_contact === "Not reported" ? "warning" : "success";
 $device_actions = [
 	["Add device", "devices.php?tab=add", "Open the NMS Add device form."],
 	["Graph templates", "#graph-templates", "Manage this device’s graph templates in NMS."],
-	["Device readings", "devices.php?tab=readings&id=" . $device_id, "See the latest actual RRD-backed readings and their plain-language diagnosis."],
 	["Data queries", "#data-queries", "Manage this device’s indexed queries in NMS."],
 	[
 		"Refresh device identity",

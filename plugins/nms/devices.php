@@ -754,6 +754,11 @@ if ($tab === "graphs") {
 		ORDER BY gt.name");
 }
 
+// Device readings is a Device Management submenu, with the current device preferred.
+$reading_tab_device_id = $edit_device
+	? (int) $edit_device["id"]
+	: ($devices ? (int) $devices[0]["id"] : 0);
+
 nms_prepare_page(
 	$template_workspace ? "templates" : ($repository_workspace ? "repository" : "devices"),
 	$template_workspace
@@ -850,9 +855,7 @@ require $config["base_path"] . "/plugins/nms/templates/app_header.php";
 		<?php if ($tab === "edit") { ?><a class="selected" href="?tab=edit&id=<?php print (int) $edit_device[
 	"id"
 ]; ?>" data-nms-tip="Edit this live Cacti device and manage its graph templates and data queries.">Edit device</a><?php } ?>
-		<?php if ($tab === "readings") { ?><a class="selected" href="?tab=readings&id=<?php print (int) $edit_device[
-	"id"
-]; ?>" data-nms-tip="See the latest actual RRD-backed values in plain language and diagnose unknown readings.">Device readings</a><?php } ?>
+		<?php if ($reading_tab_device_id) { ?><a class="<?php print $tab === "readings" ? "selected" : ""; ?>" href="?tab=readings&amp;id=<?php print $reading_tab_device_id; ?>" data-nms-tip="See actual RRD readings, discovery evidence, diagnosis, and raw device responses.">Device readings</a><?php } ?>
 	</div><?php } ?>
 
 	<?php require $config["base_path"] .
