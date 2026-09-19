@@ -225,3 +225,6 @@
 @media(max-width:650px) {
 	.nms-diagnostic-limits { grid-template-columns:1fr; }
 }
+
+/* Keep the diagnostic dialog title and close control available while its form scrolls. */
+.nms-config-dialog.nms-diagnostic-dialog > .nms-panel-head { position:sticky; top:0; z-index:4; box-shadow:0 2px 8px #0003; }
