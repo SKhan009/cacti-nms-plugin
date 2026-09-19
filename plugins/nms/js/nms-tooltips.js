@@ -270,15 +270,38 @@
 		return false;
 	}
 
-	/** Create the shared accessible tooltip element once and return it. */
+	/** Create the shared accessible tooltip once; a native popover keeps it above modal dialogs. */
 	function ensureTooltip() {
 		if (tooltip) return tooltip;
 		tooltip = document.createElement("div");
 		tooltip.id = "nmsGlobalTooltip";
 		tooltip.className = "nms-tooltip";
 		tooltip.setAttribute("role", "tooltip");
+		if (typeof tooltip.showPopover === "function") {
+			tooltip.setAttribute("popover", "manual");
+		}
 		document.body.appendChild(tooltip);
 		return tooltip;
+	}
+
+	/** Open the tooltip in the browser top layer when available. */
+	function openTooltip() {
+		if (!tooltip || typeof tooltip.showPopover !== "function") return;
+		try {
+			if (!tooltip.matches(":popover-open")) tooltip.showPopover();
+		} catch (error) {
+			// The normal fixed-position fallback remains available in older browsers.
+		}
+	}
+
+	/** Close the native popover without affecting the fallback tooltip presentation. */
+	function closeTooltip() {
+		if (!tooltip || typeof tooltip.hidePopover !== "function") return;
+		try {
+			if (tooltip.matches(":popover-open")) tooltip.hidePopover();
+		} catch (error) {
+			// A tooltip that was not opened as a popover needs no further cleanup.
+		}
 	}
 
 	/** Place the tooltip above or below its target while keeping it within the viewport. */
@@ -365,6 +388,7 @@
 				},
 			);
 		tooltip.classList.add("visible");
+		openTooltip();
 		if (pointerMode) positionAtPointer();
 		else position(target);
 	}
@@ -372,7 +396,10 @@
 	/** Hide the active tooltip, ignoring a hide request from another target. */
 	function hide(target) {
 		if (target && activeTarget !== target) return;
-		if (tooltip) tooltip.classList.remove("visible");
+		if (tooltip) {
+			tooltip.classList.remove("visible");
+			closeTooltip();
+		}
 		activeTarget = null;
 		pointerMode = false;
 	}
