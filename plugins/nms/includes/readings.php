@@ -7,12 +7,15 @@ function nms_device_readings($host_id)
 	return db_fetch_assoc_prepared(
 		"SELECT p.local_data_id, p.parameter_key, p.parameter_name, p.display_name,
 		p.raw_value, p.numeric_value, p.last_seen, dtd.data_source_path AS rrd_path,
-		h.status AS host_status, h.last_updated AS host_last_updated, h.status_last_error,
+		pi.arg1 AS stored_oid, h.status AS host_status, h.last_updated AS host_last_updated, h.status_last_error,
 		dtd.name_cache AS data_source_name
 		FROM plugin_nms_device_parameters AS p
 		INNER JOIN host AS h ON h.id = p.host_id
 		LEFT JOIN data_local AS dl ON dl.id = p.local_data_id
 		LEFT JOIN data_template_data AS dtd ON dtd.local_data_id = p.local_data_id
+		LEFT JOIN poller_item AS pi ON pi.local_data_id = p.local_data_id
+			AND pi.host_id = p.host_id
+			AND (pi.rrd_name = p.parameter_name OR pi.rrd_name = '')
 		WHERE p.host_id = ?
 		ORDER BY p.last_seen DESC, p.display_name, p.parameter_name",
 		[(int) $host_id]
@@ -93,6 +96,11 @@ function nms_reading_label($reading)
 /** Return the standard SNMP MIB object behind a stored Cacti reading when known. */
 function nms_reading_source($reading)
 {
+	$stored_oid = trim((string) ($reading['stored_oid'] ?? ''));
+	if (preg_match('/^\.?\d+(?:\.\d+)+$/', $stored_oid)) {
+		return $stored_oid;
+	}
+
 	$name = strtolower((string) $reading['parameter_name']);
 	$index = nms_reading_interface_index($reading);
 	$index = $index === '' ? '' : '.' . $index;
