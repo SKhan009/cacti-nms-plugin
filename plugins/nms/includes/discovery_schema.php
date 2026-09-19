@@ -12,9 +12,6 @@ function nms_discovery_schema()
 		"CREATE TABLE IF NOT EXISTS plugin_nms_discovery_snapshots (host_id MEDIUMINT UNSIGNED NOT NULL,protocol VARCHAR(8) NOT NULL,status VARCHAR(16) NOT NULL,attempted_at DATETIME NOT NULL,succeeded_at DATETIME NULL,config_hash CHAR(64) NOT NULL,data_json MEDIUMTEXT NOT NULL,error VARCHAR(255) NOT NULL DEFAULT '',PRIMARY KEY(host_id,protocol)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 	);
 	nms_category_execute(
-		"CREATE TABLE IF NOT EXISTS plugin_nms_discovery_rules (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,name VARCHAR(100) NOT NULL,preset_id INT UNSIGNED NOT NULL,site_id INT UNSIGNED NOT NULL,host_template_id INT UNSIGNED NOT NULL,poller_id INT UNSIGNED NOT NULL,enabled TINYINT NOT NULL DEFAULT 1,after_host_id INT UNSIGNED NOT NULL,created_by INT UNSIGNED NOT NULL,created_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
-	);
-	nms_category_execute(
 		"CREATE TABLE IF NOT EXISTS plugin_nms_discovery_network_jobs (network_id INT UNSIGNED PRIMARY KEY,methods VARCHAR(40) NOT NULL,ports VARCHAR(100) NOT NULL,snmp_item_id INT UNSIGNED NOT NULL DEFAULT 0,follow_schedule TINYINT NOT NULL DEFAULT 0,created_by INT UNSIGNED NOT NULL,revision INT UNSIGNED NOT NULL DEFAULT 1,status VARCHAR(16) NOT NULL DEFAULT 'queued',progress_cursor INT UNSIGNED NOT NULL DEFAULT 0,config_hash CHAR(64) NOT NULL DEFAULT '',results_json MEDIUMTEXT NOT NULL,requested_at DATETIME NOT NULL,finished_at DATETIME NULL,native_started VARCHAR(30) NOT NULL DEFAULT '',error VARCHAR(255) NOT NULL DEFAULT '') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 	);
 	nms_category_execute(

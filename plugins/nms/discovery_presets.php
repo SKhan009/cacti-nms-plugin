@@ -11,23 +11,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 		if (!csrf_check_tokens($_POST["__csrf_magic"] ?? "")) {
 			throw new RuntimeException("Invalid request token.");
 		}
-		if (($_POST["nms_action"] ?? "") === "discovery_rule") {
-			nms_nd_rule_save($_POST);
-		} elseif (($_POST["nms_action"] ?? "") === "discovery_rule_toggle") {
-			nms_require_management();
-			$id = nms_topology_integer($_POST["rule_id"] ?? 0, 1, 2147483647, "Rule");
-			nms_category_execute("UPDATE plugin_nms_discovery_rules SET enabled=1-enabled WHERE id=?", [$id]);
-		} elseif (($_POST["nms_action"] ?? "") === "discovery_bulk") {
+		if (($_POST["nms_action"] ?? "") === "discovery_bulk") {
 			$_SESSION["nms_discovery_bulk"] = nms_nd_bulk_assign($_POST);
 		} elseif (($_POST["nms_action"] ?? "") === "discovery_preset") {
 			nms_nd_save("discovery_preset", 0, $_POST);
 		} else {
 			throw new InvalidArgumentException("Unknown preset action.");
 		}
-		$target =
-			["discovery_bulk" => "assignments", "discovery_rule" => "rules", "discovery_rule_toggle" => "rules"][
-				$_POST["nms_action"] ?? ""
-			] ?? "presets";
+		$target = ($_POST["nms_action"] ?? "") === "discovery_bulk" ? "assignments" : "presets";
 		header("Location: discovery_presets.php?saved=1&section=" . $target);
 		exit();
 	} catch (Throwable $e) {
