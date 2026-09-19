@@ -22,14 +22,13 @@ if ($error && ($_POST["nms_action"] ?? "") === "save_diagnostic_profile") {
 
 $enabled_tools = nms_diag_tools($profile_values["tools"]);
 ?>
-<dialog id="nmsConfigDialog" class="nms-config-dialog" aria-labelledby="nmsConfigTitle" data-auto-open="<?php print $open_profile_modal
-	? "true"
-	: "false"; ?>">
+<dialog id="nmsConfigDialog" class="nms-config-dialog nms-diagnostic-dialog" aria-labelledby="nmsConfigTitle" data-auto-open="<?php print $open_profile_modal ? "true" : "false"; ?>">
 	<div class="nms-panel-head">
-		<h2 id="nmsConfigTitle"><?php print (int) $profile_values["id"]
-  	? "Edit diagnostic profile"
-  	: "Add diagnostic profile"; ?></h2>
-		<button type="button" data-nms-config-close aria-label="Close">×</button>
+		<div>
+			<p class="nms-dialog-eyebrow">NMS / PRESETS</p>
+			<h2 id="nmsConfigTitle"><?php print (int) $profile_values["id"] ? "Edit diagnostic profile" : "Add diagnostic profile"; ?></h2>
+		</div>
+		<button type="button" data-nms-config-close aria-label="Close diagnostic profile">×</button>
 	</div>
 
 	<?php if ($error) { ?>
@@ -41,43 +40,50 @@ $enabled_tools = nms_diag_tools($profile_values["tools"]);
 		<input type="hidden" name="nms_action" value="save_diagnostic_profile">
 		<input type="hidden" name="diagnostic_profile_id" value="<?php print (int) $profile_values["id"]; ?>">
 
-		<label>
-			Profile name
-			<input required maxlength="100" name="diagnostic_profile_name" value="<?php print nms_h(
-   	$profile_values["name"],
-   ); ?>" placeholder="Standard site diagnostics">
-		</label>
+		<section class="nms-diagnostic-profile-section">
+			<label class="nms-diagnostic-profile-name">
+				<span>Profile name</span>
+				<input required maxlength="100" name="diagnostic_profile_name" value="<?php print nms_h($profile_values["name"]); ?>" placeholder="Standard site diagnostics">
+			</label>
+		</section>
 
-		<fieldset class="nms-discovery-methods">
-			<legend>Enabled tools</legend>
-			<?php foreach (nms_diag_labels() as $key => $label) { ?>
+		<section class="nms-diagnostic-profile-section">
+			<fieldset class="nms-discovery-methods nms-diagnostic-tools">
+				<legend>Enabled tools</legend>
+				<p class="nms-diagnostic-section-help">Choose the checks this profile can run for an assigned device.</p>
+				<div class="nms-diagnostic-tool-grid">
+					<?php foreach (nms_diag_labels() as $key => $label) { ?>
+						<label>
+							<input type="checkbox" name="diagnostic_tools[]" value="<?php print nms_h($key); ?>" <?php if (in_array($key, $enabled_tools, true)) { print "checked"; } ?>>
+							<span><?php print nms_h($label); ?></span>
+						</label>
+					<?php } ?>
+				</div>
+			</fieldset>
+		</section>
+
+		<section class="nms-diagnostic-profile-section">
+			<h3>Test limits</h3>
+			<div class="nms-diagnostic-limits">
 				<label>
-					<input type="checkbox" name="diagnostic_tools[]" value="<?php print nms_h($key); ?>" <?php if (
-	in_array($key, $enabled_tools, true)
-) {
-	print "checked";
-} ?>>
-					<?php print nms_h($label); ?>
+					<span>Ping packets</span>
+					<input type="number" name="ping_count" min="1" max="10" value="<?php print (int) $profile_values["ping_count"]; ?>">
 				</label>
-			<?php } ?>
-		</fieldset>
-
-		<div class="nms-diagnostic-limits">
-			<label>Ping packets<input type="number" name="ping_count" min="1" max="10" value="<?php print (int) $profile_values[
-   	"ping_count"
-   ]; ?>"></label>
-			<label>Traceroute maximum hops<input type="number" name="trace_hops" min="1" max="30" value="<?php print (int) $profile_values[
-   	"trace_hops"
-   ]; ?>"></label>
-			<label>Bandwidth test seconds<input type="number" name="bandwidth_seconds" min="1" max="30" value="<?php print (int) $profile_values[
-   	"bandwidth_seconds"
-   ]; ?>"></label>
-		</div>
+				<label>
+					<span>Traceroute maximum hops</span>
+					<input type="number" name="trace_hops" min="1" max="30" value="<?php print (int) $profile_values["trace_hops"]; ?>">
+				</label>
+				<label>
+					<span>Bandwidth test seconds</span>
+					<input type="number" name="bandwidth_seconds" min="1" max="30" value="<?php print (int) $profile_values["bandwidth_seconds"]; ?>">
+				</label>
+			</div>
+		</section>
 
 		<p class="nms-config-note">Enable bandwidth tests only for devices that you are authorised to test. Assign the saved profile in Add/Edit device → On-demand diagnostics.</p>
 		<div class="nms-discovery-preset-actions">
 			<button type="submit"><?php print (int) $profile_values["id"] ? "Save changes" : "Save diagnostic profile"; ?></button>
-			<button type="button" data-nms-config-close>Cancel</button>
+			<button type="button" class="nms-cancel-button" data-nms-config-close>Cancel</button>
 		</div>
 	</form>
 </dialog>

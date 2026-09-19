@@ -166,3 +166,33 @@
 .nms-catalog-footer{grid-column:1/-1;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid #ddd;padding-top:18px;}.nms-catalog-footer button{width:auto!important;}.nms-catalog-error{margin:20px 24px;padding:12px;color:#a11;background:#fff1f1;border-radius:6px;}
 @media(max-width:600px){.nms-appearance-dialog .nms-catalog-form{grid-template-columns:1fr;}.nms-icon-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
 .nms-appearance-dialog .nms-panel-head{position:sticky;top:0;z-index:2;}.nms-appearance-dialog .nms-catalog-footer{position:sticky;bottom:-24px;background:white;padding-bottom:16px;z-index:1;}
+
+/* Diagnostic profile dialog follows the same structured popup pattern as discovery presets. */
+.nms-config-dialog.nms-diagnostic-dialog { width:min(860px,94vw); }
+.nms-config-dialog .nms-panel-head > div { min-width:0; }
+.nms-config-dialog .nms-dialog-eyebrow { margin:0 0 5px; color:#c8cdd2; font-size:12px; font-weight:700; letter-spacing:.08em; }
+.nms-config-dialog .nms-diagnostic-profile-form { gap:0; padding:0; }
+.nms-diagnostic-profile-section { border-bottom:1px solid #e1e4e8; padding:24px 34px; }
+.nms-diagnostic-profile-name { display:grid; gap:8px; font-weight:700; }
+.nms-diagnostic-profile-form input[type=text],
+.nms-diagnostic-profile-form input:not([type]),
+.nms-diagnostic-profile-form input[type=number] { min-height:44px; border:1px solid #b9c0c7; border-radius:6px; background:#fff; color:#171717; padding:9px 11px; font:inherit; }
+.nms-diagnostic-profile-form input:focus-visible { border-color:#2563eb; box-shadow:0 0 0 3px #2563eb33; outline:0; }
+.nms-diagnostic-profile-form .nms-discovery-methods { display:block; }
+.nms-diagnostic-profile-form .nms-discovery-methods legend { margin-bottom:6px; }
+.nms-diagnostic-section-help { margin:0 0 14px; color:#65707c; line-height:1.45; }
+.nms-diagnostic-tool-grid { display:grid; gap:10px; grid-template-columns:repeat(3,minmax(0,1fr)); }
+.nms-config-dialog .nms-diagnostic-tool-grid label { align-items:center; border:1px solid #d9dce0; border-radius:7px; display:flex; gap:10px; margin:0; min-height:48px; padding:10px 12px; background:#fff; }
+.nms-config-dialog .nms-diagnostic-tool-grid label:hover { background:#f7f8f9; border-color:#b9c0c7; }
+.nms-config-dialog .nms-diagnostic-tool-grid label:has(input:checked) { background:#f2f8f4; border-color:#7ab68b; }
+.nms-diagnostic-profile-section h3 { font-size:16px; margin:0 0 14px; }
+.nms-diagnostic-limits { gap:16px; }
+.nms-diagnostic-limits label span { line-height:1.3; }
+.nms-diagnostic-profile-form .nms-config-note { background:#f7f8f9; border-left:4px solid #7d8790; color:#4d5560; line-height:1.45; margin:0; padding:15px 34px; }
+.nms-diagnostic-profile-form .nms-discovery-preset-actions { align-items:center; border-top:1px solid #e1e4e8; padding:20px 34px 28px; }
+@media(max-width:650px) {
+	.nms-diagnostic-profile-section { padding:20px; }
+	.nms-diagnostic-tool-grid { grid-template-columns:1fr; }
+	.nms-diagnostic-profile-form .nms-config-note { padding:15px 20px; }
+	.nms-diagnostic-profile-form .nms-discovery-preset-actions { padding:18px 20px 22px; }
+}
