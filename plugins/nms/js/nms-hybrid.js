@@ -95,18 +95,17 @@
 	 */
 	function ports(n) {
 		const found = new Map();
+		(n.interfaces || []).forEach((p) => {
+			const name = p.name || "ifIndex " + p.index;
+			found.set(name, { ...p, name, edge: null });
+		});
 		(n.ports || []).forEach((p) => {
-			if (p.name) found.set(p.name, { ...p, edge: null });
+			if (p.name) found.set(p.name, { ...(found.get(p.name) || {}), ...p, edge: null });
 		});
 		data.links.forEach((l) => {
-			const name =
-				l.a === n.id ? l.a_port : l.b === n.id ? l.b_port : null;
+			const name = l.a === n.id ? l.a_port : l.b === n.id ? l.b_port : null;
 			if (name && name !== "Unknown port")
-				found.set(name, {
-					...(found.get(name) || {}),
-					name,
-					edge: l.id,
-				});
+				found.set(name, { ...(found.get(name) || {}), name, edge: l.id });
 		});
 		return [...found.values()];
 	}
@@ -345,7 +344,8 @@
 				];
 			}),
 			...links.map((l) => ["Bandwidth", formatBandwidth(l.speed)]),
-			...(!links.length
+			...(p.availability ? [["Port state", p.availability]] : []),
+			...(!links.length && !p.availability
 				? [["Connection", "No discovered neighbour"]]
 				: []),
 		];
@@ -355,7 +355,12 @@
 	 */
 	function portTone(p) {
 		const edge = p.edge && data.links.find((l) => l.id === p.edge);
-		if (!edge) return "#334155";
+		if (!edge) {
+			if (/unavailable|disabled/i.test(p.availability || "")) return "#64748b";
+			if (/link down/i.test(p.availability || "")) return "#ef4444";
+			if (/link up/i.test(p.availability || "")) return "#f59e0b";
+			return "#334155";
+		}
 		if (!edge.current) return "#ef4444";
 		const speed = Number(
 			edge.speed || edge.link_speed || edge.bandwidth || 0,
@@ -671,9 +676,7 @@
 				tabindex: 0,
 				role: "button",
 				"aria-label":
-					(p.available ? "Available " : "Observed ") +
-					"port " +
-					p.name,
+					"Port " + p.name + ": " + (p.availability || (p.available ? "Available socket" : "Observed by SNMP")),
 			});
 			hover(r, n.name, portRows(n, p));
 			const inspect = (e) => {

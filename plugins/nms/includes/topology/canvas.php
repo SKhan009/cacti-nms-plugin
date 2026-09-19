@@ -90,6 +90,8 @@ function nms_canvas_data($site_id)
 					"name" => (string) $interface["name"],
 					"speed_bps" => (int) ($interface["speed_bps"] ?? 0),
 					"high_speed_mbps" => (int) ($interface["high_speed_mbps"] ?? 0),
+					"admin" => (int) ($interface["admin"] ?? 0),
+					"oper" => (int) ($interface["oper"] ?? 0),
 				];
 			}
 			foreach ($snapshot["data"]["hardware"]["physical_ports"] ?? [] as $port) {
@@ -180,6 +182,48 @@ function nms_canvas_data($site_id)
 			$links[] = $link;
 		}
 	}
+	// Add a factual per-interface state for the map. A link is marked connected only
+	// when current LLDP/CDP evidence identifies both device ports.
+	$node_names = [];
+	foreach ($nodes as $node) {
+		$node_names[(int) $node["id"]] = (string) $node["name"];
+	}
+	foreach ($nodes as &$node) {
+		foreach ($node["interfaces"] as &$interface) {
+			$connection = null;
+			foreach ($links as $link) {
+				if (empty($link["current"])) {
+					continue;
+				}
+				if ((int) $link["a"] === (int) $node["id"] && (int) ($link["a_ifindex"] ?? 0) === (int) $interface["index"]) {
+					$connection = ["peer" => (int) $link["b"], "port" => (string) $link["b_port"]];
+					break;
+				}
+				if ((int) $link["b"] === (int) $node["id"] && (int) ($link["b_ifindex"] ?? 0) === (int) $interface["index"]) {
+					$connection = ["peer" => (int) $link["a"], "port" => (string) $link["a_port"]];
+					break;
+				}
+			}
+			if ($connection) {
+				$interface["availability"] = "In use — connected to " . ($node_names[$connection["peer"]] ?? "device") . " / " . $connection["port"];
+				$interface["peer_name"] = $node_names[$connection["peer"]] ?? "Device";
+				$interface["peer_port"] = $connection["port"];
+			} elseif ((int) $interface["oper"] === 6) {
+				$interface["availability"] = "Unavailable — interface not present";
+			} elseif ((int) $interface["admin"] === 2) {
+				$interface["availability"] = "Disabled by device configuration";
+			} elseif ((int) $interface["oper"] === 2) {
+				$interface["availability"] = "Link down — no active physical connection";
+			} elseif ((int) $interface["oper"] === 1) {
+				$interface["availability"] = "Link up — neighbour not advertised";
+			} else {
+				$interface["availability"] = "Status not reported by IF-MIB";
+			}
+		}
+		unset($interface);
+	}
+	unset($node);
+
 	$observations = [];
 	foreach (array_merge($d["unresolved"] ?? [], $endpoint["observations"]) as $o) {
 		if (isset($ids[(int) $o["host_id"]])) {
