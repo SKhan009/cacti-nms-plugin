@@ -64,7 +64,7 @@ if ($nd_mode === "preset") {
 	print "checked";
 } ?>> <?php print nms_h($label); ?></label><?php } ?></div>
 </div>
-<p>Requires SNMPv2c/v3 and readable tables on the assigned collector. Save to apply collection settings. Interval and stale threshold come from the shared preset; disabled devices are not collected.</p>
+<p>Supports SNMPv1, SNMPv2c, and SNMPv3 with readable tables on the assigned collector. Unavailable optional MIBs are skipped safely. Save to apply collection settings. Interval and stale threshold come from the shared preset; disabled devices are not collected.</p>
 </fieldset>
 <?php
 $diag_profiles = db_fetch_assoc("SELECT id,name,tools FROM plugin_nms_diagnostic_profiles ORDER BY name");

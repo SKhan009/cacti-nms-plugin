@@ -47,7 +47,7 @@
 		location:
 			"Optionally enter the physical location, for example Building A / Floor 2 / Rack 03. Leave blank if unknown.",
 		snmp_version:
-			"Choose the version enabled on the device. Example: Version 2 for SNMPv2c with a community, or Version 3 for an SNMPv3 user. Not In Use disables SNMP; connection discovery requires v2c or v3.",
+			"Choose the version enabled on the device. Version 1 and Version 2 use a community; Version 3 uses an SNMPv3 user. Not In Use disables SNMP. Connection discovery supports SNMPv1, SNMPv2c, and SNMPv3; unavailable MIBs are skipped safely.",
 		snmp_community:
 			"Enter the exact read-only community configured on the target. Example: use public only if that is actually configured. This value is case-sensitive; an arbitrary name will not authenticate.",
 		snmp_port:

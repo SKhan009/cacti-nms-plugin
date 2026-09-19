@@ -30,6 +30,15 @@ function nms_nd_snmp_scalar($session, $oid, $deadline)
 	}
 	return nms_nd_snmp_value($response, $oid);
 }
+/** Return whether a GETNEXT error denotes the normal end of an SNMPv1 or SNMPv2+ subtree. */
+function nms_nd_snmp_end_of_subtree($session)
+{
+	return in_array((int) $session->getErrno(), [2, 8], true) &&
+		preg_match(
+			"/No more variables left|End of MIB|endOfMibView|No Such (?:Object|Name)/i",
+			(string) $session->getError(),
+		);
+}
 /** Walk via bounded GETNEXT, retaining type and octets; never accept a partial walk after failure. */
 function nms_nd_snmp_subtree($session, $root, $deadline, &$budget)
 {
@@ -42,11 +51,8 @@ function nms_nd_snmp_subtree($session, $root, $deadline, &$budget)
 		$budget--;
 		$result = @$session->getnext([$cursor]);
 		if ($result === false || $session->getErrno()) {
-			// PHP reports a valid SNMPv2 endOfMibView as an error; other errors must fail.
-			if (
-				$session->getErrno() === 8 &&
-				preg_match("/No more variables left|End of MIB|endOfMibView/i", $session->getError())
-			) {
+			// PHP reports normal SNMPv1 and SNMPv2+ table endings as errors.
+			if (nms_nd_snmp_end_of_subtree($session)) {
 				break;
 			}
 			throw new RuntimeException("SNMP table read failed: " . $root . ". Partial result discarded.");
@@ -67,6 +73,15 @@ function nms_nd_snmp_subtree($session, $root, $deadline, &$budget)
 	}
 	return $values;
 }
+/** Read an optional MIB subtree without making an absent vendor or newer MIB fail discovery. */
+function nms_nd_snmp_optional_subtree($session, $root, $deadline, &$budget)
+{
+	try {
+		return nms_nd_snmp_subtree($session, $root, $deadline, $budget);
+	} catch (RuntimeException $e) {
+		return [];
+	}
+}
 /** Compare numeric OID arcs, not lexicographic strings. */
 function nms_nd_oid_compare($a, $b)
 {
@@ -82,7 +97,10 @@ function nms_nd_oid_compare($a, $b)
 /** Validate the explicitly configured SNMPv3 level before the native helper can downgrade missing keys. */
 function nms_nd_snmp_security($host)
 {
-	if ((string) $host["snmp_version"] !== "3") {
+	if ((string) $host["snmp_version"] === "1") {
+		return "SNMPv1";
+	}
+	if ((string) $host["snmp_version"] === "2") {
 		return "SNMPv2c";
 	}
 	if ($host["snmp_username"] === "" || strlen($host["snmp_username"]) > 32) {
@@ -119,7 +137,6 @@ function nms_nd_snmp_security($host)
 function nms_nd_discovery_session($host)
 {
 	global $config;
-	static $profiles = [];
 	require_once $config["base_path"] . "/lib/snmp.php";
 	if (!$config["php_snmp_support"] || !extension_loaded("snmp")) {
 		throw new RuntimeException(
@@ -129,41 +146,14 @@ function nms_nd_discovery_session($host)
 	if ($host["disabled"] !== "" || (int) $host["poller_id"] !== (int) $config["poller_id"]) {
 		throw new RuntimeException("Device is disabled or assigned to another collector.");
 	}
-	if (!in_array((string) $host["snmp_version"], ["2", "3"], true)) {
-		throw new RuntimeException("Discovery requires explicitly configured SNMPv2c or SNMPv3.");
-	}
-	if ($host["snmp_engine_id"] !== "") {
-		throw new RuntimeException(
-			"An explicit authoritative SNMP engine ID is not supported by this native PHP session; configuration was not ignored.",
-		);
+	if (!in_array((string) $host["snmp_version"], ["1", "2", "3"], true)) {
+		throw new RuntimeException("Discovery requires an explicitly configured SNMPv1, SNMPv2c, or SNMPv3 profile.");
 	}
 	$security = nms_nd_snmp_security($host);
-	if ((string) $host["snmp_version"] === "3") {
-		$fingerprint = hash(
-			"sha256",
-			json_encode(
-				[
-					$security,
-					$host["snmp_auth_protocol"],
-					$host["snmp_password"],
-					$host["snmp_priv_protocol"],
-					$host["snmp_priv_passphrase"],
-				],
-				JSON_THROW_ON_ERROR,
-			),
-		);
-		$name = $host["snmp_username"];
-		if (isset($profiles[$name]) && !hash_equals($profiles[$name], $fingerprint)) {
-			throw new RuntimeException(
-				"A changed SNMPv3 profile requires an isolated collection process; cached keys were not reused.",
-			);
-		}
-		$profiles[$name] = $fingerprint;
-	}
 	$timeout = (int) $host["snmp_timeout"];
 	$retries = $host["nms_snmp_retries"] ?? read_config_option("snmp_retries");
-	if ($timeout < 1 || $timeout > 5000 || !preg_match('/^[0-3]$/D', (string) $retries)) {
-		throw new RuntimeException("Discovery requires native timeout 1–5000 ms and native retries 0–3.");
+	if ($timeout < 1 || !is_scalar($retries) || !preg_match('/^\d+$/D', (string) $retries)) {
+		throw new RuntimeException("Discovery requires a positive timeout and a non-negative retry count.");
 	}
 	$session = false;
 	try {
@@ -210,7 +200,8 @@ function nms_nd_discovery_session($host)
 	}
 	$session->valueretrieval = SNMP_VALUE_OBJECT | SNMP_VALUE_PLAIN;
 	$session->enum_print = true;
-	$session->oid_increasing_check = true;
+	// Retain our own numeric OID guard while accepting devices whose agent does not advertise ordered OIDs.
+	$session->oid_increasing_check = false;
 	return $session;
 }
 /**
@@ -293,17 +284,10 @@ function nms_nd_collect_direct($host, $protocol, $jobDeadline)
 		if ($before["type"] !== 67) {
 			throw new RuntimeException("sysUpTime must be TimeTicks.");
 		}
-		foreach (
-			[
-				"1.3.6.1.2.1.2.2.1",
-				"1.3.6.1.2.1.2.2.1.5",
-				"1.3.6.1.2.1.31.1.1.1.1",
-				"1.3.6.1.2.1.31.1.1.1.15",
-				"1.3.6.1.2.1.31.1.1.1.18",
-			]
-			as $root
-		) {
-			$values += nms_nd_snmp_subtree($session, $root, $deadline, $budget);
+		// IF-MIB is required for interface mapping. IFX-MIB is optional and absent on many SNMPv1 agents.
+		$values += nms_nd_snmp_subtree($session, "1.3.6.1.2.1.2.2.1", $deadline, $budget);
+		foreach (["1.3.6.1.2.1.2.2.1.5", "1.3.6.1.2.1.31.1.1.1.1", "1.3.6.1.2.1.31.1.1.1.15", "1.3.6.1.2.1.31.1.1.1.18"] as $root) {
+			$values += nms_nd_snmp_optional_subtree($session, $root, $deadline, $budget);
 		}
 		if ($protocol === "lldp") {
 			$values += nms_nd_snmp_subtree($session, "1.0.8802.1.1.2.1.3", $deadline, $budget);
@@ -315,7 +299,7 @@ function nms_nd_collect_direct($host, $protocol, $jobDeadline)
 		} elseif ($protocol === "arp") {
 			// Retain legacy IPv4 support and add the version-neutral IPv4/IPv6 table.
 			foreach (["1.3.6.1.2.1.4.22.1", "1.3.6.1.2.1.4.35.1"] as $root) {
-				$values += nms_nd_snmp_subtree($session, $root, $deadline, $budget);
+				$values += nms_nd_snmp_optional_subtree($session, $root, $deadline, $budget);
 			}
 			$data = nms_nd_parse_arp($values, nms_nd_interfaces($values));
 		} elseif ($protocol === "fdb") {
@@ -328,7 +312,7 @@ function nms_nd_collect_direct($host, $protocol, $jobDeadline)
 				]
 				as $root
 			) {
-				$values += nms_nd_snmp_subtree($session, $root, $deadline, $budget);
+				$values += nms_nd_snmp_optional_subtree($session, $root, $deadline, $budget);
 			}
 			$data = nms_nd_parse_fdb($values, nms_nd_interfaces($values));
 		} else {

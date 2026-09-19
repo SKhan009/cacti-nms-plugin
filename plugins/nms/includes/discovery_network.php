@@ -96,8 +96,8 @@ function nms_nd_network_profile($network, $item_id)
 	if (!$p) {
 		throw new InvalidArgumentException("Select a native SNMP option belonging to this network.");
 	}
-	if (!in_array((string) $p["snmp_version"], ["2", "3"], true)) {
-		throw new InvalidArgumentException("Supplemental SNMP probes require v2c/v3; native Cacti retains v1 support.");
+	if (!in_array((string) $p["snmp_version"], ["1", "2", "3"], true)) {
+		throw new InvalidArgumentException("Supplemental SNMP probes require an explicitly configured SNMPv1, SNMPv2c, or SNMPv3 profile.");
 	}
 	return $p;
 }
