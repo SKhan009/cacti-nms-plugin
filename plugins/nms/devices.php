@@ -52,7 +52,7 @@ if (
 	$_SERVER["REQUEST_METHOD"] === "POST" &&
 	!in_array(
 		get_nfilter_request_var("nms_action"),
-		["import_snmprec", "mib_preview", "mib_create", "check_snmpsim", "control_snmpsim"],
+		["import_snmprec", "mib_preview", "mib_create", "check_snmpsim", "control_snmpsim", "apply_snmpsim_fcaps"],
 		true,
 	)
 ) {
@@ -114,6 +114,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset_request_var("nms_action")) {
 		if ($action === "control_snmpsim") {
 			$tab = "import";
 			$simulator_message = nms_snmpsim_queue_control(get_nfilter_request_var("simulator_command"));
+		}
+		if ($action === "apply_snmpsim_fcaps") {
+			$tab = "import";
+			$simulator_message = nms_snmprec_apply_fcaps_scenario(
+				get_filter_request_var("import_id"),
+				get_nfilter_request_var("fcaps_scenario"),
+				$_POST,
+			);
 		}
 		if (isset_request_var("id")) {
 			nms_require_device_access(get_filter_request_var("id"));
@@ -525,7 +533,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset_request_var("nms_action")) {
 					? "edit"
 					: "inventory"));
 	}
-	if ($page_error !== "" && in_array($action, ["check_snmpsim", "control_snmpsim"], true)) {
+	if ($page_error !== "" && in_array($action, ["check_snmpsim", "control_snmpsim", "apply_snmpsim_fcaps"], true)) {
 		$tab = "import";
 	}
 	if ($page_error !== "" && $action === "add_device") {
@@ -592,6 +600,10 @@ $imports = db_fetch_assoc("SELECT i.*, c.name AS category_name, ht.name AS host_
 	LEFT JOIN plugin_nms_categories AS c ON c.id = i.category_id
 	LEFT JOIN host_template AS ht ON ht.id = i.host_template_id
 	LEFT JOIN user_auth AS u ON u.id = i.uploaded_by ORDER BY i.id DESC");
+foreach ($imports as &$import) {
+	$import["fcaps_targets"] = nms_snmprec_fcaps_targets((int) $import["id"]);
+}
+unset($import);
 
 // Seed normal device forms from Cacti settings before applying any explicit imported-simulator defaults.
 // Reuse configured defaults from the installed device form, including site/template/poller.

@@ -193,3 +193,163 @@ function nms_snmprec_deploy($community, $content)
 	}
 	return $target;
 }
+
+/** Return simulator OIDs that can be changed by the lab-only FCAPS controls. */
+function nms_snmprec_fcaps_targets($import_id)
+{
+	$rows = db_fetch_assoc_prepared(
+		"SELECT oid, tag, raw_value FROM plugin_nms_snmprec_oids WHERE import_id = ? ORDER BY oid",
+		[(int) $import_id],
+	);
+	$targets = ["interfaces" => [], "traffic" => [], "battery" => [], "sys_name" => false];
+	foreach ($rows as $row) {
+		$oid = (string) $row["oid"];
+		if (preg_match('/^1\\.3\\.6\\.1\\.2\\.1\\.2\\.2\\.1\\.8\\.([0-9]+)$/D', $oid, $match) && $row["tag"] === "2") {
+			$targets["interfaces"][(int) $match[1]] = ["oid" => $oid, "value" => $row["raw_value"]];
+		}
+		if (preg_match('/^1\\.3\\.6\\.1\\.2\\.1\\.(?:2\\.2\\.1\\.(?:10|16)|31\\.1\\.1\\.1\\.(?:6|10))\\.[0-9]+$/D', $oid) && in_array($row["tag"], ["65", "70"], true)) {
+			$targets["traffic"][] = $oid;
+		}
+		if (in_array($oid, ["1.3.6.1.2.1.33.1.2.1.0", "1.3.6.1.2.1.33.1.2.3.0", "1.3.6.1.2.1.33.1.2.4.0"], true) && $row["tag"] === "2") {
+			$targets["battery"][] = $oid;
+		}
+		if ($oid === "1.3.6.1.2.1.1.5.0" && $row["tag"] === "4") {
+			$targets["sys_name"] = true;
+		}
+	}
+	return $targets;
+}
+
+/** Add two non-negative decimal strings without depending on platform integer size. */
+function nms_snmprec_decimal_add($left, $right)
+{
+	$left = ltrim((string) $left, "0");
+	$right = ltrim((string) $right, "0");
+	$left = $left === "" ? "0" : $left;
+	$right = $right === "" ? "0" : $right;
+	$carry = 0;
+	$out = "";
+	for ($i = 0, $length = max(strlen($left), strlen($right)); $i < $length; $i++) {
+		$a = $i < strlen($left) ? (int) $left[strlen($left) - 1 - $i] : 0;
+		$b = $i < strlen($right) ? (int) $right[strlen($right) - 1 - $i] : 0;
+		$sum = $a + $b + $carry;
+		$out = ($sum % 10) . $out;
+		$carry = intdiv($sum, 10);
+	}
+	return ($carry ? (string) $carry : "") . $out;
+}
+
+/** Atomically replace an imported record and ask the managed worker to reload it. */
+function nms_snmprec_replace_import($import_id, $changes)
+{
+	$import = db_fetch_row_prepared(
+		"SELECT community, deployed_path FROM plugin_nms_snmprec_imports WHERE id = ?",
+		[(int) $import_id],
+	);
+	if (!$import || !$changes) {
+		throw new InvalidArgumentException("Select an imported simulator record and a supported lab scenario.");
+	}
+	$community = nms_snmprec_community($import["community"]);
+	$directory = nms_snmprec_runtime_dir();
+	$target = $directory . DIRECTORY_SEPARATOR . $community . ".snmprec";
+	if (is_link($target) || !is_file($target) || !is_readable($target)) {
+		throw new RuntimeException("The imported simulator record is not a readable regular file in the configured data directory.");
+	}
+	$content = file_get_contents($target);
+	if ($content === false) {
+		throw new RuntimeException("NMS could not read the imported simulator record.");
+	}
+	$records = nms_snmprec_parse($content);
+	$known = [];
+	foreach ($records as $record) {
+		$known[$record["oid"]] = $record;
+	}
+	foreach ($changes as $oid => $value) {
+		if (!isset($known[$oid])) {
+			throw new RuntimeException("The requested OID is no longer present in this simulator record.");
+		}
+		$test = $known[$oid];
+		$test["value"] = (string) $value;
+		// Reuse the record parser to validate type and value rules before writing anything.
+		nms_snmprec_parse($oid . "|" . $test["tag"] . "|" . $test["value"]);
+	}
+	$rewritten = [];
+	foreach (preg_split('/\\r\\n|\\r|\\n/', $content) as $line) {
+		$parts = explode("|", trim($line), 3);
+		$oid = count($parts) === 3 ? ltrim(trim($parts[0]), ".") : "";
+		if ($oid !== "" && array_key_exists($oid, $changes)) {
+			$line = trim($parts[0]) . "|" . trim($parts[1]) . "|" . $changes[$oid];
+		}
+		$rewritten[] = $line;
+	}
+	$new_content = rtrim(implode("\n", $rewritten)) . "\n";
+	// Validate the full record so duplicate or malformed data can never be deployed.
+	nms_snmprec_parse($new_content);
+	$temporary = tempnam($directory, ".nms-fcaps-");
+	if ($temporary === false || file_put_contents($temporary, $new_content, LOCK_EX) === false) {
+		throw new RuntimeException("NMS could not write the updated simulator record.");
+	}
+	@chmod($temporary, 0640);
+	if (!rename($temporary, $target)) {
+		@unlink($temporary);
+		throw new RuntimeException("NMS could not activate the updated simulator record.");
+	}
+	foreach ($changes as $oid => $value) {
+		db_execute_prepared("UPDATE plugin_nms_snmprec_oids SET raw_value = ? WHERE import_id = ? AND oid = ?", [
+			(string) $value,
+			(int) $import_id,
+			$oid,
+		]);
+	}
+	if ((nms_snmpsim_config()["activation"] ?? "") !== "manual") {
+		if (file_put_contents($directory . DIRECTORY_SEPARATOR . ".reload.pending", (string) time(), LOCK_EX) === false) {
+			throw new RuntimeException("The record was updated, but NMS could not queue the SNMPSim reload.");
+		}
+	}
+}
+
+/** Apply a named FCAPS scenario to an imported lab record; real Cacti devices are never changed. */
+function nms_snmprec_apply_fcaps_scenario($import_id, $scenario, $input)
+{
+	$targets = nms_snmprec_fcaps_targets($import_id);
+	$changes = [];
+	if (in_array($scenario, ["interface_up", "interface_down"], true)) {
+		$index = filter_var($input["interface_index"] ?? null, FILTER_VALIDATE_INT, ["options" => ["min_range" => 1]]);
+		if ($index === false || !isset($targets["interfaces"][$index])) {
+			throw new InvalidArgumentException("Select an interface provided by this imported record.");
+		}
+		$changes[$targets["interfaces"][$index]["oid"]] = $scenario === "interface_up" ? "1" : "2";
+		$label = "Interface " . $index . ($scenario === "interface_up" ? " set to up" : " set to down");
+	} elseif ($scenario === "traffic_pulse") {
+		if (!$targets["traffic"]) {
+			throw new RuntimeException("This record has no supported interface traffic counters.");
+		}
+		$rows = db_fetch_assoc_prepared("SELECT oid, raw_value FROM plugin_nms_snmprec_oids WHERE import_id = ?", [(int) $import_id]);
+		$values = array_column($rows, "raw_value", "oid");
+		foreach ($targets["traffic"] as $oid) {
+			$changes[$oid] = nms_snmprec_decimal_add($values[$oid], "1250000");
+		}
+		$label = "Traffic counters increased for the next Cacti poll";
+	} elseif (in_array($scenario, ["battery_normal", "battery_low"], true)) {
+		if (!$targets["battery"]) {
+			throw new RuntimeException("This record does not include standard UPS battery OIDs.");
+		}
+		$normal = ["1.3.6.1.2.1.33.1.2.1.0" => "2", "1.3.6.1.2.1.33.1.2.3.0" => "45", "1.3.6.1.2.1.33.1.2.4.0" => "95"];
+		$low = ["1.3.6.1.2.1.33.1.2.1.0" => "3", "1.3.6.1.2.1.33.1.2.3.0" => "8", "1.3.6.1.2.1.33.1.2.4.0" => "15"];
+		foreach ($targets["battery"] as $oid) {
+			$changes[$oid] = ($scenario === "battery_low" ? $low : $normal)[$oid];
+		}
+		$label = $scenario === "battery_low" ? "UPS battery set to low" : "UPS battery set to normal";
+	} elseif ($scenario === "system_name") {
+		$name = trim((string) ($input["system_name"] ?? ""));
+		if (!$targets["sys_name"] || $name === "" || strlen($name) > 255 || preg_match('/[|\\r\\n]/', $name)) {
+			throw new InvalidArgumentException("Enter a valid system name for a record that includes sysName.");
+		}
+		$changes["1.3.6.1.2.1.1.5.0"] = $name;
+		$label = "System name updated";
+	} else {
+		throw new InvalidArgumentException("Unsupported FCAPS scenario.");
+	}
+	nms_snmprec_replace_import($import_id, $changes);
+	return $label . ". Reload is queued when managed SNMPSim is enabled; run or wait for the next Cacti poll to see the change.";
+}
