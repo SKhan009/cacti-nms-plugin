@@ -72,11 +72,15 @@
 </section>
 
 <?php if ($result) { ?>
-	<section class="nms-panel">
+	<section class="nms-panel nms-diagnostic-result">
 		<div class="nms-panel-head">
 			<div>
 				<h2><?php print nms_h(nms_diag_labels()[$result["tool"]] . " result"); ?></h2>
-				<p><?php print nms_h($result["target"] . " · profile " . $result["profile"] . " · exit code " . $result["exit"]); ?></p>
+				<p class="nms-diagnostic-result-meta">
+					<span><?php print nms_h($result["target"]); ?></span>
+					<span>Profile: <?php print nms_h($result["profile"]); ?></span>
+					<span>Exit code: <?php print (int) $result["exit"]; ?></span>
+				</p>
 			</div>
 		</div>
 		<pre class="nms-diagnostic-output"><?php print nms_h($result["output"] ?: "No output returned."); ?></pre>

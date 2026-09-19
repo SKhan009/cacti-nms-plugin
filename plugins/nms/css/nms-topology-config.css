@@ -196,3 +196,16 @@
 	.nms-diagnostic-profile-form .nms-config-note { padding:15px 20px; }
 	.nms-diagnostic-profile-form .nms-discovery-preset-actions { padding:18px 20px 22px; }
 }
+
+
+/* Keep diagnostic result metadata aligned beneath its result title. */
+.nms-diagnostic-result .nms-panel-head > div { width:100%; }
+.nms-diagnostic-result .nms-diagnostic-result-meta { align-items:center; display:flex; flex-wrap:wrap; gap:0; margin:7px 0 0; }
+.nms-diagnostic-result .nms-diagnostic-result-meta span { align-items:center; color:#d2d6da; display:inline-flex; font-size:14px; line-height:1.35; }
+.nms-diagnostic-result .nms-diagnostic-result-meta span + span::before { color:#8c959e; content:"•"; margin:0 9px; }
+.nms-diagnostic-result .nms-diagnostic-output { margin:0; min-height:72px; padding:20px 28px; white-space:pre-wrap; word-break:break-word; }
+@media(max-width:650px) {
+	.nms-diagnostic-result .nms-diagnostic-output { padding:16px 20px; }
+	.nms-diagnostic-result .nms-diagnostic-result-meta { align-items:flex-start; flex-direction:column; gap:3px; }
+	.nms-diagnostic-result .nms-diagnostic-result-meta span + span::before { content:""; margin:0; }
+}
