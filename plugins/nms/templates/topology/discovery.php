@@ -60,6 +60,11 @@ $discovery = nms_topology_discovery($site_id);
  ) { ?><tr><td colspan="4">No resolved connections at this site. Interface availability alone does not establish a neighbour.</td></tr><?php }
  ?>
  </tbody></table></div>
+ <div class="nms-panel-head"><div><h2>Port availability</h2><p>Current IF-MIB state and resolved LLDP/CDP connections. Link-up without a neighbour is not treated as a known device connection.</p></div></div>
+ <div class="nms-table-wrap"><table class="nms-table"><thead><tr><th>Device</th><th>Local port</th><th>IF-MIB state</th><th>Topology state</th><th>Connected device / port</th><th>Evidence</th></tr></thead><tbody>
+ <?php foreach ($discovery["ports"] as $port) { ?><tr><td><?php print nms_h($port["device"]); ?></td><td><?php print nms_h($port["port"]); ?></td><td><?php print nms_h($port["if_mib"]); ?></td><td><?php print nms_h($port["state"]); ?></td><td><?php print nms_h($port["peer"]); ?></td><td><?php print nms_h($port["evidence"]); ?></td></tr><?php } ?>
+ <?php if (empty($discovery["ports"])) { ?><tr><td colspan="6">No port state is available. Assign discovery to a device and wait for the next collector poll.</td></tr><?php } ?>
+ </tbody></table></div>
 
  <?php if (!empty($discovery["unresolved"])) { ?>
  <div class="nms-table-wrap"><table class="nms-table"><thead><tr><th>Reporting device</th><th>Observed neighbour / matching result</th></tr></thead><tbody>
