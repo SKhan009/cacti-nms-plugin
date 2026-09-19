@@ -4,7 +4,7 @@
  * Controller for saved diagnostic profiles and one on-demand collector test.
  */
 
-require __DIR__ . "/../include/auth.php";
+require __DIR__ . "/../../include/auth.php";
 require_once __DIR__ . "/includes/database.php";
 require_once __DIR__ . "/includes/diagnostics.php";
 
