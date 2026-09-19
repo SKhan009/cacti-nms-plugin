@@ -128,7 +128,6 @@ function nms_nd_poll()
 {
 	global $config;
 	require_once __DIR__ . "/discovery_snmp.php";
-	nms_nd_apply_rules();
 	$deadline = PHP_FLOAT_MAX;
 	$hosts = nms_nd_hosts();
 	usort($hosts, function ($a, $b) {
