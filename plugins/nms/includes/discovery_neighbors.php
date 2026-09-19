@@ -247,9 +247,6 @@ function nms_nd_observation_history($previous, $current, $now)
 		$row["present"] = true;
 		$merged[$key] = $row;
 	}
-	if (count($merged) > 2000) {
-		throw new RuntimeException("Neighbor history exceeds 2000 observations; collection was not published.");
-	}
 	return $merged;
 }
 /** Resolve evidence only within the visible, configured node; preserve parallel ports and ambiguity. */

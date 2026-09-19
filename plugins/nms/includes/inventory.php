@@ -102,13 +102,9 @@ function nms_collect_inventory_values($only_host_id = 0)
 		$attempted++;
 		$display_name = nms_inventory_display_name($definition["inventory_key"]);
 
-		/* Do not add a second timeout when Cacti has already marked the host down. */
-		if ((int) $definition["status"] !== HOST_UP || (int) $definition["snmp_version"] === 0) {
-			$state = (int) $definition["snmp_version"] === 0 ? "unconfigured" : "failed";
-			$error =
-				(int) $definition["snmp_version"] === 0
-					? "SNMP is disabled on this Cacti device; live inventory polling was not attempted."
-					: "Cacti device is not Up; live inventory polling was not attempted.";
+		if ((int) $definition["snmp_version"] === 0) {
+			$state = "unconfigured";
+			$error = "SNMP is disabled on this Cacti device; live inventory polling was not attempted.";
 			nms_category_execute(
 				"INSERT INTO plugin_nms_device_inventory
 				(host_id, inventory_key, oid, display_name, status, last_attempt, last_error)

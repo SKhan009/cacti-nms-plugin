@@ -11,6 +11,11 @@ the most complete inventory and topology results. The plugin reads standard and
 vendor tables dynamically. Missing optional tables, including IFX-MIB on older
 SNMPv1 agents, do not prevent collection of the tables the device exposes.
 
+NMS also attempts configured live inventory reads when Cacti has temporarily
+marked a device down. Missing, malformed, or unavailable topology tables are
+recorded as empty evidence with a warning instead of cancelling the device's
+other discovery results.
+
 For SNMPv1 and SNMPv2c, save the matching read-only community in the Cacti
 device profile. For SNMPv3, save the device's security name, authentication and
 privacy protocols, passwords, context, and authoritative engine ID where used.

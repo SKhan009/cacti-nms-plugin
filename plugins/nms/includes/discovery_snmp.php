@@ -13,9 +13,6 @@ function nms_nd_snmp_value($response, $oid)
 	) {
 		throw new RuntimeException("SNMP object is unavailable or not readable: " . $oid);
 	}
-	if (strlen((string) $response->value) > 4096) {
-		throw new RuntimeException("SNMP value exceeds the discovery size limit.");
-	}
 	return ["type" => (int) $response->type, "value" => (string) $response->value];
 }
 /** Read one mandatory scalar with explicit native-session error handling. */
@@ -39,14 +36,14 @@ function nms_nd_snmp_end_of_subtree($session)
 			(string) $session->getError(),
 		);
 }
-/** Walk via bounded GETNEXT, retaining type and octets; never accept a partial walk after failure. */
+/** Walk GETNEXT, retaining typed values; never accept a partial walk after a transport failure. */
 function nms_nd_snmp_subtree($session, $root, $deadline, &$budget)
 {
 	$values = [];
 	$cursor = $root;
 	while (true) {
-		if (microtime(true) > $deadline || $budget <= 0) {
-			throw new RuntimeException("Discovery time or 5000-object limit reached; partial result discarded.");
+		if (microtime(true) > $deadline) {
+			throw new RuntimeException("Discovery time limit reached; partial result discarded.");
 		}
 		$budget--;
 		$result = @$session->getnext([$cursor]);
@@ -72,6 +69,27 @@ function nms_nd_snmp_subtree($session, $root, $deadline, &$budget)
 		$cursor = $oid;
 	}
 	return $values;
+}
+/** Return usable interfaces when IF-MIB is exposed, without making optional topology evidence fail collection. */
+function nms_nd_snmp_interfaces($values)
+{
+	try {
+		return nms_nd_interfaces($values);
+	} catch (RuntimeException $e) {
+		return [];
+	}
+}
+/** Return a successful empty observation when a requested table is unavailable or nonconforming. */
+function nms_nd_snmp_empty_protocol($protocol, $interfaces, $error)
+{
+	$data = ["interfaces" => $interfaces, "neighbors" => [], "warning" => $error];
+	if ($protocol === "arp") {
+		$data["endpoints"] = [];
+	}
+	if (in_array($protocol, ["lldp", "cdp"], true)) {
+		$data += ["identity" => "", "name" => "", "ports" => []];
+	}
+	return $data;
 }
 /** Read an optional MIB subtree without making an absent vendor or newer MIB fail discovery. */
 function nms_nd_snmp_optional_subtree($session, $root, $deadline, &$budget)
@@ -128,8 +146,8 @@ function nms_nd_snmp_security($host)
 	if ($hasPriv && !$hasAuth) {
 		throw new RuntimeException("SNMPv3 privacy requires authentication.");
 	}
-	if (strlen($host["snmp_context"]) > 32) {
-		throw new RuntimeException("SNMPv3 context exceeds 32 bytes.");
+	if (strlen($host["snmp_context"]) > 255) {
+		throw new RuntimeException("SNMPv3 context exceeds the protocol maximum of 255 bytes.");
 	}
 	return $hasPriv ? "authPriv" : ($hasAuth ? "authNoPriv" : "noAuthNoPriv");
 }
@@ -212,14 +230,15 @@ function nms_nd_discovery_session($host)
 function nms_nd_collect_identity($host, $jobDeadline)
 {
 	$session = nms_nd_discovery_session($host);
-	$deadline = min($jobDeadline, microtime(true) + 30);
-	$budget = 5000;
+	$deadline = $jobDeadline;
+	$budget = PHP_INT_MAX;
 	$values = [];
 	try {
 		$uptime = "1.3.6.1.2.1.1.3.0";
-		$before = nms_nd_snmp_scalar($session, $uptime, $deadline);
-		if ($before["type"] !== 67) {
-			throw new RuntimeException("sysUpTime must be TimeTicks.");
+		try {
+			$before = nms_nd_snmp_scalar($session, $uptime, $deadline);
+		} catch (RuntimeException $e) {
+			$before = null;
 		}
 		foreach (
 			["1.3.6.1.2.1.2.2.1", "1.3.6.1.2.1.31.1.1.1.1", "1.3.6.1.2.1.31.1.1.1.15", "1.3.6.1.2.1.31.1.1.1.18"]
@@ -247,13 +266,12 @@ function nms_nd_collect_identity($host, $jobDeadline)
 		if (isset($hardware_error)) {
 			$hardware["error"] = $hardware_error;
 		}
-		if (!$interfaces && empty($hardware["chassis"]) && empty($hardware["physical_ports"])) {
-			throw new RuntimeException(
-				"No readable IF-MIB interfaces or ENTITY-MIB inventory. Check the SNMP view on this device.",
-			);
+		try {
+			$after = nms_nd_snmp_scalar($session, $uptime, $deadline);
+		} catch (RuntimeException $e) {
+			$after = null;
 		}
-		$after = nms_nd_snmp_scalar($session, $uptime, $deadline);
-		if ($after["type"] !== 67 || (float) $after["value"] < (float) $before["value"]) {
+		if ($before !== null && $after !== null && (float) $after["value"] < (float) $before["value"]) {
 			throw new RuntimeException(
 				"Device restarted or uptime wrapped during identity collection; result discarded.",
 			);
@@ -275,33 +293,47 @@ function nms_nd_collect_identity($host, $jobDeadline)
 function nms_nd_collect_direct($host, $protocol, $jobDeadline)
 {
 	$session = nms_nd_discovery_session($host);
-	$deadline = min($jobDeadline, microtime(true) + 30);
-	$budget = 5000;
+	$deadline = $jobDeadline;
+	$budget = PHP_INT_MAX;
 	$values = [];
 	try {
 		$uptime = "1.3.6.1.2.1.1.3.0";
-		$before = nms_nd_snmp_scalar($session, $uptime, $deadline);
-		if ($before["type"] !== 67) {
-			throw new RuntimeException("sysUpTime must be TimeTicks.");
+		try {
+			$before = nms_nd_snmp_scalar($session, $uptime, $deadline);
+		} catch (RuntimeException $e) {
+			$before = null;
 		}
-		// IF-MIB is required for interface mapping. IFX-MIB is optional and absent on many SNMPv1 agents.
-		$values += nms_nd_snmp_subtree($session, "1.3.6.1.2.1.2.2.1", $deadline, $budget);
+		// IF-MIB and IFX-MIB are both optional: LLDP port labels can still be collected without them.
+		$values += nms_nd_snmp_optional_subtree($session, "1.3.6.1.2.1.2.2.1", $deadline, $budget);
 		foreach (["1.3.6.1.2.1.2.2.1.5", "1.3.6.1.2.1.31.1.1.1.1", "1.3.6.1.2.1.31.1.1.1.15", "1.3.6.1.2.1.31.1.1.1.18"] as $root) {
 			$values += nms_nd_snmp_optional_subtree($session, $root, $deadline, $budget);
 		}
+		$interfaces = nms_nd_snmp_interfaces($values);
 		if ($protocol === "lldp") {
-			$values += nms_nd_snmp_subtree($session, "1.0.8802.1.1.2.1.3", $deadline, $budget);
-			$values += nms_nd_snmp_subtree($session, "1.0.8802.1.1.2.1.4.1.1", $deadline, $budget);
-			$data = nms_nd_parse_lldp($values, nms_nd_interfaces($values));
+			$values += nms_nd_snmp_optional_subtree($session, "1.0.8802.1.1.2.1.3", $deadline, $budget);
+			$values += nms_nd_snmp_optional_subtree($session, "1.0.8802.1.1.2.1.4.1.1", $deadline, $budget);
+			try {
+				$data = nms_nd_parse_lldp($values, $interfaces);
+			} catch (RuntimeException $e) {
+				$data = nms_nd_snmp_empty_protocol($protocol, $interfaces, $e->getMessage());
+			}
 		} elseif ($protocol === "cdp") {
-			$values += nms_nd_snmp_subtree($session, "1.3.6.1.4.1.9.9.23.1", $deadline, $budget);
-			$data = nms_nd_parse_cdp($values, nms_nd_interfaces($values));
+			$values += nms_nd_snmp_optional_subtree($session, "1.3.6.1.4.1.9.9.23.1", $deadline, $budget);
+			try {
+				$data = nms_nd_parse_cdp($values, $interfaces);
+			} catch (RuntimeException $e) {
+				$data = nms_nd_snmp_empty_protocol($protocol, $interfaces, $e->getMessage());
+			}
 		} elseif ($protocol === "arp") {
 			// Retain legacy IPv4 support and add the version-neutral IPv4/IPv6 table.
 			foreach (["1.3.6.1.2.1.4.22.1", "1.3.6.1.2.1.4.35.1"] as $root) {
 				$values += nms_nd_snmp_optional_subtree($session, $root, $deadline, $budget);
 			}
-			$data = nms_nd_parse_arp($values, nms_nd_interfaces($values));
+			try {
+				$data = nms_nd_parse_arp($values, $interfaces);
+			} catch (RuntimeException $e) {
+				$data = nms_nd_snmp_empty_protocol($protocol, $interfaces, $e->getMessage());
+			}
 		} elseif ($protocol === "fdb") {
 			foreach (
 				[
@@ -314,15 +346,23 @@ function nms_nd_collect_direct($host, $protocol, $jobDeadline)
 			) {
 				$values += nms_nd_snmp_optional_subtree($session, $root, $deadline, $budget);
 			}
-			$data = nms_nd_parse_fdb($values, nms_nd_interfaces($values));
+			try {
+				$data = nms_nd_parse_fdb($values, $interfaces);
+			} catch (RuntimeException $e) {
+				$data = nms_nd_snmp_empty_protocol($protocol, $interfaces, $e->getMessage());
+			}
 		} else {
 			throw new RuntimeException("Unknown discovery protocol.");
 		}
-		$after = nms_nd_snmp_scalar($session, $uptime, $deadline);
-		if ($after["type"] !== 67 || (float) $after["value"] < (float) $before["value"]) {
+		try {
+			$after = nms_nd_snmp_scalar($session, $uptime, $deadline);
+		} catch (RuntimeException $e) {
+			$after = null;
+		}
+		if ($before !== null && $after !== null && (float) $after["value"] < (float) $before["value"]) {
 			throw new RuntimeException("Device restarted or uptime wrapped during collection; result discarded.");
 		}
-		// Optional inventory uses the same authenticated session and bounded budget.
+		// Optional inventory uses the same authenticated session.
 		// Its failure must not turn successful neighbour evidence into an empty success.
 		try {
 			$entity = nms_nd_snmp_subtree($session, "1.3.6.1.2.1.47.1.1.1.1", $deadline, $budget);

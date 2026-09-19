@@ -129,15 +129,12 @@ function nms_nd_poll()
 	global $config;
 	require_once __DIR__ . "/discovery_snmp.php";
 	nms_nd_apply_rules();
-	$deadline = microtime(true) + 45;
+	$deadline = PHP_FLOAT_MAX;
 	$hosts = nms_nd_hosts();
 	usort($hosts, function ($a, $b) {
 		return strcmp($a["last_attempt"] ?? "", $b["last_attempt"] ?? "");
 	});
 	foreach ($hosts as $host) {
-		if (microtime(true) > $deadline) {
-			break;
-		}
 		if (
 			!$host["enabled"] ||
 			!$host["collection_enabled"] ||
