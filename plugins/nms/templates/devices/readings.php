@@ -38,7 +38,7 @@ $lastRead = $device_readings ? $device_readings[0]['last_seen'] : ($edit_device[
 </section>
 
 <section class="nms-panel nms-reading-summary">
-	<div class="nms-panel-head"><div><p class="nms-eyebrow">NMS / Device monitoring</p><h2>Device reading</h2><p>Human explanation of the current readings Cacti collected for this device.</p></div><div class="nms-reading-actions"><a class="nms-panel-action" href="diagnostics.php?section=run&amp;host_id=<?php print (int) $edit_device['id']; ?>">On-demand diagnostics</a><a class="nms-panel-action" href="<?php print nms_h(nms_cacti_url('graph_view.php?action=tree&host_id=' . (int) $edit_device['id'])); ?>">Open Cacti graphs</a><a class="nms-panel-action" href="devices.php?tab=edit&amp;id=<?php print (int) $edit_device['id']; ?>">Back to device</a></div></div>
+	<div class="nms-panel-head"><div><p class="nms-eyebrow">NMS / Device monitoring</p><h2>Device reading</h2><p>Explanation of the current readings Cacti collected for this device.</p></div><div class="nms-reading-actions"><a class="nms-panel-action" href="diagnostics.php?section=run&amp;host_id=<?php print (int) $edit_device['id']; ?>">On-demand diagnostics</a><a class="nms-panel-action" href="<?php print nms_h(nms_cacti_url('graph_view.php?action=tree&host_id=' . (int) $edit_device['id'])); ?>">Open Cacti graphs</a><a class="nms-panel-action" href="devices.php?tab=edit&amp;id=<?php print (int) $edit_device['id']; ?>">Back to device</a></div></div>
 	<div class="nms-reading-facts">
 		<div><span>Device</span><strong><?php print nms_h($edit_device['description']); ?></strong><small><?php print nms_h($edit_device['hostname'] . ' · SNMPv' . $edit_device['snmp_version']); ?></small></div>
 		<div><span>SNMP port</span><strong><?php print (int) $edit_device['snmp_port']; ?></strong><small><?php print nms_h($edit_device['poller_name'] ?: 'Assigned collector'); ?></small></div>
@@ -59,7 +59,7 @@ $lastRead = $device_readings ? $device_readings[0]['last_seen'] : ($edit_device[
 		<button data-reading-tab="traffic">Traffic <span><?php print $traffic; ?></span></button>
 		<button data-reading-tab="problems">Problems <span><?php print $unknown + $stale + count($failed); ?></span></button>
 	</nav>
-	<div class="nms-reading-table-wrap"><table class="nms-table nms-reading-table"><thead><tr><th>Status</th><th>Area</th><th>OID / Source</th><th>Actual reading</th><th>Human explanation</th><th>What NMS does</th><th>Last checked</th></tr></thead><tbody>
+	<div class="nms-reading-table-wrap"><table class="nms-table nms-reading-table"><thead><tr><th>Status</th><th>Area</th><th>OID / Source</th><th>Reading</th><th>Explanation</th><th>What NMS does</th><th>Last checked</th></tr></thead><tbody>
 		<?php foreach ($device_readings as $reading) {
 			$p = nms_reading_presentation($reading);
 			$category = nms_reading_category($reading);

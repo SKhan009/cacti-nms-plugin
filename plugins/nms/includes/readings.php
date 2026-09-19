@@ -187,6 +187,31 @@ function nms_reading_uptime($value)
 	return implode(', ', $parts);
 }
 
+/** Add the unit or meaning needed to understand a numeric Cacti reading. */
+function nms_reading_display_value($reading, $raw)
+{
+	$name = strtolower((string) $reading['parameter_name']);
+	$oid = ltrim(trim((string) ($reading['stored_oid'] ?? '')), '.');
+	if ($oid === '1.3.6.1.2.1.1.3.0' || $name === 'uptime') {
+		return nms_reading_uptime($raw);
+	}
+	if ($oid === '1.3.6.1.2.1.1.8.0') {
+		$layers = [1 => 'physical', 2 => 'data-link', 4 => 'internet', 8 => 'transport', 16 => 'application'];
+		return (string) (int) $raw . (isset($layers[(int) $raw]) ? ' — ' . $layers[(int) $raw] . ' layer service' : ' — service layer bitmask');
+	}
+	if (in_array($name, ['traffic_in', 'traffic_out'], true)) return number_format((float) $raw) . ' bytes';
+	if (in_array($name, ['nonunicast_in', 'nonunicast_out'], true)) return number_format((float) $raw) . ' packets';
+	if (str_starts_with($name, 'sscpu') || str_ends_with($name, '_percent')) {
+		return nms_reading_human_number($raw) . '%';
+	}
+	if (in_array($name, ['mem_buffers', 'mem_swap'], true)) {
+		return number_format((float) $raw) . ' KiB';
+	}
+	if ($name === 'proc') return number_format((float) $raw) . ' processes';
+	if ($name === 'users') return number_format((float) $raw) . ' users';
+	return nms_reading_human_number($raw);
+}
+
 /** Return a plain-language status and practical next check for one captured reading. */
 function nms_reading_presentation($reading)
 {
@@ -213,20 +238,16 @@ function nms_reading_presentation($reading)
 			'next' => 'Check the data input method and the OID ASN.1 type; use inventory for text values.',
 		];
 	}
-	if (strtolower((string) $reading['parameter_name']) === 'uptime') {
-		$uptime = nms_reading_uptime($raw);
-	} else {
-		$uptime = nms_reading_human_number($raw);
-	}
+	$value = nms_reading_display_value($reading, $raw);
 	if (!nms_parameter_is_fresh($reading['last_seen'])) {
 		return [
-			'tone' => 'warning', 'state' => 'Stale', 'value' => $uptime,
+			'tone' => 'warning', 'state' => 'Stale', 'value' => $value,
 			'meaning' => $label . ' has not been updated within two expected poll intervals.',
 			'next' => 'Check the Cacti poller schedule, device reachability, and the last poller error.',
 		];
 	}
 	return [
-		'tone' => 'success', 'state' => 'OK', 'value' => $uptime,
+		'tone' => 'success', 'state' => 'OK', 'value' => $value,
 		'meaning' => $label . ' is a current numeric value captured by the Cacti poller.',
 		'next' => 'No action needed. The exact RRD value is retained below for verification.',
 	];
