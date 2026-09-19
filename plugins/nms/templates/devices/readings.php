@@ -78,4 +78,4 @@ $lastRead = $device_readings ? $device_readings[0]['last_seen'] : ($edit_device[
 	</tbody></table></div>
 </section>
 
-<section class="nms-panel nms-reading-raw"><div class="nms-panel-head"><div><h2>Raw device response</h2><p>Technical evidence for troubleshooting. Credentials are never shown.</p></div></div><pre><?php foreach ($device_readings as $reading) print nms_h($reading['parameter_key'] . ' = ' . $reading['raw_value'] . "\n"); foreach ($device_discovery_readings as $snapshot) print nms_h("\n[" . strtoupper($snapshot['protocol']) . '] ' . $snapshot['status'] . "\n" . $snapshot['data_json'] . "\n" . $snapshot['error'] . "\n"); ?></pre></section>
+<section class="nms-panel nms-reading-raw"><div class="nms-panel-head"><div><h2>Actual collected evidence</h2><p>Stored poller OIDs and discovery values from Cacti. Internal parameter IDs and credentials are excluded.</p></div></div><pre><?php print nms_h(nms_reading_raw_evidence($device_readings, $device_discovery_readings)); ?></pre></section>

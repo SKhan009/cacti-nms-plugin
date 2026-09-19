@@ -290,3 +290,32 @@ function nms_readings_load_live_rrd_values($readings)
 
 	return $readings;
 }
+
+/** Render only the device facts actually captured by Cacti, without exposing internal parameter IDs. */
+function nms_reading_raw_evidence($readings, $snapshots)
+{
+	$lines = [];
+	foreach ($readings as $reading) {
+		$lines[] = nms_reading_source($reading) . ' = ' . (string) $reading['raw_value'];
+	}
+
+	foreach ($snapshots as $snapshot) {
+		$data = json_decode((string) $snapshot['data_json'], true);
+		if (!is_array($data)) {
+			continue;
+		}
+		$protocol = strtoupper((string) $snapshot['protocol']);
+		foreach ($data['interfaces'] ?? [] as $interface) {
+			$name = (string) ($interface['name'] ?? 'unnamed interface');
+			$index = (string) ($interface['index'] ?? 'unknown');
+			$mac = strtoupper(trim((string) ($interface['mac_hex'] ?? '')));
+			$mac = $mac === '' ? 'not reported' : implode(':', str_split($mac, 2));
+			$lines[] = '[' . $protocol . '] interface ' . $name . ' (ifIndex ' . $index . ') MAC ' . $mac . ' admin ' . ($interface['admin'] ?? 'unknown') . ' oper ' . ($interface['oper'] ?? 'unknown');
+		}
+		foreach ($data['neighbors'] ?? [] as $neighbor) {
+			$lines[] = '[' . $protocol . '] neighbour ' . ($neighbor['local_port'] ?? 'unknown local port') . ' -> ' . ($neighbor['remote_name'] ?? $neighbor['peer_label'] ?? 'unknown remote device') . ' port ' . ($neighbor['remote_port'] ?? 'not reported');
+		}
+	}
+
+	return $lines ? implode("\n", array_unique($lines)) : 'No Cacti readings or discovery evidence are stored for this device.';
+}
