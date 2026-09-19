@@ -64,6 +64,8 @@
 		this.container = container;
 		this.items = directChildren(container, itemSelector);
 		if (!this.items.length) return;
+		this.filteredItems = this.items.slice();
+		this.filter = null;
 		this.page = 1;
 		this.pageSize =
 			Number(container.getAttribute("data-nms-page-size")) ||
@@ -83,14 +85,29 @@
 			"nms:list-updated",
 			/** Recapture changed list items and reset pagination to the first page. */ function () {
 				self.items = directChildren(container, itemSelector);
+				self.filteredItems = self.filter
+					? self.items.filter(self.filter)
+					: self.items.slice();
 				self.page = 1;
 				self.render();
 			},
 		);
 		var anchor = container.closest(".nms-table-wrap") || container;
 		anchor.insertAdjacentElement("afterend", this.controls);
+		container.nmsPaginator = this;
 		this.render();
+		container.dispatchEvent(new CustomEvent("nms:paginator-ready", { bubbles: true }));
 	}
+
+	Paginator.prototype.setFilter =
+		/** Replace the visible item set, reset to page one, and keep controls accurate. */ function (filter) {
+			this.filter = typeof filter === "function" ? filter : null;
+			this.filteredItems = this.filter
+				? this.items.filter(this.filter)
+				: this.items.slice();
+			this.page = 1;
+			this.render();
+		};
 
 	Paginator.prototype.go =
 		/** Clamp the requested page to the available range and redraw the list controls. */ function (
@@ -98,41 +115,45 @@
 		) {
 			var totalPages = Math.max(
 				1,
-				Math.ceil(this.items.length / this.pageSize),
+				Math.ceil(this.filteredItems.length / this.pageSize),
 			);
 			this.page = Math.max(1, Math.min(totalPages, page));
 			this.render();
 		};
 
 	Paginator.prototype.render =
-		/** Show the current item slice and rebuild the summary, page-size selector, and navigation. */ function () {
+		/** Show the filtered item slice and rebuild the navigation controls. */ function () {
 			var self = this;
-			var total = this.items.length;
+			var total = this.filteredItems.length;
+			var visibleItems = new Set(this.filteredItems);
+
 			if (!total) {
+				this.items.forEach(function (item) {
+					item.classList.add("nms-page-hidden");
+				});
 				this.controls.hidden = true;
 				return;
 			}
+
 			var totalPages = Math.max(1, Math.ceil(total / this.pageSize));
-			if (totalPages <= 1) {
-				this.items.forEach(function (item) { item.classList.remove("nms-page-hidden"); });
-				this.controls.hidden = true;
-				return;
-			}
-			this.controls.hidden = false;
 			if (this.page > totalPages) this.page = totalPages;
 			var start = (this.page - 1) * this.pageSize;
 			var end = Math.min(start + this.pageSize, total);
-			this.items.forEach(
-				/** Hide items whose index falls outside the current page slice. */ function (
-					item,
-					index,
-				) {
-					item.classList.toggle(
-						"nms-page-hidden",
-						index < start || index >= end,
-					);
-				},
-			);
+			var pageItems = new Set(this.filteredItems.slice(start, end));
+
+			this.items.forEach(function (item) {
+				item.classList.toggle(
+					"nms-page-hidden",
+					!visibleItems.has(item) || !pageItems.has(item),
+				);
+			});
+
+			if (totalPages <= 1) {
+				this.controls.hidden = true;
+				return;
+			}
+
+			this.controls.hidden = false;
 			this.summary.textContent =
 				"Showing " + (start + 1) + "–" + end + " of " + total;
 			this.actions.innerHTML = "";
@@ -142,73 +163,32 @@
 			sizeLabel.textContent = "Rows";
 			var sizeSelect = document.createElement("select");
 			sizeSelect.setAttribute("aria-label", "Rows per page");
-			pageSizes.forEach(
-				/** Add a page-size choice and mark the current size as selected. */ function (
-					size,
-				) {
-					var option = document.createElement("option");
-					option.value = size;
-					option.textContent = size;
-					option.selected = size === self.pageSize;
-					sizeSelect.appendChild(option);
-				},
-			);
-			sizeSelect.addEventListener(
-				"change",
-				/** Apply a new page size and return the list to its first page. */ function () {
-					self.pageSize = Number(sizeSelect.value);
-					self.page = 1;
-					self.render();
-				},
-			);
+			pageSizes.forEach(function (size) {
+				var option = document.createElement("option");
+				option.value = size;
+				option.textContent = size;
+				option.selected = size === self.pageSize;
+				sizeSelect.appendChild(option);
+			});
+			sizeSelect.addEventListener("change", function () {
+				self.pageSize = Number(sizeSelect.value);
+				self.page = 1;
+				self.render();
+			});
 			sizeLabel.appendChild(sizeSelect);
 			this.actions.appendChild(sizeLabel);
-			this.actions.appendChild(
-				createButton(
-					"‹",
-					"Previous page",
-					this.page === 1,
-					false,
-					/** Navigate to the previous page. */ function () {
-						self.go(self.page - 1);
-					},
-				),
-			);
-			pageTokens(this.page, totalPages).forEach(
-				/** Render either a page button or an ellipsis gap for each navigation token. */ function (
-					token,
-				) {
-					if (typeof token !== "number") {
-						var gap = document.createElement("span");
-						gap.className = "nms-page-gap";
-						gap.textContent = "…";
-						self.actions.appendChild(gap);
-						return;
-					}
-					self.actions.appendChild(
-						createButton(
-							String(token),
-							"Page " + token,
-							false,
-							token === self.page,
-							/** Navigate to the page represented by this numbered button. */ function () {
-								self.go(token);
-							},
-						),
-					);
-				},
-			);
-			this.actions.appendChild(
-				createButton(
-					"›",
-					"Next page",
-					this.page === totalPages,
-					false,
-					/** Navigate to the next page. */ function () {
-						self.go(self.page + 1);
-					},
-				),
-			);
+			this.actions.appendChild(createButton("‹", "Previous page", this.page === 1, false, function () { self.go(self.page - 1); }));
+			pageTokens(this.page, totalPages).forEach(function (token) {
+				if (typeof token !== "number") {
+					var gap = document.createElement("span");
+					gap.className = "nms-page-gap";
+					gap.textContent = "…";
+					self.actions.appendChild(gap);
+					return;
+				}
+				self.actions.appendChild(createButton(String(token), "Page " + token, false, token === self.page, function () { self.go(token); }));
+			});
+			this.actions.appendChild(createButton("›", "Next page", this.page === totalPages, false, function () { self.go(self.page + 1); }));
 		};
 
 	/** Attach paginators to supported NMS tables, associations, rules, and inventory lists. */
