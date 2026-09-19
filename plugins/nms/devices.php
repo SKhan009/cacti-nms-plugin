@@ -11,7 +11,6 @@ require_once $config["base_path"] . "/include/global_form.php";
 require_once $config["base_path"] . "/plugins/nms/includes/functions.php";
 require_once $config["base_path"] . "/plugins/nms/includes/database.php";
 require_once $config["base_path"] . "/plugins/nms/includes/readings.php";
-require_once $config["base_path"] . "/plugins/nms/includes/graphs.php";
 require_once $config["base_path"] . "/plugins/nms/includes/snmprec.php";
 require_once $config["base_path"] . "/plugins/nms/includes/template_manager.php";
 require_once __DIR__ . "/includes/mib_import.php";
@@ -621,7 +620,6 @@ $device_readings = [];
 $device_discovery_readings = [];
 $device_diagnostic_profile = [];
 $device_graph_templates = [];
-$device_graphs = [];
 $device_data_queries = [];
 $available_graph_templates = [];
 $available_data_queries = [];
@@ -660,7 +658,6 @@ if (in_array($tab, ["edit", "readings"], true)) {
 		nms_require_device_access($edit_device_id);
 		if ($tab === "readings") {
 			$device_readings = nms_readings_load_live_rrd_values(nms_device_readings($edit_device_id));
-			$device_graphs = nms_device_graphs($edit_device_id);
 			$device_discovery_readings = nms_device_discovery_readings($edit_device_id);
 			$device_diagnostic_profile = db_fetch_row_prepared("SELECT p.name,p.tools FROM plugin_nms_diagnostic_devices d INNER JOIN plugin_nms_diagnostic_profiles p ON p.id=d.profile_id WHERE d.host_id=?", [$edit_device_id]);
 		}

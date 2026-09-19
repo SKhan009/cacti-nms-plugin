@@ -38,7 +38,7 @@ $lastRead = $device_readings ? $device_readings[0]['last_seen'] : ($edit_device[
 </section>
 
 <section class="nms-panel nms-reading-summary">
-	<div class="nms-panel-head"><div><p class="nms-eyebrow">NMS / Device monitoring</p><h2>Device reading</h2><p>What Cacti read, what NMS discovered, and what each result means.</p></div><a class="nms-panel-action" href="devices.php?tab=edit&amp;id=<?php print (int) $edit_device['id']; ?>">Back to device</a></div>
+	<div class="nms-panel-head"><div><p class="nms-eyebrow">NMS / Device monitoring</p><h2>Device reading</h2><p>Human explanation of the current readings Cacti collected for this device.</p></div><div class="nms-reading-actions"><a class="nms-panel-action" href="<?php print nms_h(nms_cacti_url('graph_view.php?action=tree&host_id=' . (int) $edit_device['id'])); ?>">Open Cacti graphs</a><a class="nms-panel-action" href="devices.php?tab=edit&amp;id=<?php print (int) $edit_device['id']; ?>">Back to device</a></div></div>
 	<div class="nms-reading-facts">
 		<div><span>Device</span><strong><?php print nms_h($edit_device['description']); ?></strong><small><?php print nms_h($edit_device['hostname'] . ' · SNMPv' . $edit_device['snmp_version']); ?></small></div>
 		<div><span>SNMP port</span><strong><?php print (int) $edit_device['snmp_port']; ?></strong><small><?php print nms_h($edit_device['poller_name'] ?: 'Assigned collector'); ?></small></div>
@@ -49,11 +49,6 @@ $lastRead = $device_readings ? $device_readings[0]['last_seen'] : ($edit_device[
 </section>
 
 <section class="nms-reading-live"><strong>● Live reading</strong><span>Values come from each graph data source’s latest RRD sample.</span><code>Last response: <?php print nms_h($lastRead); ?></code></section>
-
-<section class="nms-panel nms-reading-graphs">
-	<div class="nms-panel-head"><div><h2>Actual Cacti graph readings</h2><p>Every graph assigned to this device, rendered live by Cacti from its RRD files.</p></div><a class="nms-panel-action" href="<?php print nms_h(nms_cacti_url('graph_view.php?action=tree&host_id=' . (int) $edit_device['id'])); ?>">Open in Cacti</a></div>
-	<?php if (!$device_graphs) { ?><p class="nms-empty">No graphs are assigned to this device.</p><?php } else { ?><div class="nms-reading-graph-grid"><?php foreach ($device_graphs as $graph) { $graph_id = (int) ($graph['local_graph_id'] ?? 0); if ($graph_id < 1) continue; $title = trim((string) ($graph['title_cache'] ?? '')) ?: 'Graph ' . $graph_id; ?><article><a href="<?php print nms_h(nms_cacti_url('graph.php?action=view&local_graph_id=' . $graph_id)); ?>"><img loading="lazy" src="<?php print nms_h(nms_cacti_url('graph_image.php?local_graph_id=' . $graph_id . '&rra_id=0&graph_start=' . (time() - 86400) . '&graph_end=' . time() . '&disable_cache=1')); ?>" alt="<?php print nms_h($title); ?>"></a><strong><?php print nms_h($title); ?></strong></article><?php } ?></div><?php } ?>
-</section>
 
 <section class="nms-panel nms-reading-table-panel">
 	<div class="nms-panel-head"><div><h2>Readings, discovery &amp; diagnosis</h2><p>One combined view of values, topology evidence, and collection failures.</p></div></div>

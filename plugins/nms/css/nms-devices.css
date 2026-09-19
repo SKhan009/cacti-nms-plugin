@@ -71,3 +71,7 @@
 .nms-reading-table td { line-height: 1.45; }
 .nms-reading-state.info { background: #eef2f5; color: #52606d; }
 .nms-reading-table-wrap + .nms-pagination .nms-pagination-actions { margin-left: auto; }
+
+/* Keep the two Device Reading actions together without an embedded graph gallery. */
+.nms-reading-actions { display:flex; flex-wrap:wrap; gap:8px; }
+@media (max-width: 650px) { .nms-reading-actions { width:100%; } }
