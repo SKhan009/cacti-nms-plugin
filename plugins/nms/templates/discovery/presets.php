@@ -57,7 +57,6 @@ $open_modal = isset_request_var("discovery_preset") || ($error && ($_POST["nms_a
 			<?php print nms_h($label); ?>
 		</a>
 	<?php } ?>
-	<a href="diagnostics.php#diagnostic-profiles" data-nms-tip="Create profiles for Ping, Traceroute, ARP, iPerf3, Netperf, and Pathchar. Assign a profile to a device in Add/Edit device before running a test.">Protocol checks</a>
 </nav>
 
 <section class="nms-panel">
