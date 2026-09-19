@@ -32,10 +32,54 @@ function nms_device_discovery_readings($host_id)
 	);
 }
 
+/** Return current UPS-MIB battery values retained during read-only identity collection. */
+function nms_device_battery_readings($host_id)
+{
+	$snapshot = db_fetch_row_prepared(
+		"SELECT status,succeeded_at,data_json FROM plugin_nms_discovery_snapshots WHERE host_id=? AND protocol='identity'",
+		[(int) $host_id],
+	);
+	if (!$snapshot || $snapshot["status"] !== "success") {
+		return ["supported" => false, "readings" => [], "last_seen" => ""];
+	}
+	$data = json_decode((string) $snapshot["data_json"], true);
+	$battery = is_array($data) ? ($data["battery"] ?? []) : [];
+	if (empty($battery["supported"])) {
+		return ["supported" => false, "readings" => [], "last_seen" => (string) $snapshot["succeeded_at"]];
+	}
+	$map = [
+		"status" => "ups_battery_status",
+		"charge_percent" => "ups_battery_charge",
+		"minutes_remaining" => "ups_battery_minutes",
+		"voltage" => "ups_battery_voltage",
+		"current" => "ups_battery_current",
+	];
+	$readings = [];
+	foreach ($map as $key => $parameter_name) {
+		if (!isset($battery[$key]) || !is_numeric($battery[$key])) {
+			continue;
+		}
+		$readings[] = [
+			"parameter_name" => $parameter_name,
+			"display_name" => "UPS battery " . str_replace("ups_battery_", "", $parameter_name),
+			"raw_value" => (string) $battery[$key],
+			"numeric_value" => (float) $battery[$key],
+			"last_seen" => (string) $snapshot["succeeded_at"],
+			"stored_oid" => "",
+			"host_description" => "",
+			"data_source_name" => "",
+		];
+	}
+	return ["supported" => true, "readings" => $readings, "last_seen" => (string) $snapshot["succeeded_at"]];
+}
+
 /** Classify a captured value for the device-reading filters without changing source data. */
 function nms_reading_category($reading)
 {
 	$name = strtolower((string) ($reading['display_name'] . ' ' . $reading['parameter_name']));
+	if (preg_match('/battery|ups.*(?:charge|runtime|voltage|current)|charge.*battery/', $name)) {
+		return 'battery';
+	}
 	if (preg_match('/octet|bit|traffic|bandwidth|inbound|outbound/', $name)) {
 		return 'traffic';
 	}
@@ -88,6 +132,11 @@ function nms_reading_label($reading)
 	$name = strtolower((string) $reading['parameter_name']);
 	$interface = nms_reading_interface_name($reading);
 	$labels = [
+		'ups_battery_status' => 'UPS battery status',
+		'ups_battery_charge' => 'UPS battery charge',
+		'ups_battery_minutes' => 'UPS estimated runtime',
+		'ups_battery_voltage' => 'UPS battery voltage',
+		'ups_battery_current' => 'UPS battery current',
 		'uptime' => 'Device uptime',
 		'traffic_in' => 'Incoming traffic — ' . $interface,
 		'traffic_out' => 'Outgoing traffic — ' . $interface,
@@ -123,6 +172,11 @@ function nms_reading_source($reading)
 	$index = nms_reading_interface_index($reading);
 	$index = $index === '' ? '' : '.' . $index;
 	$sources = [
+		'ups_battery_status' => 'UPS-MIB · upsBatteryStatus.0',
+		'ups_battery_charge' => 'UPS-MIB · upsEstimatedChargeRemaining.0',
+		'ups_battery_minutes' => 'UPS-MIB · upsEstimatedMinutesRemaining.0',
+		'ups_battery_voltage' => 'UPS-MIB · upsBatteryVoltage.0',
+		'ups_battery_current' => 'UPS-MIB · upsBatteryCurrent.0',
 		'uptime' => 'SNMPv2-MIB · sysUpTime.0',
 		'traffic_in' => 'IF-MIB · ifHCInOctets' . $index,
 		'traffic_out' => 'IF-MIB · ifHCOutOctets' . $index,
@@ -211,6 +265,14 @@ function nms_reading_display_value($reading, $raw)
 {
 	$name = strtolower((string) $reading['parameter_name']);
 	$oid = ltrim(trim((string) ($reading['stored_oid'] ?? '')), '.');
+	if ($name === 'ups_battery_status') {
+		$states = [1 => 'Unknown', 2 => 'Normal', 3 => 'Low', 4 => 'Depleted'];
+		return $states[(int) $raw] ?? 'Unknown';
+	}
+	if ($name === 'ups_battery_charge') return nms_reading_human_number($raw) . '%';
+	if ($name === 'ups_battery_minutes') return nms_reading_human_number($raw) . ' minutes';
+	if ($name === 'ups_battery_voltage') return nms_reading_human_number($raw) . ' V';
+	if ($name === 'ups_battery_current') return nms_reading_human_number($raw) . ' A';
 	if ($oid === '1.3.6.1.2.1.1.3.0' || $name === 'uptime') {
 		return nms_reading_uptime($raw);
 	}
@@ -258,6 +320,18 @@ function nms_reading_presentation($reading)
 		];
 	}
 	$value = nms_reading_display_value($reading, $raw);
+	$name = strtolower((string) $reading['parameter_name']);
+	$is_battery_warning =
+		($name === 'ups_battery_status' && (int) $raw >= 3) ||
+		($name === 'ups_battery_charge' && (float) $raw < 20) ||
+		($name === 'ups_battery_minutes' && (float) $raw < 10);
+	if ($is_battery_warning) {
+		return [
+			'tone' => 'warning', 'state' => 'Battery low', 'value' => $value,
+			'meaning' => $label . ' needs attention based on the UPS-MIB reading.',
+			'next' => 'Check mains power, battery age, and the UPS load. Confirm the device has a current SNMP response.',
+		];
+	}
 	if (!nms_parameter_is_fresh($reading['last_seen'])) {
 		return [
 			'tone' => 'warning', 'state' => 'Stale', 'value' => $value,
@@ -278,6 +352,7 @@ function nms_reading_action($reading)
 	$name = strtolower((string) $reading['parameter_name']);
 	if (in_array($name, ['traffic_in', 'traffic_out'], true)) return 'Compares consecutive counters to calculate traffic rate and graph it.';
 	if (in_array($name, ['nonunicast_in', 'nonunicast_out'], true)) return 'Keeps the packet counter for trend and fault analysis.';
+	if (str_starts_with($name, 'ups_battery_')) return 'Keeps UPS battery health visible and flags low charge, runtime, or reported battery faults.';
 	if ($name === 'uptime') return 'Confirms the device is responding through SNMP.';
 	if (str_starts_with($name, 'sscpu') || str_starts_with($name, 'load_')) return 'Stores the sample for device health monitoring.';
 	return 'Retains the exact poller value and makes its condition visible.';

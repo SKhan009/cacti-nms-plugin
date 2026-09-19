@@ -222,6 +222,31 @@ function nms_nd_discovery_session($host)
 	$session->oid_increasing_check = false;
 	return $session;
 }
+/** Read standard UPS-MIB battery values when the device exposes them. */
+function nms_nd_collect_battery($session, $deadline)
+{
+	$oids = [
+		"status" => "1.3.6.1.2.1.33.1.2.1.0",
+		"minutes_remaining" => "1.3.6.1.2.1.33.1.2.3.0",
+		"charge_percent" => "1.3.6.1.2.1.33.1.2.4.0",
+		"voltage" => "1.3.6.1.2.1.33.1.2.5.0",
+		"current" => "1.3.6.1.2.1.33.1.2.6.0",
+	];
+	$out = ["supported" => false];
+	foreach ($oids as $name => $oid) {
+		try {
+			$value = nms_nd_snmp_scalar($session, $oid, $deadline);
+			if (is_numeric($value["value"])) {
+				$out[$name] = (float) $value["value"];
+				$out["supported"] = true;
+			}
+		} catch (RuntimeException $error) {
+			// UPS-MIB is optional; a normal server, laptop, or phone may not expose it.
+		}
+	}
+	return $out;
+}
+
 /**
  * Collect asset identity separately from neighbour protocols.  IF-MIB and
  * ENTITY-MIB are useful on ordinary servers and switches even when LLDP/CDP
@@ -255,6 +280,7 @@ function nms_nd_collect_identity($host, $jobDeadline)
 			$entity = [];
 			$hardware_error = $e->getMessage();
 		}
+		$battery = nms_nd_collect_battery($session, $deadline);
 		$interfaces = [];
 		$interface_error = "";
 		try {
@@ -279,6 +305,7 @@ function nms_nd_collect_identity($host, $jobDeadline)
 		return [
 			"interfaces" => $interfaces,
 			"hardware" => $hardware,
+			"battery" => $battery,
 			"interface_error" => $interface_error,
 			"neighbors" => [],
 			"collected" => time(),

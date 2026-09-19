@@ -4,11 +4,15 @@ $unknown = 0;
 $stale = 0;
 $interfaces = 0;
 $traffic = 0;
+$battery = 0;
+$battery_evidence = nms_device_battery_readings((int) $edit_device['id']);
+$device_readings = array_merge($device_readings, $battery_evidence['readings']);
 
 foreach ($device_readings as $reading) {
 	$category = nms_reading_category($reading);
 	$interfaces += $category === 'interfaces';
 	$traffic += $category === 'traffic';
+	$battery += $category === 'battery';
 	$unknown += nms_reading_is_actionable_problem($reading);
 	$stale += !nms_reading_is_unknown($reading['raw_value']) && !nms_parameter_is_fresh($reading['last_seen']);
 }
@@ -29,7 +33,7 @@ $lastRead = $device_readings ? $device_readings[0]['last_seen'] : ($edit_device[
 		</select>
 	</label>
 	<label>View
-		<select data-reading-view><option value="all">All readings</option><option value="interfaces">Interfaces</option><option value="discovery">Discovery</option><option value="traffic">Traffic</option><option value="problems">Problems</option></select>
+		<select data-reading-view><option value="all">All readings</option><option value="interfaces">Interfaces</option><option value="discovery">Discovery</option><option value="traffic">Traffic</option><option value="battery">Battery</option><option value="problems">Problems</option></select>
 	</label>
 	<label>Protocol
 		<select data-reading-protocol><option value="all">All</option><option value="snmp">SNMP / RRD</option><option value="lldp">LLDP</option><option value="cdp">CDP</option><option value="arp">ARP</option><option value="fdb">FDB</option></select>
@@ -49,6 +53,7 @@ $lastRead = $device_readings ? $device_readings[0]['last_seen'] : ($edit_device[
 </section>
 
 <section class="nms-reading-live"><strong>● Live reading</strong><span>Values come from each graph data source’s latest RRD sample.</span><code>Last response: <?php print nms_h($lastRead); ?></code></section>
+<section class="nms-panel nms-battery-status"><div class="nms-panel-head"><div><h2>Battery monitoring</h2><p><?php print $battery_evidence['supported'] ? 'Live standard UPS-MIB values are included in the Battery tab below.' : 'This device has not reported standard UPS-MIB battery values. Laptop and phone battery values appear here when their SNMP agent or Cacti template exposes them.'; ?></p></div></div></section>
 
 <section class="nms-panel nms-reading-table-panel">
 	<div class="nms-panel-head"><div><h2>Readings, discovery &amp; diagnosis</h2><p>One combined view of values, topology evidence, and collection failures.</p></div></div>
@@ -57,6 +62,7 @@ $lastRead = $device_readings ? $device_readings[0]['last_seen'] : ($edit_device[
 		<button data-reading-tab="interfaces">Interfaces <span><?php print $interfaces; ?></span></button>
 		<button data-reading-tab="discovery">Discovery <span><?php print count($device_discovery_readings); ?></span></button>
 		<button data-reading-tab="traffic">Traffic <span><?php print $traffic; ?></span></button>
+		<button data-reading-tab="battery">Battery <span><?php print $battery; ?></span></button>
 		<button data-reading-tab="problems">Problems <span><?php print $unknown + $stale + count($failed); ?></span></button>
 	</nav>
 	<div class="nms-reading-table-wrap"><table class="nms-table nms-reading-table"><thead><tr><th>Status</th><th>Area</th><th>OID / Source</th><th>Reading</th><th>Explanation</th><th>What NMS does</th><th>Last checked</th></tr></thead><tbody>
