@@ -617,6 +617,8 @@ if ($snmpsim_import_id > 0) {
 
 $edit_device = [];
 $device_readings = [];
+$device_discovery_readings = [];
+$device_diagnostic_profile = [];
 $device_graph_templates = [];
 $device_data_queries = [];
 $available_graph_templates = [];
@@ -656,6 +658,8 @@ if (in_array($tab, ["edit", "readings"], true)) {
 		nms_require_device_access($edit_device_id);
 		if ($tab === "readings") {
 			$device_readings = nms_device_readings($edit_device_id);
+			$device_discovery_readings = nms_device_discovery_readings($edit_device_id);
+			$device_diagnostic_profile = db_fetch_row_prepared("SELECT p.name,p.tools FROM plugin_nms_diagnostic_devices d INNER JOIN plugin_nms_diagnostic_profiles p ON p.id=d.profile_id WHERE d.host_id=?", [$edit_device_id]);
 		}
 		$device_classification = db_fetch_row_prepared(
 			"SELECT * FROM plugin_nms_device_classification WHERE host_id = ?",
@@ -758,7 +762,7 @@ nms_prepare_page(
 			? "NMS · File Repository"
 			: "NMS · Device Management"),
 	"css/nms-devices.css",
-	"js/nms-devices.js",
+	"js/nms-devices.js,js/nms-readings.js",
 );
 require $config["base_path"] . "/plugins/nms/templates/app_header.php";
 ?>

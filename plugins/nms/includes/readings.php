@@ -18,6 +18,30 @@ function nms_device_readings($host_id)
 		[(int) $host_id],
 	);
 }
+/** Return the latest persisted discovery evidence for one Cacti device. */
+function nms_device_discovery_readings($host_id)
+{
+	return db_fetch_assoc_prepared("SELECT protocol,status,attempted_at,succeeded_at,data_json,error FROM plugin_nms_discovery_snapshots WHERE host_id=? ORDER BY protocol", [(int) $host_id]);
+}
+/** Classify a captured value for the device-reading filters without changing source data. */
+function nms_reading_category($reading)
+{
+	$name = strtolower((string) ($reading["display_name"] . " " . $reading["parameter_name"]));
+	if (preg_match('/octet|bit|traffic|bandwidth|inbound|outbound/', $name)) return "traffic";
+	return preg_match('/if|interface|port|link/', $name) ? "interfaces" : "all";
+}
+/** Summarize a discovery snapshot while retaining complete data in the raw-evidence panel. */
+function nms_reading_snapshot_summary($snapshot)
+{
+	$data = json_decode((string) $snapshot["data_json"], true);
+	$data = is_array($data) ? $data : [];
+	$parts = [];
+	foreach (["interfaces" => "interface", "neighbors" => "neighbour", "endpoints" => "endpoint"] as $key => $label) {
+		$count = count($data[$key] ?? []);
+		if ($count) $parts[] = $count . " " . $label . ($count === 1 ? "" : "s");
+	}
+	return $parts ? implode(", ", $parts) : "No rows returned";
+}
 
 /** Identify RRD's unknown tokens without treating zero as unavailable. */
 function nms_reading_is_unknown($value)
