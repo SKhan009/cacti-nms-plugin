@@ -6,7 +6,7 @@ function nms_device_readings($host_id)
 {
 	return db_fetch_assoc_prepared(
 		"SELECT p.local_data_id, p.parameter_key, p.parameter_name, p.display_name,
-		p.raw_value, p.numeric_value, p.last_seen, dl.rrd_path,
+		p.raw_value, p.numeric_value, p.last_seen, dtd.data_source_path AS rrd_path,
 		h.status AS host_status, h.last_updated AS host_last_updated, h.status_last_error,
 		dtd.name_cache AS data_source_name
 		FROM plugin_nms_device_parameters AS p
