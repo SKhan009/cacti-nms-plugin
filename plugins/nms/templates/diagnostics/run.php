@@ -20,7 +20,7 @@
 				Device
 				<select id="nmsDiagnosticHost" name="host_id" required>
 					<?php foreach ($devices as $device) { ?>
-						<option value="<?php print (int) $device["id"]; ?>" data-tools="<?php print nms_h($device["tools"]); ?>">
+						<option value="<?php print (int) $device["id"]; ?>" data-tools="<?php print nms_h($device["tools"]); ?>" <?php print (int) $device["id"] === $selected_diagnostic_host_id ? "selected" : ""; ?>>
 							<?php print nms_h($device["description"] . " · " . $device["hostname"] . " · " . $device["profile_name"]); ?>
 						</option>
 					<?php } ?>

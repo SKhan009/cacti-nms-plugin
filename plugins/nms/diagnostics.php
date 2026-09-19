@@ -46,6 +46,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 }
 
 $profiles = db_fetch_assoc("SELECT * FROM plugin_nms_diagnostic_profiles ORDER BY name");
+$selected_diagnostic_host_id = isset_request_var("host_id") ? (int) get_filter_request_var("host_id") : 0;
 $devices = db_fetch_assoc(
 	"SELECT h.id, h.description, h.hostname, p.id AS profile_id, p.name AS profile_name, p.tools
 	FROM host AS h

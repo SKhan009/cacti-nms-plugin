@@ -38,7 +38,7 @@ $lastRead = $device_readings ? $device_readings[0]['last_seen'] : ($edit_device[
 </section>
 
 <section class="nms-panel nms-reading-summary">
-	<div class="nms-panel-head"><div><p class="nms-eyebrow">NMS / Device monitoring</p><h2>Device reading</h2><p>Human explanation of the current readings Cacti collected for this device.</p></div><div class="nms-reading-actions"><a class="nms-panel-action" href="<?php print nms_h(nms_cacti_url('graph_view.php?action=tree&host_id=' . (int) $edit_device['id'])); ?>">Open Cacti graphs</a><a class="nms-panel-action" href="devices.php?tab=edit&amp;id=<?php print (int) $edit_device['id']; ?>">Back to device</a></div></div>
+	<div class="nms-panel-head"><div><p class="nms-eyebrow">NMS / Device monitoring</p><h2>Device reading</h2><p>Human explanation of the current readings Cacti collected for this device.</p></div><div class="nms-reading-actions"><a class="nms-panel-action" href="diagnostics.php?section=run&amp;host_id=<?php print (int) $edit_device['id']; ?>">On-demand diagnostics</a><a class="nms-panel-action" href="<?php print nms_h(nms_cacti_url('graph_view.php?action=tree&host_id=' . (int) $edit_device['id'])); ?>">Open Cacti graphs</a><a class="nms-panel-action" href="devices.php?tab=edit&amp;id=<?php print (int) $edit_device['id']; ?>">Back to device</a></div></div>
 	<div class="nms-reading-facts">
 		<div><span>Device</span><strong><?php print nms_h($edit_device['description']); ?></strong><small><?php print nms_h($edit_device['hostname'] . ' · SNMPv' . $edit_device['snmp_version']); ?></small></div>
 		<div><span>SNMP port</span><strong><?php print (int) $edit_device['snmp_port']; ?></strong><small><?php print nms_h($edit_device['poller_name'] ?: 'Assigned collector'); ?></small></div>
@@ -76,16 +76,6 @@ $lastRead = $device_readings ? $device_readings[0]['last_seen'] : ($edit_device[
 			</tr>
 		<?php } ?>
 	</tbody></table></div>
-</section>
-
-<section class="nms-panel nms-reading-diagnosis">
-	<div class="nms-panel-head"><div><h2>Device diagnosis</h2><p>Simple summary of what NMS currently understands.</p></div></div>
-	<div class="nms-reading-diagnosis-grid">
-		<div class="<?php print $unknown ? 'warning' : 'success'; ?>"><strong>Device communication</strong><span><?php print $unknown ? 'Some poller values are unknown. Check device status, SNMP credentials, and the last Cacti error.' : 'Current captured values are numeric and usable.'; ?></span></div>
-		<div class="<?php print $device_discovery_readings ? 'success' : 'warning'; ?>"><strong>Discovery evidence</strong><span><?php print $device_discovery_readings ? count($device_discovery_readings) . ' discovery methods have stored evidence.' : 'No discovery result has been collected yet.'; ?></span></div>
-		<div class="<?php print $device_diagnostic_profile ? 'success' : 'warning'; ?>"><strong>On-demand diagnostics</strong><span><?php print $device_diagnostic_profile ? nms_h($device_diagnostic_profile['name'] . ' — ' . $device_diagnostic_profile['tools']) : 'No diagnostic profile is assigned. Assign one in Edit device to run Ping or Traceroute.'; ?></span></div>
-		<div class="<?php print $failed || $stale ? 'warning' : 'success'; ?>"><strong>Collection health</strong><span><?php print ($failed || $stale) ? 'Review stale readings and discovery warnings in the Problems tab.' : 'No stale readings or discovery failures are currently recorded.'; ?></span></div>
-	</div>
 </section>
 
 <section class="nms-panel nms-reading-raw"><div class="nms-panel-head"><div><h2>Raw device response</h2><p>Technical evidence for troubleshooting. Credentials are never shown.</p></div></div><pre><?php foreach ($device_readings as $reading) print nms_h($reading['parameter_key'] . ' = ' . $reading['raw_value'] . "\n"); foreach ($device_discovery_readings as $snapshot) print nms_h("\n[" . strtoupper($snapshot['protocol']) . '] ' . $snapshot['status'] . "\n" . $snapshot['data_json'] . "\n" . $snapshot['error'] . "\n"); ?></pre></section>
