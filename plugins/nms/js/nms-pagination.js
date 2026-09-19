@@ -112,8 +112,13 @@
 				this.controls.hidden = true;
 				return;
 			}
-			this.controls.hidden = false;
 			var totalPages = Math.max(1, Math.ceil(total / this.pageSize));
+			if (totalPages <= 1) {
+				this.items.forEach(function (item) { item.classList.remove("nms-page-hidden"); });
+				this.controls.hidden = true;
+				return;
+			}
+			this.controls.hidden = false;
 			if (this.page > totalPages) this.page = totalPages;
 			var start = (this.page - 1) * this.pageSize;
 			var end = Math.min(start + this.pageSize, total);

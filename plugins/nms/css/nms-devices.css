@@ -57,3 +57,17 @@
 .nms-reading-graph-grid strong { font-size:13px; overflow-wrap:anywhere; }
 .nms-reading-graphs .nms-empty { margin:0; padding:16px; }
 @media (max-width: 900px) { .nms-reading-graph-grid { grid-template-columns:1fr; } }
+
+/* Give operator-facing evidence room before wrapping long labels. */
+.nms-reading-table { min-width: 1420px; table-layout: fixed; width: 100%; }
+.nms-reading-table :is(th, td) { overflow-wrap: break-word; padding: 12px 10px; }
+.nms-reading-table th:nth-child(1) { width: 8%; }
+.nms-reading-table th:nth-child(2) { width: 16%; }
+.nms-reading-table th:nth-child(3) { width: 17%; }
+.nms-reading-table th:nth-child(4) { width: 12%; }
+.nms-reading-table th:nth-child(5) { width: 24%; }
+.nms-reading-table th:nth-child(6) { width: 16%; }
+.nms-reading-table th:nth-child(7) { width: 7%; }
+.nms-reading-table td { line-height: 1.45; }
+.nms-reading-state.info { background: #eef2f5; color: #52606d; }
+.nms-reading-table-wrap + .nms-pagination .nms-pagination-actions { margin-left: auto; }
