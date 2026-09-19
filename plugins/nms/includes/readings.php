@@ -7,8 +7,8 @@ function nms_device_readings($host_id)
 	return db_fetch_assoc_prepared(
 		"SELECT p.local_data_id, p.parameter_key, p.parameter_name, p.display_name,
 		p.raw_value, p.numeric_value, p.last_seen, dtd.data_source_path AS rrd_path,
-		pi.arg1 AS stored_oid, h.status AS host_status, h.last_updated AS host_last_updated, h.status_last_error,
-		dtd.name_cache AS data_source_name
+		pi.arg1 AS stored_oid, h.description AS host_description, h.status AS host_status,
+		h.last_updated AS host_last_updated, h.status_last_error, dtd.name_cache AS data_source_name
 		FROM plugin_nms_device_parameters AS p
 		INNER JOIN host AS h ON h.id = p.host_id
 		LEFT JOIN data_local AS dl ON dl.id = p.local_data_id
@@ -64,6 +64,24 @@ function nms_reading_interface_name($reading)
 	return 'the interface';
 }
 
+/** Return the Cacti-generated metric title without the device prefix or internal data-source name. */
+function nms_reading_dynamic_label($reading)
+{
+	$title = trim((string) (($reading['display_name'] ?? '') ?: ($reading['data_source_name'] ?? '')));
+	$host = trim((string) ($reading['host_description'] ?? ''));
+	$parameter = trim((string) ($reading['parameter_name'] ?? ''));
+
+	if ($host !== '' && str_starts_with($title, $host . ' - ')) {
+		$title = substr($title, strlen($host) + 3);
+	}
+	if ($parameter !== '') {
+		$title = preg_replace('/\s*·\s*' . preg_quote($parameter, '/') . '$/u', '', $title) ?? $title;
+	}
+	$title = preg_replace('/\s*·\s*SNMP index\s+\d+/iu', '', $title) ?? $title;
+
+	return trim($title, " \t\n\r\0\x0B·-");
+}
+
 /** Return a concise operator-facing name for a Cacti parameter. */
 function nms_reading_label($reading)
 {
@@ -90,7 +108,7 @@ function nms_reading_label($reading)
 		'uptime_seconds' => 'Device uptime',
 	];
 
-	return $labels[$name] ?? trim((string) ($reading['parameter_name'] ?: $reading['display_name']));
+	return $labels[$name] ?? (nms_reading_dynamic_label($reading) ?: trim((string) $reading['parameter_name']));
 }
 
 /** Return the standard SNMP MIB object behind a stored Cacti reading when known. */
@@ -122,7 +140,8 @@ function nms_reading_source($reading)
 		'mem_swap' => 'UCD-SNMP-MIB · memAvailSwap.0',
 	];
 
-	return $sources[$name] ?? 'Cacti RRD · ' . $name;
+	$dynamic_source = nms_reading_dynamic_label($reading);
+	return $sources[$name] ?? ($dynamic_source !== '' ? 'Cacti RRD · ' . $dynamic_source : 'Cacti RRD · ' . $name);
 }
 
 /** Summarize a discovery snapshot while retaining complete data in the raw-evidence panel. */

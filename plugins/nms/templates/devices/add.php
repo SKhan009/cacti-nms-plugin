@@ -36,9 +36,14 @@ $selected_site_id = isset_request_var("site_id")
 		? $device_values["site_id"] ?? 0
 		: (nms_single_topology_site() ?:
 		$device_values["site_id"] ?? 0));
+$available_poller_ids = array_map(static fn($poller) => (int) $poller["id"], $pollers);
+$default_poller_id = (int) ($device_values["poller_id"] ?? 0);
+if (!in_array($default_poller_id, $available_poller_ids, true)) {
+	$default_poller_id = $available_poller_ids ? $available_poller_ids[0] : 0;
+}
 $selected_poller_id = isset_request_var("poller_id")
 	? (int) get_filter_request_var("poller_id")
-	: (int) ($device_values["poller_id"] ?? 1);
+	: $default_poller_id;
 $selected_snmp_port = isset_request_var("snmp_port")
 	? (int) get_filter_request_var("snmp_port")
 	: (int) $device_values["snmp_port"];
