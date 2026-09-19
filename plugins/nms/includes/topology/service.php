@@ -5,7 +5,7 @@
  * Layout helpers validate site membership and preserve core devices when a mapping is removed.
  */
 
-require_once __DIR__ . "/functions.php";
+require_once __DIR__ . "/../functions.php";
 
 /** List Cacti sites containing enabled, nondeleted devices with their device counts. */
 function nms_topology_sites()

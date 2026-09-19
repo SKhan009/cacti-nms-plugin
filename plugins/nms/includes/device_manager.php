@@ -6,7 +6,7 @@
  */
 
 require_once __DIR__ . "/device_metadata.php";
-require_once __DIR__ . "/topology_appearance.php";
+require_once __DIR__ . "/topology/appearance.php";
 require_once __DIR__ . "/core_form_options.php";
 require_once $config["base_path"] . "/lib/api_device.php";
 require_once $config["base_path"] . "/lib/api_automation.php";

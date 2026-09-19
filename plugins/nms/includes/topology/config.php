@@ -1,6 +1,6 @@
 <?php
 /** Physical planning metadata only. Never synthesize discovered ports or core devices. */
-require_once __DIR__ . "/categories.php";
+require_once __DIR__ . "/../categories.php";
 
 /** Create the plugin-owned tables for physical-port planning and rack placement metadata. */
 function nms_topology_config_schema()

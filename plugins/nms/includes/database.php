@@ -9,7 +9,7 @@ require_once __DIR__ . "/functions.php";
 require_once __DIR__ . "/categories.php";
 require_once __DIR__ . "/groups.php";
 require_once __DIR__ . "/relationships.php";
-require_once __DIR__ . "/topology_config.php";
+require_once __DIR__ . "/topology/config.php";
 require_once __DIR__ . "/ssh_schema.php";
 require_once __DIR__ . "/discovery_schema.php";
 

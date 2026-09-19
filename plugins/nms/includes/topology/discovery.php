@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . "/discovery.php";
+require_once __DIR__ . "/../discovery.php";
 /** Read only NMS-owned evidence for permitted core devices in the selected site. */
 function nms_topology_discovery($site_id)
 {
