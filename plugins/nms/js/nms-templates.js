@@ -63,6 +63,7 @@
 			var collapsed = document.body.classList.toggle(
 				"nms-sidebar-collapsed",
 			);
+			window.localStorage.setItem("nms.sidebar.collapsed", collapsed ? "1" : "0");
 			toggle.setAttribute("aria-expanded", String(!collapsed));
 			toggle.setAttribute(
 				"aria-label",
@@ -83,14 +84,6 @@
 							))
 					) {
 						event.preventDefault();
-						document.body.classList.remove("nms-sidebar-collapsed");
-						if (innerWidth <= 700)
-							document.body.classList.add(
-								"nms-sidebar-menu-open",
-							);
-						this.parentElement.open = true;
-						toggle.setAttribute("aria-expanded", "true");
-						toggle.setAttribute("aria-label", "Collapse sidebar");
 					}
 				});
 			});

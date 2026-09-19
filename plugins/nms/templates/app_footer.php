@@ -5,25 +5,27 @@
  */
 ?>	</div>
 	<script>
-	(/** Bind the shared sidebar toggle when the current page contains its button. */ function() {
+	(/** Persist the shared sidebar state; only the hamburger can reopen a collapsed menu. */ function() {
 		var button = document.getElementById('nmsSidebarToggle');
 		if (!button) return;
-		button.addEventListener('click', /** Toggle sidebar collapse and synchronize the button's accessible state and label. */ function() {
-			document.body.classList.remove('nms-sidebar-menu-open');
-			var collapsed = document.body.classList.toggle('nms-sidebar-collapsed');
+		var key = 'nms.sidebar.collapsed';
+		function sync(collapsed) {
+			document.body.classList.toggle('nms-sidebar-collapsed', collapsed);
 			button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
 			button.setAttribute('aria-label', collapsed ? 'Open sidebar' : 'Collapse sidebar');
+		}
+		sync(window.localStorage.getItem(key) === '1');
+		button.addEventListener('click', function() {
+			document.body.classList.remove('nms-sidebar-menu-open');
+			var collapsed = !document.body.classList.contains('nms-sidebar-collapsed');
+			window.localStorage.setItem(key, collapsed ? '1' : '0');
+			sync(collapsed);
 		});
-		document.querySelectorAll('.nms-template-menu > summary').forEach(function(menu) { menu.addEventListener('click', function(event) {
-			if (document.body.classList.contains('nms-sidebar-collapsed') || (innerWidth <= 700 && !document.body.classList.contains('nms-sidebar-menu-open'))) {
-				event.preventDefault();
-				document.body.classList.remove('nms-sidebar-collapsed');
-				if (innerWidth <= 700) document.body.classList.add('nms-sidebar-menu-open');
-				menu.parentElement.open = true;
-				button.setAttribute('aria-expanded', 'true');
-				button.setAttribute('aria-label', 'Collapse sidebar');
-			}
-		}); });
+		document.querySelectorAll('.nms-template-menu > summary').forEach(function(menu) {
+			menu.addEventListener('click', function(event) {
+				if (document.body.classList.contains('nms-sidebar-collapsed')) event.preventDefault();
+			});
+		});
 	})();
 	</script>
 	<script src="<?php print nms_h(nms_asset_url("js/nms-upload.js")); ?>"></script>
