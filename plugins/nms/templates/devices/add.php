@@ -286,7 +286,7 @@ $reported_interfaces = $identity_auto["interfaces"] ?? [];
    ); ?>" placeholder="Branch router 01"></label>
 			<label><span>Short name</span><input name="short_name" id="nms-short-name" data-device-id="<?php print (int) ($device_values[
    	"id"
-   ] ?? 0); ?>" maxlength="24" pattern="[A-Za-z0-9][A-Za-z0-9 _\-]*" value="<?php print nms_h(
+	] ?? 0); ?>" maxlength="8" pattern="[A-Za-z0-9][A-Za-z0-9 _\-]*" value="<?php print nms_h(
 	isset_request_var("short_name")
 		? get_nfilter_request_var("short_name")
 		: ($device_form_is_edit
@@ -294,7 +294,7 @@ $reported_interfaces = $identity_auto["interfaces"] ?? [];
 			: ""),
 ); ?>" placeholder="<?php print nms_h(
 	nms_short_name_auto($device_values["description"] ?? "", $device_values["id"] ?? 0),
-); ?>" data-nms-tip="Enter a short map label, for example CORE-SW or RTR-01. Use up to 24 letters, numbers, spaces, hyphens or underscores. Leave blank to follow the device name automatically."><small id="nms-short-name-help">Leave blank to generate from the device name automatically.</small></label>
+); ?>" data-nms-tip="Enter a short map label, for example CORE-SW or RTR-01. Use up to 8 letters, numbers, spaces, hyphens or underscores. Leave blank to generate it automatically."><small id="nms-short-name-help">Leave blank to generate a label automatically.</small></label>
             <label><span>Hostname or IP</span><input required name="hostname" value="<?php print nms_h(
             	isset_request_var("hostname") ? get_nfilter_request_var("hostname") : $device_values["hostname"] ?? "",
             ); ?>" placeholder="192.0.2.10"></label>

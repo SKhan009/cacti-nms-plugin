@@ -73,7 +73,7 @@ function nms_canvas_data($site_id)
 			$node["color"] = $appearance_profile["color"];
 		}
 		$node["icon_path"] = nms_appearance_icons()[$node["icon"] ?? "device"][1] ?? "";
-		$node["short_name"] = nms_short_name_get($node["id"]) ?: nms_short_name_auto($node["name"], $node["id"]);
+		$node["short_name"] = substr(nms_short_name_get($node["id"]) ?: nms_short_name_auto($node["name"], $node["id"]), 0, 8);
 		$node["ports"] = [];
 		$node["interfaces"] = [];
 		foreach ($d["snapshots"] as $snapshot) {

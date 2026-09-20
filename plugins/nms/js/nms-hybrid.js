@@ -172,6 +172,14 @@
 			: Math.max(70, Math.min(12, ports(n).length) * 12 + 24);
 	}
 	/**
+	 * Returns the compact, readable topology label supplied by the server.
+	 */
+	function deviceLabel(n) {
+		return String(n.short_name || n.name || "DEVICE")
+			.trim()
+			.slice(0, 8);
+	}
+	/**
 	 * Handles switch Port Offset.
 	 */
 	function switchPortOffset(i, count) {
@@ -385,11 +393,11 @@
 		if (kind !== "switch")
 			body.append(
 				el("rect", {
-					x: -w / 2 - 6,
-					y: -36,
-					width: w + 12,
-					height: 72 + Math.ceil(ps.length / 12) * 12,
-					rx: 9,
+					x: -w / 2 - 14,
+					y: -48,
+					width: w + 28,
+					height: 112 + Math.ceil(ps.length / 12) * 12,
+					rx: 12,
 					fill: "none",
 					stroke: source === n.id ? "#2563eb" : color,
 					"stroke-width": source === n.id ? 2 : 1.5,
@@ -458,7 +466,7 @@
 						"font-weight": 800,
 						"letter-spacing": 1,
 					},
-					n.short_name || "NEXUS-9000",
+					deviceLabel(n),
 				),
 				el(
 					"text",
@@ -761,11 +769,11 @@
 				"text",
 				{
 					x: 0,
-					y: kind === "switch" ? 90 : 50,
+					y: kind === "switch" ? 64 : 52,
 					"text-anchor": "middle",
 					class: "nms-device-name",
 				},
-				n.short_name || n.name,
+				deviceLabel(n),
 			),
 		);
 	}

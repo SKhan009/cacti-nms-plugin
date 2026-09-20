@@ -397,11 +397,11 @@ function nms_short_name_validate($value)
 {
 	if (
 		!is_string($value) ||
-		strlen($value) > 24 ||
+		strlen($value) > 8 ||
 		($value !== "" && !preg_match('/^[A-Za-z0-9][A-Za-z0-9 _-]*$/D', $value))
 	) {
 		throw new InvalidArgumentException(
-			"Short name must be at most 24 characters: letters, numbers, spaces, hyphens or underscores. Leave blank to generate it from the device name.",
+			"Short name must be at most 8 characters: letters, numbers, spaces, hyphens or underscores. Leave blank to generate it from the device name.",
 		);
 	}
 	return trim($value);
@@ -438,9 +438,9 @@ function nms_short_name_auto($name, $id = 0)
  */
 function nms_short_name_get($id)
 {
-	return (string) db_fetch_cell_prepared("SELECT meta_value FROM plugin_nms_meta WHERE meta_key=?", [
+	return substr((string) db_fetch_cell_prepared("SELECT meta_value FROM plugin_nms_meta WHERE meta_key=?", [
 		"device_short_name_" . (int) $id,
-	]);
+	]), 0, 8);
 }
 /**
  * Handles short name save.

@@ -456,9 +456,9 @@
 			(kinds[key] || "DEV") +
 			"-" +
 			(id ? String(id).padStart(2, "0") : "…");
-		short.placeholder = generated;
+		short.placeholder = generated.slice(0, 8);
 		document.getElementById("nms-short-name-help").textContent = short.value
-			? "Custom topology label. Clear to use the device name."
+			? "Custom topology label. Clear to generate it automatically."
 			: "Automatic short name: " +
 				generated +
 				(id ? "" : " (number assigned when saved)");
