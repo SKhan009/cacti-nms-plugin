@@ -67,6 +67,17 @@
 	z-index: 10000;
 }
 
+/*
+ * Chrome gives popovers an automatic centred inset and margin. Tooltips use
+ * their JavaScript-calculated fixed top/left coordinates instead.
+ */
+.nms-tooltip[popover] {
+	bottom: auto;
+	inset: auto;
+	margin: 0;
+	right: auto;
+}
+
 .nms-tooltip.visible {
 	opacity: 1;
 	transform: translateY(0);

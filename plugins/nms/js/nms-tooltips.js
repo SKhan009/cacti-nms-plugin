@@ -224,7 +224,7 @@
 	var pointerMode = false;
 	var counter = 0;
 	var pointerTargets =
-		".nms-page-tabs a,.nms-primary-nav a,.nms-sidebar-link,.nms-sidebar-status,.nms-sidebar-toggle,.nms-brand,.nms-backend-button";
+		".nms-sidebar-link,.nms-sidebar-status,.nms-sidebar-toggle,.nms-brand,.nms-backend-button";
 
 	/** Normalize whitespace and remove the optional marker from display text. */
 	function cleanText(value) {
