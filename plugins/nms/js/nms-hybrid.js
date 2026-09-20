@@ -168,7 +168,7 @@
 	 */
 	function chassisWidth(n) {
 		return deviceKind(n) === "switch"
-			? 720
+			? 480
 			: Math.max(70, Math.min(12, ports(n).length) * 12 + 24);
 	}
 	/**
@@ -185,8 +185,8 @@
 					: Math.round((pair * 23) / (perRow - 1))
 				: i % 24,
 			isTop = small ? i % 2 === 0 : i < 24,
-			gap = Math.floor(col / 4) * 16;
-		return { x: -250 + col * 18 + gap, y: isTop ? -20 : 20 };
+			gap = Math.floor(col / 4) * 8;
+		return { x: -160 + col * 12 + gap, y: isTop ? -10 : 10 };
 	}
 	/**
 	 * Handles port Point.
@@ -382,40 +382,41 @@
 			w = chassisWidth(n),
 			ps = kind === "switch" ? physicalPorts(n) : ports(n);
 		const body = el("g", { class: "nms-device-chassis" });
-		body.append(
-			el("rect", {
-				x: -w / 2 - 6,
-				y: -36,
-				width: w + 12,
-				height: 72 + Math.ceil(ps.length / 12) * 12,
-				rx: 9,
-				fill: "#fff",
-				stroke: source === n.id ? "#2563eb" : "transparent",
-				"stroke-width": 2,
-			}),
-		);
-		if (kind === "switch") {
-			const rackHeight =
-				140 + Math.max(0, Math.ceil(ps.length / 24) - 2) * 45;
+		if (kind !== "switch")
 			body.append(
 				el("rect", {
-					x: -360,
-					y: -70,
-					width: 720,
+					x: -w / 2 - 6,
+					y: -36,
+					width: w + 12,
+					height: 72 + Math.ceil(ps.length / 12) * 12,
+					rx: 9,
+					fill: "none",
+					stroke: source === n.id ? "#2563eb" : color,
+					"stroke-width": source === n.id ? 2 : 1.5,
+				}),
+			);
+		if (kind === "switch") {
+			const rackHeight =
+				90 + Math.max(0, Math.ceil(ps.length / 24) - 2) * 28;
+			body.append(
+				el("rect", {
+					x: -240,
+					y: -45,
+					width: 480,
 					height: rackHeight,
 					rx: 6,
 					fill: "url(#nms-rack-metal)",
-					stroke: n.color || "#1e293b",
+					stroke: source === n.id ? "#2563eb" : color,
 					"stroke-width": 3,
 					class: "nms-reference-rack",
 				}),
 			);
 			if (n.color)
 				body.append(
-					el("rect", {
-						x: -356,
-						y: -66,
-						width: 712,
+				el("rect", {
+					x: -236,
+					y: -41,
+					width: 472,
 						height: rackHeight - 8,
 						rx: 4,
 						fill: n.color,
@@ -426,9 +427,9 @@
 			[-1, 1].forEach((side) => {
 				body.append(
 					el("rect", {
-						x: side < 0 ? -380 : 360,
-						y: -62,
-						width: 20,
+						x: side < 0 ? -255 : 240,
+						y: -37,
+						width: 15,
 						height: rackHeight - 16,
 						rx: 2,
 						fill: "url(#nms-rack-ears)",
@@ -437,9 +438,9 @@
 				[-25, 0, 25].forEach((y) =>
 					body.append(
 						el("circle", {
-							cx: side * 370,
-							cy: y,
-							r: 4,
+							cx: side * 247,
+							cy: y / 1.45,
+							r: 3,
 							fill: "#0f172a",
 							stroke: "#475569",
 						}),
@@ -450,8 +451,8 @@
 				el(
 					"text",
 					{
-						x: -340,
-						y: -20,
+						x: -220,
+						y: -14,
 						fill: "#f8fafc",
 						"font-size": 14,
 						"font-weight": 800,
@@ -462,8 +463,8 @@
 				el(
 					"text",
 					{
-						x: -340,
-						y: -5,
+						x: -220,
+						y: 1,
 						fill: "#94a3b8",
 						"font-size": 9,
 						"font-weight": 500,
@@ -475,26 +476,26 @@
 							: ""),
 				),
 				el("rect", {
-					x: 260,
-					y: -50,
-					width: 75,
-					height: 30,
+					x: 150,
+					y: -31,
+					width: 65,
+					height: 24,
 					fill: "#020617",
 					rx: 4,
 					stroke: "#334155",
 				}),
 				el("circle", {
-					cx: 275,
-					cy: -35,
-					r: 5,
+					cx: 163,
+					cy: -19,
+					r: 4,
 					fill: color,
 					class: n.status === 3 ? "nms-rack-led" : "",
 				}),
 				el(
 					"text",
 					{
-						x: 290,
-						y: -31,
+						x: 175,
+						y: -16,
 						fill: "#cbd5e1",
 						"font-size": 11,
 						"font-weight": 600,
@@ -664,14 +665,14 @@
 				active = !!edge?.current;
 			const tone = portTone(p);
 			const r = el("rect", {
-				x: x - (rack ? 9 : 4),
-				y: y - (rack ? 9 : 4),
-				width: rack ? 18 : 8,
-				height: rack ? 18 : 8,
-				rx: rack ? 2 : 1,
+				x: x - (rack ? 6 : 4),
+				y: y - (rack ? 6 : 4),
+				width: rack ? 12 : 8,
+				height: rack ? 12 : 8,
+				rx: rack ? 1.5 : 1,
 				fill: rack ? tone : "#020617",
 				stroke: rack ? "#0f172a" : "#fff",
-				"stroke-width": rack ? 1.5 : 1,
+				"stroke-width": rack ? 1 : 1,
 				class: "nms-observed-port",
 				tabindex: 0,
 				role: "button",
@@ -698,7 +699,7 @@
 			if (rack && p.edge)
 				body.append(
 					el("path", {
-						d: `M ${x} ${y < 0 ? -70 : 70} V ${y}`,
+						d: `M ${x} ${y < 0 ? -45 : 45} V ${y}`,
 						stroke: active ? "#3b82f6" : "#94a3b8",
 						"stroke-width": 1.5,
 						"pointer-events": "none",
@@ -708,10 +709,10 @@
 			if (rack) {
 				body.append(
 					el("rect", {
-						x: x - 5,
-						y: y - 5,
-						width: 10,
-						height: 10,
+						x: x - 4,
+						y: y - 4,
+						width: 8,
+						height: 8,
 						fill: "url(#nms-port-bg)",
 						rx: 1,
 						"pointer-events": "none",
