@@ -100,38 +100,6 @@ $simulator_badge = nms_snmpsim_status_badge($simulator_health);
  ) { ?><p class="nms-snmpsim-message" role="status"><?php print nms_h($simulator_message); ?></p><?php } ?>
 </section>
 
-<?php if (count($imports)) { ?>
-<section class="nms-panel nms-fcaps-lab" id="fcaps-lab-scenarios">
-	<div class="nms-panel-head"><div><h2>FCAPS lab scenarios</h2><p>Changes only the selected imported SNMPSim record. Real devices, Cacti credentials, and production monitoring are never changed.</p></div></div>
-	<div class="nms-fcaps-lab-grid">
-	<?php foreach ($imports as $import) {
-		$targets = $import["fcaps_targets"];
-		$available = (bool) ($targets["interfaces"] || $targets["traffic"] || $targets["battery"] || $targets["sys_name"]);
-	?>
-	<article class="nms-fcaps-record">
-		<header><div><strong><?php print nms_h($import["community"]); ?></strong><small><?php print nms_h($import["original_name"]); ?></small></div><span>Simulator only</span></header>
-		<?php if (!$available) { ?><p class="nms-empty">This record has no supported FCAPS OIDs. Import interface, UPS, or system OIDs to create lab scenarios.</p><?php } ?>
-		<?php if ($targets["interfaces"]) { ?><form method="post" action="file_repository.php" class="nms-fcaps-form">
-			<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>"><input type="hidden" name="nms_action" value="apply_snmpsim_fcaps"><input type="hidden" name="import_id" value="<?php print (int) $import["id"]; ?>">
-			<label><span>Fault — interface link</span><select name="interface_index"><?php foreach ($targets["interfaces"] as $index => $interface) { ?><option value="<?php print (int) $index; ?>">IF-MIB interface <?php print (int) $index; ?> · currently <?php print $interface["value"] === "1" ? "up" : "down"; ?></option><?php } ?></select></label>
-			<div><button type="submit" name="fcaps_scenario" value="interface_up">Set link up</button><button type="submit" name="fcaps_scenario" value="interface_down" class="nms-danger-button">Set link down</button></div>
-			<small>Changes <code>ifOperStatus</code>. The device can remain reachable while one Ethernet port is down.</small>
-		</form><?php } ?>
-		<?php if ($targets["traffic"]) { ?><form method="post" action="file_repository.php" class="nms-fcaps-form nms-fcaps-inline">
-			<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>"><input type="hidden" name="nms_action" value="apply_snmpsim_fcaps"><input type="hidden" name="import_id" value="<?php print (int) $import["id"]; ?>"><div><strong>Performance and accounting — traffic</strong><small>Increases the available interface byte counters by 1,250,000. Cacti calculates a rate after two polls.</small></div><button type="submit" name="fcaps_scenario" value="traffic_pulse">Add traffic pulse</button>
-		</form><?php } ?>
-		<?php if ($targets["battery"]) { ?><form method="post" action="file_repository.php" class="nms-fcaps-form nms-fcaps-inline">
-			<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>"><input type="hidden" name="nms_action" value="apply_snmpsim_fcaps"><input type="hidden" name="import_id" value="<?php print (int) $import["id"]; ?>"><div><strong>Fault — UPS battery</strong><small>Uses standard UPS-MIB values. Low means 15% charge and 8 minutes remaining.</small></div><div><button type="submit" name="fcaps_scenario" value="battery_normal">Set normal</button><button type="submit" name="fcaps_scenario" value="battery_low" class="nms-warning-button">Set low</button></div>
-		</form><?php } ?>
-		<?php if ($targets["sys_name"]) { ?><form method="post" action="file_repository.php" class="nms-fcaps-form nms-fcaps-inline">
-			<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>"><input type="hidden" name="nms_action" value="apply_snmpsim_fcaps"><input type="hidden" name="import_id" value="<?php print (int) $import["id"]; ?>"><label><span>Configuration — system name</span><input required name="system_name" maxlength="255" placeholder="Lab device name"></label><button type="submit" name="fcaps_scenario" value="system_name">Update name</button>
-		</form><?php } ?>
-		<footer><strong>Security testing</strong><span>Use a separate Cacti test device with intentionally incorrect SNMP credentials. A record file cannot safely simulate SNMPv3 authentication or access control.</span></footer>
-	</article>
-	<?php } ?>
-	</div>
-</section>
-<?php } ?>
 <div class="nms-upload-dialog<?php print $upload_open ? " nms-upload-inline" : ""; ?>" id="nmsUploadDialog" <?php if (
 	!$upload_open
 ) {
