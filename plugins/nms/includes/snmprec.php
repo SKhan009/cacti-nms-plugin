@@ -350,6 +350,13 @@ function nms_snmprec_apply_fcaps_scenario($import_id, $scenario, $input)
 	} else {
 		throw new InvalidArgumentException("Unsupported FCAPS scenario.");
 	}
+	// The record file is updated before activation.  A manually launched responder
+	// keeps its records in memory, so it cannot see this change until its process is
+	// restarted.  Managed RHEL installs consume the marker through the reload timer.
 	nms_snmprec_replace_import($import_id, $changes);
-	return $label . ". Reload is queued when managed SNMPSim is enabled; run or wait for the next Cacti poll to see the change.";
+	$settings = nms_snmpsim_config();
+	if (($settings["activation"] ?? "") === "manual") {
+		return $label . ". The record file was updated, but manual SNMPSim activation does not reload a running responder. Restart the responder on the configured collector, then run the next Cacti poll.";
+	}
+	return $label . ". Reload is queued; the managed SNMPSim timer will restart the responder before the next Cacti poll.";
 }
