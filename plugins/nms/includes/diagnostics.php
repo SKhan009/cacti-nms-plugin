@@ -286,13 +286,6 @@ function nms_diag_run($host_id, $tool)
 
 	$result = nms_diag_run_command($command, $tool === "pathchar" ? 60 : 40);
 	if ($tool === "arp") {
-		if ($result["output"] === "") {
-			$legacy_binary = nms_diag_program("arp");
-			if ($legacy_binary) {
-				$command = [$legacy_binary, "-an"];
-				$result = nms_diag_run_command($command);
-			}
-		}
 		$result["output"] = "$ " . implode(" ", $command) . "\n" . ($result["output"] ?: "No IPv4 or IPv6 neighbours are currently cached by this collector.");
 		$result["target"] = "Collector neighbour cache";
 	} else {
