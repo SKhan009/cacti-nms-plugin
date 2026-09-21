@@ -232,7 +232,10 @@ function nms_diag_run($host_id, $tool)
 	$command = [];
 	if ($tool === "arp") {
 		$binary = nms_diag_program("ip");
-		$command = [$binary, "neigh", "show", "to", $target];
+		// The selected device authorizes this on-demand check. Do not filter the
+		// collector cache by its address: the cache describes every neighbour the
+		// collector has learned, while loopback devices never have an ARP entry.
+		$command = [$binary, "neigh", "show"];
 	} elseif ($tool === "ping") {
 		$binary = nms_diag_program("ping");
 		$command = [$binary, "-n", "-c", (string) $row["ping_count"], "-W", "2", $target];
@@ -262,9 +265,40 @@ function nms_diag_run($host_id, $tool)
 		);
 	}
 
+	/* A bandwidth client needs a listening server before a measurement can
+	 * begin. Check the TCP endpoint first so an unavailable server produces a
+	 * useful explanation instead of iperf's partial JSON and bad-fd message. */
+	if ($tool === "iperf3") {
+		$socket_error = 0;
+		$socket_message = "";
+		$socket = @fsockopen($target, 5201, $socket_error, $socket_message, 2);
+		if (!is_resource($socket)) {
+			return [
+				"exit" => 111,
+				"output" => "iPerf3 server is not reachable at " . $target . ":5201. Start an authorised server on the remote endpoint, then run this check again.\n" . ($socket_message ?: "TCP connection refused."),
+				"tool" => $tool,
+				"target" => $target,
+				"profile" => $row["name"],
+			];
+		}
+		fclose($socket);
+	}
+
 	$result = nms_diag_run_command($command, $tool === "pathchar" ? 60 : 40);
+	if ($tool === "arp") {
+		if ($result["output"] === "") {
+			$legacy_binary = nms_diag_program("arp");
+			if ($legacy_binary) {
+				$command = [$legacy_binary, "-an"];
+				$result = nms_diag_run_command($command);
+			}
+		}
+		$result["output"] = "$ " . implode(" ", $command) . "\n" . ($result["output"] ?: "No IPv4 or IPv6 neighbours are currently cached by this collector.");
+		$result["target"] = "Collector neighbour cache";
+	} else {
+		$result["target"] = $target;
+	}
 	$result["tool"] = $tool;
-	$result["target"] = $target;
 	$result["profile"] = $row["name"];
 
 	return $result;

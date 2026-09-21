@@ -30,7 +30,7 @@
 	<div class="nms-panel-head">
 		<div>
 			<h2>Run a diagnostic</h2>
-			<p>Ping and traceroute test reachability. ARP reads the collector cache. iPerf3 and Netperf generate test traffic to the selected device.</p>
+			<p>Ping and traceroute test reachability. Collector ARP lookup displays the full collector neighbour cache. iPerf3 and Netperf generate test traffic to the selected device.</p>
 		</div>
 	</div>
 

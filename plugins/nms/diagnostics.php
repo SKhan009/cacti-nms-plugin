@@ -72,8 +72,8 @@ $nms_diagnostic_readiness = [
 	],
 	"arp" => [
 		"ready" => (bool) nms_diag_program("ip"),
-		"purpose" => "Reads the collector neighbour cache.",
-		"requirement" => "Shows only entries already learned by the collector.",
+		"purpose" => "Reads every IPv4 and IPv6 neighbour cached by the collector.",
+		"requirement" => "Equivalent to arp -a, including entries already learned by the collector.",
 	],
 	"iperf3" => [
 		"ready" => (bool) nms_diag_program("iperf3"),
