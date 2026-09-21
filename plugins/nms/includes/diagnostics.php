@@ -261,21 +261,23 @@ function nms_diag_run($host_id, $tool)
 	if (!$binary) {
 		throw new RuntimeException(
 			ucfirst($tool) .
-				" is not installed on the assigned collector. See the offline RHEL guide for the required RPM.",
+				" client is not installed on the assigned collector. Install the matching Netperf build, then run this check again.",
 		);
 	}
 
 	/* A bandwidth client needs a listening server before a measurement can
 	 * begin. Check the TCP endpoint first so an unavailable server produces a
 	 * useful explanation instead of iperf's partial JSON and bad-fd message. */
-	if ($tool === "iperf3") {
+	if (in_array($tool, ["iperf3", "netperf"], true)) {
+		$port = $tool === "iperf3" ? 5201 : 12865;
+		$label = $tool === "iperf3" ? "iPerf3" : "Netperf";
 		$socket_error = 0;
 		$socket_message = "";
-		$socket = @fsockopen($target, 5201, $socket_error, $socket_message, 2);
+		$socket = @fsockopen($target, $port, $socket_error, $socket_message, 2);
 		if (!is_resource($socket)) {
 			return [
 				"exit" => 111,
-				"output" => "iPerf3 server is not reachable at " . $target . ":5201. Start an authorised server on the remote endpoint, then run this check again.\n" . ($socket_message ?: "TCP connection refused."),
+				"output" => $label . " server is not reachable at " . $target . ":" . $port . ". Start an authorised " . ($tool === "iperf3" ? "iPerf3 server" : "netserver") . " on the remote endpoint, then run this check again.\n" . ($socket_message ?: "TCP connection refused."),
 				"tool" => $tool,
 				"target" => $target,
 				"profile" => $row["name"],

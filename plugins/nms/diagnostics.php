@@ -84,7 +84,7 @@ $nms_diagnostic_readiness = [
 		"ready" => (bool) nms_diag_program("netperf"),
 		"purpose" => "Measures TCP stream throughput.",
 		"requirement" =>
-			"Offline requirement: install the signed matching netperf RPM and dependencies, then run netserver on the remote endpoint.",
+			"Install the Netperf client on the collector and run netserver on the remote endpoint at TCP 12865.",
 	],
 	"pathchar" => [
 		"ready" => (bool) nms_diag_program("pathchar"),

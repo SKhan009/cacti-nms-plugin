@@ -15,7 +15,7 @@
 				<p><?php print nms_h($tool["purpose"]); ?></p>
 				<small><?php print nms_h($tool["requirement"]); ?></small>
 				<?php if (!$tool["ready"] && $key === "netperf") { ?>
-					<code>sudo dnf install -y ./netperf*.rpm</code>
+					<code>Build/install Netperf, then run netserver on TCP 12865</code>
 				<?php } ?>
 			</article>
 		<?php } ?>
@@ -63,7 +63,7 @@
 
 			<p>
 				iPerf3 requires an iperf3 server on TCP 5201 at the selected endpoint.
-				Netperf requires netserver. Pathchar is optional and commonly unavailable
+				Netperf requires netserver on TCP 12865. Pathchar is optional and commonly unavailable
 				on modern RHEL.
 			</p>
 			<button type="submit">Run selected test</button>
