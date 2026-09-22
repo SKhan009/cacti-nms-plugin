@@ -1,6 +1,6 @@
 [info]
 name = NMS
-version = 1.10.72
+version = 1.10.73
 longname = NMS Device, Fault, and Dynamic Topology Management
 author = NMS Project
 homepage = https://www.cacti.net/

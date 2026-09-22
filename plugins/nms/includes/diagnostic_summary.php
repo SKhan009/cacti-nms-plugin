@@ -64,3 +64,80 @@ function nms_diag_plain_summary(array $result): array
     if ($ok) array_splice($lines, 1, 0, ['The tool finished without reporting an execution error.']);
     return $lines;
 }
+
+/** Structured readings from the same saved text shown in Technical output. */
+function nms_diag_description(array $result): array
+{
+    $text = (string) ($result['output'] ?? '');
+    $tool = $result['tool'] ?? '';
+    $failed = !isset($result['exit']) || (int) $result['exit'] !== 0;
+    $warning = !empty($result['truncated']);
+    $metrics = ['Target' => $result['target'] ?? 'Not reported'];
+    $missing = 'Not reported';
+    switch ($tool) {
+        case 'netperf':
+            $metrics += ['Test type'=>'TCP_STREAM', 'Duration'=>$missing, 'Transfer speed'=>$missing,
+                'Data sent'=>$missing, 'Data received'=>$missing, 'Receive socket buffer'=>$missing,
+                'Send socket buffer'=>$missing, 'Send message size'=>$missing];
+            if (preg_match('/10\^6bits\/sec\s*\n\s*(\d+)\s+(\d+)\s+(\d+)\s+([\d.]+)\s+([\d.]+)/', $text, $m)) {
+                $metrics['Receive socket buffer'] = $m[1] . ' bytes';
+                $metrics['Send socket buffer'] = $m[2] . ' bytes';
+                $metrics['Send message size'] = $m[3] . ' bytes';
+                $metrics['Duration'] = $m[4] . ' seconds';
+                $metrics['Transfer speed'] = $m[5] . ' Mbps';
+            } else $warning = true;
+            // Socket sizes are buffers, never totals of bytes transferred.
+            break;
+        case 'iperf3':
+            $metrics += ['Test type'=>$missing, 'Duration'=>$missing, 'Data sent'=>$missing, 'Data received'=>$missing, 'Send speed'=>$missing, 'Receive speed'=>$missing];
+            $begin = strpos($text, '{'); $end = strrpos($text, '}');
+            $json = $begin !== false && $end !== false ? json_decode(substr($text, $begin, $end - $begin + 1), true) : null;
+            if (!empty($json['error'])) $failed = true;
+            $metrics['Test type'] = $json['start']['test_start']['protocol'] ?? $missing;
+            foreach (['sum_sent'=>['Data sent','Send speed'], 'sum_received'=>['Data received','Receive speed']] as $key=>$labels) {
+                $value = $json['end'][$key] ?? [];
+                if (isset($value['bytes'])) $metrics[$labels[0]] = number_format((float)$value['bytes'], 0) . ' bytes';
+                if (isset($value['bits_per_second'])) $metrics[$labels[1]] = number_format((float)$value['bits_per_second']/1000000, 2) . ' Mbps';
+                if (isset($value['seconds'])) $metrics[$key === 'sum_sent' ? 'Send duration' : 'Duration'] = (string)$value['seconds'] . ' seconds';
+            }
+            if ($metrics['Receive speed'] === $missing) $warning = true;
+            break;
+        case 'ping':
+            $metrics += ['Packets sent'=>$missing,'Packets received'=>$missing,'Packet loss'=>$missing,'Duration'=>$missing,'Average reply time'=>$missing];
+            if (preg_match('/(\d+) packets transmitted,\s*(\d+) (?:packets )?received.*?([\d.]+)% packet loss/', $text, $m)) {
+                $metrics['Packets sent']=$m[1]; $metrics['Packets received']=$m[2]; $metrics['Packet loss']=$m[3].'%';
+                if ((float)$m[3] > 0) $warning=true;
+                if ((float)$m[3] >= 100) $failed=true;
+            } else $warning=true;
+            if (preg_match('/packet loss,\s*time\s+(\d+)ms/', $text, $m)) $metrics['Duration']=$m[1].' ms';
+            if (preg_match('/(?:rtt|round-trip)[^=]*=\s*[\d.]+\/([\d.]+)\//', $text, $m)) $metrics['Average reply time']=$m[1].' ms';
+            break;
+        case 'arp':
+            preg_match_all('/^\S+\s+dev\s+\S+.*$/m', $text, $rows);
+            $metrics['Neighbour entries']=(string)count($rows[0]);
+            $issues=0;
+            foreach ($rows[0] as $row) if (preg_match('/\b(FAILED|INCOMPLETE)\b/', $row)) $issues++;
+            $metrics['Unresolved entries']=(string)$issues;
+            if ($issues) $warning=true;
+            break;
+        case 'traceroute':
+            preg_match_all('/^\s*\d+[ :]+.*$/m', $text, $rows);
+            $metrics['Reported hop lines']=(string)count($rows[0]);
+            $metrics['Probes without a reply']=(string)substr_count(implode('\n',$rows[0]), '*');
+            $metrics['Duration']=$missing;
+            if (!$rows[0] || strpos(implode(' ',$rows[0]), '*') !== false) $warning=true;
+            break;
+        case 'pathchar':
+            $metrics['Test type']='Route capacity estimate';
+            $metrics['Duration']=$missing;
+            $metrics['Hop estimates']='See Technical output';
+            $warning=true;
+            break;
+    }
+    $lines=nms_diag_plain_summary($result);
+    if ($failed || $warning) $lines=array_values(array_filter($lines, static function($line) { return $line !== 'The tool finished without reporting an execution error.'; }));
+    if ($tool === 'netperf') $lines[]='Socket buffers and message size are not totals sent or received. This output does not report those totals.';
+    return ['tone'=>$failed?'error':($warning?'warning':'success'),
+        'status'=>$failed?'Test failed':($warning?'Review required':'Test completed'),
+        'metrics'=>$metrics, 'lines'=>$lines];
+}

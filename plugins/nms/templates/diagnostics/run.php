@@ -86,11 +86,18 @@
         <?php require_once __DIR__ . '/../../includes/diagnostic_summary.php'; ?>
         <div class="nms-diagnostic-panel-body" data-result-tabs>
             <div class="nms-result-tabs" role="tablist" aria-label="Result view">
-                <button type="button" role="tab" id="result-summary-tab" aria-controls="result-summary" aria-selected="true">Plain-language summary</button>
+                <button type="button" role="tab" id="result-summary-tab" aria-controls="result-summary" aria-selected="true">Description</button>
                 <button type="button" role="tab" id="result-technical-tab" aria-controls="result-technical" aria-selected="false" tabindex="-1">Technical output</button>
             </div>
             <div id="result-summary" role="tabpanel" aria-labelledby="result-summary-tab">
-                <?php foreach (nms_diag_plain_summary($result) as $explanation) { ?><p><?php print nms_h($explanation); ?></p><?php } ?>
+                <?php $description = nms_diag_description($result); ?>
+                <p class="nms-result-status nms-result-status-<?php print nms_h($description['tone']); ?>" role="status"><?php print nms_h($description['status']); ?></p>
+                <dl class="nms-result-metrics">
+                    <?php foreach ($description['metrics'] as $label => $value) { ?>
+                    <div><dt><?php print nms_h($label); ?></dt><dd><?php print nms_h($value); ?></dd></div>
+                    <?php } ?>
+                </dl>
+                <?php foreach ($description['lines'] as $explanation) { ?><p><?php print nms_h($explanation); ?></p><?php } ?>
             </div>
             <div id="result-technical" role="tabpanel" aria-labelledby="result-technical-tab" hidden>
                 <pre class="nms-diagnostic-output"><?php print nms_h(($result["output"] ?? "") ?: "No output returned."); ?></pre>

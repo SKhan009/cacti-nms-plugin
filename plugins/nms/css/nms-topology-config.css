@@ -277,3 +277,12 @@
 
 .nms-diagnostic-run-form .nms-diagnostic-run-button{grid-column:2}
 @media(max-width:650px){.nms-diagnostic-run-form .nms-diagnostic-run-button{grid-column:1}}
+
+.nms-result-status{padding:12px 16px;border-left:4px solid;border-radius:6px;font-weight:700}
+.nms-result-status-success{color:#17653c;background:#edf8f1;border-color:#27834e}
+.nms-result-status-warning{color:#815400;background:#fff7e6;border-color:#b8790e}
+.nms-result-status-error{color:#9f2424;background:#fff0f0;border-color:#c53636}
+.nms-result-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:20px 0}
+.nms-result-metrics>div{padding:14px;border:1px solid #ddd;border-radius:8px}
+.nms-result-metrics dt{color:#666;font-size:13px;margin-bottom:6px}
+.nms-result-metrics dd{margin:0;font-weight:700;overflow-wrap:anywhere}
