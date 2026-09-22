@@ -58,11 +58,7 @@
 				</select>
 			</label>
 
-			<p class="nms-diagnostic-run-note">
-				iPerf3 needs a server on TCP 5201 on remote devices. Loopback IPs run a temporary local self-test, not a network-link test.
-				Netperf uses a temporary server for loopback IPs; remote devices need netserver on TCP 12865 and a data connection. Pathchar is optional and commonly unavailable
-				on modern RHEL.
-			</p>
+
 			<button type="submit" class="nms-diagnostic-run-button">Run selected test</button>
 		</form>
 	<?php } ?>

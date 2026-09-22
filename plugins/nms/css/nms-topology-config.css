@@ -274,3 +274,6 @@
 .nms-result-tabs button:focus-visible{outline:2px solid #555;outline-offset:2px}
 #result-technical[hidden],#result-summary[hidden]{display:none}
 #result-technical .nms-diagnostic-output{padding:0;margin:0}
+
+.nms-diagnostic-run-form .nms-diagnostic-run-button{grid-column:2}
+@media(max-width:650px){.nms-diagnostic-run-form .nms-diagnostic-run-button{grid-column:1}}

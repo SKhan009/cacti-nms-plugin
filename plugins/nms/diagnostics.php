@@ -11,6 +11,11 @@ require_once __DIR__ . "/includes/diagnostics_queue.php";
 nms_require_database();
 nms_require_management(3);
 
+// Diagnostic pages always reflect current saved results and collector state.
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
+header("Expires: 0");
+
 $section = isset_request_var("section") ? get_nfilter_request_var("section") : "run";
 if (!in_array($section, ["run", "profiles"], true)) {
 	$section = "run";

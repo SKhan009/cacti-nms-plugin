@@ -3,6 +3,20 @@
 ?>
 <script>
 (function() {
+    // A reload starts at the page heading instead of restoring the old scroll position.
+    var navigation = performance.getEntriesByType('navigation')[0];
+    if (navigation && navigation.type === 'reload') {
+        history.scrollRestoration = 'manual';
+        var refreshedUrl = new URL(location.href);
+        refreshedUrl.hash = '';
+        history.replaceState(history.state, '', refreshedUrl.href);
+        window.scrollTo(0, 0);
+        window.addEventListener('pageshow', function() {
+            window.scrollTo(0, 0);
+            history.scrollRestoration = 'auto';
+        }, { once: true });
+    }
+
 	// Opening a profile is a one-time action; refresh should show the list.
 	var profileDialog = document.getElementById('nmsConfigDialog');
 	if (profileDialog && profileDialog.dataset.autoOpen === 'true') {
