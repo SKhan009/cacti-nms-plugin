@@ -3,17 +3,29 @@
 ?>
 <script>
 (function() {
-    // A reload starts at the page heading instead of restoring the old scroll position.
+    // Chrome toolbar reload and keyboard reload both report navigation type "reload".
     var navigation = performance.getEntriesByType('navigation')[0];
     if (navigation && navigation.type === 'reload') {
         history.scrollRestoration = 'manual';
         var refreshedUrl = new URL(location.href);
         refreshedUrl.hash = '';
-        history.replaceState(history.state, '', refreshedUrl.href);
-        window.scrollTo(0, 0);
+        // Keep an active request visible; completed results remain available in history.
+        if (!document.getElementById('nms-diagnostic-status')) {
+            refreshedUrl.searchParams.delete('job_id');
+        }
+        refreshedUrl.searchParams.delete('profile_new');
+        refreshedUrl.searchParams.delete('profile_id');
+        if (refreshedUrl.href !== location.href) {
+            location.replace(refreshedUrl.href);
+            return;
+        }
+        function resetReloadView() {
+            window.scrollTo({top: 0, left: 0, behavior: 'instant'});
+        }
+        resetReloadView();
         window.addEventListener('pageshow', function() {
-            window.scrollTo(0, 0);
-            history.scrollRestoration = 'auto';
+            resetReloadView();
+            requestAnimationFrame(resetReloadView);
         }, { once: true });
     }
 
