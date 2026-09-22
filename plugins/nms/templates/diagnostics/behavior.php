@@ -9,12 +9,7 @@
         history.scrollRestoration = 'manual';
         var refreshedUrl = new URL(location.href);
         refreshedUrl.hash = '';
-        // Keep an active request visible; completed results remain available in history.
-        if (!document.getElementById('nms-diagnostic-status')) {
-            refreshedUrl.searchParams.delete('job_id');
-        }
-        refreshedUrl.searchParams.delete('profile_new');
-        refreshedUrl.searchParams.delete('profile_id');
+        refreshedUrl.search = '';
         if (refreshedUrl.href !== location.href) {
             location.replace(refreshedUrl.href);
             return;
