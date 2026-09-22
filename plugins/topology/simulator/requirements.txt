@@ -1,0 +1,4 @@
+# Production SNMPv2c responder versions verified on the project RHEL VM
+snmpsim==1.2.2
+pysnmp==7.1.29
+pyasn1==0.6.4

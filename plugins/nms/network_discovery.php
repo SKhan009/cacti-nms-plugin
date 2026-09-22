@@ -40,8 +40,8 @@ require __DIR__ . "/templates/app_header.php";
 	as $page => $label
 ) { ?><a href="<?php print nms_h($config["url_path"] . $page); ?>"><?php print nms_h($label); ?></a><?php } ?></nav>
 <?php
-if ($error) { ?><p role="alert"><?php print nms_h($error); ?></p><?php }
-if ($notice) { ?><p role="status"><?php print nms_h($notice); ?></p><?php }
+if ($error) { ?><p class="nms-action-feedback error" role="alert"><?php print nms_h($error); ?></p><?php }
+if ($notice) { ?><p class="nms-action-feedback" role="status"><?php print nms_h($notice); ?></p><?php }
 ?>
 <section class="nms-panel"><div class="nms-panel-head"><h2>Supplemental method selection</h2></div>
 <form method="post" class="nms-config-form"><input type="hidden" name="__csrf_magic" value="<?php print nms_h(

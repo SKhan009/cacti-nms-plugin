@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . "/discovery_neighbors.php";
+require_once __DIR__ . "/interface_rates.php";
 /** Validate all timing and protocol values before persistence. */
 function nms_nd_preset_validate($input)
 {
@@ -174,12 +175,16 @@ function nms_nd_poll()
 				$host["id"],
 			]);
 			$hash = nms_nd_hash($host);
+            $previousIdentity = db_fetch_row_prepared("SELECT status,config_hash,data_json FROM plugin_nms_discovery_snapshots WHERE host_id=? AND protocol='identity'", [$host["id"]]);
+            $previousData = ($previousIdentity && $previousIdentity["status"] === "success" && $previousIdentity["config_hash"] === $hash)
+                ? json_decode($previousIdentity["data_json"], true) : [];
 			nms_category_execute(
 				"INSERT INTO plugin_nms_discovery_snapshots(host_id,protocol,status,attempted_at,config_hash,data_json) VALUES (?,'identity','running',NOW(),?,'{}') ON DUPLICATE KEY UPDATE status='running',attempted_at=NOW(),error=''",
 				[$host["id"], $hash],
 			);
 			try {
 				$identity = nms_nd_collect_identity($host, $deadline);
+                $identity = nms_interface_rates($identity, is_array($previousData) ? $previousData : [], (int) ($host["stale_seconds"] ?? 600));
 				nms_category_execute(
 					"UPDATE plugin_nms_discovery_snapshots SET status='success',succeeded_at=NOW(),config_hash=?,data_json=?,error='' WHERE host_id=? AND protocol='identity'",
 					[$hash, json_encode($identity, JSON_THROW_ON_ERROR), $host["id"]],

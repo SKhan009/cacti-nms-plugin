@@ -266,7 +266,7 @@ function nms_nd_collect_identity($host, $jobDeadline)
 			$before = null;
 		}
 		foreach (
-			["1.3.6.1.2.1.2.2.1", "1.3.6.1.2.1.31.1.1.1.1", "1.3.6.1.2.1.31.1.1.1.15", "1.3.6.1.2.1.31.1.1.1.18"]
+			["1.3.6.1.2.1.31.1.1.1.6", "1.3.6.1.2.1.31.1.1.1.10", "1.3.6.1.2.1.31.1.1.1.19", "1.3.6.1.2.1.2.2.1", "1.3.6.1.2.1.31.1.1.1.1", "1.3.6.1.2.1.31.1.1.1.15", "1.3.6.1.2.1.31.1.1.1.18"]
 			as $root
 		) {
 			try {
@@ -274,6 +274,7 @@ function nms_nd_collect_identity($host, $jobDeadline)
 			} catch (RuntimeException $e) {
 			}
 		}
+		$counterCollected = time();
 		try {
 			$entity = nms_nd_snmp_subtree($session, "1.3.6.1.2.1.47.1.1.1.1", $deadline, $budget);
 		} catch (RuntimeException $e) {
@@ -306,9 +307,10 @@ function nms_nd_collect_identity($host, $jobDeadline)
 			"interfaces" => $interfaces,
 			"hardware" => $hardware,
 			"battery" => $battery,
+            "uptime" => $after["value"] ?? null,
 			"interface_error" => $interface_error,
 			"neighbors" => [],
-			"collected" => time(),
+			"collected" => $counterCollected,
 		];
 	} finally {
 		$session->close();

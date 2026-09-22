@@ -1,0 +1,68 @@
+<?php
+/** Mutation and isolation checks run only against a disposable copy of Cacti. */
+if(PHP_SAPI!=='cli') {http_response_code(403);exit;}
+$o=getopt('',array('cacti-root:','database:'));
+if(empty($o['cacti-root'])||!preg_match('/^topology_canvas_qa_[a-z0-9_]+$/D',$o['database']??'')) exit(2);
+require($o['cacti-root'].'/include/cli_check.php');
+$database_hostname='localhost';$database_port='3306';$database_default=$o['database'];
+if(!db_connect_real('localhost','root','',$database_default,'mysql','3306',1)) exit(2);
+require_once(__DIR__.'/../includes/physical.php');
+try {
+    if(db_fetch_cell('SELECT DATABASE()')!==$o['database']) throw new RuntimeException('QA database mismatch.');
+    $admin=(int)read_config_option('admin_user');$_SESSION=array('sess_user_id'=>$admin);
+    function pcheck($v,$s){if(!$v)throw new RuntimeException($s);print "PASS: $s\n";}
+    function preject($fn,$s){try{$fn();}catch(RuntimeException|InvalidArgumentException $e){print "PASS: $s\n";return;}throw new RuntimeException('Accepted: '.$s);}
+    $core=hash('sha256',json_encode(db_fetch_assoc('SELECT * FROM host ORDER BY id')));
+    $sources=db_fetch_cell('SELECT COUNT(*) FROM data_local');$graphs=db_fetch_cell('SELECT COUNT(*) FROM graph_local');
+    $evidence=db_fetch_assoc('SELECT * FROM plugin_topology_snapshots ORDER BY host_id,protocol');
+    foreach(array('port_profiles','ports','cables','positions','scenes') as $table) tp_exec('DROP TABLE IF EXISTS plugin_topology_'.$table);
+    tp_schema();tp_schema();
+    preject(function(){tp_category_save(0,'Unsafe color','',1,'red;display:none');},'non-hex category color rejected');
+    $colorCategory=tp_category_save(0,'QA color','',1,'#7c3aed');
+    pcheck(db_fetch_cell_prepared('SELECT color FROM plugin_topology_categories WHERE id=?',array($colorCategory))==='#7c3aed','category color saved');
+    tp_category_save($colorCategory,'QA color renamed','',1);
+    pcheck(db_fetch_cell_prepared('SELECT color FROM plugin_topology_categories WHERE id=?',array($colorCategory))==='#7c3aed','existing color preserved when not supplied');
+    pcheck($evidence===db_fetch_assoc('SELECT * FROM plugin_topology_snapshots ORDER BY host_id,protocol'),'repeatable additive upgrade preserves SNMP evidence');
+    $profile=tp_profile_save(0,1,'QA two ports','Ethernet',1,2,'RJ45');
+    preject(function(){tp_profile_save(0,1,'QA too large','Port',1,129,'RJ45');},'oversized port profile rejected');
+    tp_ports_apply(3,9,$profile);tp_ports_apply(3,10,$profile);
+    $a=db_fetch_assoc('SELECT * FROM plugin_topology_ports WHERE host_id=9 ORDER BY ordinal');$b=db_fetch_assoc('SELECT * FROM plugin_topology_ports WHERE host_id=10 ORDER BY ordinal');
+    pcheck(count($a)===2&&count($b)===2&&$a[0]['label']==='Ethernet1','category profile materializes exact device ports');
+    $wrong=tp_category_save(0,'QA computers','',1);$wp=tp_profile_save(0,$wrong,'QA wrong','LAN',1,1,'RJ45');
+    preject(function()use($wp){tp_ports_apply(3,9,$wp);},'wrong category profile rejected');
+    tp_port_map(3,$a[0]['id'],1);
+    preject(function()use($a){tp_port_map(3,$a[1]['id'],1);},'duplicate interface mapping rejected');
+    preject(function()use($a){tp_port_map(3,$a[1]['id'],99999);},'uncached interface mapping rejected');
+    $cable=tp_cable_add(3,$a[0]['id'],$b[0]['id']);
+    preject(function()use($a,$b){tp_cable_add(3,$b[1]['id'],$a[0]['id']);},'occupied endpoint rejected in either cable direction');
+    preject(function()use($a){tp_cable_add(3,$a[1]['id'],$a[1]['id']);},'self connection rejected');
+    preject(function()use($a){tp_cable_add(3,$a[0]['id'],$a[1]['id']);},'same-device cable rejected');
+    preject(function(){tp_ports_apply(3,9,0);},'connected physical ports cannot be cleared');
+    tp_profile_save($profile,1,'QA two ports','Ethernet',1,3,'RJ45');tp_ports_apply(3,9,$profile);
+    $again=db_fetch_assoc('SELECT * FROM plugin_topology_ports WHERE host_id=9 ORDER BY ordinal');
+    pcheck(count($again)===3&&$again[0]['id']===$a[0]['id']&&(int)$again[0]['if_index']===1,'profile expansion preserves connected IDs and interface mappings');
+    tp_profile_save($profile,1,'QA two ports','Ethernet',2,2,'RJ45');
+    preject(function()use($profile){tp_ports_apply(3,9,$profile);},'profile reduction cannot remove connected port');
+    pcheck(count(db_fetch_assoc('SELECT id FROM plugin_topology_ports WHERE host_id=9'))===3,'failed profile application rolls back atomically');
+    $sibling=tp_unit_save(0,3,'QA canvas sibling');
+    preject(function()use($sibling){tp_assignment_save(9,1,'Ethernet Switch','Core','lldp',$sibling);},'node reassignment requires explicit port cleanup');
+    preject(function()use($wrong){tp_assignment_save(9,$wrong,'Computer','','lldp',3);},'category reassignment requires explicit port cleanup');
+    tp_assignment_save(9,1,'Ethernet Switch','Core','lldp',3);
+    tp_layout_save(3,0,array(array('id'=>9,'x'=>100,'y'=>200),array('id'=>10,'x'=>450,'y'=>200)));
+    preject(function(){tp_layout_save(3,0,array(array('id'=>9,'x'=>1,'y'=>1)));},'stale layout revision rejected');
+    preject(function(){tp_layout_save(3,1,array(array('id'=>9,'x'=>9999,'y'=>0)));},'out-of-bounds layout rejected');
+    preject(function(){tp_layout_save(3,1,array(array('id'=>2,'x'=>10,'y'=>10)));},'foreign node position rejected');
+    $data=tp_canvas_data(3);
+    pcheck(count($data['cables'])===1&&(int)$data['revision']===1,'saved layout and cables returned');
+    pcheck(!str_contains(json_encode($data),'snmp_community')&&!str_contains(json_encode($data),'snmp_password'),'browser payload excludes native credentials');
+    tp_exec('UPDATE user_auth SET policy_hosts=2,policy_graphs=2,policy_graph_templates=2 WHERE id=3');tp_exec('DELETE FROM user_auth_perms WHERE user_id=3');tp_exec('INSERT INTO user_auth_perms (user_id,item_id,type) VALUES (3,9,3)');
+    $_SESSION=array('sess_user_id'=>3);$limited=tp_canvas_data(3);
+    pcheck(count($limited['devices'])===1&&count($limited['cables'])===0,'restricted user cannot see hidden device or its cable endpoint');
+    preject(function()use($a,$b){tp_cable_add(3,$a[1]['id'],$b[1]['id']);},'read-only account cannot modify cables');
+    $_SESSION=array('sess_user_id'=>$admin);
+    tp_cable_delete(3,$cable);tp_ports_apply(3,10,0);tp_assignment_save(10,1,'Ethernet Switch','Access','lldp',$sibling);tp_ports_apply($sibling,10,$profile);
+    $b2=db_fetch_assoc('SELECT * FROM plugin_topology_ports WHERE host_id=10 ORDER BY ordinal');
+    preject(function()use($a,$b2){tp_cable_add(3,$a[0]['id'],$b2[0]['id']);},'cross-node cable rejected within same Site');
+    pcheck($core===hash('sha256',json_encode(db_fetch_assoc('SELECT * FROM host ORDER BY id')))&&$sources===db_fetch_cell('SELECT COUNT(*) FROM data_local')&&$graphs===db_fetch_cell('SELECT COUNT(*) FROM graph_local'),'native device settings, data sources and graphs unchanged');
+    print "PHYSICAL TOPOLOGY TESTS COMPLETE\n";
+} catch(Throwable $e) {fwrite(STDERR,$e->getMessage()."\n");exit(1);}

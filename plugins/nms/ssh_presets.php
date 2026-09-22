@@ -6,7 +6,8 @@ require_once __DIR__ . "/includes/database.php";
 require_once __DIR__ . "/includes/ssh.php";
 $storedAuth = "";
 $error = "";
-$notice = "";
+$notice = $_SESSION["nms_ssh_notice"] ?? "";
+unset($_SESSION["nms_ssh_notice"]);
 $selected = (int) get_filter_request_var("id");
 $values = [
 	"name" => "",
@@ -52,7 +53,8 @@ try {
 			if (!db_execute_prepared("DELETE FROM plugin_nms_ssh_presets WHERE id=?", [$selected])) {
 				throw new RuntimeException("Preset could not be deleted.");
 			}
-			header("Location: ssh_presets.php");
+			$_SESSION["nms_ssh_notice"] = "SSH preset deleted.";
+			header("Location: ssh_presets.php", true, 303);
 			exit();
 		}
 		if (!in_array($_POST["action"] ?? "", ["save", "delete"], true)) {
@@ -181,8 +183,8 @@ require __DIR__ . "/templates/app_header.php";
 <div class="nms-heading"><div><p class="nms-eyebrow">Presets / SSH</p><h1><?php print $selected
 	? "Edit SSH preset"
 	: "New SSH preset"; ?></h1><p>Reusable SSH connection settings for existing Cacti devices.</p></div></div>
-<?php if ($error) { ?><div class="ssh-message error" role="alert"><?php print nms_h($error); ?></div><?php } ?>
-<?php if ($notice) { ?><div class="ssh-message" role="status"><?php print nms_h($notice); ?></div><?php } ?>
+<?php if ($error) { ?><div class="ssh-message nms-action-feedback error" role="alert"><?php print nms_h($error); ?></div><?php } ?>
+<?php if ($notice) { ?><div class="ssh-message nms-action-feedback" role="status"><?php print nms_h($notice); ?></div><?php } ?>
 <nav class="ssh-presets-list" aria-label="Saved SSH presets"><a href="ssh_presets.php">+ New preset</a><?php foreach (
 	$presets
 	as $p

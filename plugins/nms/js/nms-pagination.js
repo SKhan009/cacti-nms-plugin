@@ -194,7 +194,7 @@
 	/** Attach paginators to supported NMS tables, associations, rules, and inventory lists. */
 	function initialize() {
 		Array.prototype.forEach.call(
-			document.querySelectorAll(".nms-table tbody"),
+			document.querySelectorAll(".nms-table:not([data-server-pagination]) tbody"),
 			/** Paginate this table's direct body rows. */ function (
 				container,
 				index,

@@ -799,6 +799,8 @@ require $config["base_path"] . "/plugins/nms/templates/app_header.php";
  ) { ?><div class="nms-form-message error"><strong>Could not complete the request</strong><span><?php print nms_h(
 	$page_error,
 ); ?></span></div><?php } ?>
+	<?php if (isset_request_var("classification_saved")) { ?><div class="nms-form-message success" role="status">Device classification saved.</div><?php } ?>
+    <?php if (isset_request_var("serial_saved") && !isset_request_var("device_updated")) { ?><div class="nms-form-message success" role="status">Device serial number saved.</div><?php } ?>
 	<?php if (
  	isset_request_var("device_created")
  ) { ?><div class="nms-form-message success"><strong>Device created</strong><span>Cacti device <?php print (int) get_filter_request_var(

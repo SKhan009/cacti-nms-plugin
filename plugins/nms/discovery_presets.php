@@ -54,10 +54,10 @@ if (isset($_SESSION["nms_discovery_bulk"])) {
 		implode(" ", $r["errors"]);
 }
 if ($notice) {
-	print '<p role="status">' . nms_h($notice) . "</p>";
+	print '<p class="nms-action-feedback" role="status">' . nms_h($notice) . "</p>";
 }
 if ($error) {
-	print '<p role="alert">' . nms_h($error) . "</p>";
+	print '<p class="nms-action-feedback error" role="alert">' . nms_h($error) . "</p>";
 }
 require __DIR__ . "/templates/discovery/presets.php";
 print "</main>";

@@ -358,5 +358,5 @@ function nms_snmprec_apply_fcaps_scenario($import_id, $scenario, $input)
 	if (($settings["activation"] ?? "") === "manual") {
 		return $label . ". The record file was updated, but manual SNMPSim activation does not reload a running responder. Restart the responder on the configured collector, then run the next Cacti poll.";
 	}
-	return $label . ". Reload is queued; the managed SNMPSim timer will restart the responder before the next Cacti poll.";
+	return $label . ". Reload is queued. The managed SNMPSim reload timer must be active and consume the marker; verify the live value before expecting the next Cacti poll to reflect this change.";
 }

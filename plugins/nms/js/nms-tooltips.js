@@ -5,7 +5,22 @@
 /** Initialize shared contextual help, tooltip positioning, and dynamic-content enhancement. */ (function () {
 	"use strict";
 
-	var fieldHelp = {
+	var diagnosticHelp = {
+        ping: "Checks whether the device responds. Shows response time and packet loss; blocked ICMP can prevent replies.",
+        traceroute: "Shows the network hops to the device. Helps locate delays; some routers may not reply.",
+        arp: "Shows IP and MAC addresses learned by the collector. It does not scan the network or read the device’s ARP table.",
+        iperf3: "Measures TCP speed by sending test traffic. Requires an iperf3 server on the target, using TCP port 5201.",
+        netperf: "Measures TCP speed by sending test traffic. Requires netperf on the collector and netserver on the target.",
+        pathchar: "Estimates bandwidth along the network path. Requires Pathchar on the collector; blocked probes may give incomplete results."
+    };
+
+    var fieldHelp = {
+        diagnostic_profile_name: "Name this set of tests and limits, for example Branch office checks.",
+        diagnostic_profile_id: "Choose the tests and limits allowed for this device. Assigning a profile does not run tests.",
+        ping_count: "Number of ping probes per test (1–10). More probes take longer.",
+        trace_hops: "Maximum network hops to check (1–30). For example, 20 checks up to twenty hops.",
+        bandwidth_seconds: "How long iPerf3 or Netperf sends traffic (1–30 seconds). Longer tests use more bandwidth.",
+        tool: "Choose a test to run. Only tools allowed by the device’s profile are listed.",
 		rule_name:
 			"Enter a recognisable rule name, for example New network switches. This helps identify the rule when reviewing automatic assignments.",
 		preset_id:
@@ -179,6 +194,10 @@
 	};
 
 	var sectionHelp = {
+        "Enabled tools": "Choose which tests this profile allows. Checking a box does not run or install the tool.",
+        "On-demand diagnostics": "Allow manual tests from the device’s collector. Assigning a profile does not schedule tests.",
+        "Collector tool requirements": "Tools must be installed on the assigned collector. Bandwidth tests also need a server on the target.",
+        "Run a diagnostic": "Choose a device and tool, then run the test. Results appear automatically.",
 		"Device identity":
 			"Core Cacti fields that identify the device and connect it to a host template, site, and collector.",
 		"SNMP connection":
@@ -510,6 +529,9 @@
 			control.getAttribute("aria-label") ||
 			name.replace(/_/g, " ");
 		var text = label.getAttribute("data-nms-tip") || fieldHelp[name];
+        if (!label.getAttribute("data-nms-tip") && name === "diagnostic_tools[]") text = diagnosticHelp[control.value];
+        if (!label.getAttribute("data-nms-tip") && control.id === "nmsDiagnosticHost")
+            text = "Choose the device to test. Tests run from its assigned collector, not your browser.";
 		if (!text && (name === "methods[]" || name === "discovery_methods[]")) {
 			text = {
 				lldp: "Read advertised LLDP neighbours and ports through SNMP. Example: enable this for an LLDP-capable switch to read its neighbour ports. LLDP must already be enabled on the equipment; selecting this does not configure it.",

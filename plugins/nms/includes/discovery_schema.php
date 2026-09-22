@@ -20,6 +20,13 @@ function nms_discovery_schema()
 	nms_category_execute(
 		"CREATE TABLE IF NOT EXISTS plugin_nms_diagnostic_devices (host_id MEDIUMINT UNSIGNED PRIMARY KEY,profile_id INT UNSIGNED NOT NULL,KEY(profile_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 	);
+	nms_category_execute("CREATE TABLE IF NOT EXISTS plugin_nms_diagnostic_jobs (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, host_id MEDIUMINT UNSIGNED NOT NULL,
+ poller_id INT UNSIGNED NOT NULL, user_id INT UNSIGNED NOT NULL, tool VARCHAR(16) NOT NULL,
+ config_hash CHAR(64) NOT NULL, status VARCHAR(16) NOT NULL DEFAULT 'queued',
+ result_json MEDIUMTEXT NOT NULL, requested_at DATETIME NOT NULL, started_at DATETIME NULL,
+ finished_at DATETIME NULL, KEY collector_queue (poller_id,status,id), KEY owner_jobs (user_id,id)
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 	foreach (
 		[
 			"chassis_id" => "VARCHAR(191) NOT NULL DEFAULT ''",

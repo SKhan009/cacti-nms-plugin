@@ -1,0 +1,7 @@
+[info]
+name = Topology
+version = 0.12.1
+longname = Topology Configuration
+author = NMS Project
+homepage = https://www.cacti.net/
+compat = 1.2.31

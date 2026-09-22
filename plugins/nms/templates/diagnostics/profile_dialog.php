@@ -9,14 +9,14 @@ $profile_values = $editing_profile ?: [
 	"bandwidth_seconds" => 10,
 ];
 
-if ($error && ($_POST["nms_action"] ?? "") === "save_diagnostic_profile") {
+if ($error && is_array($failed_profile_input)) {
 	$profile_values = array_merge($profile_values, [
-		"id" => (int) ($_POST["diagnostic_profile_id"] ?? 0),
-		"name" => (string) ($_POST["diagnostic_profile_name"] ?? ""),
-		"tools" => implode(",", nms_diag_tools($_POST["diagnostic_tools"] ?? [])),
-		"ping_count" => (int) ($_POST["ping_count"] ?? 4),
-		"trace_hops" => (int) ($_POST["trace_hops"] ?? 20),
-		"bandwidth_seconds" => (int) ($_POST["bandwidth_seconds"] ?? 10),
+		"id" => (int) ($failed_profile_input["diagnostic_profile_id"] ?? 0),
+		"name" => (string) ($failed_profile_input["diagnostic_profile_name"] ?? ""),
+		"tools" => implode(",", nms_diag_tools($failed_profile_input["diagnostic_tools"] ?? [])),
+		"ping_count" => (int) ($failed_profile_input["ping_count"] ?? 4),
+		"trace_hops" => (int) ($failed_profile_input["trace_hops"] ?? 20),
+		"bandwidth_seconds" => (int) ($failed_profile_input["bandwidth_seconds"] ?? 10),
 	]);
 }
 

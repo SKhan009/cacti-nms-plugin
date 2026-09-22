@@ -228,3 +228,42 @@
 
 /* Keep the diagnostic dialog title and close control available while its form scrolls. */
 .nms-config-dialog.nms-diagnostic-dialog > .nms-panel-head { position:sticky !important; top:0; z-index:4; box-shadow:0 2px 8px #0003; }
+
+/* Persistent click cards remain inside the map while it pans or refreshes. */
+.nms-hybrid .nms-canvas-viewport{position:relative}
+.nms-hybrid #nms-port-details{position:absolute;right:16px;top:16px;z-index:8;box-sizing:border-box;width:410px;max-width:calc(100% - 32px);max-height:calc(100% - 32px);overflow:auto;padding:18px;background:#fff;color:#243247;border:1px solid #d7e0ea;border-radius:10px;box-shadow:0 8px 32px #0f172a30;overflow-wrap:anywhere;text-align:left;font-size:13px}
+.nms-hybrid #nms-port-details header{display:flex;align-items:center;gap:12px;border-bottom:1px solid #e2e8f0;padding-bottom:12px;margin-bottom:12px}
+.nms-hybrid #nms-port-details h3{margin:0;flex:1;font-size:17px;color:#172b45}
+.nms-hybrid #nms-port-details header button{font-size:24px;border:0;background:#f1f5f9;color:#334155;cursor:pointer;border-radius:5px;min-width:32px;min-height:32px}
+.nms-hybrid .nms-detail-metrics{display:grid;grid-template-columns:minmax(100px, .85fr) minmax(0,1.3fr);gap:9px 16px;margin:12px 0}
+.nms-hybrid .nms-detail-metrics dt{color:#64748b;margin:0;font-weight:normal}
+.nms-hybrid .nms-detail-metrics dd{color:#243247;margin:0;font-weight:600}
+.nms-hybrid .nms-detail-interface{border-top:1px solid #e2e8f0;padding-top:8px;margin-top:16px}
+.nms-hybrid #nms-port-details h4{font-size:14px;margin:8px 0;color:#172b45}
+.nms-hybrid .nms-detail-subtitle{color:#52647a;line-height:1.5}
+.nms-hybrid .nms-detail-alarm{padding:10px 12px;background:#f5f8fc;border:1px solid #dce4ef;border-radius:6px;margin:18px 0}
+.nms-hybrid #nms-port-details details button{display:block;width:100%;text-align:left;white-space:normal;margin:8px 0;padding:8px;border:1px solid #dce4ef;background:#f5f8fc;color:#243247;cursor:pointer}
+.nms-hybrid #nms-port-details summary{cursor:pointer;font-weight:600;padding:8px 0}
+.nms-hybrid #nms-port-details button:focus-visible,.nms-hybrid #nms-port-details summary:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+@media(max-width:600px){.nms-hybrid #nms-port-details{right:8px;top:8px;max-width:calc(100% - 16px);max-height:calc(100% - 16px);padding:12px}}
+
+/* Diagnostic controls share one baseline; status/history use the same panel spacing as results. */
+.nms-diagnostic-run-form{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;gap:18px 22px}
+.nms-diagnostic-run-form>label{display:grid;gap:8px;min-width:0}
+.nms-diagnostic-run-form select{width:100%;min-width:0;min-height:46px;box-sizing:border-box}
+.nms-diagnostic-run-form .nms-diagnostic-run-note{margin:0;color:#58636d;line-height:1.5;align-self:center}
+.nms-diagnostic-run-form .nms-diagnostic-run-button{align-self:center;min-height:46px;width:100%;text-align:center;justify-content:center}
+.nms-diagnostic-run-button:disabled{opacity:.65;cursor:wait}
+.nms-diagnostic-panel-body{padding:20px 28px}
+.nms-diagnostic-panel-body p{margin:0 0 12px}
+.nms-diagnostic-history{padding:20px 28px}
+.nms-diagnostic-history summary{font-weight:700;cursor:pointer}
+.nms-diagnostic-history ul{padding-left:20px;margin:16px 0 0}
+.nms-diagnostic-history li{padding:5px 0}
+@media(max-width:650px){.nms-diagnostic-run-form{grid-template-columns:minmax(0,1fr)}.nms-diagnostic-panel-body,.nms-diagnostic-history{padding:16px 20px}}
+
+/* Saved diagnostic history uses server pagination, including large archives. */
+.nms-config-form.nms-history-filters { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.nms-history-filters label { min-width:0; }
+.nms-history-actions { display:flex; align-items:center; gap:12px; align-self:end; }
+@media(max-width:800px) { .nms-config-form.nms-history-filters { grid-template-columns:1fr; } }

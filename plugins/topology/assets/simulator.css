@@ -1,0 +1,4 @@
+/* Layout only: controls retain native Cacti theme styles. */
+#main .tp-sim-actions { display:flex; flex-wrap:wrap; align-items:center; gap:6px; padding:5px 0; }
+#main .tp-sim-actions form { margin:0; }
+#main .tp-sim-name, #main .tp-sim-location, #main .tp-sim-community { display:inline-block; white-space:normal; overflow-wrap:anywhere; max-width:18rem; vertical-align:middle; padding:4px 0; }

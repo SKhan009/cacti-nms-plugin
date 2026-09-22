@@ -1,0 +1,25 @@
+1.0.2 - 2026-09-15
+- Raised the supported Cacti baseline to patched 1.2.31+.
+- Added explicit CSRF token handling for administration and drag/drop writes.
+- Blocked deleted hosts, disabled racks, and unauthorized device detail lookups.
+- Aligned the schema version marker with the plugin package version.
+- Enforced the same 1.2.31+ minimum in the installer guard.
+- Added a dedicated visible Rack Topology sidebar section with Rack View and Manage racks links.
+
+1.0.0 - 2026-09-14
+- Initial ICCT rack topology implementation.
+- Front/rear rack visualization and live Cacti device status.
+- Rack and placement CRUD with overlap validation.
+- Drag-and-drop move support.
+- View/Manage realms and audit trail.
+- Cross-platform Windows/RHEL plugin design with no Cacti core edits.
+
+1.0.1
+- Fixed Cacti 1.2.x navigation integration.
+- Added Rack Topology to Console > Management.
+- Added Rack Topology Management to Console > Configuration.
+- Registered both top_header_tabs and top_graph_header_tabs.
+- Added Cacti breadcrumbs.
+- Added visible Rack header tab icons.
+- Plugin index.php now opens the rack topology page instead of returning to Cacti home.
+- Upgrade routine now re-registers hooks.

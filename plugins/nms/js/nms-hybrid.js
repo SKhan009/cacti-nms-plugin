@@ -32,9 +32,10 @@
 	/**
 	 * Handles message.
 	 */
-	function message(text) {
+	function message(text, error = false) {
 		notice.textContent = text;
-		notice.hidden = !/fail|error|unavailable/i.test(text);
+		notice.hidden = !error && !/fail|error|unavailable|saved/i.test(text);
+		if (!notice.hidden && window.nmsNotify) window.nmsNotify(text, !/saved/i.test(text));
 	}
 	let panX = 0,
 		panY = 0,
@@ -692,7 +693,7 @@
 				e.stopPropagation();
 				source = n.id;
 				selected = p.edge;
-				showPorts(p.edge ? null : n.id, p.edge);
+				showPorts(p.edge ? null : n.id, p.edge, p.edge ? null : {name: p.name, index: p.index});
 				message("Observed port: " + p.name);
 				draw();
 			};
@@ -942,7 +943,8 @@
 				draw();
 			});
 			g.addEventListener("keydown", async (e) => {
-				if (e.key === "Enter") {
+				if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
 					source = n.id;
 					selected = null;
 					showPorts(n.id);
@@ -1033,7 +1035,7 @@
 			n.x = old.x;
 			n.y = old.y;
 			draw();
-			message(e.message);
+			message(e.message, true);
 		}
 	}
 	svg.addEventListener("pointerup", async () => {
@@ -1131,69 +1133,119 @@
 				list.append(b);
 			});
 	}
-	/**
-	 * Handles show Ports.
-	 */
-	function showPorts(id, edge) {
-		details.replaceChildren();
-		const node = data.nodes.find((n) => n.id === id),
-			title = document.createElement("h3");
-		title.textContent = id
-			? node?.name + " — connection evidence"
-			: "Connection ports";
-		details.append(title);
-		const add = (text) => {
-			const p = document.createElement("p");
-			p.textContent = text;
-			details.append(p);
-		};
-		(node?.discovery_warnings || []).forEach(add);
-		const links = data.links.filter((l) =>
-			edge ? l.id === edge : l.a === id || l.b === id,
-		);
-		if (!links.length)
-			add(
-				"No resolved connections. Observed neighbours and matching reasons are listed below.",
-			);
-		links.forEach((l) => {
-			const a = data.nodes.find((n) => n.id === l.a),
-				b = data.nodes.find((n) => n.id === l.b);
-			add(
-				a.name +
-					" [" +
-					(l.a_port || "Unknown port") +
-					"] ↔ " +
-					b.name +
-					" [" +
-					(l.b_port || "Unknown port") +
-					"] — " +
-					l.state,
-			);
+	let detailSelection = null;
+	const missing = "Not collected";
+	function metricRows(parent, rows) {
+		const dl = document.createElement("dl");
+		dl.className = "nms-detail-metrics";
+		rows.forEach(([label, value]) => {
+			const dt = document.createElement("dt"), dd = document.createElement("dd");
+			dt.textContent = label;
+			dd.textContent = value === null || value === undefined || value === "" ? missing : String(value);
+			dl.append(dt, dd);
 		});
-		const observations = (data.observations || []).filter(
-			(o) => o.host_id === id,
-		);
-		if (observations.length)
-			add(
-				"Showing " +
-					Math.min(500, observations.length) +
-					" of " +
-					observations.length +
-					" stored observations.",
-			);
-		observations
-			.slice(0, 500)
-			.forEach((o) =>
-				add(
-					(o.current ? "" : "Historical / stale · ") +
-						(o.text || o.reason || "Observation"),
-				),
-			);
-		if (id && !links.length && !observations.length)
-			add(
-				"No neighbour observations collected. Check the device discovery assignment and latest method results.",
-			);
+		parent.append(dl);
 	}
+	function trafficText(value, speed) {
+		if (value === null || value === undefined || !Number.isFinite(Number(value))) return missing;
+		const rate = Number(value), units = ["bps", "Kbps", "Mbps", "Gbps", "Tbps"];
+		let amount = rate, unit = 0;
+		while (amount >= 1000 && unit < units.length - 1) { amount /= 1000; unit++; }
+		return amount.toLocaleString(undefined, { maximumFractionDigits: 3 }) + " " + units[unit]
+			+ (speed > 0 ? " (" + (rate * 100 / speed).toFixed(2) + "%)" : " (capacity unknown)");
+	}
+	function closeDetails() {
+		const previous = detailSelection;
+		details.hidden = true;
+		detailSelection = null;
+		source = selected = null;
+		draw();
+		const targets = svg.querySelectorAll(previous?.edge ? "[data-edge]" : "[data-node]");
+		[...targets].find((element) => previous?.edge
+			? element.dataset.edge === String(previous.edge)
+			: element.dataset.node === String(previous?.id))?.focus();
+	}
+	function showPorts(id, edge, port = null, restoreFocus = false) {
+		const hadFocus = details.contains(document.activeElement);
+        const evidenceOpen = restoreFocus && details.querySelector("details")?.open;
+        detailSelection = { id, edge, port };
+		details.replaceChildren();
+		details.hidden = false;
+		const node = data.nodes.find((n) => n.id === id), link = data.links.find((l) => l.id === edge);
+		const heading = document.createElement("header"), title = document.createElement("h3"), close = document.createElement("button");
+		title.id = "nms-detail-title";
+		title.textContent = link ? "Network link" : port ? (node?.name || "Device") + " · " + port.name : node?.name || "Selection unavailable";
+		close.type = "button"; close.textContent = "×"; close.setAttribute("aria-label", "Close details"); close.onclick = closeDetails;
+		heading.append(title, close); details.append(heading);
+		const add = (text, className = "") => {
+			const p = document.createElement("p"); p.textContent = text; p.className = className; details.append(p);
+		};
+		const interfaceCard = (device, name, index, fallback = null) => {
+			const section = document.createElement("section"), h = document.createElement("h4");
+			section.className = "nms-detail-interface";
+			const candidates = (device?.interfaces || []).filter((p) => index ? Number(p.index) === Number(index) : p.name === name);
+			const p = candidates.length === 1 ? candidates[0] : fallback || {};
+			h.textContent = (device?.name || "Unknown device") + " · " + (p.name || name || "Unknown interface");
+			section.append(h);
+			const speed = p.high_speed_mbps > 0 ? p.high_speed_mbps * 1000000 : p.speed_bps || 0;
+			metricRows(section, [
+				["Device name", device?.name], ["Interface", p.name || name],
+				["Admin status", {1:"Up",2:"Down",3:"Testing"}[p.admin]],
+				["Oper status", {1:"Up",2:"Down",3:"Testing",4:"Unknown",5:"Dormant",6:"Not present",7:"Lower layer down"}[p.oper]],
+				["Speed", speed ? formatBandwidth(speed) : missing],
+				["In traffic", trafficText(p.in_bps, speed)], ["Out traffic", trafficText(p.out_bps, speed)],
+				["Description", p.description], ["Alias", p.alias],
+				["Observed", p.observed_at ? new Date(p.observed_at * 1000).toLocaleString() : null],
+				["Traffic interval", p.sample_seconds ? p.sample_seconds + " seconds (average)" : "Requires two valid counter samples"],
+			]);
+			const note = document.createElement("p"); note.textContent = "In and out are relative to this device interface."; section.append(note);
+			details.append(section);
+		};
+		if (link) {
+			add((link.current ? "Current" : "Historical / stale") + " · " + (link.state || "Unknown"), "nms-detail-subtitle");
+			add(link.label || "Connection");
+			["a", "b"].forEach((side) => interfaceCard(data.nodes.find((n) => n.id === link[side]), link[side + "_port"], link[side + "_ifindex"]));
+		} else if (node && port) {
+			interfaceCard(node, port.name, port.index);
+		} else if (node) {
+			add((states[node.status] || "Unknown") + " · " + node.address + " · " + (node.device_type || node.template || "Unknown model"), "nms-detail-subtitle");
+			metricRows(details, [
+				["Availability", states[node.status] || "Unknown"], ["Category", node.category],
+				["Device type", node.device_type || node.template], ["Serial number", node.identity?.serial],
+				["Response time", node.response_ms == null ? null : node.response_ms + " ms"],
+				["Packet loss", node.packet_loss == null ? null : node.packet_loss + "%"],
+				["Poll availability", node.poll_availability == null ? null : node.poll_availability.toFixed(2) + "% (lifetime)"],
+				["Last polled", node.last_polled],
+			]);
+			const alarm = document.createElement("section"), alarmTitle = document.createElement("h4");
+			alarm.className = "nms-detail-alarm"; alarmTitle.textContent = "Recent active alarm"; alarm.append(alarmTitle);
+			const a = node.recent_alarm;
+			metricRows(alarm, a ? [["Title", a.title], ["Severity", a.severity], ["Status", a.status], ["Message", a.message], ["Last seen", a.last_seen]] : [["Status", "No active NMS alarms"]]);
+			details.append(alarm);
+			(node.discovery_warnings || []).forEach((warning) => add(warning));
+			const evidence = document.createElement("details"), summary = document.createElement("summary");
+			summary.textContent = "Connections and discovery evidence"; evidence.append(summary);
+            evidence.open = Boolean(evidenceOpen);
+			const connections = data.links.filter((l) => l.a === id || l.b === id);
+			connections.forEach((l) => {
+				const button = document.createElement("button"); button.type = "button";
+				button.textContent = l.label + " · " + l.state;
+				button.onclick = () => { source = null; selected = l.id; showPorts(null, l.id); draw(); }; evidence.append(button);
+			});
+			(data.observations || []).filter((o) => o.host_id === id).slice(0, 500).forEach((o) => {
+				const p = document.createElement("p"); p.textContent = (o.current ? "" : "Historical / stale · ") + (o.text || o.reason || "Observation"); evidence.append(p);
+			});
+			if (!connections.length) { const p = document.createElement("p"); p.textContent = "No resolved connections."; evidence.append(p); }
+			details.append(evidence);
+		} else {
+			add("This device or link is no longer present in the latest topology. Select another item.");
+		}
+		if (!restoreFocus) details.scrollTop = 0;
+        if (!restoreFocus || hadFocus) close.focus({preventScroll: true});
+	}
+	details.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); closeDetails(); } });
+	root.addEventListener("keydown", (e) => { if (e.key === "Escape" && !details.hidden) { e.preventDefault(); closeDetails(); } });
+
 	document
 		.getElementById("nms-device-search")
 		.addEventListener("input", palette);
@@ -1233,8 +1285,12 @@
 				throw Error("Session unavailable");
 			data = next;
 			draw();
-			if (source !== null) showPorts(source);
-			else if (selected !== null) showPorts(null, selected);
+			if (detailSelection && !details.hidden) {
+                const {id, edge, port} = detailSelection;
+                const scroll = details.scrollTop;
+                showPorts(id, edge, port, true);
+                details.scrollTop = scroll;
+            }
 			return true;
 		} catch (e) {
 			message(

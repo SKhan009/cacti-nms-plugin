@@ -1,0 +1,4 @@
+# Only native UI controllers, metadata are public entry points.
+<FilesMatch "^(simulator\.local\.php|.*\.(json|py|md|lock))$">
+    Require all denied
+</FilesMatch>

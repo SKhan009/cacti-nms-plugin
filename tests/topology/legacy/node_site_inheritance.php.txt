@@ -1,0 +1,29 @@
+<?php
+/** Verify node Site inheritance only in a disposable Cacti database clone. */
+if(PHP_SAPI!=='cli')exit(2);
+$o=getopt('',array('cacti-root:','database:'));
+if(empty($o['cacti-root'])||!preg_match('/^topology_node_qa_[a-z0-9_]+$/D',$o['database']??''))exit(2);
+require($o['cacti-root'].'/include/cli_check.php');
+$database_hostname='localhost';$database_port='3306';$database_default=$o['database'];
+if(!db_connect_real('localhost','root','',$database_default,'mysql','3306',1))exit(2);
+require_once(__DIR__.'/../includes/model.php');
+try {
+    if(db_fetch_cell('SELECT DATABASE()')!==$o['database'])throw new RuntimeException('Wrong QA database.');
+    $_SESSION=array('sess_user_id'=>(int)read_config_option('admin_user'));
+    function ncheck($v,$s){if(!$v)throw new RuntimeException($s);print "PASS: $s\n";}
+    function nreject($fn,$s){try{$fn();}catch(RuntimeException|InvalidArgumentException $e){print "PASS: $s\n";return;}throw new RuntimeException('Accepted: '.$s);}
+    $core=hash('sha256',json_encode(db_fetch_assoc('SELECT * FROM host ORDER BY id')));
+    $old=db_fetch_assoc('SELECT * FROM plugin_topology_units ORDER BY id');
+    $node=tp_unit_save_from_device(0,9,'QA inherited node');
+    ncheck((int)tp_unit($node)['site_id']===(int)tp_host(9)['site_id'],'new node inherits Site from native device');
+    ncheck($old===db_fetch_assoc_prepared('SELECT * FROM plugin_topology_units WHERE id<>? ORDER BY id',array($node)),'existing nodes remain unchanged');
+    $site=tp_unit($node)['site_id'];tp_unit_save_from_device($node,2,'QA renamed node');
+    ncheck(tp_unit($node)['site_id']===$site,'renaming does not reassign node Site');
+    nreject(function(){tp_unit_save_from_device(0,999999,'Invalid reference');},'missing reference device rejected');
+    ncheck($core===hash('sha256',json_encode(db_fetch_assoc('SELECT * FROM host ORDER BY id'))),'node operations preserve native device and credential fields');
+    tp_exec('UPDATE host SET site_id=0 WHERE id=9');
+    nreject(function(){tp_unit_save_from_device(0,9,'Missing Site');},'device without native Site requires core configuration');
+    tp_exec('UPDATE host SET site_id=? WHERE id=9',array($site));
+    $_SESSION=array('sess_user_id'=>3);nreject(function(){tp_unit_save_from_device(0,9,'Unauthorized');},'read-only user cannot create nodes');
+    print "NODE INHERITANCE CHECKS COMPLETE\n";
+}catch(Throwable $e){fwrite(STDERR,$e->getMessage()."\n");exit(1);}

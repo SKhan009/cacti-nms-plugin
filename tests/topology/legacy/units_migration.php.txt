@@ -1,0 +1,62 @@
+<?php
+/** Destructive QA checks are permitted only in an explicitly named disposable Cacti clone. */
+if(PHP_SAPI!=='cli') {http_response_code(403);exit;}
+$options=getopt('',array('cacti-root:','database:'));
+if(empty($options['cacti-root']) || !preg_match('/^topology_units_qa_[a-z0-9_]+$/D',$options['database'] ?? '')) exit(2);
+require($options['cacti-root'].'/include/cli_check.php');
+$database_hostname='localhost';$database_port='3306';$database_default=$options['database'];
+if(!db_connect_real('localhost','root','',$database_default,'mysql','3306',1)) exit(2);
+require_once(__DIR__.'/../includes/discovery.php');
+try {
+    if(db_fetch_cell('SELECT DATABASE()')!==$options['database']) throw new RuntimeException('QA database mismatch.');
+    $_SESSION=array('sess_user_id'=>(int)read_config_option('admin_user'));
+    function check_unit($ok,$label) {if(!$ok) throw new RuntimeException($label);echo "PASS: $label\n";}
+    function reject_unit($fn,$label) {try{$fn();}catch(RuntimeException|InvalidArgumentException $e){echo "PASS: $label\n";return;}throw new LogicException('Accepted '.$label);}
+    $old=db_fetch_assoc('SELECT host_id,protocol,data_json,succeeded_at FROM plugin_topology_snapshots ORDER BY host_id,protocol');
+    $core=hash('sha256',json_encode(db_fetch_assoc('SELECT * FROM host ORDER BY id')));
+    $sources=(int)db_fetch_cell('SELECT COUNT(*) FROM data_local');$graphs=(int)db_fetch_cell('SELECT COUNT(*) FROM graph_local');
+    tp_schema();
+    check_unit($old===db_fetch_assoc('SELECT host_id,protocol,data_json,succeeded_at FROM plugin_topology_snapshots ORDER BY host_id,protocol'),'migration preserves exact neighbor JSON and last-success timestamps');
+    check_unit((int)tp_unit(3)['site_id']===3,'legacy lab retains its ID and location');
+    $hosts=tp_discovery_hosts(3);
+    check_unit(isset($hosts[9],$hosts[10]),'legacy devices retain explicit node membership');
+    $evidence=tp_discovery_evidence(3,$hosts);
+    check_unit($evidence['9|lldp']['valid'] && $evidence['10|lldp']['valid'],'unchanged legacy evidence retains valid configuration fingerprints');
+    check_unit(count(tp_reconcile(tp_discovery_evidence(3,$hosts),time(),900)['links'])===1,'legacy connection evidence remains resolvable after migration');
+    tp_exec('UPDATE plugin_config SET version="0.4.0" WHERE directory="topology"');
+    $second=tp_unit_save(0,3,'QA Second Node');
+    check_unit($second!==3 && (int)tp_unit($second)['site_id']===3,'one location accepts two independent nodes');
+    reject_unit(function(){tp_unit_save(0,3,'QA Second Node');},'duplicate name in one location is rejected');
+    $other=tp_unit_save(0,1,'QA Second Node');
+    check_unit($other!==$second,'the same node name is allowed at a different location');
+    reject_unit(function()use($second){tp_assignment_save(2,1,'Switch','','lldp',$second);},'cross-location device assignment is rejected');
+    tp_assignment_save(10,1,'Ethernet Switch','Access','lldp',$second);
+    $a=tp_discovery_hosts(3);$b=tp_discovery_hosts($second);
+    check_unit(isset($a[9]) && !isset($a[10]) && isset($b[10]) && !isset($b[9]),'sibling nodes have separate device inventories');
+    check_unit(count(tp_reconcile(tp_discovery_evidence(3,$a),time(),900)['links'])===0,'a sibling-node device cannot complete a local topology link');
+    check_unit(tp_discovery_evidence($second,$b)===array(),'moved devices do not inherit the former node’s evidence');
+    tp_discovery_save($second,'0',600,1800);tp_discovery_save(3,'0',300,900);
+    $jobA=tp_discovery_queue(3);$jobB=tp_discovery_queue($second);
+    check_unit($jobA!==$jobB,'sibling nodes queue independent discovery jobs');
+    check_unit((int)db_fetch_cell_prepared('SELECT interval_seconds FROM plugin_topology_discovery_sites WHERE unit_id=?',array($second))===600,'node cadence is stored independently');
+    reject_unit(function()use($second){tp_unit_save($second,1,'QA Second Node');},'moving an occupied node cannot silently move core devices');
+    $before=db_fetch_assoc('SELECT * FROM plugin_topology_devices ORDER BY host_id');tp_schema();
+    check_unit($before===db_fetch_assoc('SELECT * FROM plugin_topology_devices ORDER BY host_id'),'repeated upgrade preserves explicit sibling assignments');
+    check_unit((int)db_fetch_cell('SELECT COUNT(*) FROM plugin_topology_imports WHERE unit_id=3')===2,'existing simulator imports retain their original node');
+    tp_exec('UPDATE user_auth SET policy_hosts=2,policy_graphs=2,policy_graph_templates=2 WHERE id=3');
+    tp_exec('DELETE FROM user_auth_perms WHERE user_id=3');
+    tp_exec('INSERT INTO user_auth_perms (user_id,item_id,type) VALUES (3,9,3)');
+    $_SESSION=array('sess_user_id'=>3);
+    $visible=array_map('intval',array_column(tp_units(),'id'));
+    check_unit(in_array(3,$visible,true) && !in_array($second,$visible,true),'device-limited user cannot see a sibling node at the same location');
+    reject_unit(function()use($second){tp_unit($second);},'direct access to a hidden sibling node is rejected');
+    $_SESSION=array('sess_user_id'=>(int)read_config_option('admin_user'));
+    check_unit($core===hash('sha256',json_encode(db_fetch_assoc('SELECT * FROM host ORDER BY id'))),'native device rows and credentials are unchanged');
+    check_unit($sources===(int)db_fetch_cell('SELECT COUNT(*) FROM data_local') && $graphs===(int)db_fetch_cell('SELECT COUNT(*) FROM graph_local'),'native data sources and graphs are unchanged');
+    foreach(array('snapshots','jobs','discovery_sites','audit','objects','imports','devices','categories','units') as $table) tp_exec('DROP TABLE plugin_topology_'.$table);
+    tp_schema();
+    $first=tp_unit_save(0,3,'Fresh Node A');$next=tp_unit_save(0,3,'Fresh Node B');
+    check_unit($first!==$next && count(tp_units())===2,'fresh install supports multiple named nodes at one location');
+    check_unit(tp_discovery_hosts($first)===array() && tp_discovery_hosts($next)===array(),'fresh nodes require explicit device assignment');
+    echo "LOCATION/NODE MIGRATION CHECKS COMPLETE\n";
+} catch(Throwable $e) {fwrite(STDERR,'FAIL: '.$e->getMessage()."\n");exit(1);}

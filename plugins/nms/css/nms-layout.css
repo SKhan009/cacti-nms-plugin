@@ -374,3 +374,44 @@ body.nms-standalone button.nms-cancel-button {
 }
 body.nms-standalone button.nms-cancel-button:hover { background: #f3f3f3; }
 body.nms-standalone button.nms-cancel-button:focus-visible { outline: 2px solid #111; outline-offset: 3px; }
+
+/* Shared action feedback: visible on every NMS page, independent of module CSS. */
+.nms-feedback-banner, .nms-notice, .nms-action-feedback {
+    background:#eaf7ee; color:#185b30; border:1px solid #91c9a3; border-left:5px solid #25854a;
+    border-radius:8px; padding:16px 20px; margin:16px 0; font-size:15px; line-height:1.5;
+}
+.nms-feedback-banner.nms-feedback-error, .nms-notice.error, .nms-action-feedback[role="alert"] {
+    background:#fff0f0; color:#8c2020; border-color:#dd9b9b; border-left-color:#be3535;
+}
+.nms-feedback-banner strong, .nms-feedback-banner span { display:block; }
+.nms-feedback-toast {
+    position:fixed; top:90px; right:24px; z-index:10000; display:flex; align-items:flex-start; gap:16px;
+    max-width:min(520px,calc(100vw - 48px)); max-height:45vh; overflow:auto;
+    padding:18px 20px; border:1px solid #91c9a3; border-left:5px solid #25854a; border-radius:8px;
+    background:#eaf7ee; color:#185b30; box-shadow:0 5px 24px #0003; font:600 15px/1.5 sans-serif;
+}
+.nms-feedback-toast.error { background:#fff0f0; color:#8c2020; border-color:#dd9b9b; border-left-color:#be3535; }
+.nms-feedback-toast button { flex:none; background:transparent; color:inherit; border:0; font-size:24px; cursor:pointer; padding:0 4px; }
+.nms-feedback-pending { grid-column:1/-1; font-weight:600; padding:12px; background:#eef4fc; color:#234f80; }
+
+/* Shared list controls keep links and visited states consistent with buttons. */
+body.nms-standalone .nms-list-action,
+body.nms-standalone .nms-list-action:visited {
+    display:inline-flex; align-items:center; justify-content:center; box-sizing:border-box;
+    min-height:36px; padding:7px 12px; border:1px solid #d4d8dc; border-radius:6px;
+    background:#fff; color:#222; font:inherit; font-weight:600; text-decoration:none; white-space:nowrap;
+}
+body.nms-standalone .nms-list-action:hover { background:#f3f3f3; border-color:#aaa; }
+body.nms-standalone .nms-pagination a.nms-page-button { color:#4c4c4c; text-decoration:none; box-sizing:border-box; }
+body.nms-standalone .nms-pagination .nms-page-button:focus-visible,
+body.nms-standalone .nms-list-action:focus-visible { outline:2px solid #555; outline-offset:3px; }
+.nms-test-status { display:inline-flex; align-items:center; padding:4px 9px; border-radius:5px; font-weight:600; font-size:12px; white-space:nowrap; }
+.nms-test-status.passed { background:#eaf7ee; color:#185b30; }
+.nms-test-status.failed { background:#fff0f0; color:#8c2020; }
+.nms-test-status.pending { background:#eef4fc; color:#234f80; }
+#diagnostic-history, #diagnostic-result { scroll-margin-top:110px; }
+#diagnostic-history .nms-table th:first-child { width:65px; }
+#diagnostic-history .nms-table td { vertical-align:middle; }
+#diagnostic-history .nms-table small { color:#707070; }
+#diagnostic-history .nms-table td:nth-child(5), #diagnostic-history .nms-table td:nth-child(6) { white-space:nowrap; font-variant-numeric:tabular-nums; }
+#diagnostic-history .nms-history-actions > * { min-height:40px; }

@@ -1,9 +1,9 @@
 <main class="nms-shell nms-topology-config"><h1><?php print $topology_tab === "appearance"
 	? "Device appearance"
 	: "Discovery inventory"; ?></h1>
-<?php if ($error) { ?><p role="alert"><?php print nms_h($error); ?></p><?php } elseif (
+<?php if ($error) { ?><p class="nms-action-feedback error" role="alert"><?php print nms_h($error); ?></p><?php } elseif (
 	isset($_GET["saved"])
-) { ?><p role="status">Settings saved.</p><?php } ?>
+) { ?><p class="nms-action-feedback" role="status">Settings saved.</p><?php } ?>
 <?php if ($topology_tab === "appearance") {
 
 	$catalog = nms_appearance_read();

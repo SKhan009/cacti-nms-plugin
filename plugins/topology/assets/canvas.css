@@ -1,0 +1,58 @@
+/* Only the topology drawing surface; navigation, forms and tables remain native Cacti. */
+#tp-canvas-app .tp-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:8px 0 12px; }
+#tp-canvas-app .tp-viewport { width:100%; height:620px; overflow:auto; border:1px solid #9998; position:relative; background:repeating-linear-gradient(0deg,transparent,transparent 23px,#8881 24px),repeating-linear-gradient(90deg,transparent,transparent 23px,#8881 24px); }
+#tp-canvas { width:2400px; height:1400px; position:relative; }
+#tp-wires { position:absolute; inset:0; pointer-events:none; overflow:visible; }
+#tp-wires path { fill:none; stroke:currentColor; stroke-width:2; opacity:.65; }
+#tp-wires text { fill:currentColor; font-size:11px; paint-order:stroke; stroke:var(--background-color,#f5f5f5); stroke-width:4; }
+#tp-canvas .tp-device { position:absolute; width:240px; box-sizing:border-box; border:1px solid #888; border-radius:3px; box-shadow:0 2px 5px #0002; color:inherit; background:var(--background-color,#f4f4f4); }
+#tp-canvas .tp-device-head { padding:9px 10px; cursor:grab; touch-action:none; border-bottom:1px solid #8885; background:#8882; }
+#tp-canvas .tp-device-head:active { cursor:grabbing; }
+#tp-canvas .tp-device-head:focus-visible, #tp-canvas .tp-port:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
+#tp-canvas .tp-device-head strong { display:block; overflow-wrap:anywhere; }
+#tp-canvas .tp-device-meta { font-size:11px; opacity:.85; margin-top:5px; }
+#tp-canvas .tp-port-list { max-height:168px; overflow:auto; padding:5px; }
+#tp-canvas .tp-port { display:flex; justify-content:space-between; align-items:center; gap:6px; width:100%; padding:6px; box-sizing:border-box; margin:2px 0; text-align:left; font:inherit; color:inherit; background:transparent; border:1px solid #8885; border-radius:2px; cursor:crosshair; touch-action:none; }
+#tp-canvas .tp-port small { font-size:10px; opacity:.8; }
+#tp-canvas .tp-port.tp-connected { background:#8882; cursor:default; }
+#tp-canvas .tp-port.tp-selected { outline:2px solid currentColor; }
+#tp-canvas .tp-device-foot { display:flex; flex-wrap:wrap; gap:6px; padding:7px 10px; border-top:1px solid #8884; font-size:11px; }
+#tp-canvas-app .tp-caption { margin:8px 0 2px; opacity:.8; }
+#tp-canvas-app .tp-error { font-weight:bold; color:#b22; }
+
+#tp-canvas-app .tp-toolbar { white-space:normal; }
+#tp-canvas-app #tp-canvas-message { flex:1 1 220px; min-width:0; }
+
+/* Color is paired with labels and port symbols, never the only source of meaning. */
+#tp-canvas .tp-device { border-top:4px solid var(--tp-category); }
+#tp-canvas .tp-device-head { background:color-mix(in srgb, var(--tp-category) 10%, transparent); }
+#tp-canvas .tp-device-health { display:flex; gap:7px; margin-top:7px; align-items:center; }
+#tp-canvas .tp-status, #tp-canvas .tp-simulated { border-radius:3px; padding:2px 6px; font-size:11px; font-weight:600; }
+#tp-canvas .tp-status-up { background:#dcfce7; color:#166534; }
+#tp-canvas .tp-status-down, #tp-canvas .tp-status-error { background:#fee2e2; color:#991b1b; }
+#tp-canvas .tp-status-recovering { background:#fef3c7; color:#92400e; }
+#tp-canvas .tp-status-disabled, #tp-canvas .tp-status-unknown { background:#e2e8f0; color:#475569; }
+#tp-canvas .tp-simulated { background:#ede9fe; color:#6d28d9; }
+#tp-canvas .tp-port.tp-connected { background:#dbeafe; border-color:#2563eb; color:#1e40af; }
+#tp-canvas .tp-port.tp-selected { outline:2px solid #d97706; background:#fef3c7; color:#92400e; }
+#tp-wires path { stroke:#2563eb; stroke-width:2.5; opacity:1; }
+#tp-wires text { fill:#1d4ed8; font-weight:600; }
+#tp-canvas-app .tp-legend { display:flex; flex-wrap:wrap; gap:14px; padding-top:9px; font-size:11px; white-space:normal; }
+#tp-canvas-app .tp-legend-up { color:#15803d; }
+#tp-canvas-app .tp-legend-down { color:#b91c1c; }
+#tp-canvas-app .tp-legend-recovering { color:#a16207; }
+#tp-canvas-app .tp-legend-unknown { color:#64748b; }
+#tp-canvas-app .tp-legend-cable { color:#2563eb; }
+#tp-canvas-app .tp-category-swatch { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; }
+
+/* Zoom changes the viewport only; stored layout coordinates stay in canvas units. */
+#tp-stage { position:relative; width:2400px; height:1400px; overflow:hidden; }
+#tp-canvas { transform-origin:0 0; }
+#tp-canvas-app .tp-zoom-controls { margin-left:auto; display:flex; gap:6px; align-items:center; }
+#tp-canvas-app #tp-zoom-level { min-width:44px; text-align:center; }
+#tp-canvas-app #tp-canvas-message { flex-basis:100%; }
+#tp-wires path { pointer-events:stroke; cursor:pointer; }
+#tp-wires path.tp-selected-cable { stroke:#d97706; stroke-width:4; }
+#tp-canvas-app .tp-viewport { contain:inline-size; box-sizing:border-box; }
+
+#tp-canvas-app .tp-viewport { height:clamp(360px,calc(100vh - 300px),1000px); }

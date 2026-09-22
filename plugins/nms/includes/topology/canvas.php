@@ -20,7 +20,7 @@ function nms_canvas_data($site_id)
 	$visible = nms_visible_host_sql();
 	$site_filter = $site_id ? " AND h.site_id=" . (int) $site_id : "";
 	$rows = db_fetch_assoc(
-		"SELECT h.id,h.description,h.hostname,h.status,c.category_id,c.device_type,c.device_role,t.name AS template_name,l.pos_x,l.pos_y,dp.name AS diagnostic_profile,dp.tools AS diagnostic_tools FROM host h LEFT JOIN plugin_nms_device_classification c ON c.host_id=h.id LEFT JOIN host_template t ON t.id=h.host_template_id LEFT JOIN plugin_nms_topology l ON l.host_id=h.id LEFT JOIN plugin_nms_diagnostic_devices dd ON dd.host_id=h.id LEFT JOIN plugin_nms_diagnostic_profiles dp ON dp.id=dd.profile_id WHERE h.deleted='' AND h.disabled='' AND $visible $site_filter ORDER BY h.description",
+		"SELECT h.id,h.description,h.hostname,h.status,h.cur_time,h.availability,h.total_polls,h.last_updated,cat.name AS category_name,c.category_id,c.device_type,c.device_role,t.name AS template_name,l.pos_x,l.pos_y,dp.name AS diagnostic_profile,dp.tools AS diagnostic_tools FROM host h LEFT JOIN plugin_nms_device_classification c ON c.host_id=h.id LEFT JOIN plugin_nms_categories cat ON cat.id=c.category_id LEFT JOIN host_template t ON t.id=h.host_template_id LEFT JOIN plugin_nms_topology l ON l.host_id=h.id LEFT JOIN plugin_nms_diagnostic_devices dd ON dd.host_id=h.id LEFT JOIN plugin_nms_diagnostic_profiles dp ON dp.id=dd.profile_id WHERE h.deleted='' AND h.disabled='' AND $visible $site_filter ORDER BY h.description",
 	);
 	$columns = max(1, (int) ceil(sqrt(count($rows))));
 	$row_count = max(1, (int) ceil(count($rows) / $columns));
@@ -33,6 +33,12 @@ function nms_canvas_data($site_id)
 			"address" => $h["hostname"],
 			"status" => (int) $h["status"],
 			"category_id" => (int) $h["category_id"],
+            "category" => (string) ($h["category_name"] ?? ""),
+            "response_ms" => (int) $h["status"] === 3 && (int) $h["total_polls"] > 0 ? (float) $h["cur_time"] : null,
+            "poll_availability" => (int) $h["total_polls"] > 0 ? (float) $h["availability"] : null,
+            "last_polled" => (string) ($h["last_updated"] ?? ""),
+            "packet_loss" => null,
+            "recent_alarm" => null,
 			"device_role" => (string) $h["device_role"],
 			"device_type" => (string) $h["device_type"],
 			"template" => (string) $h["template_name"],
@@ -43,8 +49,20 @@ function nms_canvas_data($site_id)
 				$h["pos_y"] === null ? 10 + intdiv($i, $columns) * (80 / max(1, $row_count - 1)) : (float) $h["pos_y"],
 		];
 	}
+	// Only request alarms belonging to hosts already authorised for this canvas.
+    if ($ids) {
+        $alarms = db_fetch_assoc("SELECT i.host_id,i.title,i.message,i.severity,i.status,i.last_seen FROM plugin_nms_incidents i WHERE i.host_id IN (" . implode(',', array_keys($ids)) . ") AND i.status IN ('open','acknowledged') AND NOT EXISTS (SELECT 1 FROM plugin_nms_incidents newer WHERE newer.host_id=i.host_id AND newer.status IN ('open','acknowledged') AND (newer.last_seen>i.last_seen OR (newer.last_seen=i.last_seen AND newer.id>i.id)))");
+        $latest = [];
+        foreach ($alarms as $alarm) {
+            if (!isset($latest[(int) $alarm['host_id']])) $latest[(int) $alarm['host_id']] = $alarm;
+        }
+        foreach ($nodes as &$node) $node['recent_alarm'] = $latest[$node['id']] ?? null;
+        unset($node);
+    }
 	$appearance = nms_appearance_read();
 	$identity_warnings = nms_nd_identity_warnings($d["snapshots"]);
+    $interfaceSnapshots = array_values($d["snapshots"]);
+    usort($interfaceSnapshots, static fn($a, $b) => (($b["protocol"] === "identity") <=> ($a["protocol"] === "identity")));
 	foreach ($nodes as &$node) {
 		$appearance_type = (string) ($node["device_type"] ?: $node["template"]);
 		$appearance_profile = null;
@@ -76,7 +94,7 @@ function nms_canvas_data($site_id)
 		$node["short_name"] = substr(nms_short_name_get($node["id"]) ?: nms_short_name_auto($node["name"], $node["id"]), 0, 8);
 		$node["ports"] = [];
 		$node["interfaces"] = [];
-		foreach ($d["snapshots"] as $snapshot) {
+		foreach ($interfaceSnapshots as $snapshot) {
 			if (
 				(int) $snapshot["host_id"] !== $node["id"] ||
 				!$snapshot["valid"] ||
@@ -88,6 +106,12 @@ function nms_canvas_data($site_id)
 				$node["interfaces"][] = [
 					"index" => (int) $interface["index"],
 					"name" => (string) $interface["name"],
+                    "description" => (string) ($interface["description"] ?? ""),
+                    "alias" => (string) ($interface["alias"] ?? ""),
+                    "in_bps" => isset($interface["in_bps"]) ? (float) $interface["in_bps"] : null,
+                    "out_bps" => isset($interface["out_bps"]) ? (float) $interface["out_bps"] : null,
+                    "sample_seconds" => $interface["sample_seconds"] ?? null,
+                    "observed_at" => (int) ($snapshot["data"]["collected"] ?? 0),
 					"speed_bps" => (int) ($interface["speed_bps"] ?? 0),
 					"high_speed_mbps" => (int) ($interface["high_speed_mbps"] ?? 0),
 					"admin" => (int) ($interface["admin"] ?? 0),
@@ -156,7 +180,7 @@ function nms_canvas_data($site_id)
 			}
 			$speed = $as && $bs ? min($as, $bs) : max($as, $bs);
 			$links[] = [
-				"id" => "d" . $i,
+				"id" => "d" . implode("-", [$l["a"][0], $l["a"][1], $l["b"][0], $l["b"][1]]),
 				"a" => $l["a"][0],
 				"b" => $l["b"][0],
 				"a_port" => $ap,

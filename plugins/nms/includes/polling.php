@@ -10,6 +10,13 @@ require_once __DIR__ . "/database.php";
 /** Isolate NMS failures from Cacti's core poll cycle; missing schemas never trigger DDL here. */
 function nms_poller_bottom()
 {
+	// Independent of inventory/discovery errors; no new cron job or service is needed.
+	try {
+		require_once __DIR__ . '/diagnostics_queue.php';
+		nms_diag_dispatch();
+	} catch (Throwable $error) {
+		cacti_log('NMS diagnostic queue failed (' . get_class($error) . '). Check plugin database and collector logs.', false, 'NMS');
+	}
 	try {
 		if (!nms_poller_schema_ready()) {
 			return;

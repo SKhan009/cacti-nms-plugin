@@ -1,0 +1,22 @@
+# QA system uptime
+1.3.6.1.2.1.1.3.0|67|123456
+# QA system name
+1.3.6.1.2.1.1.5.0|4|topology-upload-qa-0110
+# QA signed gauge
+1.3.6.1.4.1.8072.9999.1.0|2|-12
+# QA counter32
+1.3.6.1.4.1.8072.9999.2.0|65|345678
+# QA unsigned gauge
+1.3.6.1.4.1.8072.9999.3.0|66|77
+# QA counter64
+1.3.6.1.4.1.8072.9999.4.0|70|12345678901
+# QA text value
+1.3.6.1.4.1.8072.9999.5.0|4|not-a-metric
+# QA OID value
+1.3.6.1.4.1.8072.9999.6.0|6|1.3.6.1.4.1.8072
+# QA address value
+1.3.6.1.4.1.8072.9999.7.0|64|192.0.2.10
+# QA LLDP identifier, not a metric
+1.0.8802.1.1.2.1.3.7.1.2.1|2|5
+# QA CDP identifier, not a metric
+1.3.6.1.4.1.9.9.23.1.2.1.1.3.1.1|2|1

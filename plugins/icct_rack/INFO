@@ -1,0 +1,11 @@
+[info]
+name = icct_rack
+version = 1.0.2
+longname = ICCT Rack Topology
+author = ICCT NMS Team
+email =
+homepage =
+; FIX 2026-09-15: Require the patched Cacti 1.2.x baseline used by the NMS VM.
+compat = 1.2.31
+requires =
+capabilities = online_view:1, online_mgmt:1, offline_view:0, offline_mgmt:0, remote_collect:0

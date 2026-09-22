@@ -100,8 +100,8 @@ require __DIR__ . "/templates/app_header.php";
 	false
 ) { ?><a href="ssh_console.php?id=<?php print $id; ?>">SSH console</a><?php } ?></nav>
 <?php
-if ($error) { ?><div class="ssh-message error" role="alert"><?php print nms_h($error); ?></div><?php }
-if ($notice) { ?><div class="ssh-message" role="status"><?php print nms_h($notice); ?></div><?php }
+if ($error) { ?><div class="ssh-message nms-action-feedback error" role="alert"><?php print nms_h($error); ?></div><?php }
+if ($notice) { ?><div class="ssh-message nms-action-feedback" role="status"><?php print nms_h($notice); ?></div><?php }
 ?>
 <?php if ($readiness) { ?><div class="ssh-message" role="status"><strong>SSH setup required</strong><ul><?php foreach (
 	$readiness
