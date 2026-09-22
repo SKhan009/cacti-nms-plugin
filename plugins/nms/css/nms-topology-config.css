@@ -267,3 +267,10 @@
 .nms-history-filters label { min-width:0; }
 .nms-history-actions { display:flex; align-items:center; gap:12px; align-self:end; }
 @media(max-width:800px) { .nms-config-form.nms-history-filters { grid-template-columns:1fr; } }
+
+.nms-result-tabs{display:flex;gap:6px;padding:6px;background:#eee;border-radius:10px;margin-bottom:24px;flex-wrap:wrap}
+.nms-result-tabs button{background:transparent;color:#333;border:0;border-radius:7px;padding:12px 18px;font-weight:700;cursor:pointer}
+.nms-result-tabs button[aria-selected="true"]{background:#fff;color:#111;box-shadow:0 1px 4px #0002}
+.nms-result-tabs button:focus-visible{outline:2px solid #555;outline-offset:2px}
+#result-technical[hidden],#result-summary[hidden]{display:none}
+#result-technical .nms-diagnostic-output{padding:0;margin:0}

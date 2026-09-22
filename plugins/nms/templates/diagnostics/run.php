@@ -87,7 +87,42 @@
 				</p>
 			</div>
 		</div>
-		<pre class="nms-diagnostic-output"><?php print nms_h(($result["output"] ?? "") ?: "No output returned."); ?></pre>
+        <?php require_once __DIR__ . '/../../includes/diagnostic_summary.php'; ?>
+        <div class="nms-diagnostic-panel-body" data-result-tabs>
+            <div class="nms-result-tabs" role="tablist" aria-label="Result view">
+                <button type="button" role="tab" id="result-summary-tab" aria-controls="result-summary" aria-selected="true">Plain-language summary</button>
+                <button type="button" role="tab" id="result-technical-tab" aria-controls="result-technical" aria-selected="false" tabindex="-1">Technical output</button>
+            </div>
+            <div id="result-summary" role="tabpanel" aria-labelledby="result-summary-tab">
+                <?php foreach (nms_diag_plain_summary($result) as $explanation) { ?><p><?php print nms_h($explanation); ?></p><?php } ?>
+            </div>
+            <div id="result-technical" role="tabpanel" aria-labelledby="result-technical-tab" hidden>
+                <pre class="nms-diagnostic-output"><?php print nms_h(($result["output"] ?? "") ?: "No output returned."); ?></pre>
+            </div>
+        </div>
+        <script>
+        (function () {
+            var root = document.querySelector('[data-result-tabs]');
+            var tabs = Array.from(root.querySelectorAll('[role="tab"]'));
+            function select(tab) {
+                tabs.forEach(function (item) {
+                    var active = item === tab;
+                    item.setAttribute('aria-selected', String(active));
+                    item.tabIndex = active ? 0 : -1;
+                    document.getElementById(item.getAttribute('aria-controls')).hidden = !active;
+                });
+            }
+            tabs.forEach(function (tab, index) {
+                tab.addEventListener('click', function () { select(tab); });
+                tab.addEventListener('keydown', function (event) {
+                    if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].indexOf(event.key) < 0) return;
+                    event.preventDefault();
+                    var next = tabs[event.key === 'Home' ? 0 : event.key === 'End' ? 1 : 1 - index];
+                    select(next); next.focus();
+                });
+            });
+        }());
+        </script>
 	</section>
 <?php } ?>
 
