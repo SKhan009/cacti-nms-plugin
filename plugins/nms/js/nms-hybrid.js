@@ -850,7 +850,7 @@
 							? "#3b82f6"
 							: "#94a3b8",
 					"stroke-width": selected === l.id ? 4 : 2,
-					"stroke-dasharray": l.manual ? ({solid:"",dashed:"9 5",dotted:"2 5"}[l.line_style] || "") : l.inferred
+					"stroke-dasharray": l.manual ? (l.dash || "") : l.inferred
 						? "3 5"
 						: l.current
 							? ""

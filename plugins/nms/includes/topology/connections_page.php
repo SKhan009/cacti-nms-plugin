@@ -22,7 +22,7 @@ $filtered = array_values(array_filter($rows, static fn($r)=>$search === '' || st
 $total=count($filtered); $pages=max(1,(int)ceil($total/20));
 $page=max(1,min($pages,(int)($_GET['page'] ?? 1))); $listed=array_slice($filtered,($page-1)*20,20);
 $can=is_realm_allowed(3);
-nms_prepare_page('topology','NMS · Edit topology','css/nms-topology-config.css');
+nms_prepare_page('topology','NMS · Edit topology','css/nms-topology-config.css','js/nms-connection-preview.js');
 require __DIR__ . '/../../templates/app_header.php';
 function nms_connection_fields($action,$id=0) { global $nms_csrf_token;
     print '<input type="hidden" name="__csrf_magic" value="'.nms_h($nms_csrf_token).'"><input type="hidden" name="nms_action" value="'.nms_h($action).'"><input type="hidden" name="id" value="'.(int)$id.'">';
@@ -42,16 +42,16 @@ function nms_connection_select($name,$values,$value) {
 <p>These styles identify manually configured connection types. They do not represent live health.</p>
 <?php foreach (db_fetch_assoc('SELECT * FROM plugin_nms_connection_types ORDER BY name') as $type) { ?>
 <form method="post" class="nms-panel nms-connection-form">
-<h2><?php print nms_h($type['name']); ?></h2><?php nms_connection_fields('connection_style'); ?><input type="hidden" name="type" value="<?php print nms_h($type['name']); ?>">
-<div class="nms-connection-grid"><label>Colour<input type="color" name="color" value="<?php print nms_h($type['color']); ?>"></label><label>Line style<?php nms_connection_select('line_style',['solid'=>'Solid','dashed'=>'Dashed','dotted'=>'Dotted'],$type['line_style']); ?></label><label>Endpoint symbol<?php nms_connection_select('symbol',['none'=>'None','circle'=>'Circle','square'=>'Square','arrow'=>'Arrow'],$type['symbol']); ?></label></div>
-<?php if ($can) { ?><button class="nms-catalog-button" type="submit">Save style</button><?php } ?></form>
+<div class="nms-connection-style-title"><h2><?php print nms_h(nms_connection_types()[$type['name']] ?? $type['name']); ?></h2><svg class="nms-connection-preview" viewBox="0 0 240 32" role="img" aria-label="Connection style preview" data-patterns="<?php print nms_h(json_encode(nms_connection_patterns())); ?>"><line x1="14" y1="16" x2="226" y2="16" stroke="<?php print nms_h($type['color']); ?>" stroke-width="3" stroke-dasharray="<?php print nms_h(nms_connection_patterns()[$type['line_style']] ?? ''); ?>"/></svg></div><?php nms_connection_fields('connection_style'); ?><input type="hidden" name="type" value="<?php print nms_h($type['name']); ?>">
+<div class="nms-connection-grid"><label>Colour<input type="color" name="color" value="<?php print nms_h($type['color']); ?>"></label><label>Line style<?php nms_connection_select('line_style',['solid'=>'Solid ━━━━━','dashed'=>'Dashed ━ ━ ━','dotted'=>'Dotted • • • •','dash-dot'=>'Dash-dot ━ • ━ •','fine-dotted'=>'Fine dotted ········','short-dashed'=>'Short dashed ┄┄┄┄'],$type['line_style']); ?></label><label>Endpoint symbol<?php nms_connection_select('symbol',['none'=>'None ──','circle'=>'Circle ●','square'=>'Square ■','arrow'=>'Arrow ▶'],$type['symbol']); ?></label></div>
+<?php if ($can) { ?><div class="nms-connection-actions nms-style-actions"><button class="nms-catalog-button primary" type="submit">Save style</button></div><?php } ?></form>
 <?php } } else { if ($can) { ?>
 <form method="post" class="nms-panel nms-connection-form" id="connection-form">
 <h2><?php print $edit['id']?'Edit connection':'Add connection'; ?></h2>
 <?php nms_connection_fields('connection_save',$edit['id']); ?>
 <div class="nms-connection-grid">
 <?php foreach (['a'=>'Device A / interface','b'=>'Device B / interface'] as $side=>$label) { ?><label><?php print $label; ?><?php nms_connection_select($side,[''=>'Select a device or interface']+$options,$edit[$side]); ?></label><?php } ?>
-<label>Connection type<?php nms_connection_select('type',array_combine(['Ethernet','Fiber','Wireless','Logical'],['Ethernet','Fiber','Wireless','Logical']),$edit['type']); ?></label>
+<label>Connection type<?php nms_connection_select('type',nms_connection_types(),$edit['type']); ?></label>
 <label>Label (optional)<input name="label" maxlength="150" value="<?php print nms_h($edit['label']); ?>"></label>
 <label>Configured capacity (Mbps)<input name="speed_mbps" type="number" min="0" max="100000000" step="0.001" value="<?php print nms_h($edit['speed_mbps']); ?>"></label>
 </div><p>Select a cached interface for monitoring, or a device when its port is unknown. Capacity is an entered value; use 0 when unknown.</p>

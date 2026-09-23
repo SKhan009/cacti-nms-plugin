@@ -3,13 +3,23 @@
 require_once __DIR__ . '/../relationships.php';
 require_once __DIR__ . '/../device_metadata.php';
 require_once __DIR__ . '/config.php';
+function nms_connection_types() {
+    return ['Ethernet'=>'Ethernet','Fiber'=>'Fiber','Wireless'=>'Wireless','Logical'=>'Logical',
+        'VSAT / Leased-line'=>'VSAT, Leased-line link','Optical fiber'=>'Optical fiber link','Line-of-sight (LOS)'=>'Line-of-sight (LOS) link'];
+}
+function nms_connection_patterns() {
+    return ['solid'=>'','dashed'=>'9 5','dotted'=>'2 5','dash-dot'=>'10 4 2 4','fine-dotted'=>'1 3','short-dashed'=>'4 4'];
+}
 function nms_connection_schema() {
     nms_category_execute("CREATE TABLE IF NOT EXISTS plugin_nms_connection_types (
         name VARCHAR(24) NOT NULL PRIMARY KEY, color CHAR(7) NOT NULL,
         line_style VARCHAR(12) NOT NULL, symbol VARCHAR(12) NOT NULL
     ) ENGINE=InnoDB");
-    foreach (['Ethernet','Fiber','Wireless','Logical'] as $name) {
-        nms_category_execute("INSERT IGNORE INTO plugin_nms_connection_types VALUES (?, '#64748b', 'dashed', 'circle')", [$name]);
+    foreach (array_keys(nms_connection_types()) as $name) {
+        nms_category_execute("INSERT IGNORE INTO plugin_nms_connection_types VALUES (?, ?, ?, ?)", [$name,
+            in_array($name,['VSAT / Leased-line','Optical fiber','Line-of-sight (LOS)'],true)?'#334155':'#64748b',
+            ['VSAT / Leased-line'=>'dash-dot','Optical fiber'=>'fine-dotted','Line-of-sight (LOS)'=>'short-dashed'][$name] ?? 'dashed',
+            in_array($name,['VSAT / Leased-line','Optical fiber','Line-of-sight (LOS)'],true)?'none':'circle']);
     }
     nms_category_execute("CREATE TABLE IF NOT EXISTS plugin_nms_manual_connections (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -35,7 +45,7 @@ function nms_connection_fingerprint($a, $b) {
 }
 function nms_connection_style($in) {
     if (!is_string($in['color'] ?? null) || !preg_match('/^#[0-9a-f]{6}$/iD', $in['color']) ||
-        !in_array($in['line_style'] ?? '', ['solid','dashed','dotted'], true) ||
+        !in_array($in['line_style'] ?? '', array_keys(nms_connection_patterns()), true) ||
         !in_array($in['symbol'] ?? '', ['none','circle','square','arrow'], true)) {
         throw new InvalidArgumentException('Select a colour, line style and endpoint symbol.');
     }
@@ -46,7 +56,7 @@ function nms_connection_save($in) {
     $action = $in['nms_action'] ?? '';
     if ($action === 'connection_style') {
         $style = nms_connection_style($in);
-        if (!in_array($in['type'] ?? '', ['Ethernet','Fiber','Wireless','Logical'], true)) throw new InvalidArgumentException('Unknown connection type.');
+        if (!in_array($in['type'] ?? '', array_keys(nms_connection_types()), true)) throw new InvalidArgumentException('Unknown connection type.');
         nms_category_execute('UPDATE plugin_nms_connection_types SET color=?,line_style=?,symbol=? WHERE name=?', [...$style, $in['type']]);
         return;
     }
@@ -64,7 +74,7 @@ function nms_connection_save($in) {
     $a = nms_connection_endpoint($in['a'] ?? ''); $b = nms_connection_endpoint($in['b'] ?? '');
     if ($a['host_id'] === $b['host_id']) throw new InvalidArgumentException('Select two different devices.');
     $type = $in['type'] ?? '';
-    if (!in_array($type, ['Ethernet','Fiber','Wireless','Logical'], true)) throw new InvalidArgumentException('Select a connection type.');
+    if (!in_array($type, array_keys(nms_connection_types()), true)) throw new InvalidArgumentException('Select a connection type.');
     $speed = $in['speed_mbps'] ?? '0';
     if (!is_scalar($speed) || !is_numeric($speed) || !is_finite((float)$speed) || $speed < 0 || $speed > 100000000) throw new InvalidArgumentException('Capacity must be between 0 and 100,000,000 Mbps.');
     $label = nms_classification_text($in['label'] ?? '', 150);
@@ -110,7 +120,7 @@ function nms_connection_links($nodes) {
             'a_port'=>$ends['a'][2], 'b_port'=>$ends['b'][2], 'current'=>false,
             'state'=>($ends['a'][3] && $ends['b'][3]) ? 'Manually configured' : 'Manually configured — interface needs revalidation',
             'label'=>$r['label'] ?: $r['type'], 'speed'=>(float)$r['speed_mbps']*1000000,
-            'color'=>$r['color'],'line_style'=>$r['line_style'],'symbol'=>$r['symbol'],'protocols'=>[]];
+            'dash'=>nms_connection_patterns()[$r['line_style']] ?? '', 'color'=>$r['color'],'line_style'=>$r['line_style'],'symbol'=>$r['symbol'],'protocols'=>[]];
     }
     return $links;
 }

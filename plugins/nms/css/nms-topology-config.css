@@ -308,3 +308,7 @@
 .nms-connection-pagination { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:20px 24px; flex-wrap:wrap; }
 .nms-connection-pagination .nms-connection-actions { margin-left:auto; }
 @media(max-width:700px) { .nms-connections-page .nms-connection-grid { grid-template-columns:1fr; } .nms-connection-filter { flex-wrap:wrap; } .nms-connection-filter label { flex-basis:100%; } }
+.nms-connection-style-title { display:flex; align-items:center; gap:24px; flex-wrap:wrap; margin-bottom:20px; }
+.nms-connection-style-title h2 { margin:0; }
+.nms-connection-preview { width:240px; height:40px; max-width:100%; flex-shrink:0; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:4px 10px; }
+.nms-style-actions { margin-top:20px; }

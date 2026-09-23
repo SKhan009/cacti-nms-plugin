@@ -10,3 +10,10 @@ foreach ([['color'=>'url(x)','line_style'=>'solid','symbol'=>'none'],['color'=>'
  try { nms_connection_style($bad); throw new RuntimeException('Accepted invalid style'); } catch (InvalidArgumentException $e) {}
 }
 echo "17 manual connection validation checks passed\n";
+foreach (['VSAT / Leased-line'=>'dash-dot','Optical fiber'=>'fine-dotted','Line-of-sight (LOS)'=>'short-dashed'] as $name=>$style) {
+ check(isset(nms_connection_types()[$name]),'BLR type exists');
+ check(strlen($name)<=24,'Fits existing schema');
+ check(nms_connection_style(['color'=>'#334155','line_style'=>$style,'symbol'=>'none'])[1]===$style,'BLR style accepted');
+ check(nms_connection_patterns()[$style] !== '', 'Pattern defined');
+}
+echo "12 BLR type and pattern checks passed\n";
