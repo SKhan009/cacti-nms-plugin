@@ -286,3 +286,7 @@
 .nms-result-metrics>div{padding:14px;border:1px solid #ddd;border-radius:8px}
 .nms-result-metrics dt{color:#666;font-size:13px;margin-bottom:6px}
 .nms-result-metrics dd{margin:0;font-weight:700;overflow-wrap:anywhere}
+
+#diagnostic-run,#diagnostic-result,#nms-diagnostic-status{scroll-margin-top:110px}
+.nms-diagnostic-result .nms-result-tabs button[aria-selected="true"]{background:#181818!important;color:#fff!important;border:1px solid #181818}
+.nms-diagnostic-result .nms-result-tabs button[aria-selected="false"]{background:#fff!important;color:#181818!important;border:1px solid #bbb}

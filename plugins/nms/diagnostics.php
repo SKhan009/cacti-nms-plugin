@@ -65,7 +65,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 			$selected_diagnostic_host_id = (int) ($_POST['host_id'] ?? 0);
 			$selected_diagnostic_tool = (string) ($_POST['tool'] ?? 'ping');
 			$job_id = nms_diag_run($selected_diagnostic_host_id, $selected_diagnostic_tool);
-			header('Location: diagnostics.php?section=run&job_id=' . $job_id, true, 303);
+			header('Location: diagnostics.php?section=run&job_id=' . $job_id . '#diagnostic-run', true, 303);
 			exit();
 		} else {
 			throw new RuntimeException("Unsupported diagnostic action.");

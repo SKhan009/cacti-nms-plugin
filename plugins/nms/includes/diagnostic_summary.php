@@ -131,6 +131,13 @@ function nms_diag_description(array $result): array
             $metrics['Test type']='Route capacity estimate';
             $metrics['Duration']=$missing;
             $metrics['Hop estimates']='See Technical output';
+            if (preg_match('/Path length:\s*(\d+) hops/', $text, $m)) $metrics['Path length']=$m[1].' hops';
+            if (preg_match('/Path char:\s*rtt = ([\d.]+) ms/', $text, $m)) $metrics['Path reply time']=$m[1].' ms';
+            if (preg_match('/Start time:\s*([^\r\n]+)/', $text, $start) && preg_match('/End time:\s*([^\r\n]+)/', $text, $end)) {
+                $a=strtotime(trim($start[1])); $b=strtotime(trim($end[1]));
+                if ($a !== false && $b !== false && $b >= $a) $metrics['Duration']=($b-$a).' seconds';
+            }
+
             $warning=true;
             break;
     }

@@ -23,7 +23,7 @@
 <?php
 /** Render the on-demand diagnostic form, collector readiness and last result. */
 ?>
-<section class="nms-panel">
+<section id="diagnostic-run" class="nms-panel">
 	<div class="nms-panel-head">
 		<div>
 			<h2>Run a diagnostic</h2>
@@ -34,7 +34,7 @@
 	<?php if (!$devices) { ?>
 		<p class="nms-empty">No device has a diagnostic profile. Create a profile, then choose it in Add/Edit device → On-demand diagnostics.</p>
 	<?php } else { ?>
-		<form method="post" class="nms-config-form nms-diagnostic-run-form">
+		<form method="post" action="diagnostics.php#diagnostic-run" class="nms-config-form nms-diagnostic-run-form">
 			<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>">
 			<input type="hidden" name="nms_action" value="run_diagnostic">
 

@@ -84,7 +84,11 @@
                 var response = await fetch('diagnostics.php?job_status=1&job_id=' + encodeURIComponent(progress.dataset.jobId), {credentials:'same-origin', cache:'no-store'});
                 if (!response.ok || response.redirected) throw new Error('Status unavailable');
                 var state = await response.json();
-                if (state.finished) { window.location.reload(); return; }
+                if (state.finished) {
+                    // Navigate to the saved result; browser reload intentionally resets the page.
+                    window.location.replace('diagnostics.php?section=run&job_id=' + encodeURIComponent(progress.dataset.jobId) + '&view=result#diagnostic-result');
+                    return;
+                }
                 progress.querySelector('[data-diagnostic-progress-title]').textContent = state.status === 'running' ? 'Test running…' : 'Starting test…';
                 progress.querySelector('[data-diagnostic-progress-message]').textContent = state.status === 'running' ? 'The collector is running your test. Results will appear automatically.' : 'Contacting the collector runner…';
                 if (Date.now() - started < 125000) { setTimeout(updateProgress, 1000); return; }
