@@ -375,5 +375,6 @@ function nms_diag_execute($row, $tool)
 	} else {
 		$result = nms_diag_run_command($command, $timeout);
 	}
+	if ($tool === 'pathchar') $result['self_test'] = nms_diag_collector_address($row['hostname']);
 	return nms_diag_result($row, $tool, $command, $result);
 }

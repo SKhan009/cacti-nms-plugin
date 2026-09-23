@@ -1,4 +1,13 @@
 <?php
+/** Loopback detection is address classification, not a configured test target. */
+function nms_diag_summary_local(array $result): bool {
+    if (!empty($result['self_test']) || preg_match('/Collector (?:loopback|local-address) self-test/i', $result['output'] ?? '')) return true;
+    $ip = @inet_pton((string)($result['target'] ?? ''));
+    if ($ip === false) return false;
+    return (strlen($ip) === 4 && ord($ip[0]) === 127) ||
+        (strlen($ip) === 16 && ($ip === str_repeat(chr(0),15).chr(1) ||
+        (substr($ip,0,12) === str_repeat(chr(0),10).chr(255).chr(255) && ord($ip[12]) === 127)));
+}
 /** Explain saved results using only measurements actually present in their output. */
 function nms_diag_plain_summary(array $result): array
 {
@@ -14,7 +23,7 @@ function nms_diag_plain_summary(array $result): array
         'pathchar' => 'Estimates capacity along the network route.'
     ];
     $lines = [$purpose[$tool] ?? 'Checks the selected device from its collector.'];
-    if (!empty($result['self_test']) || stripos($output, 'Collector loopback self-test') !== false) {
+    if (nms_diag_summary_local($result)) {
         $lines[] = 'This test stayed inside the collector. It does not measure your cable, switch, internet speed or a remote device.';
     }
     if (!$ok) {
@@ -130,21 +139,48 @@ function nms_diag_description(array $result): array
         case 'pathchar':
             $metrics['Test type']='Route capacity estimate';
             $metrics['Duration']=$missing;
-            $metrics['Hop estimates']='See Technical output';
-            if (preg_match('/Path length:\s*(\d+) hops/', $text, $m)) $metrics['Path length']=$m[1].' hops';
+            $local = nms_diag_summary_local($result);
+            if (!empty($result['timed_out'])) $failed=true;
+            $metrics['Scope']=$local ? 'Collector self-test' : 'Network route';
+            $metrics['Hop estimates']='No usable capacity estimate reported';
+            preg_match_all('/Hop char:\s*rtt\s*=\s*([-+\d.eE]+) ms,\s*bw\s*=\s*([-+\d.eE]+) (\S+)/', $text, $hops, PREG_SET_ORDER);
+            $usable=0;
+            foreach ($hops as $i=>$hop) {
+                $capacity=(float)$hop[2];
+                $metrics['Hop '.($i+1).' estimate']='Reply time '.$hop[1].' ms · '.($capacity>0 ? $hop[2].' '.$hop[3] : 'Capacity unavailable');
+                if ($capacity>0 && is_finite($capacity)) $usable++;
+            }
+            if ($hops) $metrics['Hop estimates']=$usable.' of '.count($hops).' with positive capacity estimates';
+            preg_match_all('/Partial loss:\s*(\d+)\s*\/\s*(\d+)/', $text, $losses, PREG_SET_ORDER);
+            $lost=0; $sent=0;
+            foreach ($losses as $loss) { $lost+=(int)$loss[1]; $sent+=(int)$loss[2]; }
+            if ($sent) { $metrics['Probes sent']=(string)$sent; $metrics['Replies received']=(string)max(0,$sent-$lost); }
+            $complete=preg_match('/Path length:\s*\d+ hops/', $text) && preg_match('/End time:/', $text);
+            $warning = $warning || !$complete || $lost>0 || (!$local && (!$hops || $usable<count($hops))) || (bool)preg_match('/timed? out|unreachable|no repl(?:y|ies)|insufficient|unreliable/i',$text);
+            if (!$local && preg_match('/\bb\s*=\s*-/', $text)) $warning=true;
+            if (!$local && preg_match_all('/r2\s*=\s*([-+\d.eE]+)/', $text, $fits)) {
+                foreach ($fits[1] as $fit) if ((float)$fit < 0.5) $warning=true;
+            }
+            if ($local) $metrics['Network capacity']='Not applicable to a local self-test';
+            if (preg_match('/Path length:\s*(\d+) hops/', $text, $m)) $metrics['Path length']=$m[1].((int)$m[1]===1?' hop':' hops');
             if (preg_match('/Path char:\s*rtt = ([\d.]+) ms/', $text, $m)) $metrics['Path reply time']=$m[1].' ms';
             if (preg_match('/Start time:\s*([^\r\n]+)/', $text, $start) && preg_match('/End time:\s*([^\r\n]+)/', $text, $end)) {
                 $a=strtotime(trim($start[1])); $b=strtotime(trim($end[1]));
                 if ($a !== false && $b !== false && $b >= $a) $metrics['Duration']=($b-$a).' seconds';
             }
 
-            $warning=true;
             break;
     }
     $lines=nms_diag_plain_summary($result);
+    if ($tool === 'pathchar') {
+        $lines = array_values(array_filter($lines, static fn($line)=>!str_starts_with($line,'Capacity values are estimates')));
+        $lines[] = nms_diag_summary_local($result)
+            ? 'Choose a different network device to estimate route capacity. This local test does not measure a physical network link.'
+            : ($warning ? 'Some hop estimates are missing or unreliable. Check replies and repeat the test; this alone does not prove a network fault.' : 'Hop capacities are estimates from probe timings, not guaranteed transfer speeds.');
+    }
     if ($failed || $warning) $lines=array_values(array_filter($lines, static function($line) { return $line !== 'The tool finished without reporting an execution error.'; }));
     if ($tool === 'netperf') $lines[]='Socket buffers and message size are not totals sent or received. This output does not report those totals.';
     return ['tone'=>$failed?'error':($warning?'warning':'success'),
-        'status'=>$failed?'Test failed':($warning?'Review required':'Test completed'),
+        'status'=>$failed?'Test failed':($warning?'Review required':($tool==='pathchar' && nms_diag_summary_local($result)?'Local self-test completed':'Test completed')),
         'metrics'=>$metrics, 'lines'=>$lines];
 }
