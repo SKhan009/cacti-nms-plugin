@@ -223,6 +223,7 @@
 	 */
 	function hover(target, title, rows) {
 		const show = (e) => {
+			if (editable) return;
 			if (
 				drag ||
 				panning ||
@@ -681,7 +682,7 @@
 				message("Observed port: " + p.name);
 				draw();
 			};
-			r.addEventListener("pointerdown", (e) => e.stopPropagation());
+			r.addEventListener("pointerdown", (e) => { if (!editable) e.stopPropagation(); });
 			r.addEventListener("click", inspect);
 			r.addEventListener("keydown", (e) => {
 				if (e.key === "Enter" || e.key === " ") {
@@ -1159,6 +1160,7 @@
 			: element.dataset.node === String(previous?.id))?.focus();
 	}
 	function showPorts(id, edge, port = null, restoreFocus = false) {
+		if (editable) return;
 		const hadFocus = details.contains(document.activeElement);
         const evidenceOpen = restoreFocus && details.querySelector("details")?.open;
         detailSelection = { id, edge, port };
@@ -1325,6 +1327,10 @@
 	if (editButton && canEdit) editButton.onclick = () => {
 		if (drag || panning) return;
 		editable = !editable;
+		hideTip();
+		details.hidden = true;
+		detailSelection = null;
+		source = selected = null;
 		editButton.textContent = editable ? "Done editing" : "Edit mode";
 		editButton.setAttribute("aria-pressed", String(editable));
 		message(editable ? "Edit mode: drag devices to arrange them. Positions are saved automatically." : "View mode. Positions saved.");
