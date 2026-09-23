@@ -6,7 +6,7 @@ const handlers = {};
 const classes = new Set();
 const node = {id: 1, x: 40, y: 30};
 const context = vm.createContext({
-  n: node, editable: true, drag: null, panning: null, panX: 0, panY: 0,
+  n: node, editable: true, savingPosition:false, deviceKind:n=>n.kind || "device", drag: null, panning: null, panX: 0, panY: 0,
   width: () => 1000, height: () => 800,
   point: e => ({x:e.clientX, y:e.clientY}),
   draw: () => {}, savePosition: async (n,old) => { context.saved={x:n.x,y:n.y,old}; },
@@ -34,6 +34,7 @@ function event(x,y,target=context.svg) {return {clientX:x,clientY:y,target,butto
  await handlers.pointerup(event(110,70));
  handlers['node:pointerdown'](event(500,320));handlers.pointermove(event(600,400));handlers.pointercancel();
  assert.equal(node.x,50);assert.equal(node.y,40);assert.equal(classes.size,0);
+ node.kind="switch";handlers['node:pointerdown'](event(500,320));assert.equal(context.drag,null);
  context.editable=false;handlers['node:pointerdown'](event(500,320));assert.equal(context.drag,null);
  console.log('PASS: device drag, pointer offset, pan isolation, save, cancellation and read-only access');
 })();

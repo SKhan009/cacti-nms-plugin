@@ -16,7 +16,8 @@
 		busy = false;
 	notice.hidden = true;
 	details.hidden = true;
-	let editable = false;
+	let editable = false, savingPosition = false;
+	const undoMoves = [], redoMoves = [];
 	const canEdit = root.dataset.edit === "1",
 		NS = "http://www.w3.org/2000/svg";
 	const colors = { 3: "#228848", 1: "#cf3535", 2: "#d69c13", 0: "#7d8790" },
@@ -767,6 +768,8 @@
 	 * Handles draw.
 	 */
 	function draw() {
+		const switches = switchNodes();
+		switches.forEach((n, i) => { n.x = 100 * (i + 1) / (switches.length + 1); n.y = 50; });
 		hideTip();
 		svg.replaceChildren();
 		const defs = el("defs");
@@ -891,7 +894,7 @@
 				tabindex: 0,
 				role: "button",
 				"aria-label": n.name + " " + (states[n.status] || "Unknown"),
-				class: "nms-canvas-node" + (editable ? "" : " nms-node-readonly"),
+				class: "nms-canvas-node" + (editable && deviceKind(n) !== "switch" ? "" : " nms-node-readonly"),
 			});
 			deviceGraphic(n, g);
 			hover(g, n.name, [
@@ -920,7 +923,7 @@
 			]);
 			g.addEventListener("pointerdown", (e) => {
 				e.stopPropagation();
-                if (!editable || e.button !== 0 || drag || panning) return;
+                if (!editable || savingPosition || deviceKind(n) === "switch" || e.button !== 0 || drag || panning) return;
 				e.preventDefault();
 				const p = point(e);
                 drag = { n, startX: n.x, startY: n.y, offsetX:p.x-n.x*width()/100, offsetY:p.y-n.y*height()/100 };
@@ -949,7 +952,7 @@
 						"ArrowUp",
 						"ArrowDown",
 					].includes(e.key) ||
-					!editable
+					!editable || savingPosition || deviceKind(n) === "switch"
 				)
 					return;
 				e.preventDefault();
@@ -1018,16 +1021,23 @@
 	/**
 	 * Updates save Position.
 	 */
-	async function savePosition(n, old) {
+	async function savePosition(n, old, record = true) {
+		savingPosition = true;
 		try {
 			await post("canvas_position", { host_id: n.id, x: n.x, y: n.y });
+			if (record) {
+				undoMoves.push({id:n.id, before:{...old}, after:{x:n.x,y:n.y}});
+				redoMoves.length = 0;
+			}
 			message("Position saved.");
+			return true;
 		} catch (e) {
 			n.x = old.x;
 			n.y = old.y;
 			draw();
 			message(e.message, true);
-		}
+			return false;
+		} finally { savingPosition = false; updateMoveButtons(); }
 	}
 	svg.addEventListener("pointerup", async (e) => {
         svg.classList.remove("nms-dragging", "nms-panning");
@@ -1111,13 +1121,10 @@
 							: "No current connection evidence");
 				b.style.borderLeft =
 					"4px solid " + (colors[n.status] || colors[0]);
-				b.draggable = editable;
+				b.draggable = editable && deviceKind(n) !== "switch";
 				b.onclick = () => {
 					source = n.id;
 					selected = null;
-					zoom = Math.max(1, width() / 900);
-					panX = (n.x * width()) / 100 - width() / zoom / 2;
-					panY = (n.y * height()) / 100 - height() / zoom / 2;
 					showPorts(n.id);
 					draw();
 				};
@@ -1266,7 +1273,7 @@
 		const n = data.nodes.find(
 			(n) => String(n.id) === e.dataTransfer.getData("text/plain"),
 		);
-		if (!n || !editable) return;
+		if (!n || !editable || savingPosition || deviceKind(n) === "switch") return;
 		const old = { x: n.x, y: n.y },
 			p = point(e);
 		n.x = Math.max(9, Math.min(91, (p.x * 100) / width()));
@@ -1280,7 +1287,7 @@
 	 * Handles refresh.
 	 */
 	async function refresh() {
-		if (drag || panning || busy) return;
+		if (drag || panning || busy || savingPosition) return;
 		busy = true;
 		try {
 			const r = await fetch(
@@ -1325,7 +1332,7 @@
 	};
 	const editButton = document.getElementById("nms-edit-mode");
 	if (editButton && canEdit) editButton.onclick = () => {
-		if (drag || panning) return;
+		if (drag || panning || savingPosition || document.fullscreenElement === root || root.classList.contains("nms-fullscreen-fallback")) return;
 		editable = !editable;
 		hideTip();
 		details.hidden = true;
@@ -1334,16 +1341,40 @@
 		editButton.textContent = editable ? "Done editing" : "Edit mode";
 		editButton.setAttribute("aria-pressed", String(editable));
 		message(editable ? "Edit mode: drag devices to arrange them. Positions are saved automatically." : "View mode. Positions saved.");
+		updateMoveButtons();
 		draw();
 	};
 	document.getElementById("nms-map-refresh").onclick = refresh;
+	function updateMoveButtons() {
+		for (const [id, stack] of [["nms-undo",undoMoves],["nms-redo",redoMoves]]) {
+			if (document.getElementById(id)) document.getElementById(id).disabled = !editable || savingPosition || !stack.length;
+		}
+	}
+	async function replayMove(from, to) {
+		if (!editable || savingPosition || drag || panning || !from.length) return;
+		const move = from[from.length - 1], n = data.nodes.find(n => n.id === move.id);
+		if (!n || deviceKind(n) === "switch") { from.pop(); updateMoveButtons(); return; }
+		const old = {x:n.x,y:n.y}, target = from === undoMoves ? move.before : move.after;
+		Object.assign(n,target); draw();
+		if (await savePosition(n,old,false)) { from.pop(); to.push(move); }
+		updateMoveButtons();
+	}
+	if (canEdit) document.getElementById("nms-undo").onclick = () => replayMove(undoMoves,redoMoves);
+	if (canEdit) document.getElementById("nms-redo").onclick = () => replayMove(redoMoves,undoMoves);
 	const fullButton = document.getElementById("nms-fullscreen");
 	function syncFullscreen() {
 		const active = document.fullscreenElement === root || root.classList.contains("nms-fullscreen-fallback");
+		if (active) {
+			editable = false; hideTip(); details.hidden = true; detailSelection = null;
+			if (editButton) { editButton.textContent = "Edit mode"; editButton.setAttribute("aria-pressed","false"); }
+			draw();
+		}
+		updateMoveButtons();
 		fullButton.textContent = active ? "Exit full screen" : "Full screen";
 		fullButton.setAttribute("aria-pressed", String(active));
 	}
 	fullButton.onclick = async () => {
+		if (drag || panning || savingPosition) return;
 		if (document.fullscreenElement === root) await document.exitFullscreen();
 		else if (root.classList.contains("nms-fullscreen-fallback")) root.classList.remove("nms-fullscreen-fallback");
 		else {
@@ -1357,6 +1388,7 @@
 		if (e.key === "Escape") { root.classList.remove("nms-fullscreen-fallback"); syncFullscreen(); }
 	});
 
+	updateMoveButtons();
 	draw();
 	setInterval(
 		() => {
