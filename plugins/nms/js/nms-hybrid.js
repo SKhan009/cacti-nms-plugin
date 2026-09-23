@@ -1331,19 +1331,33 @@
 		draw();
 	};
 	const editButton = document.getElementById("nms-edit-mode");
-	if (editButton && canEdit) editButton.onclick = () => {
-		if (drag || panning || savingPosition || document.fullscreenElement === root || root.classList.contains("nms-fullscreen-fallback")) return;
-		editable = !editable;
-		hideTip();
-		details.hidden = true;
-		detailSelection = null;
-		source = selected = null;
-		editButton.textContent = editable ? "Done editing" : "Edit mode";
-		editButton.setAttribute("aria-pressed", String(editable));
+	function setEditMode(active) {
+		editable = active && canEdit;
+		root.classList.toggle("nms-editing", editable);
+		hideTip(); details.hidden = true; detailSelection = null; source = selected = null;
+		if (editButton) {
+			editButton.textContent = editable ? "Done editing" : "Edit mode";
+			editButton.setAttribute("aria-pressed", String(editable));
+		}
+		updateMoveButtons(); draw();
+	}
+	async function enterFullscreen() {
+		try { await root.requestFullscreen(); }
+		catch (e) { root.classList.add("nms-fullscreen-fallback"); }
+		syncFullscreen();
+	}
+	async function leaveFullscreen() {
+		if (document.fullscreenElement === root) await document.exitFullscreen();
+		root.classList.remove("nms-fullscreen-fallback");
+		syncFullscreen();
+	}
+	if (editButton && canEdit) editButton.onclick = async () => {
+		if (drag || panning || savingPosition) return;
+		if (editable) { setEditMode(false); await leaveFullscreen(); }
+		else { setEditMode(true); await enterFullscreen(); }
 		message(editable ? "Edit mode: drag devices to arrange them. Positions are saved automatically." : "View mode. Positions saved.");
-		updateMoveButtons();
-		draw();
 	};
+
 	document.getElementById("nms-map-refresh").onclick = refresh;
 	function updateMoveButtons() {
 		for (const [id, stack] of [["nms-undo",undoMoves],["nms-redo",redoMoves]]) {
@@ -1364,24 +1378,15 @@
 	const fullButton = document.getElementById("nms-fullscreen");
 	function syncFullscreen() {
 		const active = document.fullscreenElement === root || root.classList.contains("nms-fullscreen-fallback");
-		if (active) {
-			editable = false; hideTip(); details.hidden = true; detailSelection = null;
-			if (editButton) { editButton.textContent = "Edit mode"; editButton.setAttribute("aria-pressed","false"); }
-			draw();
-		}
+		if (!active && editable) setEditMode(false);
 		updateMoveButtons();
 		fullButton.textContent = active ? "Exit full screen" : "Full screen";
 		fullButton.setAttribute("aria-pressed", String(active));
 	}
 	fullButton.onclick = async () => {
 		if (drag || panning || savingPosition) return;
-		if (document.fullscreenElement === root) await document.exitFullscreen();
-		else if (root.classList.contains("nms-fullscreen-fallback")) root.classList.remove("nms-fullscreen-fallback");
-		else {
-			try { await root.requestFullscreen(); }
-			catch (e) { root.classList.add("nms-fullscreen-fallback"); }
-		}
-		syncFullscreen();
+		if (document.fullscreenElement === root || root.classList.contains("nms-fullscreen-fallback")) await leaveFullscreen();
+		else { setEditMode(false); await enterFullscreen(); }
 	};
 	document.addEventListener("fullscreenchange", syncFullscreen);
 	document.addEventListener("keydown", (e) => {

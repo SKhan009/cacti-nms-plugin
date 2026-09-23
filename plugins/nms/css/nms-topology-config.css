@@ -364,7 +364,9 @@
 .nms-hybrid:is(:fullscreen,.nms-fullscreen-fallback) .nms-canvas-viewport { height:100%; min-height:0; }
 .nms-hybrid:is(:fullscreen,.nms-fullscreen-fallback) .nms-device-palette { max-height:none; min-height:0; }
 
-.nms-hybrid:is(:fullscreen,.nms-fullscreen-fallback) .nms-device-palette,
-.nms-hybrid:is(:fullscreen,.nms-fullscreen-fallback) :is(#nms-edit-mode,#nms-undo,#nms-redo,.nms-edit-connections) { display:none; }
-.nms-hybrid:is(:fullscreen,.nms-fullscreen-fallback) .nms-canvas-workspace { grid-template-columns:minmax(0,1fr); }
+.nms-hybrid:not(.nms-editing):is(:fullscreen,.nms-fullscreen-fallback) .nms-device-palette,
+.nms-hybrid:not(.nms-editing):is(:fullscreen,.nms-fullscreen-fallback) #nms-edit-mode { display:none; }
+.nms-hybrid:not(.nms-editing):is(:fullscreen,.nms-fullscreen-fallback) .nms-canvas-workspace { grid-template-columns:minmax(0,1fr); }
 .nms-canvas-controls button:disabled { opacity:.4; cursor:not-allowed; }
+
+.nms-hybrid:not(.nms-editing) :is(#nms-undo,#nms-redo,.nms-edit-connections) { display:none; }
