@@ -168,7 +168,7 @@ function nms_connection_discovered_rows($canvas) {
         if (!empty($link['manual']) || !isset($nodes[$link['a']],$nodes[$link['b']])) continue;
         $row=['id'=>null,'source'=>'Auto-detected','link_key'=>nms_connection_link_key($link),'type'=>$link['connection_type'] ?? 'Unclassified',
             'protocol'=>implode('/',array_keys($link['protocols'] ?? [])) ?: 'Discovery','status'=>(string)($link['state'] ?? 'Unknown'),
-            'detected_type'=>$link['detected_type'] ?? 'Unknown', 'label'=>'', 'speed_mbps'=>max(0,(float)($link['speed'] ?? 0))/1000000];
+            'detected_type'=>$link['detected_type'] ?? 'Unknown', 'capacity_display'=>$link['capacity_display'] ?? 'Not reported by interfaces', 'label'=>'', 'speed_mbps'=>max(0,(float)($link['speed'] ?? 0))/1000000];
         if ($row['type']==='') $row['type']='Discovery';
         foreach (['a','b'] as $side) {
             $row[$side]=(string)$link[$side];
@@ -214,22 +214,36 @@ function nms_connection_detect_interfaces($links,$nodes) {
     $by=array_column($nodes,null,'id');
     foreach ($links as &$link) {
         if (!empty($link['manual'])) continue;
-        $types=[];
+        $types=[]; $speeds=[];
         foreach (['a','b'] as $side) {
             $index=(int)($link[$side.'_ifindex'] ?? 0);
             // Never guess Ethernet from port names, LLDP, speed, or ARP alone.
             if ($index<=0) continue;
             $matches=array_values(array_filter($by[$link[$side]]['interfaces'] ?? [],static fn($p)=>(int)$p['index']===$index));
             if (count($matches)!==1) continue;
+            $speed=max((float)($matches[0]['high_speed_mbps'] ?? 0)*1000000,(float)($matches[0]['speed_bps'] ?? 0));
+            if ($speed>0) $speeds[$side]=$speed;
             $type=$matches[0]['if_type'] ?? null;
             $label=nms_connection_iftype_label($type);
             if ($label!==null) $types[$side]=$label;
         }
+        $link['capacity_display']=count($speeds)===2 && $speeds['a']===$speeds['b']
+            ? nms_connection_rate_label($speeds['a']).' · SNMP interface speed'
+            : implode('; ',array_map(static fn($side)=>strtoupper($side).': '.nms_connection_rate_label($speeds[$side]),array_keys($speeds)));
+        if (!$speeds) $link['capacity_display']='No current interface speed';
+        elseif (count($speeds)===1) $link['capacity_display'].='; other endpoint not reported';
         $link['detected_type']=count($types)===2 && $types['a']===$types['b']
             ? $types['a'].' — detected'
             : implode('; ',array_map(static fn($side)=>strtoupper($side).': '.$types[$side].' — detected',array_keys($types)));
-        if ($link['detected_type']==='') $link['detected_type']='Unknown';
+        if ($link['detected_type']==='') $link['detected_type']='Unknown — no current interface type';
         elseif (count($types)===1) $link['detected_type'].='; other endpoint unknown';
     }
     unset($link); return $links;
+}
+
+function nms_connection_rate_label($bps) {
+    if (!is_numeric($bps) || !is_finite((float)$bps) || $bps<=0) return 'Not reported';
+    $value=(float)$bps; $units=['bps','Kbps','Mbps','Gbps','Tbps']; $i=0;
+    while ($value>=1000 && $i<count($units)-1) { $value/=1000; $i++; }
+    return rtrim(rtrim(number_format($value,3,'.',','),'0'),'.').' '.$units[$i];
 }

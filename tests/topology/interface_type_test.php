@@ -16,6 +16,13 @@ iftype_check(str_contains(nms_connection_detect_interfaces([$link],$nodes)[0]['d
 $nodes[1]['interfaces']=[];
 iftype_check(str_contains(nms_connection_detect_interfaces([$link],$nodes)[0]['detected_type'],'other endpoint unknown'),'one-sided evidence is explicit');
 $link['a_ifindex']=0; $link['a_port']='GigabitEthernet0/1';
-iftype_check(nms_connection_detect_interfaces([$link],$nodes)[0]['detected_type']==='Unknown','no guessing from interface name or protocol');
+iftype_check(nms_connection_detect_interfaces([$link],$nodes)[0]['detected_type']==='Unknown — no current interface type','no guessing from interface name or protocol');
 foreach ([23=>'PPP',135=>'VLAN (802.1Q)',131=>'Tunnel',161=>'Link aggregation (LAG)'] as $type=>$label) iftype_check(nms_connection_iftype_label($type)===$label,$label);
 iftype_check(nms_connection_iftype_label(99999)===null,'unsupported type stays unknown');
+
+iftype_check(nms_connection_rate_label(2500000000)==='2.5 Gbps','dynamic capacity units');
+iftype_check(nms_connection_rate_label(0)==='Not reported','zero is not fabricated capacity');
+$nodes=[['id'=>1,'interfaces'=>[['index'=>1,'if_type'=>6,'speed_bps'=>100000000,'high_speed_mbps'=>0]]],['id'=>2,'interfaces'=>[['index'=>2,'if_type'=>6,'high_speed_mbps'=>2500]]]];
+$link['a_ifindex']=1;
+$r=nms_connection_detect_interfaces([$link],$nodes)[0];
+iftype_check($r['capacity_display']==='A: 100 Mbps; B: 2.5 Gbps','unequal speeds retain endpoint provenance');

@@ -100,7 +100,7 @@
 		external_id:
 			"Optionally enter an ID from your asset system, for example ASSET-1042. Leave blank if there is no external inventory ID.",
 		notes: "Optionally enter operator information, for example Installed in rack 3; uplink to core port 12. Do not place passwords here.",
-		proxy: "Check only when devices share a management address through a proxy or simulator. Example: several SNMPSim communities at 127.0.0.1. Leave unchecked for a normal unique device address.",
+		proxy: "Check only when devices share a management address through a proxy or simulator. Example: several SNMPSim communities on one collector address. Leave unchecked for a normal unique device address.",
 		disabled:
 			"Check to stop Cacti monitoring during maintenance while keeping the device. Leave unchecked for normal polling.",
 		data_template_rrd_id:

@@ -338,3 +338,11 @@
 .nms-connection-row-actions .nms-delete-icon-form { margin:0!important; padding:0; flex:none; }
 .nms-connection-row-actions .nms-catalog-button { margin:0!important; }
 .nms-readonly { color:#64748b; white-space:nowrap; }
+
+.nms-connections-page .nms-connections-table { table-layout:auto; min-width:1550px; width:100%; }
+.nms-connections-page .nms-connections-table :is(th,td) { vertical-align:middle; text-align:left; padding:14px 16px; overflow-wrap:normal; word-break:normal; }
+.nms-connections-table th { white-space:normal; line-height:1.4; }
+.nms-connections-table :is(th,td):nth-child(1), .nms-connections-table :is(th,td):nth-child(2) { min-width:175px; }
+.nms-connections-table :is(th,td):nth-child(4), .nms-connections-table :is(th,td):nth-child(7) { min-width:185px; }
+.nms-connections-table :is(th,td):last-child { min-width:155px; white-space:nowrap; }
+.nms-connection-data-note { padding:0 24px 16px; color:#59636e; line-height:1.5; }
