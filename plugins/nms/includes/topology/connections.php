@@ -11,6 +11,10 @@ function nms_connection_patterns() {
     return ['solid'=>'','dashed'=>'9 5','dotted'=>'2 5','dash-dot'=>'10 4 2 4','fine-dotted'=>'1 3','short-dashed'=>'4 4'];
 }
 function nms_connection_schema() {
+    nms_category_execute("CREATE TABLE IF NOT EXISTS plugin_nms_link_classification (
+        link_key CHAR(64) NOT NULL PRIMARY KEY, type VARCHAR(24) NOT NULL,
+        updated_by INT UNSIGNED NOT NULL, updated_at DATETIME NOT NULL
+    ) ENGINE=InnoDB");
     nms_category_execute("CREATE TABLE IF NOT EXISTS plugin_nms_connection_types (
         name VARCHAR(24) NOT NULL PRIMARY KEY, color CHAR(7) NOT NULL,
         line_style VARCHAR(12) NOT NULL, symbol VARCHAR(12) NOT NULL
@@ -57,10 +61,26 @@ function nms_connection_style($in) {
 function nms_connection_save($in) {
     nms_require_management();
     $action = $in['nms_action'] ?? '';
+    if ($action === 'connection_classify') {
+        require_once __DIR__.'/canvas.php';
+        $key=$in['link_key'] ?? ''; $type=$in['type'] ?? '';
+        if (!is_string($key) || !preg_match('/^[a-f0-9]{64}$/D',$key)) throw new InvalidArgumentException('Invalid discovered link.');
+        $found=false;
+        foreach (nms_canvas_data(null)['links'] as $link) {
+            if (empty($link['manual']) && nms_connection_link_key($link)===$key) { $found=true; break; }
+        }
+        if (!$found) throw new InvalidArgumentException('Link is no longer available or accessible. Refresh discovery and try again.');
+        if ($type==='__unclassified__') {
+            nms_category_execute('DELETE FROM plugin_nms_link_classification WHERE link_key=?',[$key]); return;
+        }
+        if (!is_string($type) || !db_fetch_cell_prepared('SELECT name FROM plugin_nms_connection_types WHERE name=?',[$type])) throw new InvalidArgumentException('Select a connection type.');
+        nms_category_execute('INSERT INTO plugin_nms_link_classification (link_key,type,updated_by,updated_at) VALUES (?,?,?,NOW()) ON DUPLICATE KEY UPDATE type=VALUES(type),updated_by=VALUES(updated_by),updated_at=NOW()',[$key,$type,nms_current_user_id()]);
+        return;
+    }
     if (in_array($action, ['connection_type_save','connection_type_delete','connection_style'], true)) {
         $old = nms_classification_text($in['original_type'] ?? $in['type'] ?? '', 24);
         if ($action === 'connection_type_delete') {
-            if (db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_nms_manual_connections WHERE type=?', [$old])) throw new InvalidArgumentException('This type is in use. Change its connections before deleting it.');
+            if (db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_nms_manual_connections WHERE type=?', [$old]) || db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_nms_link_classification WHERE type=?', [$old])) throw new InvalidArgumentException('This type is in use. Change its connections before deleting it.');
             nms_category_execute('DELETE FROM plugin_nms_connection_types WHERE name=?', [$old]);
             return;
         }
@@ -72,6 +92,7 @@ function nms_connection_save($in) {
         if ($old !== '') {
             nms_category_execute('UPDATE plugin_nms_connection_types SET name=?,color=?,line_style=?,symbol=? WHERE name=?', [$name,...$style,$old]);
             nms_category_execute('UPDATE plugin_nms_manual_connections SET type=? WHERE type=?', [$name,$old]);
+            nms_category_execute('UPDATE plugin_nms_link_classification SET type=? WHERE type=?', [$name,$old]);
         } else nms_category_execute('INSERT INTO plugin_nms_connection_types (name,color,line_style,symbol) VALUES (?,?,?,?)', [$name,...$style]);
         return;
     }
@@ -145,8 +166,9 @@ function nms_connection_discovered_rows($canvas) {
     $nodes=array_column($canvas['nodes'] ?? [], null, 'id'); $rows=[];
     foreach ($canvas['links'] ?? [] as $link) {
         if (!empty($link['manual']) || !isset($nodes[$link['a']],$nodes[$link['b']])) continue;
-        $row=['id'=>null,'source'=>'Auto-detected','type'=>implode('/',array_keys($link['protocols'] ?? [])),
-            'label'=>(string)($link['state'] ?? 'Discovered'), 'speed_mbps'=>max(0,(float)($link['speed'] ?? 0))/1000000];
+        $row=['id'=>null,'source'=>'Auto-detected','link_key'=>nms_connection_link_key($link),'type'=>$link['connection_type'] ?? 'Unclassified',
+            'protocol'=>implode('/',array_keys($link['protocols'] ?? [])) ?: 'Discovery','status'=>(string)($link['state'] ?? 'Unknown'),
+            'label'=>'', 'speed_mbps'=>max(0,(float)($link['speed'] ?? 0))/1000000];
         if ($row['type']==='') $row['type']='Discovery';
         foreach (['a','b'] as $side) {
             $row[$side]=(string)$link[$side];
@@ -156,4 +178,26 @@ function nms_connection_discovered_rows($canvas) {
         $rows[]=$row;
     }
     return $rows;
+}
+
+/** Direction-independent identity; port changes require a fresh classification. */
+function nms_connection_link_key($link) {
+    $ends=[];
+    foreach (['a','b'] as $side) $ends[]=json_encode([(string)$link[$side],(string)($link[$side.'_ifindex'] ?? ''),(string)($link[$side.'_port'] ?? '')]);
+    sort($ends,SORT_STRING);
+    return hash('sha256',json_encode($ends));
+}
+function nms_connection_apply_classifications($links) {
+    $saved=array_column(db_fetch_assoc('SELECT c.link_key,c.type,t.color,t.line_style,t.symbol FROM plugin_nms_link_classification c JOIN plugin_nms_connection_types t ON t.name=c.type'),null,'link_key');
+    foreach ($links as &$link) {
+        if (!empty($link['manual'])) continue;
+        $style=$saved[nms_connection_link_key($link)] ?? null;
+        if (!$style) continue;
+        $link['connection_type']=$style['type'];
+        foreach (['color','line_style','symbol'] as $field) $link[$field]=$style[$field];
+        $link['dash']=nms_connection_patterns()[$style['line_style']] ?? '';
+        // Preserve protocol evidence, state and current flag exactly as discovered.
+        $link['label']=$style['type'].' · '.($link['label'] ?? '');
+    }
+    unset($link); return $links;
 }

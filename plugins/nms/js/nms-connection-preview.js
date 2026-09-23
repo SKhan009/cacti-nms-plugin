@@ -18,7 +18,7 @@
     document.querySelectorAll('.nms-connection-dialog').forEach(dialog => {
         dialog.querySelectorAll('[data-close-dialog]').forEach(button => button.addEventListener('click', () => dialog.close()));
         dialog.addEventListener('close', () => {
-            const url = new URL(location.href); url.searchParams.delete('edit'); url.searchParams.delete('type_edit');
+            const url = new URL(location.href); url.searchParams.delete('edit'); url.searchParams.delete('type_edit'); url.searchParams.delete('classify');
             history.replaceState(null, '', url);
         });
         if (dialog.dataset.autoOpen === '1') dialog.showModal();

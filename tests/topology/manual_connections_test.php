@@ -23,5 +23,5 @@ $discovered=nms_connection_discovered_rows(['nodes'=>[['id'=>1,'name'=>'Switch A
  ['id'=>'m1','a'=>1,'b'=>2,'manual'=>true],
  ['id'=>'d2','a'=>1,'b'=>3,'manual'=>false]
 ]]);
-if (count($discovered)!==1 || $discovered[0]['id']!==null || $discovered[0]['source']!=='Auto-detected' || $discovered[0]['a_display']!=='Switch A / Gi1' || $discovered[0]['speed_mbps']!=1000 || $discovered[0]['type']!=='LLDP') throw new RuntimeException('Discovered list provenance or endpoint filtering failed');
+if (count($discovered)!==1 || $discovered[0]['id']!==null || $discovered[0]['source']!=='Auto-detected' || $discovered[0]['a_display']!=='Switch A / Gi1' || $discovered[0]['speed_mbps']!=1000 || $discovered[0]['protocol']!=='LLDP' || $discovered[0]['type']!=='Unclassified') throw new RuntimeException('Discovered list provenance or endpoint filtering failed');
 echo "Discovered list provenance and endpoint checks passed\n";

@@ -263,7 +263,7 @@ function nms_canvas_data($site_id)
 		}
 	}
 	$core_id = nms_canvas_core($nodes, $links);
-	$links = array_merge($links, nms_connection_links($nodes));
+	$links = array_merge(nms_connection_apply_classifications($links), nms_connection_links($nodes));
 	return [
 		"site_name" => $site_id
 			? (string) db_fetch_cell_prepared("SELECT name FROM sites WHERE id=?", [$site_id])
