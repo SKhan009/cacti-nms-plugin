@@ -168,7 +168,7 @@ function nms_connection_discovered_rows($canvas) {
         if (!empty($link['manual']) || !isset($nodes[$link['a']],$nodes[$link['b']])) continue;
         $row=['id'=>null,'source'=>'Auto-detected','link_key'=>nms_connection_link_key($link),'type'=>$link['connection_type'] ?? 'Unclassified',
             'protocol'=>implode('/',array_keys($link['protocols'] ?? [])) ?: 'Discovery','status'=>(string)($link['state'] ?? 'Unknown'),
-            'label'=>'', 'speed_mbps'=>max(0,(float)($link['speed'] ?? 0))/1000000];
+            'detected_type'=>$link['detected_type'] ?? 'Unknown', 'label'=>'', 'speed_mbps'=>max(0,(float)($link['speed'] ?? 0))/1000000];
         if ($row['type']==='') $row['type']='Discovery';
         foreach (['a','b'] as $side) {
             $row[$side]=(string)$link[$side];
@@ -198,6 +198,38 @@ function nms_connection_apply_classifications($links) {
         $link['dash']=nms_connection_patterns()[$style['line_style']] ?? '';
         // Preserve protocol evidence, state and current flag exactly as discovered.
         $link['label']=$style['type'].' · '.($link['label'] ?? '');
+    }
+    unset($link); return $links;
+}
+
+/** IF-MIB describes interfaces, not the underlying end-to-end carrier service. */
+function nms_connection_iftype_label($type) {
+    return [6=>'Ethernet',7=>'Ethernet',62=>'Ethernet',69=>'Ethernet (100BASE-FX)',117=>'Ethernet',
+        71=>'Wi-Fi (802.11)',23=>'PPP',135=>'VLAN (802.1Q)',136=>'Layer 3 VLAN',
+        131=>'Tunnel',150=>'MPLS tunnel',161=>'Link aggregation (LAG)',
+        24=>'Loopback',32=>'Frame Relay',37=>'ATM',39=>'SONET',56=>'Fibre Channel',
+        118=>'HDLC',157=>'Point-to-point wireless'][ (int)$type ] ?? null;
+}
+function nms_connection_detect_interfaces($links,$nodes) {
+    $by=array_column($nodes,null,'id');
+    foreach ($links as &$link) {
+        if (!empty($link['manual'])) continue;
+        $types=[];
+        foreach (['a','b'] as $side) {
+            $index=(int)($link[$side.'_ifindex'] ?? 0);
+            // Never guess Ethernet from port names, LLDP, speed, or ARP alone.
+            if ($index<=0) continue;
+            $matches=array_values(array_filter($by[$link[$side]]['interfaces'] ?? [],static fn($p)=>(int)$p['index']===$index));
+            if (count($matches)!==1) continue;
+            $type=$matches[0]['if_type'] ?? null;
+            $label=nms_connection_iftype_label($type);
+            if ($label!==null) $types[$side]=$label;
+        }
+        $link['detected_type']=count($types)===2 && $types['a']===$types['b']
+            ? $types['a'].' — detected'
+            : implode('; ',array_map(static fn($side)=>strtoupper($side).': '.$types[$side].' — detected',array_keys($types)));
+        if ($link['detected_type']==='') $link['detected_type']='Unknown';
+        elseif (count($types)===1) $link['detected_type'].='; other endpoint unknown';
     }
     unset($link); return $links;
 }

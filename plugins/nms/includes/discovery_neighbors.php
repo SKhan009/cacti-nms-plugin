@@ -72,6 +72,7 @@ function nms_nd_interfaces($values)
 		$high = nms_nd_value($values, "1.3.6.1.2.1.31.1.1.1.15." . $index, 66, false);
 		$ports[$index] = [
 			"index" => (int) $index,
+            "if_type" => nms_nd_value($values, $root . ".3." . $index, 2, false),
 			"name" => nms_nd_octets($name),
 			"name_hex" => $name === null ? "" : bin2hex($name),
 			"alias" => nms_nd_octets($alias),

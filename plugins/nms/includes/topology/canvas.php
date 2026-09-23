@@ -106,6 +106,7 @@ function nms_canvas_data($site_id)
 			foreach ($snapshot["data"]["interfaces"] ?? [] as $interface) {
 				$node["interfaces"][] = [
 					"index" => (int) $interface["index"],
+                    "if_type" => isset($interface["if_type"]) ? (int)$interface["if_type"] : null,
 					"name" => (string) $interface["name"],
                     "description" => (string) ($interface["description"] ?? ""),
                     "alias" => (string) ($interface["alias"] ?? ""),
@@ -263,6 +264,7 @@ function nms_canvas_data($site_id)
 		}
 	}
 	$core_id = nms_canvas_core($nodes, $links);
+	$links = nms_connection_detect_interfaces($links,$nodes);
 	$links = array_merge(nms_connection_apply_classifications($links), nms_connection_links($nodes));
 	return [
 		"site_name" => $site_id

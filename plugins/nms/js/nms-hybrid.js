@@ -1218,6 +1218,7 @@
 		if (link) {
 			add((link.manual ? "Manual connection" : link.current ? "Current" : "Historical / stale") + " · " + (link.state || "Unknown"), "nms-detail-subtitle");
 			add(link.label || "Connection");
+            if (link.detected_type) add("Interface type: " + link.detected_type);
             if (link.manual) {
                 add("Configured capacity: " + (link.speed ? formatBandwidth(link.speed) : "Unknown") + ". Interface readings below are measured separately.");
                 if (editable) {
