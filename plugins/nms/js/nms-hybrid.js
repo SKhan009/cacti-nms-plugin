@@ -41,7 +41,7 @@
 		notice.textContent = "";
 		notice.hidden = true;
 		if (!failed && !successful) return;
-		const label = successful ? "Successful" : text;
+		const label = successful ? "Changes saved successfully." : text;
 		if (window.nmsNotify) window.nmsNotify(label, failed);
 		else { notice.textContent = label; notice.hidden = false; }
 	}
