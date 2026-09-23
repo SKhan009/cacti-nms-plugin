@@ -13,6 +13,10 @@ require_once __DIR__ . "/includes/relationships.php";
 
 nms_require_database();
 
+if (($_GET['tab'] ?? '') === 'connections') {
+    require __DIR__ . '/includes/topology/connections_page.php';
+    exit;
+}
 // Assignments now have one owner in Add/Edit Device. Preserve bookmarks without
 // executing obsolete assignment POSTs or requiring their former site filter.
 $requested_tab = isset_request_var("tab") ? get_nfilter_request_var("tab") : "discovered";

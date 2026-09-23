@@ -290,3 +290,10 @@
 #diagnostic-run,#diagnostic-result,#nms-diagnostic-status{scroll-margin-top:110px}
 .nms-diagnostic-result .nms-result-tabs button[aria-selected="true"]{background:#181818!important;color:#fff!important;border:1px solid #181818}
 .nms-diagnostic-result .nms-result-tabs button[aria-selected="false"]{background:#fff!important;color:#181818!important;border:1px solid #bbb}
+
+/* Manual connection editor shares the topology panel and button styles. */
+.nms-connection-form { padding: 24px; margin: 20px 0; }
+.nms-connection-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 20px; }
+.nms-connection-grid label { display: flex; flex-direction: column; gap: 8px; font-weight: 600; }
+.nms-connection-grid input, .nms-connection-grid select { box-sizing: border-box; width: 100%; min-height: 44px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; color: #171717; }
+.nms-connection-delete { display: inline-block; margin: 8px; }

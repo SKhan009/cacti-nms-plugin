@@ -2,6 +2,7 @@
 require_once __DIR__ . "/discovery.php";
 require_once __DIR__ . "/../relationships.php";
 require_once __DIR__ . "/appearance.php";
+require_once __DIR__ . "/connections.php";
 require_once __DIR__ . "/../device_metadata.php";
 require_once __DIR__ . "/../discovery_endpoints.php";
 require_once __DIR__ . "/../discovery_display.php";
@@ -262,6 +263,7 @@ function nms_canvas_data($site_id)
 		}
 	}
 	$core_id = nms_canvas_core($nodes, $links);
+	$links = array_merge($links, nms_connection_links($nodes));
 	return [
 		"site_name" => $site_id
 			? (string) db_fetch_cell_prepared("SELECT name FROM sites WHERE id=?", [$site_id])

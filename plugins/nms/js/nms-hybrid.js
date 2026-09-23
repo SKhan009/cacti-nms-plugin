@@ -105,6 +105,7 @@
 		});
 		data.links.forEach((l) => {
 			const name = l.a === n.id ? l.a_port : l.b === n.id ? l.b_port : null;
+            if (l.manual && !found.has(name)) return;
 			if (name && name !== "Unknown port")
 				found.set(name, { ...(found.get(name) || {}), name, edge: l.id });
 		});
@@ -370,6 +371,7 @@
 			if (/link up/i.test(p.availability || "")) return "#f59e0b";
 			return "#334155";
 		}
+		if (edge.manual) return "#64748b";
 		if (!edge.current) return "#ef4444";
 		const speed = Number(
 			edge.speed || edge.link_speed || edge.bandwidth || 0,
@@ -819,7 +821,7 @@
 			data.nodes.length +
 			" devices · " +
 			data.links.length +
-			" discovered links";
+			" connections";
 		const byId = new Map(data.nodes.map((n) => [n.id, n]));
 		data.links.forEach((l) => {
 			const a = byId.get(l.a),
@@ -835,20 +837,20 @@
 					role: "button",
 					"aria-label": l.label + " " + l.state,
 				}),
-				pa = portPoint(a, l.a_port),
-				pb = portPoint(b, l.b_port),
+				pa = l.manual && !l.a_ifindex ? {x:a.x * width()/100,y:a.y * height()/100} : portPoint(a, l.a_port),
+				pb = l.manual && !l.b_ifindex ? {x:b.x * width()/100,y:b.y * height()/100} : portPoint(b, l.b_port),
 				mid = (pa.y + pb.y) / 2,
 				line = el("path", {
 					d: `M ${pa.x} ${pa.y} V ${mid} H ${pb.x} V ${pb.y}`,
 					fill: "none",
 					class: "nms-topology-wire",
-					stroke: l.inferred
+					stroke: l.manual ? l.color : l.inferred
 						? "#b7791f"
 						: l.current
 							? "#3b82f6"
 							: "#94a3b8",
 					"stroke-width": selected === l.id ? 4 : 2,
-					"stroke-dasharray": l.inferred
+					"stroke-dasharray": l.manual ? ({solid:"",dashed:"9 5",dotted:"2 5"}[l.line_style] || "") : l.inferred
 						? "3 5"
 						: l.current
 							? ""
@@ -859,6 +861,14 @@
 			hit.setAttribute("stroke-width", "14");
 			hit.setAttribute("class", "nms-topology-wire-hit");
 			g.append(hit, line);
+            if (l.manual && l.symbol !== "none") {
+                [pa,pb].forEach(p => {
+                    const shape = l.symbol === "circle" ? el("circle", {cx:p.x,cy:p.y,r:5}) :
+                        l.symbol === "square" ? el("rect", {x:p.x-5,y:p.y-5,width:10,height:10}) :
+                        el("path", {d:`M ${p.x-5} ${p.y-6} L ${p.x+5} ${p.y} L ${p.x-5} ${p.y+6} Z`});
+                    shape.setAttribute("fill", l.color); g.append(shape);
+                });
+            }
 			const inspect = () => {
 				source = null;
 				selected = l.id;
@@ -872,7 +882,7 @@
 				["Bandwidth", formatBandwidth(l.speed)],
 				[
 					"Capacity source",
-					l.speed
+					l.manual ? "Manually configured capacity" : l.speed
 						? "IF MIB reported speed"
 						: "No IF MIB speed reported",
 				],
@@ -1183,10 +1193,14 @@
 		const interfaceCard = (device, name, index, fallback = null) => {
 			const section = document.createElement("section"), h = document.createElement("h4");
 			section.className = "nms-detail-interface";
-			const candidates = (device?.interfaces || []).filter((p) => index ? Number(p.index) === Number(index) : p.name === name);
+			const candidates = link?.manual && !index ? [] : (device?.interfaces || []).filter((p) => index ? Number(p.index) === Number(index) : p.name === name);
 			const p = candidates.length === 1 ? candidates[0] : fallback || {};
 			h.textContent = (device?.name || "Unknown device") + " · " + (p.name || name || "Unknown interface");
 			section.append(h);
+            if (link?.manual && !candidates.length) {
+                const status = document.createElement("p"); status.textContent = "Not monitored — no matching interface readings.";
+                section.append(status); details.append(section); return;
+            }
 			const speed = p.high_speed_mbps > 0 ? p.high_speed_mbps * 1000000 : p.speed_bps || 0;
 			metricRows(section, [
 				["Device name", device?.name], ["Interface", p.name || name],
@@ -1202,8 +1216,16 @@
 			details.append(section);
 		};
 		if (link) {
-			add((link.current ? "Current" : "Historical / stale") + " · " + (link.state || "Unknown"), "nms-detail-subtitle");
+			add((link.manual ? "Manual connection" : link.current ? "Current" : "Historical / stale") + " · " + (link.state || "Unknown"), "nms-detail-subtitle");
 			add(link.label || "Connection");
+            if (link.manual) {
+                add("Configured capacity: " + (link.speed ? formatBandwidth(link.speed) : "Unknown") + ". Interface readings below are measured separately.");
+                if (editable) {
+                    const edit = document.createElement("a"); edit.className = "nms-catalog-button";
+                    edit.href = "topology.php?tab=connections&edit=" + link.manual_id + "#connection-form";
+                    edit.textContent = "Edit / delete connection"; details.append(edit);
+                }
+            }
 			["a", "b"].forEach((side) => interfaceCard(data.nodes.find((n) => n.id === link[side]), link[side + "_port"], link[side + "_ifindex"]));
 		} else if (node && port) {
 			interfaceCard(node, port.name, port.index);

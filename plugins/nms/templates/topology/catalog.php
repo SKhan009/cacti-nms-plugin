@@ -49,7 +49,7 @@ $base = "topology.php?tab=appearance";
 	: ""; ?>" href="<?php print $base; ?>&amp;section=segments">Device segments</a><a class="<?php print $section ===
 "types"
 	? "active"
-	: ""; ?>" href="<?php print $base; ?>&amp;section=types">Device types and icons</a></nav>
+	: ""; ?>" href="<?php print $base; ?>&amp;section=types">Device types and icons</a><a href="topology.php?tab=connections&amp;section=types">Connection types</a></nav>
 <section class="nms-panel nms-appearance-list"><div class="nms-panel-head"><h2><?php print $section === "types"
 	? "Device types and icons"
 	: "Device segments"; ?></h2><a class="nms-catalog-button" href="<?php print $base .
