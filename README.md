@@ -1,6 +1,6 @@
 # Cacti NMS plugins
 
-Installable Cacti plugins are maintained under `plugins/`. The current NMS version is **1.10.75**.
+Installable Cacti plugins are maintained under `plugins/`. The current NMS version is **1.10.76**.
 
 - `plugins/nms/`: device management, topology, discovery, diagnostics and SSH monitoring.
 - `plugins/topology/`: topology runtime.

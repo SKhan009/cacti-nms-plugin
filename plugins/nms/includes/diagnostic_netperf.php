@@ -1,16 +1,16 @@
 <?php
-/** Run a serial server bound only to loopback, with an independent lifetime limit. */
+/** Run a serial server bound only to the selected collector address, with an independent lifetime limit. */
 function nms_diag_netperf_self_test($command, $timeout)
 {
     $target = $command[2];
-    if (!nms_diag_iperf_loopback($target)) throw new RuntimeException('Local self-tests require a loopback IP address.');
+    if (!nms_diag_collector_address($target)) throw new RuntimeException('Local self-tests require a loopback or assigned collector IP address.');
     $binary = nms_diag_program('netserver');
     if (!$binary) throw new RuntimeException('Netserver is required for a local Netperf self-test.');
     $timer = nms_diag_program('timeout');
     if (!$timer) throw new RuntimeException('A bounded local self-test requires the collector timeout executable.');
-    $address = $target === '::1' ? '[::1]' : $target;
+    $address = strpos($target, ':') !== false ? '[' . $target . ']' : $target;
     $socket = @stream_socket_server('tcp://' . $address . ':0', $errno, $error);
-    if (!$socket) throw new RuntimeException('Cannot allocate a loopback port for the local Netperf self-test.');
+    if (!$socket) throw new RuntimeException('Cannot allocate a local port for the local Netperf self-test.');
     $bound = stream_socket_get_name($socket, false);
     $port = substr($bound, strrpos($bound, ':') + 1);
     fclose($socket);

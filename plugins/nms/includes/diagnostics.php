@@ -291,10 +291,12 @@ function nms_diag_command($row, $tool)
 	$target = nms_diag_target($row['hostname']);
 	$name = $tool === 'arp' ? 'ip' : $tool;
 	$binary = nms_diag_program($name);
+	if ($tool === 'pathchar' && !$binary) { $name = 'pchar'; $binary = nms_diag_program($name); }
 	if ($tool === 'traceroute' && !$binary) {
 		$name = 'tracepath';
 		$binary = nms_diag_program($name);
 	}
+	if (!$binary && $tool === 'pathchar') throw new RuntimeException('Path capacity estimation requires pathchar or pchar on this collector. Install an approved build matching the collector OS and architecture; raw-socket permission is also required. Traceroute cannot replace this measurement.');
 	if (!$binary) throw new RuntimeException($name . ' was not found or is not executable by this collector. Install the matching tool for its OS and architecture.');
 	$timeout = 40;
 	switch ($tool) {
@@ -305,7 +307,7 @@ function nms_diag_command($row, $tool)
 			$timeout = 2 * $row['trace_hops'] + 5; break;
 		case 'iperf3': $args = ['-c', $target, '-p', '5201', '-t', (string) $row['bandwidth_seconds'], '-J']; $timeout = $row['bandwidth_seconds'] + 10; break;
 		case 'netperf': $args = ['-H', $target, '-p', '12865', '-t', 'TCP_STREAM', '-l', (string) $row['bandwidth_seconds']]; $timeout = $row['bandwidth_seconds'] + 10; break;
-		case 'pathchar': $args = ['-n', $target]; $timeout = 60; break;
+		case 'pathchar': $args = $name === 'pchar' ? ['-n', '-H', (string) $row['trace_hops'], $target] : ['-n', $target]; $timeout = 60; break;
 		default: throw new InvalidArgumentException('Unsupported diagnostic tool.');
 	}
 	return [array_merge([$binary], $args), $timeout];
@@ -341,7 +343,7 @@ function nms_diag_result($row, $tool, $command, $result)
 		$result['output'] = 'No IPv4 or IPv6 neighbours are cached by this collector.';
 	}
 	if (in_array($tool, ['iperf3', 'netperf'], true) && !empty($result['self_test'])) {
-		$result['output'] = "Collector loopback self-test — this is not network-link bandwidth.\nTemporary local server stopped after the test.\n\n" . $result['output'];
+		$result['output'] = "Collector local-address self-test — this is not network-link bandwidth.\nTemporary local server stopped after the test.\n\n" . $result['output'];
 	} elseif ($tool === 'iperf3' && stripos($result['output'], 'Bad file descriptor') !== false) {
 		$result['output'] = "No bandwidth measurement completed. iPerf3 could not establish its control connection. Check that the target runs an iPerf3 server on TCP 5201.\n\n" . $result['output'];
 	}
@@ -365,9 +367,9 @@ function nms_diag_execute($row, $tool)
 	if (nms_inventory_collector_id() !== (int) $row['poller_id']) throw new RuntimeException('Diagnostic belongs to another collector.');
 	[$command, $timeout] = nms_diag_command($row, $tool);
 	require_once __DIR__ . '/diagnostic_iperf.php';
-	if ($tool === 'iperf3' && nms_diag_iperf_loopback($row['hostname'])) {
+	if ($tool === 'iperf3' && nms_diag_collector_address($row['hostname'])) {
 		[$command, $result] = nms_diag_iperf_self_test($command, $timeout);
-	} elseif ($tool === 'netperf' && nms_diag_iperf_loopback($row['hostname'])) {
+	} elseif ($tool === 'netperf' && nms_diag_collector_address($row['hostname'])) {
 		require_once __DIR__ . '/diagnostic_netperf.php';
 		[$command, $result] = nms_diag_netperf_self_test($command, $timeout);
 	} else {

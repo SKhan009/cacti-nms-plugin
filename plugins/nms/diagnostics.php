@@ -109,9 +109,9 @@ $nms_diagnostic_readiness = [
 	'ping' => ['purpose' => 'Tests collector-to-device reachability.', 'requirement' => 'Requires the ping executable and ICMP permission in the existing poller runtime.'],
 	'traceroute' => ['purpose' => 'Shows the route and responding hops.', 'requirement' => 'Uses traceroute or tracepath on the assigned collector. Partial output is retained on timeout.'],
 	'arp' => ['purpose' => 'Reads the collector IPv4 ARP and IPv6 neighbour cache.', 'requirement' => 'Requires ip. This is the collector cache, not the selected device ARP table.'],
-	'iperf3' => ['purpose' => 'Measures TCP throughput.', 'requirement' => 'Remote devices need an iperf3 server on TCP 5201. Loopback IPs test the collector itself using a temporary local server.'],
-	'netperf' => ['purpose' => 'Measures TCP stream throughput.', 'requirement' => 'Remote devices need netserver on TCP 12865 and its data connection. Loopback IPs use a temporary local server.'],
-	'pathchar' => ['purpose' => 'Estimates path capacity by hop.', 'requirement' => 'Optional. Requires a compatible executable for the collector OS and architecture.'],
+	'iperf3' => ['purpose' => 'Measures TCP throughput.', 'requirement' => 'Remote devices need an iperf3 server on TCP 5201. IPs assigned to the collector test the collector itself using a temporary local server.'],
+	'netperf' => ['purpose' => 'Measures TCP stream throughput.', 'requirement' => 'Remote devices need netserver on TCP 12865 and its data connection. IPs assigned to the collector use a temporary local server.'],
+	'pathchar' => ['purpose' => 'Estimates path capacity by hop.', 'requirement' => 'Requires pathchar or pchar installed on this collector, with raw-socket permission. Offline installs need an approved build for its OS and architecture.'],
 ];
 $job_id = isset_request_var('job_id') ? (int) get_filter_request_var('job_id') : 0;
 if ($job_id) {

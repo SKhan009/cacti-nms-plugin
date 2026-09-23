@@ -64,7 +64,7 @@
             var installed = runner && runner.tools[card.dataset.diagnosticTool];
             card.classList.toggle('ready', !!installed);
             card.classList.toggle('unavailable', !installed);
-            card.querySelector('[data-diagnostic-availability]').textContent = !runner ? 'Collector runner unavailable' : installed ? 'Installed on collector' : 'Not installed on collector';
+            card.querySelector('[data-diagnostic-availability]').textContent = !runner ? 'Collector runner unavailable' : installed ? 'Installed on collector' : card.dataset.diagnosticTool === 'pathchar' ? 'Unavailable — install pathchar or pchar' : 'Not installed on collector';
         });
     }
     host.addEventListener('change', function() { applyAllowedTools(true); updateReadiness(); });

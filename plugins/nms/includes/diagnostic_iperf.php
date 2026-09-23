@@ -5,16 +5,41 @@ function nms_diag_iperf_loopback($target)
     return $target === '::1' || (filter_var($target, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) && strpos($target, '127.') === 0);
 }
 
-/** Run a one-client server bound only to loopback, with an independent lifetime limit. */
+/** Match literal IPs against actual interfaces, never hostname/DNS guesses. */
+function nms_diag_collector_address($target)
+{
+    if (nms_diag_iperf_loopback($target)) return true;
+    if (!filter_var($target, FILTER_VALIDATE_IP)) return false;
+    $ip = nms_diag_program('ip');
+    if (!$ip) return false;
+    $result = nms_diag_run_command([$ip, '-j', 'address', 'show'], 3);
+    if ($result['exit'] !== 0 || !empty($result['truncated'])) return false;
+    return nms_diag_address_in_interfaces($target, json_decode($result['stdout'] ?? '', true) ?: []);
+}
+
+function nms_diag_address_in_interfaces($target, array $interfaces)
+{
+    $packed = @inet_pton($target);
+    if ($packed === false) return false;
+    foreach ($interfaces as $interface) {
+        foreach ($interface['addr_info'] ?? [] as $address) {
+            if (!empty($address['tentative']) || !empty($address['dadfailed'])) continue;
+            if (@inet_pton($address['local'] ?? '') === $packed) return true;
+        }
+    }
+    return false;
+}
+
+/** Run a one-client server bound only to the selected collector address, with an independent lifetime limit. */
 function nms_diag_iperf_self_test($command, $timeout)
 {
     $target = $command[2];
-    if (!nms_diag_iperf_loopback($target)) throw new RuntimeException('Local self-tests require a loopback IP address.');
+    if (!nms_diag_collector_address($target)) throw new RuntimeException('Local self-tests require a loopback or assigned collector IP address.');
     $timer = nms_diag_program('timeout');
     if (!$timer) throw new RuntimeException('A bounded local self-test requires the collector timeout executable.');
-    $address = $target === '::1' ? '[::1]' : $target;
+    $address = strpos($target, ':') !== false ? '[' . $target . ']' : $target;
     $socket = @stream_socket_server('tcp://' . $address . ':0', $errno, $error);
-    if (!$socket) throw new RuntimeException('Cannot allocate a loopback port for the local iPerf3 self-test.');
+    if (!$socket) throw new RuntimeException('Cannot allocate a local port for the local iPerf3 self-test.');
     $bound = stream_socket_get_name($socket, false);
     $port = substr($bound, strrpos($bound, ':') + 1);
     fclose($socket);

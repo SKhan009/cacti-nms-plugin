@@ -134,5 +134,5 @@ function nms_diag_dispatch()
 	if (PHP_SAPI !== 'cli' || PHP_OS_FAMILY !== 'Linux') return;
 	require_once $config['base_path'] . '/lib/poller.php';
 	// Both executable and script are installation paths, never request parameters.
-	exec_background(PHP_BINARY, ['-q', dirname(__DIR__) . '/diagnostic_listener.php']);
+	exec_background(PHP_BINARY, '-q ' . escapeshellarg(dirname(__DIR__) . '/diagnostic_listener.php'));
 }

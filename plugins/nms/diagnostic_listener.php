@@ -27,6 +27,7 @@ try {
                     $tools[$tool] = (bool) nms_diag_program($program);
                     if ($tool === 'traceroute' && !$tools[$tool]) $tools[$tool] = (bool) nms_diag_program('tracepath');
                 }
+                $tools['pathchar'] = $tools['pathchar'] || (bool) nms_diag_program('pchar');
                 $lastTools = time();
             }
             nms_category_execute("INSERT INTO plugin_nms_meta(meta_key,meta_value,updated_at) VALUES (?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()", [$key, json_encode(['tools'=>$tools])]);

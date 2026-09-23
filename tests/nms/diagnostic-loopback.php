@@ -12,3 +12,8 @@ try {
     if ($e instanceof LogicException || strpos($e->getMessage(),'loopback')===false) throw $e;
 }
 echo "PASS: loopback detection and remote-server rejection\n";
+$interfaces = [['addr_info'=>[['local'=>'192.0.2.20'],['local'=>'2001:db8::2']]]];
+foreach (['192.0.2.20'=>true,'192.0.2.21'=>false,'2001:db8:0:0:0:0:0:2'=>true,'localhost'=>false] as $address=>$expected) {
+    if (nms_diag_address_in_interfaces($address,$interfaces)!==$expected) throw new RuntimeException('Interface matching failed');
+}
+echo "PASS: assigned IPv4/IPv6 matching; remote address rejected\n";
