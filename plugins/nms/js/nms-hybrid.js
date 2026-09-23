@@ -36,10 +36,16 @@
 	 * Handles message.
 	 */
 	function message(text, error = false) {
-		notice.textContent = text;
-		notice.hidden = !error && !/fail|error|unavailable|saved/i.test(text);
-		if (!notice.hidden && window.nmsNotify) window.nmsNotify(text, !/saved/i.test(text));
+		const failed = error || /fail|error|unavailable/i.test(text);
+		const successful = text === "Layout changes saved.";
+		notice.textContent = "";
+		notice.hidden = true;
+		if (!failed && !successful) return;
+		const label = successful ? "Successful" : text;
+		if (window.nmsNotify) window.nmsNotify(label, failed);
+		else { notice.textContent = label; notice.hidden = false; }
 	}
+
 	let panX = 0,
 		panY = 0,
 		panning = null;
@@ -1396,7 +1402,6 @@
 		if (drag || panning || savingPosition) return;
 		if (editable) { await finishEditing(); }
 		else { setEditMode(true); await enterFullscreen(); }
-		message(editable ? "Edit mode: drag devices to arrange them. Changes are saved only when you choose Save changes." : "View mode.");
 	};
 
 	document.getElementById("nms-map-refresh").onclick = refresh;
