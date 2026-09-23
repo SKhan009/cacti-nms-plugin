@@ -85,9 +85,11 @@
 	function coordinate(value) { return Math.max(-9999, Math.min(9999, value)); }
 	function fitDevices() {
 		if (!data.nodes.length) return;
-		const xs = data.nodes.map(n => n.x * width() / 100), ys = data.nodes.map(n => n.y * height() / 100);
-		const left = Math.min(...xs) - 220, top = Math.min(...ys) - 120;
-		const spanX = Math.max(...xs) + 220 - left, spanY = Math.max(...ys) + 120 - top;
+		const left = Math.min(...data.nodes.map(n => n.x * width()/100 - chassisWidth(n)/2 - 60));
+		const right = Math.max(...data.nodes.map(n => n.x * width()/100 + chassisWidth(n)/2 + 60));
+		const top = Math.min(...data.nodes.map(n => n.y * height()/100 - 100));
+		const bottom = Math.max(...data.nodes.map(n => n.y * height()/100 + 120 + Math.ceil(ports(n).length/12)*12));
+		const spanX = right - left, spanY = bottom - top;
 		zoom = Math.min(4, width() / spanX, height() / spanY);
 		panX = left - (width() / zoom - spanX) / 2;
 		panY = top - (height() / zoom - spanY) / 2;
@@ -770,7 +772,7 @@
 	 */
 	function draw() {
 		const switches = switchNodes();
-		switches.forEach((n, i) => { n.x = 100 * (i + 1) / (switches.length + 1); n.y = 50; });
+		switches.forEach((n, i) => { n.x = 50 + (i - (switches.length - 1) / 2) * 620 / width() * 100; n.y = 50; });
 		hideTip();
 		svg.replaceChildren();
 		const defs = el("defs");
@@ -1354,13 +1356,15 @@
 		autoArranging = true; arrangeButton.disabled = true;
 		const nodes = data.nodes.filter(n => deviceKind(n) !== "switch");
 		const columns = Math.max(1, Math.ceil(Math.sqrt(nodes.length)));
+		const columnGap = Math.max(300, ...nodes.map(n => chassisWidth(n) + 120));
+		const rowGap = Math.max(240, ...nodes.map(n => 180 + Math.ceil(ports(n).length / 12) * 12));
 		let failures = 0;
 		try {
 			for (let i = 0; i < nodes.length; i++) {
 				const n = nodes[i], old = {x:n.x,y:n.y};
 				const row = Math.floor(i / columns), col = i % columns;
-				n.x = 50 + (col - (Math.min(columns,nodes.length-row*columns)-1)/2) * 260 / width() * 100;
-				n.y = 50 + (row % 2 ? 1 : -1) * (220 + Math.floor(row/2)*180) / height() * 100;
+				n.x = 50 + (col - (Math.min(columns,nodes.length-row*columns)-1)/2) * columnGap / width() * 100;
+				n.y = 50 + (row % 2 ? 1 : -1) * (280 + Math.floor(row/2)*rowGap) / height() * 100;
 				if (!await savePosition(n,old)) failures++;
 			}
 		} finally { autoArranging = false; arrangeButton.disabled = false; updateMoveButtons(); fitDevices(); }
