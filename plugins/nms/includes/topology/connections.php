@@ -15,11 +15,14 @@ function nms_connection_schema() {
         name VARCHAR(24) NOT NULL PRIMARY KEY, color CHAR(7) NOT NULL,
         line_style VARCHAR(12) NOT NULL, symbol VARCHAR(12) NOT NULL
     ) ENGINE=InnoDB");
+    if (!db_fetch_cell_prepared("SELECT meta_value FROM plugin_nms_meta WHERE meta_key=?", ["connection_types_seeded"])) {
     foreach (array_keys(nms_connection_types()) as $name) {
         nms_category_execute("INSERT IGNORE INTO plugin_nms_connection_types VALUES (?, ?, ?, ?)", [$name,
             in_array($name,['VSAT / Leased-line','Optical fiber','Line-of-sight (LOS)'],true)?'#334155':'#64748b',
             ['VSAT / Leased-line'=>'dash-dot','Optical fiber'=>'fine-dotted','Line-of-sight (LOS)'=>'short-dashed'][$name] ?? 'dashed',
             in_array($name,['VSAT / Leased-line','Optical fiber','Line-of-sight (LOS)'],true)?'none':'circle']);
+    }
+    nms_category_execute("INSERT INTO plugin_nms_meta (meta_key,meta_value,updated_at) VALUES ('connection_types_seeded','1',NOW())");
     }
     nms_category_execute("CREATE TABLE IF NOT EXISTS plugin_nms_manual_connections (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -54,10 +57,22 @@ function nms_connection_style($in) {
 function nms_connection_save($in) {
     nms_require_management();
     $action = $in['nms_action'] ?? '';
-    if ($action === 'connection_style') {
+    if (in_array($action, ['connection_type_save','connection_type_delete','connection_style'], true)) {
+        $old = nms_classification_text($in['original_type'] ?? $in['type'] ?? '', 24);
+        if ($action === 'connection_type_delete') {
+            if (db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_nms_manual_connections WHERE type=?', [$old])) throw new InvalidArgumentException('This type is in use. Change its connections before deleting it.');
+            nms_category_execute('DELETE FROM plugin_nms_connection_types WHERE name=?', [$old]);
+            return;
+        }
+        $name = nms_classification_text($in['type'] ?? '', 24);
+        if ($name === '') throw new InvalidArgumentException('Enter a connection type name.');
         $style = nms_connection_style($in);
-        if (!in_array($in['type'] ?? '', array_keys(nms_connection_types()), true)) throw new InvalidArgumentException('Unknown connection type.');
-        nms_category_execute('UPDATE plugin_nms_connection_types SET color=?,line_style=?,symbol=? WHERE name=?', [...$style, $in['type']]);
+        if ($old !== '' && !db_fetch_cell_prepared('SELECT name FROM plugin_nms_connection_types WHERE name=?', [$old])) throw new InvalidArgumentException('Connection type no longer exists.');
+        if ($old !== $name && db_fetch_cell_prepared('SELECT name FROM plugin_nms_connection_types WHERE name=?', [$name])) throw new InvalidArgumentException('A connection type with this name already exists.');
+        if ($old !== '') {
+            nms_category_execute('UPDATE plugin_nms_connection_types SET name=?,color=?,line_style=?,symbol=? WHERE name=?', [$name,...$style,$old]);
+            nms_category_execute('UPDATE plugin_nms_manual_connections SET type=? WHERE type=?', [$name,$old]);
+        } else nms_category_execute('INSERT INTO plugin_nms_connection_types (name,color,line_style,symbol) VALUES (?,?,?,?)', [$name,...$style]);
         return;
     }
     $id = nms_topology_integer($in['id'] ?? 0, 0, 2147483647, 'Connection');
@@ -74,7 +89,7 @@ function nms_connection_save($in) {
     $a = nms_connection_endpoint($in['a'] ?? ''); $b = nms_connection_endpoint($in['b'] ?? '');
     if ($a['host_id'] === $b['host_id']) throw new InvalidArgumentException('Select two different devices.');
     $type = $in['type'] ?? '';
-    if (!in_array($type, array_keys(nms_connection_types()), true)) throw new InvalidArgumentException('Select a connection type.');
+    if (!is_string($type) || !db_fetch_cell_prepared('SELECT name FROM plugin_nms_connection_types WHERE name=?', [$type])) throw new InvalidArgumentException('Select a connection type.');
     $speed = $in['speed_mbps'] ?? '0';
     if (!is_scalar($speed) || !is_numeric($speed) || !is_finite((float)$speed) || $speed < 0 || $speed > 100000000) throw new InvalidArgumentException('Capacity must be between 0 and 100,000,000 Mbps.');
     $label = nms_classification_text($in['label'] ?? '', 150);
