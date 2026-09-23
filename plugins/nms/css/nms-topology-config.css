@@ -351,3 +351,7 @@
 .nms-hybrid #nms-canvas-svg .nms-canvas-node { cursor:grab; }
 .nms-hybrid #nms-canvas-svg .nms-node-readonly { cursor:pointer; }
 .nms-hybrid #nms-canvas-svg:is(.nms-dragging,.nms-panning), .nms-hybrid #nms-canvas-svg.nms-dragging * { cursor:grabbing!important; }
+
+/* Keep short connection status and source labels together. */
+.nms-connections-page .nms-connections-table :is(th,td):nth-child(6),
+.nms-connections-page .nms-connections-table :is(th,td):nth-child(8) { white-space:nowrap; }
