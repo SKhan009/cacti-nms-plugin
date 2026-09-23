@@ -333,3 +333,8 @@
 
 .nms-connections-page button.nms-catalog-button.primary { background:#191919!important; color:#fff!important; }
 .nms-connections-page .nms-connection-dialog header button { justify-content:center; padding:0; font-size:28px; }
+
+.nms-connection-row-actions { display:flex; align-items:center; gap:12px; flex-wrap:nowrap; }
+.nms-connection-row-actions .nms-delete-icon-form { margin:0!important; padding:0; flex:none; }
+.nms-connection-row-actions .nms-catalog-button { margin:0!important; }
+.nms-readonly { color:#64748b; white-space:nowrap; }

@@ -28,7 +28,7 @@ $enabled_tools = nms_diag_tools($profile_values["tools"]);
 			<p class="nms-dialog-eyebrow">NMS / PRESETS</p>
 			<h2 id="nmsConfigTitle"><?php print (int) $profile_values["id"] ? "Edit diagnostic profile" : "Add diagnostic profile"; ?></h2>
 		</div>
-		<button type="button" data-nms-config-close aria-label="Close diagnostic profile">×</button>
+		<button type="button" data-nms-config-close aria-label="Close diagnostic profile" class="nms-popup-close"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
 	</div>
 
 	<?php if ($error) { ?>

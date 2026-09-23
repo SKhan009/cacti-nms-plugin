@@ -90,7 +90,7 @@ $base = "topology.php?tab=appearance";
 "types"
 	? ($id ? "Edit" : "Add") . " device type"
 	: ($segment["id"] ? "Edit" : "Add") .
-		" segment"; ?></h2><button type="button" data-catalog-close aria-label="Close form" class="nms-catalog-button">×</button></div>
+		" segment"; ?></h2><button type="button" data-catalog-close aria-label="Close form" class="nms-popup-close nms-catalog-button"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 <?php if ($error) { ?><p class="nms-catalog-error" role="alert"><?php print nms_h($error); ?></p><?php } ?>
 <form method="post" class="nms-catalog-form">
 <?php if ($section === "segments") {

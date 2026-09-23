@@ -21,8 +21,20 @@ $rows=array_values(array_filter(nms_connection_rows(), static fn($r)=>isset($opt
 $edit=['id'=>0,'a'=>'','b'=>'','type'=>'Ethernet','label'=>'','speed_mbps'=>0];
 foreach ($rows as $r) if ((string)$r['id'] === ($_GET['edit'] ?? '')) $edit=$r;
 if ($error && ($_POST['nms_action'] ?? '') === 'connection_save') $edit=array_merge($edit,array_intersect_key($_POST,$edit));
+// Reuse the topology's permission- and site-filtered discovery evidence.
+foreach ($rows as &$row) {
+    $row['source']='Manual';
+    $row['a_display']=$options[$row['a']] ?? $row['a'].' — reselect interface';
+    $row['b_display']=$options[$row['b']] ?? $row['b'].' — reselect interface';
+}
+unset($row);
+if (!$styles) {
+    require_once __DIR__.'/canvas.php';
+    $canvas=nms_canvas_data($site);
+    $rows=array_merge($rows,nms_connection_discovered_rows($canvas));
+}
 $search = is_string($_GET['search'] ?? null) ? trim(substr($_GET['search'],0,150)) : '';
-$filtered = array_values(array_filter($rows, static fn($r)=>$search === '' || stripos(($options[$r['a']] ?? $r['a']).' '.($options[$r['b']] ?? $r['b']).' '.$r['type'].' '.$r['label'],$search) !== false));
+$filtered = array_values(array_filter($rows, static fn($r)=>$search === '' || stripos($r['a_display'].' '.$r['b_display'].' '.$r['type'].' '.$r['label'].' '.$r['source'],$search) !== false));
 $total=count($filtered); $pages=max(1,(int)ceil($total/20));
 $page=max(1,min($pages,(int)($_GET['page'] ?? 1))); $listed=array_slice($filtered,($page-1)*20,20);
 $types=db_fetch_assoc('SELECT * FROM plugin_nms_connection_types ORDER BY name');
@@ -57,7 +69,7 @@ function nms_connection_delete_button($action,$id,$type='') {
 <main class="nms-shell nms-topology-config nms-connections-page">
 <h1><?php print $styles ? 'Connection types' : 'Edit topology'; ?></h1>
 <p>Configure connections in the NMS map. This does not change device ports or network settings.</p>
-<nav class="nms-preset-tabs"><a href="topology.php">View topology</a><a href="topology.php?tab=connections" class="<?php print !$styles?'active':''; ?>">Manual connections</a><a href="topology.php?tab=connections&amp;section=types" class="<?php print $styles?'active':''; ?>">Connection types</a><a href="topology.php?tab=appearance">Device appearance</a></nav>
+<nav class="nms-preset-tabs"><a href="topology.php">View topology</a><a href="topology.php?tab=connections" class="<?php print !$styles?'active':''; ?>">Connections</a><a href="topology.php?tab=connections&amp;section=types" class="<?php print $styles?'active':''; ?>">Connection types</a><a href="topology.php?tab=appearance">Device appearance</a></nav>
 <?php if ($error || $notice) { ?><p class="nms-action-feedback <?php print $error?'error':''; ?>" role="<?php print $error?'alert':'status'; ?>"><?php print nms_h($error ?: $notice); ?></p><?php } ?>
 <?php if ($styles) { ?>
 <p>These styles identify manually configured connection types. They do not represent live health.</p>
@@ -69,7 +81,7 @@ function nms_connection_delete_button($action,$id,$type='') {
 <?php if ($can) { ?><div class="nms-connection-actions"><a class="nms-catalog-button" href="<?php print nms_h('topology.php?tab=connections&section=types&type_edit='.rawurlencode($type['name'])); ?>">Edit</a><?php nms_connection_delete_button('connection_type_delete',0,$type['name']); ?></div><?php } ?></article><?php } ?>
 </div>
 <?php if ($can) { ?><dialog id="type-dialog" class="nms-connection-dialog" aria-labelledby="type-dialog-title" data-auto-open="<?php print $typeOriginal!=='' || ($error && ($_POST['nms_action'] ?? '')==='connection_type_save')?'1':'0'; ?>">
-<header><h2 id="type-dialog-title"><?php print $typeOriginal!==''?'Edit':'Add'; ?> connection type</h2><button type="button" data-close-dialog aria-label="Close">×</button></header>
+<header><h2 id="type-dialog-title"><?php print $typeOriginal!==''?'Edit':'Add'; ?> connection type</h2><button type="button" data-close-dialog aria-label="Close" class="nms-popup-close"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
 <form method="post" class="nms-connection-form"><?php nms_connection_fields('connection_type_save'); ?><input type="hidden" name="original_type" value="<?php print nms_h($typeOriginal); ?>">
 <?php if ($error) { ?><p role="alert"><?php print nms_h($error); ?></p><?php } ?>
 <div class="nms-connection-grid"><label>Name<input required name="type" maxlength="24" value="<?php print nms_h($typeEdit['name']); ?>"></label><label>Colour<input type="color" name="color" value="<?php print nms_h($typeEdit['color']); ?>"></label>
@@ -78,7 +90,7 @@ function nms_connection_delete_button($action,$id,$type='') {
 <div class="nms-connection-actions nms-style-actions"><button class="nms-catalog-button primary" type="submit">Save type</button><button class="nms-catalog-button" type="button" data-close-dialog>Cancel</button></div></form></dialog>
 <?php } } else { if ($can) { ?>
 <dialog id="connection-dialog" class="nms-connection-dialog" aria-labelledby="connection-dialog-title" data-auto-open="<?php print $edit['id'] || ($error && ($_POST['nms_action'] ?? '')==='connection_save')?'1':'0'; ?>">
-<header><h2 id="connection-dialog-title"><?php print $edit['id']?'Edit connection':'Add connection'; ?></h2><button type="button" data-close-dialog aria-label="Close">×</button></header>
+<header><h2 id="connection-dialog-title"><?php print $edit['id']?'Edit connection':'Add connection'; ?></h2><button type="button" data-close-dialog aria-label="Close" class="nms-popup-close"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
 <form method="post" class="nms-connection-form" id="connection-form">
 <?php if ($error) { ?><p role="alert"><?php print nms_h($error); ?></p><?php } ?>
 <?php nms_connection_fields('connection_save',$edit['id']); ?>
@@ -90,8 +102,8 @@ function nms_connection_delete_button($action,$id,$type='') {
 </div><p>Select a cached interface for monitoring, or a device when its port is unknown. Capacity is an entered value; use 0 when unknown.</p>
 <div class="nms-connection-actions"><button class="nms-catalog-button primary" type="submit">Save connection</button><button class="nms-catalog-button" type="button" data-close-dialog>Cancel</button></div>
 </form></dialog><?php } ?>
-<section class="nms-panel"><div class="nms-panel-head"><h2>Manually configured connections</h2><?php if ($can) { ?><button type="button" class="nms-catalog-button" data-open-dialog="connection-dialog">+ Add connection</button><?php } ?></div><form method="get" class="nms-connection-filter"><input type="hidden" name="tab" value="connections"><label>Find connection <input type="search" name="search" value="<?php print nms_h($search); ?>" placeholder="Device, type or label"></label> <button class="nms-catalog-button primary" type="submit">Filter</button> <a class="nms-catalog-button" href="topology.php?tab=connections">Reset</a></form><div class="nms-catalog-scroll"><table class="nms-table"><thead><tr><th>Device A / interface</th><th>Device B / interface</th><th>Type / label</th><th>Configured Mbps</th><th>Actions</th></tr></thead><tbody>
-<?php foreach ($listed as $r) { ?><tr><td><?php print nms_h($options[$r['a']] ?? $r['a'].' — reselect interface'); ?></td><td><?php print nms_h($options[$r['b']] ?? $r['b'].' — reselect interface'); ?></td><td><?php print nms_h($r['type'].' · '.$r['label']); ?></td><td><?php print $r['speed_mbps']>0?nms_h($r['speed_mbps']):'Unknown'; ?></td><td><?php if ($can) { ?><a class="nms-catalog-button" href="topology.php?tab=connections&amp;edit=<?php print (int)$r['id']; ?>">Edit</a><?php nms_connection_delete_button('connection_delete',$r['id']); ?><?php } ?></td></tr><?php } if (!$listed) { ?><tr><td colspan="5">No manual connections. Use Add connection to create one.</td></tr><?php } ?>
+<section class="nms-panel"><div class="nms-panel-head"><h2>Device connections</h2><?php if ($can) { ?><button type="button" class="nms-catalog-button" data-open-dialog="connection-dialog">+ Add connection</button><?php } ?></div><form method="get" class="nms-connection-filter"><input type="hidden" name="tab" value="connections"><label>Find connection <input type="search" name="search" value="<?php print nms_h($search); ?>" placeholder="Device, type or label"></label> <button class="nms-catalog-button primary" type="submit">Filter</button> <a class="nms-catalog-button" href="topology.php?tab=connections">Reset</a></form><div class="nms-catalog-scroll"><table class="nms-table"><thead><tr><th>Device A / interface</th><th>Device B / interface</th><th>Type / label</th><th>Capacity (Mbps)</th><th>Source</th><th>Actions</th></tr></thead><tbody>
+<?php foreach ($listed as $r) { ?><tr><td><?php print nms_h($r['a_display']); ?></td><td><?php print nms_h($r['b_display']); ?></td><td><?php print nms_h($r['type'].' · '.$r['label']); ?></td><td><?php print $r['speed_mbps']>0?nms_h($r['speed_mbps']):'Unknown'; ?></td><td><?php print nms_h($r['source']); ?></td><td><?php if ($can && $r['source']==='Manual') { ?><div class="nms-connection-row-actions"><a class="nms-catalog-button" href="topology.php?tab=connections&amp;edit=<?php print (int)$r['id']; ?>">Edit</a><?php nms_connection_delete_button('connection_delete',$r['id']); ?></div><?php } elseif ($r['source']!=='Manual') { ?><span class="nms-readonly">Read only</span><?php } ?></td></tr><?php } if (!$listed) { ?><tr><td colspan="6">No matching connections. Use Add connection to create one.</td></tr><?php } ?>
 </tbody></table></div><nav class="nms-connection-pagination" aria-label="Connection pagination"><span>Showing <?php print $total?($page-1)*20+1:0; ?>–<?php print min($page*20,$total); ?> of <?php print $total; ?> · Page <?php print $page; ?> of <?php print $pages; ?></span><div class="nms-connection-actions">
 <?php foreach (['Previous'=>$page-1,'Next'=>$page+1] as $label=>$target) { if ($target>=1 && $target<=$pages) { ?><a class="nms-catalog-button" href="<?php print nms_h('topology.php?'.http_build_query(['tab'=>'connections','search'=>$search,'page'=>$target])); ?>"><?php print $label; ?></a><?php } else { ?><button class="nms-catalog-button" disabled><?php print $label; ?></button><?php } } ?></div></nav></section><?php } ?></main>
 <?php require __DIR__ . '/../../templates/app_footer.php'; ?>

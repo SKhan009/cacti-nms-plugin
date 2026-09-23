@@ -107,7 +107,7 @@ $simulator_badge = nms_snmpsim_status_badge($simulator_health);
 } ?> data-auto-open="<?php print $upload_open
  	? "true"
  	: "false"; ?>" role="dialog" aria-modal="true" aria-labelledby="nmsUploadDialogTitle" tabindex="-1">
-	<div class="nms-panel-head nms-upload-dialog-head"><div><h2 id="nmsUploadDialogTitle">Upload an SNMP record</h2><p>Deploy a simulator community and generate native Cacti templates for numeric OIDs.</p></div><button class="nms-upload-dialog-close" type="button" aria-label="Close upload dialog">×</button></div>
+	<div class="nms-panel-head nms-upload-dialog-head"><div><h2 id="nmsUploadDialogTitle">Upload an SNMP record</h2><p>Deploy a simulator community and generate native Cacti templates for numeric OIDs.</p></div><button class="nms-popup-close nms-upload-dialog-close" type="button" aria-label="Close upload dialog"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 	<?php if (
  	!empty($page_error) &&
  	($action ?? "") === "import_snmprec"

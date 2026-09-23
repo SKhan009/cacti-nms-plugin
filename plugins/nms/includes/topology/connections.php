@@ -139,3 +139,21 @@ function nms_connection_links($nodes) {
     }
     return $links;
 }
+
+/** Read-only rows retain discovery provenance; never assign a manual record ID. */
+function nms_connection_discovered_rows($canvas) {
+    $nodes=array_column($canvas['nodes'] ?? [], null, 'id'); $rows=[];
+    foreach ($canvas['links'] ?? [] as $link) {
+        if (!empty($link['manual']) || !isset($nodes[$link['a']],$nodes[$link['b']])) continue;
+        $row=['id'=>null,'source'=>'Auto-detected','type'=>implode('/',array_keys($link['protocols'] ?? [])),
+            'label'=>(string)($link['state'] ?? 'Discovered'), 'speed_mbps'=>max(0,(float)($link['speed'] ?? 0))/1000000];
+        if ($row['type']==='') $row['type']='Discovery';
+        foreach (['a','b'] as $side) {
+            $row[$side]=(string)$link[$side];
+            $port=trim((string)($link[$side.'_port'] ?? ''));
+            $row[$side.'_display']=$nodes[$link[$side]]['name'].($port!==''?' / '.$port:' (interface unknown)');
+        }
+        $rows[]=$row;
+    }
+    return $rows;
+}

@@ -117,7 +117,7 @@ $open_modal = isset_request_var("discovery_preset") || ($error && ($_POST["nms_a
 <dialog id="nmsConfigDialog" class="nms-config-dialog" aria-labelledby="nmsConfigTitle" data-auto-open="<?php print $open_modal ? "true" : "false"; ?>">
 	<div class="nms-panel-head">
 		<h2 id="nmsConfigTitle"><?php print $section === "presets" ? ((int) $edit["id"] ? "Edit discovery preset" : "Add discovery preset") : "Configure device assignments"; ?></h2>
-		<button type="button" data-nms-config-close aria-label="Close configuration">×</button>
+		<button type="button" data-nms-config-close aria-label="Close configuration" class="nms-popup-close"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
 	</div>
 	<?php if ($error) { ?>
 		<p class="nms-config-error" role="alert"><?php print nms_h($error); ?></p>
