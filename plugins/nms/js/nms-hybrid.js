@@ -16,7 +16,7 @@
 		busy = false;
 	notice.hidden = true;
 	details.hidden = true;
-	let editable = false, savingPosition = false;
+	let editable = false, savingPosition = false, autoArranging = false;
 	const undoMoves = [], redoMoves = [];
 	const canEdit = root.dataset.edit === "1",
 		NS = "http://www.w3.org/2000/svg";
@@ -75,24 +75,24 @@
 	 * Handles width.
 	 */
 	function width() {
-		return switchNodes().length > 1
-			? 2400
-			: Math.max(1200, Math.ceil(Math.sqrt(data.nodes.length)) * 270);
+		return Math.max(1200, switchNodes().length * 600, Math.ceil(Math.sqrt(data.nodes.length)) * 300);
 	}
 	function height() {
-		return switchNodes().length > 1
-			? 1000
-			: Math.max(
-					700,
-					Math.ceil(
-						data.nodes.length /
-							Math.max(
-								1,
-								Math.ceil(Math.sqrt(data.nodes.length)),
-							),
-					) * 150,
-				);
+		return Math.max(900, Math.ceil(Math.sqrt(data.nodes.length)) * 200);
 	}
+	// Coordinates may extend beyond the initial view; retain only the database's numeric range.
+	function coordinate(value) { return Math.max(-9999, Math.min(9999, value)); }
+	function fitDevices() {
+		if (!data.nodes.length) return;
+		const xs = data.nodes.map(n => n.x * width() / 100), ys = data.nodes.map(n => n.y * height() / 100);
+		const left = Math.min(...xs) - 220, top = Math.min(...ys) - 120;
+		const spanX = Math.max(...xs) + 220 - left, spanY = Math.max(...ys) + 120 - top;
+		zoom = Math.min(4, width() / spanX, height() / spanY);
+		panX = left - (width() / zoom - spanX) / 2;
+		panY = top - (height() / zoom - spanY) / 2;
+		draw();
+	}
+
 	/**
 	 * Handles ports.
 	 */
@@ -923,7 +923,7 @@
 			]);
 			g.addEventListener("pointerdown", (e) => {
 				e.stopPropagation();
-                if (!editable || savingPosition || deviceKind(n) === "switch" || e.button !== 0 || drag || panning) return;
+                if (!editable || savingPosition || autoArranging || deviceKind(n) === "switch" || e.button !== 0 || drag || panning) return;
 				e.preventDefault();
 				const p = point(e);
                 drag = { n, startX: n.x, startY: n.y, offsetX:p.x-n.x*width()/100, offsetY:p.y-n.y*height()/100 };
@@ -952,35 +952,13 @@
 						"ArrowUp",
 						"ArrowDown",
 					].includes(e.key) ||
-					!editable || savingPosition || deviceKind(n) === "switch"
+					!editable || savingPosition || autoArranging || deviceKind(n) === "switch"
 				)
 					return;
 				e.preventDefault();
 				const old = { x: n.x, y: n.y };
-				n.x = Math.max(
-					9,
-					Math.min(
-						91,
-						n.x +
-							(e.key === "ArrowLeft"
-								? -1
-								: e.key === "ArrowRight"
-									? 1
-									: 0),
-					),
-				);
-				n.y = Math.max(
-					6,
-					Math.min(
-						94,
-						n.y +
-							(e.key === "ArrowUp"
-								? -1
-								: e.key === "ArrowDown"
-									? 1
-									: 0),
-					),
-				);
+				n.x = coordinate(n.x + (e.key === "ArrowLeft" ? -1 : e.key === "ArrowRight" ? 1 : 0));
+				n.y = coordinate(n.y + (e.key === "ArrowUp" ? -1 : e.key === "ArrowDown" ? 1 : 0));
 				draw();
 				await savePosition(n, old);
 			});
@@ -1014,8 +992,8 @@
 		}
 		if (!drag) return;
 		const p = point(e);
-		drag.n.x = Math.max(9, Math.min(91, ((p.x - drag.offsetX) * 100) / width()));
-		drag.n.y = Math.max(6, Math.min(94, ((p.y - drag.offsetY) * 100) / height()));
+		drag.n.x = coordinate(((p.x - drag.offsetX) * 100) / width());
+		drag.n.y = coordinate(((p.y - drag.offsetY) * 100) / height());
 		draw();
 	});
 	/**
@@ -1273,11 +1251,11 @@
 		const n = data.nodes.find(
 			(n) => String(n.id) === e.dataTransfer.getData("text/plain"),
 		);
-		if (!n || !editable || savingPosition || deviceKind(n) === "switch") return;
+		if (!n || !editable || savingPosition || autoArranging || deviceKind(n) === "switch") return;
 		const old = { x: n.x, y: n.y },
 			p = point(e);
-		n.x = Math.max(9, Math.min(91, (p.x * 100) / width()));
-		n.y = Math.max(6, Math.min(94, (p.y * 100) / height()));
+		n.x = coordinate((p.x * 100) / width());
+		n.y = coordinate((p.y * 100) / height());
 		source = n.id;
 		draw();
 		showPorts(n.id);
@@ -1287,7 +1265,7 @@
 	 * Handles refresh.
 	 */
 	async function refresh() {
-		if (drag || panning || busy || savingPosition) return;
+		if (drag || panning || busy || savingPosition || autoArranging) return;
 		busy = true;
 		try {
 			const r = await fetch(
@@ -1321,14 +1299,27 @@
 		draw();
 	};
 	document.getElementById("nms-zoom-out").onclick = () => {
-		zoom = Math.max(0.5, zoom / 1.25);
+		zoom = Math.max(0.01, zoom / 1.25);
 		draw();
 	};
-	document.getElementById("nms-fit").onclick = () => {
-		zoom = 1;
-		panX = 0;
-		panY = 0;
-		draw();
+	document.getElementById("nms-fit").onclick = fitDevices;
+	const arrangeButton = document.getElementById("nms-auto-arrange");
+	if (arrangeButton) arrangeButton.onclick = async () => {
+		if (!editable || savingPosition || autoArranging || drag || panning) return;
+		autoArranging = true; arrangeButton.disabled = true;
+		const nodes = data.nodes.filter(n => deviceKind(n) !== "switch");
+		const columns = Math.max(1, Math.ceil(Math.sqrt(nodes.length)));
+		let failures = 0;
+		try {
+			for (let i = 0; i < nodes.length; i++) {
+				const n = nodes[i], old = {x:n.x,y:n.y};
+				const row = Math.floor(i / columns), col = i % columns;
+				n.x = 50 + (col - (Math.min(columns,nodes.length-row*columns)-1)/2) * 260 / width() * 100;
+				n.y = 50 + (row % 2 ? 1 : -1) * (220 + Math.floor(row/2)*180) / height() * 100;
+				if (!await savePosition(n,old)) failures++;
+			}
+		} finally { autoArranging = false; arrangeButton.disabled = false; updateMoveButtons(); fitDevices(); }
+		message(failures ? "Some positions could not be saved. Please retry Auto arrange." : "Auto arrange saved. Undo restores individual device moves.", failures > 0);
 	};
 	const editButton = document.getElementById("nms-edit-mode");
 	function setEditMode(active) {
@@ -1361,11 +1352,11 @@
 	document.getElementById("nms-map-refresh").onclick = refresh;
 	function updateMoveButtons() {
 		for (const [id, stack] of [["nms-undo",undoMoves],["nms-redo",redoMoves]]) {
-			if (document.getElementById(id)) document.getElementById(id).disabled = !editable || savingPosition || !stack.length;
+			if (document.getElementById(id)) document.getElementById(id).disabled = !editable || savingPosition || autoArranging || !stack.length;
 		}
 	}
 	async function replayMove(from, to) {
-		if (!editable || savingPosition || drag || panning || !from.length) return;
+		if (!editable || savingPosition || autoArranging || drag || panning || !from.length) return;
 		const move = from[from.length - 1], n = data.nodes.find(n => n.id === move.id);
 		if (!n || deviceKind(n) === "switch") { from.pop(); updateMoveButtons(); return; }
 		const old = {x:n.x,y:n.y}, target = from === undoMoves ? move.before : move.after;

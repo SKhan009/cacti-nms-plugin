@@ -330,10 +330,10 @@ function nms_canvas_write($action, $site_id, $input)
 				!is_scalar($input[$axis]) ||
 				!is_numeric($input[$axis]) ||
 				!is_finite((float) $input[$axis]) ||
-				$input[$axis] < 5 ||
-				$input[$axis] > 95
+				$input[$axis] < -9999 ||
+				$input[$axis] > 9999
 			) {
-				throw new InvalidArgumentException("Position must be between 5 and 95.");
+				throw new InvalidArgumentException("Position is outside the supported numeric range.");
 			}
 		}
 		nms_category_execute(

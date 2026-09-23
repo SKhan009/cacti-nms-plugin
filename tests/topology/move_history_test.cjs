@@ -2,7 +2,7 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const code=fs.readFileSync('plugins/nms/js/nms-hybrid.js','utf8');
 const n={id:7,x:60,y:40}, buttons={};
 let fail=false;
-const c=vm.createContext({editable:true,savingPosition:false,drag:null,panning:null,
+const c=vm.createContext({editable:true,savingPosition:false,autoArranging:false,coordinate:v=>v,drag:null,panning:null,
  undoMoves:[],redoMoves:[],data:{nodes:[n]},deviceKind:()=> 'device',
  document:{getElementById:id=>buttons[id] ||= {}},draw:()=>{},message:()=>{},
  post:async()=>{if(fail) throw Error('save failed');}});

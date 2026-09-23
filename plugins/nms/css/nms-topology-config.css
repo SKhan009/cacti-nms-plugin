@@ -369,4 +369,4 @@
 .nms-hybrid:not(.nms-editing):is(:fullscreen,.nms-fullscreen-fallback) .nms-canvas-workspace { grid-template-columns:minmax(0,1fr); }
 .nms-canvas-controls button:disabled { opacity:.4; cursor:not-allowed; }
 
-.nms-hybrid:not(.nms-editing) :is(#nms-undo,#nms-redo,.nms-edit-connections) { display:none; }
+.nms-hybrid:not(.nms-editing) :is(#nms-auto-arrange,#nms-undo,#nms-redo,.nms-edit-connections) { display:none; }

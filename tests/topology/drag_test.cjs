@@ -6,7 +6,7 @@ const handlers = {};
 const classes = new Set();
 const node = {id: 1, x: 40, y: 30};
 const context = vm.createContext({
-  n: node, editable: true, savingPosition:false, deviceKind:n=>n.kind || "device", drag: null, panning: null, panX: 0, panY: 0,
+  n: node, editable: true, savingPosition:false,autoArranging:false,coordinate:v=>v, deviceKind:n=>n.kind || "device", drag: null, panning: null, panX: 0, panY: 0,
   width: () => 1000, height: () => 800,
   point: e => ({x:e.clientX, y:e.clientY}),
   draw: () => {}, savePosition: async (n,old) => { context.saved={x:n.x,y:n.y,old}; },
