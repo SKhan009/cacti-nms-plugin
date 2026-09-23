@@ -148,24 +148,6 @@
 		return n.id === data.core_id;
 	}
 	/**
-	 * Checks is Fixed Switch.
-	 */
-	function isFixedSwitch(n) {
-		return deviceKind(n) === "switch";
-	}
-	/**
-	 * Handles place Switches.
-	 */
-	function placeSwitches() {
-		const all = switchNodes();
-		if (!all.length) return;
-		all.forEach((node, index) => {
-			node.x =
-				all.length === 1 ? 50 : 18 + index * (64 / (all.length - 1));
-			node.y = 52;
-		});
-	}
-	/**
 	 * Handles chassis Width.
 	 */
 	function chassisWidth(n) {
@@ -202,7 +184,6 @@
 	 * Handles port Point.
 	 */
 	function portPoint(n, name) {
-		placeSwitches();
 		const ps = deviceKind(n) === "switch" ? physicalPorts(n) : ports(n),
 			i = ps.findIndex((p) => p.name === name);
 		if (deviceKind(n) === "switch") {
@@ -784,11 +765,6 @@
 	 * Handles draw.
 	 */
 	function draw() {
-		const core = data.nodes.find(isCore);
-		if (core) {
-			core.x = ((panX + width() / zoom / 2) * 100) / width();
-			core.y = ((panY + height() / zoom / 2) * 100) / height();
-		}
 		hideTip();
 		svg.replaceChildren();
 		const defs = el("defs");
@@ -913,7 +889,7 @@
 				tabindex: 0,
 				role: "button",
 				"aria-label": n.name + " " + (states[n.status] || "Unknown"),
-				class: "nms-canvas-node" + (isCore(n) ? " nms-core-fixed" : ""),
+				class: "nms-canvas-node" + (editable ? "" : " nms-node-readonly"),
 			});
 			deviceGraphic(n, g);
 			hover(g, n.name, [
@@ -941,9 +917,12 @@
 					]),
 			]);
 			g.addEventListener("pointerdown", (e) => {
-				if (!editable || isFixedSwitch(n)) return;
+				e.stopPropagation();
+                if (!editable || e.button !== 0 || drag || panning) return;
 				e.preventDefault();
-				drag = { n, startX: n.x, startY: n.y };
+				const p = point(e);
+                drag = { n, startX: n.x, startY: n.y, offsetX:p.x-n.x*width()/100, offsetY:p.y-n.y*height()/100 };
+                svg.classList.add("nms-dragging");
 				svg.setPointerCapture(e.pointerId);
 			});
 			g.addEventListener("click", () => {
@@ -968,8 +947,7 @@
 						"ArrowUp",
 						"ArrowDown",
 					].includes(e.key) ||
-					!editable ||
-					isCore(n)
+					!editable
 				)
 					return;
 				e.preventDefault();
@@ -1015,7 +993,8 @@
 		return p.matrixTransform(svg.getScreenCTM().inverse());
 	}
 	svg.addEventListener("pointerdown", (e) => {
-		if (e.target === svg) {
+		if (e.target === svg && e.button === 0 && !drag && !panning) {
+            e.preventDefault(); svg.classList.add("nms-panning");
 			panning = { x: e.clientX, y: e.clientY, px: panX, py: panY };
 			svg.setPointerCapture(e.pointerId);
 		}
@@ -1030,8 +1009,8 @@
 		}
 		if (!drag) return;
 		const p = point(e);
-		drag.n.x = Math.max(9, Math.min(91, (p.x * 100) / width()));
-		drag.n.y = Math.max(6, Math.min(94, (p.y * 100) / height()));
+		drag.n.x = Math.max(9, Math.min(91, ((p.x - drag.offsetX) * 100) / width()));
+		drag.n.y = Math.max(6, Math.min(94, ((p.y - drag.offsetY) * 100) / height()));
 		draw();
 	});
 	/**
@@ -1048,14 +1027,17 @@
 			message(e.message, true);
 		}
 	}
-	svg.addEventListener("pointerup", async () => {
+	svg.addEventListener("pointerup", async (e) => {
+        svg.classList.remove("nms-dragging", "nms-panning");
+        if (svg.hasPointerCapture(e.pointerId)) svg.releasePointerCapture(e.pointerId);
 		panning = null;
 		if (!drag) return;
 		const d = drag;
 		drag = null;
-		await savePosition(d.n, { x: d.startX, y: d.startY });
+		if (d.n.x !== d.startX || d.n.y !== d.startY) await savePosition(d.n, { x: d.startX, y: d.startY });
 	});
 	svg.addEventListener("pointercancel", () => {
+        svg.classList.remove("nms-dragging", "nms-panning");
 		panning = null;
 		if (drag) {
 			drag.n.x = drag.startX;
@@ -1127,7 +1109,7 @@
 							: "No current connection evidence");
 				b.style.borderLeft =
 					"4px solid " + (colors[n.status] || colors[0]);
-				b.draggable = !isCore(n);
+				b.draggable = editable;
 				b.onclick = () => {
 					source = n.id;
 					selected = null;
@@ -1281,7 +1263,7 @@
 		const n = data.nodes.find(
 			(n) => String(n.id) === e.dataTransfer.getData("text/plain"),
 		);
-		if (!n || isCore(n)) return;
+		if (!n || !editable) return;
 		const old = { x: n.x, y: n.y },
 			p = point(e);
 		n.x = Math.max(9, Math.min(91, (p.x * 100) / width()));

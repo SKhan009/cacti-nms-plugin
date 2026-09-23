@@ -324,10 +324,6 @@ function nms_canvas_write($action, $site_id, $input)
 		throw new InvalidArgumentException("Device is not enabled in this site.");
 	}
 	if ($action === "canvas_position") {
-		$canvas = nms_canvas_data(null);
-		if ($host === $canvas["core_id"]) {
-			throw new InvalidArgumentException("The core switch is fixed at the centre of the topology.");
-		}
 		foreach (["x", "y"] as $axis) {
 			if (
 				!isset($input[$axis]) ||
