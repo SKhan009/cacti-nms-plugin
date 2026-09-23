@@ -1,6 +1,6 @@
 # Cacti NMS plugins
 
-Installable Cacti plugins are maintained under `plugins/`. The current NMS version is **1.10.76**.
+Installable Cacti plugins are maintained under `plugins/`. The current NMS version is **1.10.77**.
 
 - `plugins/nms/`: device management, topology, discovery, diagnostics and SSH monitoring.
 - `plugins/topology/`: topology runtime.
@@ -18,6 +18,6 @@ Only copy the required plugin folder into Cacti's `plugins` directory. Enable or
 
 The plugin runs without internet access after Cacti and its required packages are installed. Download the repository on a connected machine and transfer `plugins/nms` into the existing Cacti installation, then enable or upgrade NMS in Plugin Management. Keep existing local configuration and data when upgrading.
 
-Diagnostics require the existing Cacti poller to run, a ready collector runner, and executable tools with permission to run under the collector account. Install iputils (Ping), iproute (neighbour cache), traceroute, iperf3 and optionally Netperf from matching offline packages. Pathchar is optional and was not installed or validated on the test VM. Remote bandwidth tests require the corresponding server and permitted network connections at the target.
+Diagnostics require the existing Cacti poller to run, a ready collector runner, and executable tools with permission to run under the collector account. Install iputils (Ping), iproute (neighbour cache), traceroute, iperf3 and optionally Netperf from matching offline packages. Pathchar is optional; a locally built pchar alternative has been installed and exercised on the test VM. See docs/nms/PCHAR_OFFLINE_RHEL.md. Remote bandwidth tests require the corresponding server and permitted network connections at the target.
 
 Validation used RHEL 9.8 aarch64 with SELinux enforcing. Ping, Traceroute, ARP and loopback iPerf3/Netperf passed under the apache collector account. This does not certify every RHEL policy or remote endpoint. For x86_64 RHEL, obtain x86_64 RPMs; the prepared aarch64 bundle is not compatible. OS packages are not included in the Git download.

@@ -307,7 +307,7 @@ function nms_diag_command($row, $tool)
 			$timeout = 2 * $row['trace_hops'] + 5; break;
 		case 'iperf3': $args = ['-c', $target, '-p', '5201', '-t', (string) $row['bandwidth_seconds'], '-J']; $timeout = $row['bandwidth_seconds'] + 10; break;
 		case 'netperf': $args = ['-H', $target, '-p', '12865', '-t', 'TCP_STREAM', '-l', (string) $row['bandwidth_seconds']]; $timeout = $row['bandwidth_seconds'] + 10; break;
-		case 'pathchar': $args = $name === 'pchar' ? ['-n', '-H', (string) $row['trace_hops'], $target] : ['-n', $target]; $timeout = 60; break;
+		case 'pathchar': $args = $name === 'pchar' ? ['-n', '-H', (string) $row['trace_hops'], '-R', '3', '-I', '128', $target] : ['-n', $target]; $timeout = 60; break;
 		default: throw new InvalidArgumentException('Unsupported diagnostic tool.');
 	}
 	return [array_merge([$binary], $args), $timeout];
