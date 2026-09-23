@@ -18,6 +18,7 @@
 	details.hidden = true;
 	let editable = false, savingPosition = false, autoArranging = false;
 	const undoMoves = [], redoMoves = [];
+	let editBaseline = new Map(), exitPending = false;
 	const canEdit = root.dataset.edit === "1",
 		NS = "http://www.w3.org/2000/svg";
 	const colors = { 3: "#228848", 1: "#cf3535", 2: "#d69c13", 0: "#7d8790" },
@@ -1000,23 +1001,67 @@
 	 * Updates save Position.
 	 */
 	async function savePosition(n, old, record = true) {
-		savingPosition = true;
-		try {
-			await post("canvas_position", { host_id: n.id, x: n.x, y: n.y });
-			if (record) {
-				undoMoves.push({id:n.id, before:{...old}, after:{x:n.x,y:n.y}});
-				redoMoves.length = 0;
-			}
-			message("Position saved.");
-			return true;
-		} catch (e) {
-			n.x = old.x;
-			n.y = old.y;
-			draw();
-			message(e.message, true);
-			return false;
-		} finally { savingPosition = false; updateMoveButtons(); }
+		if (record) {
+			undoMoves.push({id:n.id, before:{...old}, after:{x:n.x,y:n.y}});
+			redoMoves.length = 0;
+		}
+		message("Unsaved layout changes."); updateMoveButtons();
+		return true;
 	}
+	function changedNodes() {
+		return data.nodes.filter(n => {
+			const old = editBaseline.get(n.id);
+			return deviceKind(n) !== "switch" && old && (old.x !== n.x || old.y !== n.y);
+		});
+	}
+	async function finishEditing() {
+		if (exitPending || savingPosition || autoArranging || drag || panning) return;
+		exitPending = true;
+		try {
+			const changes = changedNodes();
+			if (changes.length) {
+				const choice = await askLayoutSave();
+				if (choice === "cancel") return;
+				if (choice === "save") {
+					savingPosition = true;
+					try {
+						for (const n of changes) {
+							await post("canvas_position", {host_id:n.id,x:n.x,y:n.y});
+							editBaseline.set(n.id,{x:n.x,y:n.y});
+						}
+					} catch (e) { message("Could not save all positions. Your remaining changes are kept for retry. " + e.message,true); return; }
+					finally { savingPosition = false; updateMoveButtons(); }
+					message("Layout changes saved.");
+				} else {
+					for (const n of changes) Object.assign(n,editBaseline.get(n.id));
+					message("Layout changes discarded.");
+				}
+			}
+			setEditMode(false); await leaveFullscreen();
+		} finally { exitPending = false; }
+	}
+	function askLayoutSave() {
+		return new Promise(resolve => {
+			const dialog = document.createElement("dialog");
+			dialog.className = "nms-layout-save-dialog";
+			dialog.setAttribute("aria-label", "Save layout changes?");
+			const heading = document.createElement("h2"); heading.textContent = "Save layout changes?";
+			const text = document.createElement("p"); text.textContent = "Your device positions have not been saved.";
+			const actions = document.createElement("div"); actions.className = "nms-layout-save-actions";
+			const done = choice => { dialog.close(); dialog.remove(); resolve(choice); };
+			for (const [label,choice] of [["Save changes","save"],["Discard changes","discard"],["Keep editing","cancel"]]) {
+				const button = document.createElement("button"); button.type = "button"; button.textContent = label;
+				button.onclick = () => done(choice); actions.append(button);
+			}
+			dialog.append(heading,text,actions); root.append(dialog);
+			dialog.addEventListener("cancel", e => { e.preventDefault(); done("cancel"); });
+			dialog.showModal();
+		});
+	}
+	window.addEventListener("beforeunload", e => {
+		if (editable && changedNodes().length) { e.preventDefault(); e.returnValue = ""; }
+	});
+
 	svg.addEventListener("pointerup", async (e) => {
         svg.classList.remove("nms-dragging", "nms-panning");
         if (svg.hasPointerCapture(e.pointerId)) svg.releasePointerCapture(e.pointerId);
@@ -1265,7 +1310,7 @@
 	 * Handles refresh.
 	 */
 	async function refresh() {
-		if (drag || panning || busy || savingPosition || autoArranging) return;
+		if (editable || drag || panning || busy || savingPosition || autoArranging) return;
 		busy = true;
 		try {
 			const r = await fetch(
@@ -1319,10 +1364,11 @@
 				if (!await savePosition(n,old)) failures++;
 			}
 		} finally { autoArranging = false; arrangeButton.disabled = false; updateMoveButtons(); fitDevices(); }
-		message(failures ? "Some positions could not be saved. Please retry Auto arrange." : "Auto arrange saved. Undo restores individual device moves.", failures > 0);
+		message(failures ? "Some positions could not be saved. Please retry Auto arrange." : "Auto arranged. Changes are unsaved.", failures > 0);
 	};
 	const editButton = document.getElementById("nms-edit-mode");
 	function setEditMode(active) {
+		if (active && !editable) { editBaseline = new Map(data.nodes.map(n => [n.id,{x:n.x,y:n.y}])); undoMoves.length = redoMoves.length = 0; }
 		editable = active && canEdit;
 		root.classList.toggle("nms-editing", editable);
 		hideTip(); details.hidden = true; detailSelection = null; source = selected = null;
@@ -1344,9 +1390,9 @@
 	}
 	if (editButton && canEdit) editButton.onclick = async () => {
 		if (drag || panning || savingPosition) return;
-		if (editable) { setEditMode(false); await leaveFullscreen(); }
+		if (editable) { await finishEditing(); }
 		else { setEditMode(true); await enterFullscreen(); }
-		message(editable ? "Edit mode: drag devices to arrange them. Positions are saved automatically." : "View mode. Positions saved.");
+		message(editable ? "Edit mode: drag devices to arrange them. Changes are saved only when you choose Save changes." : "View mode.");
 	};
 
 	document.getElementById("nms-map-refresh").onclick = refresh;
@@ -1369,14 +1415,15 @@
 	const fullButton = document.getElementById("nms-fullscreen");
 	function syncFullscreen() {
 		const active = document.fullscreenElement === root || root.classList.contains("nms-fullscreen-fallback");
-		if (!active && editable) setEditMode(false);
+		if (!active && editable) finishEditing();
 		updateMoveButtons();
 		fullButton.textContent = active ? "Exit full screen" : "Full screen";
 		fullButton.setAttribute("aria-pressed", String(active));
 	}
 	fullButton.onclick = async () => {
 		if (drag || panning || savingPosition) return;
-		if (document.fullscreenElement === root || root.classList.contains("nms-fullscreen-fallback")) await leaveFullscreen();
+		if (editable) await finishEditing();
+		else if (document.fullscreenElement === root || root.classList.contains("nms-fullscreen-fallback")) await leaveFullscreen();
 		else { setEditMode(false); await enterFullscreen(); }
 	};
 	document.addEventListener("fullscreenchange", syncFullscreen);

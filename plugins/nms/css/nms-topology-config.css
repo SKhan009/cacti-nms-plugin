@@ -370,3 +370,9 @@
 .nms-canvas-controls button:disabled { opacity:.4; cursor:not-allowed; }
 
 .nms-hybrid:not(.nms-editing) :is(#nms-auto-arrange,#nms-undo,#nms-redo,.nms-edit-connections) { display:none; }
+
+.nms-layout-save-dialog { border:1px solid #ddd; border-radius:12px; padding:28px; max-width:520px; color:#171717; background:#fff; }
+.nms-layout-save-dialog::backdrop { background:#0008; }
+.nms-layout-save-actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:24px; }
+.nms-layout-save-actions button { padding:12px 16px; border:1px solid #171717; border-radius:6px; background:#fff; color:#171717; cursor:pointer; }
+.nms-layout-save-actions button:first-child { background:#171717; color:#fff; }
