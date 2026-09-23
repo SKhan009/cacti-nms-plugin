@@ -355,3 +355,11 @@
 /* Keep short connection status and source labels together. */
 .nms-connections-page .nms-connections-table :is(th,td):nth-child(6),
 .nms-connections-page .nms-connections-table :is(th,td):nth-child(8) { white-space:nowrap; }
+
+.nms-canvas-controls { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.nms-canvas-controls button[aria-pressed="true"] { box-shadow:inset 0 0 0 2px #888; }
+.nms-hybrid:fullscreen,.nms-hybrid.nms-fullscreen-fallback { background:#fff; width:100%; height:100%; display:flex; flex-direction:column; border-radius:0; }
+.nms-hybrid.nms-fullscreen-fallback { position:fixed; inset:0; z-index:100000; }
+.nms-hybrid:is(:fullscreen,.nms-fullscreen-fallback) .nms-canvas-workspace { flex:1; min-height:0; }
+.nms-hybrid:is(:fullscreen,.nms-fullscreen-fallback) .nms-canvas-viewport { height:100%; min-height:0; }
+.nms-hybrid:is(:fullscreen,.nms-fullscreen-fallback) .nms-device-palette { max-height:none; min-height:0; }

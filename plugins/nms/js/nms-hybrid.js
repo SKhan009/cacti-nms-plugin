@@ -16,7 +16,8 @@
 		busy = false;
 	notice.hidden = true;
 	details.hidden = true;
-	const editable = root.dataset.edit === "1",
+	let editable = false;
+	const canEdit = root.dataset.edit === "1",
 		NS = "http://www.w3.org/2000/svg";
 	const colors = { 3: "#228848", 1: "#cf3535", 2: "#d69c13", 0: "#7d8790" },
 		states = { 3: "Up", 1: "Down", 2: "Recovering", 0: "Unknown" };
@@ -1320,6 +1321,36 @@
 		panY = 0;
 		draw();
 	};
+	const editButton = document.getElementById("nms-edit-mode");
+	if (editButton && canEdit) editButton.onclick = () => {
+		if (drag || panning) return;
+		editable = !editable;
+		editButton.textContent = editable ? "Done editing" : "Edit mode";
+		editButton.setAttribute("aria-pressed", String(editable));
+		message(editable ? "Edit mode: drag devices to arrange them. Positions are saved automatically." : "View mode. Positions saved.");
+		draw();
+	};
+	document.getElementById("nms-map-refresh").onclick = refresh;
+	const fullButton = document.getElementById("nms-fullscreen");
+	function syncFullscreen() {
+		const active = document.fullscreenElement === root || root.classList.contains("nms-fullscreen-fallback");
+		fullButton.textContent = active ? "Exit full screen" : "Full screen";
+		fullButton.setAttribute("aria-pressed", String(active));
+	}
+	fullButton.onclick = async () => {
+		if (document.fullscreenElement === root) await document.exitFullscreen();
+		else if (root.classList.contains("nms-fullscreen-fallback")) root.classList.remove("nms-fullscreen-fallback");
+		else {
+			try { await root.requestFullscreen(); }
+			catch (e) { root.classList.add("nms-fullscreen-fallback"); }
+		}
+		syncFullscreen();
+	};
+	document.addEventListener("fullscreenchange", syncFullscreen);
+	document.addEventListener("keydown", (e) => {
+		if (e.key === "Escape") { root.classList.remove("nms-fullscreen-fallback"); syncFullscreen(); }
+	});
+
 	draw();
 	setInterval(
 		() => {
