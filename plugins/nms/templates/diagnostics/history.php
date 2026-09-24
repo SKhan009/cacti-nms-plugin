@@ -1,8 +1,8 @@
-<?php $filters = $history['filters']; $statuses = ['queued' => 'Starting', 'running' => 'Running', 'complete' => 'Passed', 'failed' => 'Failed']; ?>
+<?php $filters = $history['filters']; $statuses = ['queued' => 'Starting', 'running' => 'Running', 'complete' => 'Completed', 'failed' => 'Failed']; ?>
 <section class="nms-panel" id="diagnostic-history">
-    <div class="nms-panel-head"><div><h2>Test history</h2><p>Your saved tests by device. Open a result to see its full output.</p></div></div>
+    <div class="nms-panel-head"><div><h2>Test history</h2><p>Your saved tests by device. Completed means the command finished; open the result to check replies and measurements.</p></div></div>
     <form method="get" id="nms-history-filters" class="nms-config-form nms-history-filters" action="diagnostics.php#diagnostic-history">
-        <input type="hidden" name="section" value="run">
+        <input type="hidden" name="section" value="run"><input type="hidden" name="node_id" value="<?php print $node_id; ?>">
         <label>Device<select name="history_device"><option value="0">All devices</option>
         <?php foreach ($history['devices'] as $device) { ?>
             <option value="<?php print (int) $device['id']; ?>" <?php print (int) $device['id'] === $filters['history_device'] ? 'selected' : ''; ?>><?php print nms_h($device['description'] . ' · ' . $device['hostname']); ?></option>
@@ -17,12 +17,12 @@
         <?php } ?></select></label>
         <label>From date<input type="date" name="history_from" value="<?php print nms_h($filters['history_from']); ?>"></label>
         <label>To date<input type="date" name="history_to" value="<?php print nms_h($filters['history_to']); ?>"></label>
-        <div class="nms-history-actions"><button type="submit">Apply filters</button><a class="nms-list-action" href="diagnostics.php?section=run#diagnostic-history">Reset</a></div>
+        <div class="nms-history-actions"><button type="submit">Apply filters</button><a class="nms-list-action" href="diagnostics.php?section=run&amp;node_id=<?php print $node_id; ?>#diagnostic-history">Reset</a></div>
     </form>
     <div class="nms-table-wrap"><table class="nms-table" data-server-pagination="true">
         <thead><tr><th>Test</th><th>Device</th><th>Tool</th><th>Status</th><th>Requested</th><th>Finished</th><th>Result</th></tr></thead>
         <tbody><?php foreach ($history['rows'] as $job) { ?>
-            <tr><td>#<?php print (int) $job['id']; ?></td><td><?php print nms_h($job['description']); ?><br><small><?php print nms_h($job['hostname']); ?></small></td><td><?php print nms_h(nms_diag_labels()[$job['tool']] ?? $job['tool']); ?></td><td><span class="nms-test-status <?php print $job['status'] === 'complete' ? 'passed' : ($job['status'] === 'failed' ? 'failed' : 'pending'); ?>"><?php print nms_h($statuses[$job['status']] ?? $job['status']); ?></span></td><td><?php print nms_h($job['requested_at']); ?></td><td><?php print nms_h($job['finished_at'] ?: '—'); ?></td><td><a class="nms-list-action" href="<?php print nms_h(nms_diag_history_url($filters, ['history_page' => $history['page'], 'job_id' => (int) $job['id']])); ?>#diagnostic-result">View result</a></td></tr>
+            <tr><td>#<?php print (int) $job['id']; ?></td><td><?php print nms_h($job['description']); ?><br><small><?php print nms_h($job['hostname']); ?></small></td><td><?php print nms_h(nms_diag_labels()[$job['tool']] ?? $job['tool']); ?></td><td><span class="nms-test-status <?php print $job['status'] === 'complete' ? 'completed' : ($job['status'] === 'failed' ? 'failed' : 'pending'); ?>"><?php print nms_h($statuses[$job['status']] ?? $job['status']); ?></span></td><td><?php print nms_h($job['requested_at']); ?></td><td><?php print nms_h($job['finished_at'] ?: '—'); ?></td><td><a class="nms-list-action" href="<?php print nms_h(nms_diag_history_url($filters, ['history_page' => $history['page'], 'job_id' => (int) $job['id']])); ?>#diagnostic-result">View result</a></td></tr>
         <?php } ?>
         <?php if (!$history['rows']) { ?><tr><td colspan="7" class="nms-empty">No tests match these filters.</td></tr><?php } ?>
         </tbody>

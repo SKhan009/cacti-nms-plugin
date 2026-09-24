@@ -86,11 +86,11 @@ $base = "topology.php?tab=appearance";
 } ?></tbody></table></div></section>
 <?php if (
 	$editing
-) { ?><dialog id="nmsAppearanceDialog" class="nms-appearance-dialog" aria-labelledby="nmsAppearanceTitle"><div class="nms-panel-head"><h2 id="nmsAppearanceTitle"><?php print $section ===
+) { ?><dialog id="nmsAppearanceDialog" data-nms-auto-open class="nms-appearance-dialog" aria-labelledby="nmsAppearanceTitle"><div class="nms-panel-head"><h2 id="nmsAppearanceTitle"><?php print $section ===
 "types"
 	? ($id ? "Edit" : "Add") . " device type"
 	: ($segment["id"] ? "Edit" : "Add") .
-		" segment"; ?></h2><button type="button" data-catalog-close aria-label="Close form" class="nms-popup-close nms-catalog-button"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+		" segment"; ?></h2><button type="button" data-nms-dialog-close aria-label="Close form" class="nms-popup-close nms-catalog-button"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 <?php if ($error) { ?><p class="nms-catalog-error" role="alert"><?php print nms_h($error); ?></p><?php } ?>
 <form method="post" class="nms-catalog-form">
 <?php if ($section === "segments") {
@@ -128,7 +128,7 @@ $base = "topology.php?tab=appearance";
 	$type["color"],
 ); ?>"><small>Health lights keep their status colour. Switches retain the metallic chassis design.</small></label><?php
 } ?>
-<div class="nms-catalog-footer"><button type="button" data-catalog-close class="nms-catalog-button">Cancel</button><button type="submit">Save <?php print $section ===
+<div class="nms-catalog-footer"><button type="button" data-nms-dialog-close class="nms-cancel-button nms-catalog-button">Cancel</button><button type="submit">Save <?php print $section ===
 "types"
 	? "device type"
 	: "segment"; ?></button></div></form></dialog><?php } ?>

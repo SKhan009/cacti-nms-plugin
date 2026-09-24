@@ -6,19 +6,27 @@
 	"use strict";
 
 	var diagnosticHelp = {
-        ping: "Checks whether the device responds. Shows response time and packet loss; blocked ICMP can prevent replies.",
-        traceroute: "Shows the network hops to the device. Helps locate delays; some routers may not reply.",
-        arp: "Shows IP and MAC addresses learned by the collector. It does not scan the network or read the device’s ARP table.",
-        iperf3: "Measures TCP speed by sending test traffic. Requires an iperf3 server on the target, using TCP port 5201.",
-        netperf: "Measures TCP speed by sending test traffic. Requires netperf on the collector and netserver on the target.",
-        pathchar: "Estimates bandwidth along the network path. Requires Pathchar on the collector; blocked probes may give incomplete results."
-    };
+        "ping": "Checks whether the device replies and how quickly.",
+        "traceroute": "Shows the network path to the device to help find where a connection stops.",
+        "traceroute_icmp": "Traces the path to the device using ping-style checks to help locate connection problems.",
+        "traceroute_tcp": "Traces the path to port 443 when ordinary ping checks are blocked.",
+        "mtr_icmp": "Repeats path checks to help find delays and lost replies on the way to the device.",
+        "mtr_tcp": "Checks the path to port 443 repeatedly to help investigate slow or unstable connections.",
+        "nping_icmp": "Sends a few ping-style checks to compare device response time and missing replies.",
+        "nping_tcp": "Checks whether the device responds on port 443 when ordinary ping is blocked.",
+        "hping3_icmp": "Checks whether an IPv4 device replies and helps spot delays or lost replies.",
+        "hping3_tcp": "Checks how an IPv4 device responds on port 443 to help investigate blocked connections.",
+        "arp": "Shows nearby device addresses already learned by the collector.",
+        "iperf3": "Measures transfer speed to a device running an iPerf3 test server.",
+        "netperf": "Measures transfer speed to a device running a Netperf test server.",
+        "pathchar": "Estimates where network capacity may be limited along the path to the device."
+};
 
     var fieldHelp = {
         diagnostic_profile_name: "Name this set of tests and limits, for example Branch office checks.",
         diagnostic_profile_id: "Choose the tests and limits allowed for this device. Assigning a profile does not run tests.",
-        ping_count: "Number of ping probes per test (1–10). More probes take longer.",
-        trace_hops: "Maximum network hops to check (1–30). For example, 20 checks up to twenty hops.",
+        ping_count: "Number of checks to send (1–10). More checks help spot occasional missing replies.",
+        trace_hops: "How far Traceroute and MTR look along the path to the device (1–30 hops).",
         bandwidth_seconds: "How long iPerf3 or Netperf sends traffic (1–30 seconds). Longer tests use more bandwidth.",
         tool: "Choose a test to run. Only tools allowed by the device’s profile are listed.",
 		rule_name:
@@ -196,7 +204,9 @@
 	var sectionHelp = {
         "Enabled tools": "Choose which tests this profile allows. Checking a box does not run or install the tool.",
         "On-demand diagnostics": "Allow manual tests from the device’s collector. Assigning a profile does not schedule tests.",
-        "Collector tool requirements": "Tools must be installed on the assigned collector. Bandwidth tests also need a server on the target.",
+        "Device diagnostics": "Check why a device is unreachable, slow or losing replies.",
+        "Bandwidth tests": "Check transfer speed or estimate capacity along the network path.",
+        "Collector tool requirements": "Choose a check to investigate device reachability, connection delays or transfer speed.",
         "Run a diagnostic": "Choose a device and tool, then run the test. Results appear automatically.",
 		"Device identity":
 			"Core Cacti fields that identify the device and connect it to a host template, site, and collector.",

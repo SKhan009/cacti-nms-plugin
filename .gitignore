@@ -1,2 +1,9 @@
 __pycache__/
 *.py[cod]
+
+# Local generated previews, QA artifacts and machine files
+/outputs/
+.DS_Store
+._*
+# Superseded private specification notes
+/docs/nms/NODE_GNSS_ROADMAP.md

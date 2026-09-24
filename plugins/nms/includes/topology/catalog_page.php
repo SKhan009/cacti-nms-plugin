@@ -23,7 +23,7 @@ nms_prepare_page(
 	"topology",
 	"NMS · " . ($topology_tab === "appearance" ? "Device appearance" : "Discovery inventory"),
 	"css/nms-topology-config.css",
-	"js/nms-appearance.js",
+	"",
 );
 require __DIR__ . "/../../templates/app_header.php";
 /**

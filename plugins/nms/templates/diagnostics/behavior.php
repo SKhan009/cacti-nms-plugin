@@ -9,7 +9,9 @@
         history.scrollRestoration = 'manual';
         var refreshedUrl = new URL(location.href);
         refreshedUrl.hash = '';
+        var selectedNode = refreshedUrl.searchParams.get('node_id');
         refreshedUrl.search = '';
+        if (selectedNode) refreshedUrl.searchParams.set('node_id', selectedNode);
         if (refreshedUrl.href !== location.href) {
             location.replace(refreshedUrl.href);
             return;
@@ -34,17 +36,21 @@
 			window.history.replaceState(window.history.state, '', pageUrl.href);
 		}
 	}
-	var host = document.getElementById('nmsDiagnosticHost');
-	var tool = document.getElementById('nmsDiagnosticTool');
-	if (!host || !tool) return;
+    document.querySelectorAll('[data-diagnostic-form]').forEach(function(form) {
+    var host = form.querySelector('[name=host_id]');
+    var tool = form.querySelector('[name=tool]');
+    var panel = form.closest('[data-diagnostic-group]');
 
 	function storageKey() {
-		return 'nms.diagnostic.tool.' + host.value;
+		return 'nms.diagnostic.tool.' + form.dataset.diagnosticForm + '.' + host.value;
 	}
 
 	function applyAllowedTools(restoreSaved) {
 		var selected = host.selectedOptions[0];
-		var allowed = selected ? selected.dataset.tools.split(',') : [];
+		var assigned = selected ? selected.dataset.tools.split(',') : [];
+        var allowed = Array.from(tool.options).map(function(option) { return option.value; }).filter(function(value) { return assigned.includes(value); });
+        form.querySelector('button[type=submit]').disabled = allowed.length === 0;
+        form.querySelector('[data-no-tools]').hidden = allowed.length !== 0;
 		Array.from(tool.options).forEach(function(option) {
 			option.hidden = !allowed.includes(option.value);
 			option.disabled = !allowed.includes(option.value);
@@ -60,11 +66,12 @@
         var source = document.getElementById('nms-diagnostic-runners');
         var runners = source ? JSON.parse(source.textContent) : {};
         var runner = selected ? runners[selected.dataset.collector] : null;
-        document.querySelectorAll('[data-diagnostic-tool]').forEach(function(card) {
+        panel.querySelectorAll('[data-diagnostic-tool]').forEach(function(card) {
             var installed = runner && runner.tools[card.dataset.diagnosticTool];
             card.classList.toggle('ready', !!installed);
             card.classList.toggle('unavailable', !installed);
-            card.querySelector('[data-diagnostic-availability]').textContent = !runner ? 'Collector runner unavailable' : installed ? 'Installed on collector' : card.dataset.diagnosticTool === 'pathchar' ? 'Unavailable — install pathchar or pchar' : 'Not installed on collector';
+            var status = !runner ? 'Collector runner unavailable' : installed ? 'Installed on collector' : card.dataset.diagnosticTool === 'pathchar' ? 'Unavailable — install pathchar or pchar' : 'Not installed on collector';
+            card.setAttribute('aria-label', card.querySelector('h3').textContent + ': ' + status);
         });
     }
     host.addEventListener('change', function() { applyAllowedTools(true); updateReadiness(); });
@@ -76,6 +83,7 @@
     });
 	applyAllowedTools(false);
     updateReadiness();
+    });
     var progress = document.getElementById('nms-diagnostic-status');
     if (progress) {
         var started = Date.now();
@@ -86,7 +94,7 @@
                 var state = await response.json();
                 if (state.finished) {
                     // Navigate to the saved result; browser reload intentionally resets the page.
-                    window.location.replace('diagnostics.php?section=run&job_id=' + encodeURIComponent(progress.dataset.jobId) + '&view=result#diagnostic-result');
+                    window.location.replace('diagnostics.php?section=run&node_id=' + encodeURIComponent(new URL(location.href).searchParams.get('node_id') || '0') + '&job_id=' + encodeURIComponent(progress.dataset.jobId) + '&view=result#diagnostic-result');
                     return;
                 }
                 progress.querySelector('[data-diagnostic-progress-title]').textContent = state.status === 'running' ? 'Test running…' : 'Starting test…';

@@ -9,12 +9,20 @@
 function nms_diag_labels()
 {
 	return [
-		"ping" => "Ping",
-		"traceroute" => "Traceroute",
-		"arp" => "Collector ARP lookup",
-		"iperf3" => "iPerf3 bandwidth",
-		"netperf" => "Netperf bandwidth",
-		"pathchar" => "Pathchar capacity estimate",
+		"ping" => "Ping ICMP",
+		"traceroute" => "Traceroute UDP",
+		"traceroute_icmp" => "Traceroute ICMP",
+		"traceroute_tcp" => "Traceroute TCP",
+		"mtr_icmp" => "MTR ICMP",
+		"mtr_tcp" => "MTR TCP",
+		"nping_icmp" => "Nping ICMP",
+		"nping_tcp" => "Nping TCP",
+		"hping3_icmp" => "hping3 ICMP",
+		"hping3_tcp" => "hping3 TCP",
+		"arp" => "ARP",
+		"iperf3" => "iPerf3",
+		"netperf" => "Netperf",
+		"pathchar" => "Pathchar",
 	];
 }
 
@@ -285,19 +293,44 @@ function nms_diag_signature($row)
 	])), JSON_THROW_ON_ERROR));
 }
 
+/** Resolve the same executable for readiness and execution; never change requested protocol. */
+function nms_diag_executable($tool, $lookup = null)
+{
+	if (!isset(nms_diag_labels()[$tool])) throw new InvalidArgumentException('Unsupported diagnostic tool.');
+	$lookup = $lookup ?? 'nms_diag_program';
+	$name = $tool === 'arp' ? 'ip' : explode('_', $tool)[0];
+	$binary = $lookup($name);
+	if (!$binary && $tool === 'pathchar') { $name = 'pchar'; $binary = $lookup($name); }
+	// tracepath supports only the legacy UDP check, never TCP or ICMP modes.
+	if (!$binary && $tool === 'traceroute') { $name = 'tracepath'; $binary = $lookup($name); }
+	return [$name, $binary];
+}
+
 /** Build only approved executable arguments; no socket preflight or shell interpolation. */
 function nms_diag_command($row, $tool)
 {
-	$target = nms_diag_target($row['hostname']);
-	$name = $tool === 'arp' ? 'ip' : $tool;
-	$binary = nms_diag_program($name);
-	if ($tool === 'pathchar' && !$binary) { $name = 'pchar'; $binary = nms_diag_program($name); }
-	if ($tool === 'traceroute' && !$binary) {
-		$name = 'tracepath';
-		$binary = nms_diag_program($name);
-	}
+	[$name, $binary] = nms_diag_executable($tool);
 	if (!$binary && $tool === 'pathchar') throw new RuntimeException('Path capacity estimation requires pathchar or pchar on this collector. Install an approved build matching the collector OS and architecture; raw-socket permission is also required. Traceroute cannot replace this measurement.');
 	if (!$binary) throw new RuntimeException($name . ' was not found or is not executable by this collector. Install the matching tool for its OS and architecture.');
+	[$args, $timeout] = nms_diag_arguments($row, $tool, $name);
+	return [array_merge([$binary], $args), $timeout];
+}
+
+/** Pure argument builder, also validating bounds for direct callers. */
+function nms_diag_arguments($row, $tool, $name)
+{
+	$target = nms_diag_target($row['hostname']);
+	nms_diag_profile_validate(['diagnostic_profile_name' => $row['name'], 'diagnostic_tools' => [$tool],
+		'ping_count' => $row['ping_count'], 'trace_hops' => $row['trace_hops'], 'bandwidth_seconds' => $row['bandwidth_seconds']]);
+	if (strpos($tool, 'hping3_') === 0 && filter_var($target, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+		throw new InvalidArgumentException('hping3 supports IPv4 targets only. Choose Nping or MTR for IPv6.');
+	}
+	// Nping accepts octet ranges as targets; a device check must remain single-host.
+	if (strpos($tool, 'nping_') === 0 && preg_match('/^[0-9.-]+$/D', $target) && strpos($target, '-') !== false) {
+		throw new InvalidArgumentException('Nping requires one device address, not an address range.');
+	}
+	$ipv6 = filter_var($target, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) ? ['-6'] : [];
+
 	$timeout = 40;
 	switch ($tool) {
 		case 'arp': $args = ['neigh', 'show']; $timeout = 5; break;
@@ -305,12 +338,34 @@ function nms_diag_command($row, $tool)
 		case 'traceroute':
 			$args = $name === 'tracepath' ? ['-n', '-m', (string) $row['trace_hops'], $target] : ['-n', '-q', '1', '-m', (string) $row['trace_hops'], '-w', '2', $target];
 			$timeout = 2 * $row['trace_hops'] + 5; break;
+		case 'traceroute_icmp':
+		case 'traceroute_tcp':
+			$args = array_merge($ipv6, ['-n', '-q', '1', '-m', (string) $row['trace_hops'], '-w', '2'],
+				$tool === 'traceroute_tcp' ? ['-T', '-p', '443'] : ['-I'], [$target]);
+			$timeout = 2 * $row['trace_hops'] + 5; break;
+		case 'mtr_icmp':
+		case 'mtr_tcp':
+			$args = array_merge($ipv6, ['--report', '--no-dns', '--report-cycles', (string) $row['ping_count'],
+				'--max-ttl', (string) $row['trace_hops'], '--interval', '1'],
+				$tool === 'mtr_tcp' ? ['--tcp', '--port', '443'] : [], [$target]);
+			$timeout = 60; break;
+		case 'nping_icmp':
+		case 'nping_tcp':
+			// Nping has no -n switch. --privileged permits capability-based raw sockets; it grants no privilege itself.
+			$args = array_merge($ipv6, ['--privileged', '-c', (string) $row['ping_count'], '--delay', '1s'],
+				$tool === 'nping_tcp' ? ['--tcp', '--flags', 'syn', '-p', '443'] : ['--icmp'], [$target]);
+			$timeout = $row['ping_count'] + 10; break;
+		case 'hping3_icmp':
+		case 'hping3_tcp':
+			$args = array_merge(['-n', '-c', (string) $row['ping_count'], '-i', '1'],
+				$tool === 'hping3_tcp' ? ['-S', '-p', '443'] : ['-1'], [$target]);
+			$timeout = $row['ping_count'] + 15; break;
 		case 'iperf3': $args = ['-c', $target, '-p', '5201', '-t', (string) $row['bandwidth_seconds'], '-J']; $timeout = $row['bandwidth_seconds'] + 10; break;
 		case 'netperf': $args = ['-H', $target, '-p', '12865', '-t', 'TCP_STREAM', '-l', (string) $row['bandwidth_seconds']]; $timeout = $row['bandwidth_seconds'] + 10; break;
 		case 'pathchar': $args = $name === 'pchar' ? ['-n', '-H', (string) $row['trace_hops'], '-R', '3', '-I', '128', $target] : ['-n', $target]; $timeout = 60; break;
 		default: throw new InvalidArgumentException('Unsupported diagnostic tool.');
 	}
-	return [array_merge([$binary], $args), $timeout];
+	return [$args, $timeout];
 }
 
 /** Convert actual executable errors into explanations without inventing an exit status. */
@@ -366,11 +421,10 @@ function nms_diag_execute($row, $tool)
 	require_once __DIR__ . '/inventory.php';
 	if (nms_inventory_collector_id() !== (int) $row['poller_id']) throw new RuntimeException('Diagnostic belongs to another collector.');
 	[$command, $timeout] = nms_diag_command($row, $tool);
-	require_once __DIR__ . '/diagnostic_iperf.php';
+	require_once __DIR__ . '/diagnostic_bandwidth.php';
 	if ($tool === 'iperf3' && nms_diag_collector_address($row['hostname'])) {
 		[$command, $result] = nms_diag_iperf_self_test($command, $timeout);
 	} elseif ($tool === 'netperf' && nms_diag_collector_address($row['hostname'])) {
-		require_once __DIR__ . '/diagnostic_netperf.php';
 		[$command, $result] = nms_diag_netperf_self_test($command, $timeout);
 	} else {
 		$result = nms_diag_run_command($command, $timeout);

@@ -17,3 +17,9 @@ $h=nms_diag_history(['history_tool'=>"' OR 1=1",'history_status'=>['bad'],'histo
 check($h['filters']['history_tool']==='' && $h['filters']['history_status']==='' && $h['filters']['history_from']==='' && $h['filters']['history_size']===10 && $h['page']===1,'Invalid input normalized');
 check(strpos(nms_diag_history_url(['history_device'=>2],['history_page'=>3]),'history_device=2&history_page=3')!==false,'Navigation retains filters');
 echo "7 history checks passed\n";
+$queries=[];
+$h=nms_diag_history(['node_id'=>23,'history_size'=>10]);
+check(strpos($queries[0][0],'nm.host_id=h.id AND nm.node_id=?')!==false,'Node restricts history device choices');
+check($queries[0][1]===[7,23] && $queries[2][1]===[7,23],'Node applies to history rows with bound parameters');
+check(strpos(nms_diag_history_url($h['filters'],['history_page'=>2]),'node_id=23')!==false,'Node persists across history navigation');
+echo "Node-scoped history checks passed\n";

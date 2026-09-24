@@ -1,8 +1,9 @@
 <?php
 require __DIR__ . '/../../plugins/nms/includes/diagnostics.php';
-require __DIR__ . '/../../plugins/nms/includes/diagnostic_iperf.php';
-require __DIR__ . '/../../plugins/nms/includes/diagnostic_netperf.php';
-foreach (['127.0.0.1'=>true,'127.2.3.4'=>true,'::1'=>true,'192.0.2.1'=>false,'localhost'=>false,'127.attacker.example'=>false] as $target=>$expected) {
+require __DIR__ . '/../../plugins/nms/includes/diagnostic_bandwidth.php';
+foreach (['127.0.0.1'=>true,'127.2.3.4'=>true,'::1'=>true,'0:0:0:0:0:0:0:1'=>true,
+    '::ffff:127.2.3.4'=>true,'::ffff:192.0.2.1'=>false,'2001:db8::1'=>false,
+    '192.0.2.1'=>false,'localhost'=>false,'127.attacker.example'=>false] as $target=>$expected) {
     if ((bool)nms_diag_iperf_loopback($target)!==$expected) throw new RuntimeException('Loopback validation failed');
 }
 try {

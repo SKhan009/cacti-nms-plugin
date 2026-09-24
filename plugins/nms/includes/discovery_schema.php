@@ -15,7 +15,7 @@ function nms_discovery_schema()
 		"CREATE TABLE IF NOT EXISTS plugin_nms_discovery_network_jobs (network_id INT UNSIGNED PRIMARY KEY,methods VARCHAR(40) NOT NULL,ports VARCHAR(100) NOT NULL,snmp_item_id INT UNSIGNED NOT NULL DEFAULT 0,follow_schedule TINYINT NOT NULL DEFAULT 0,created_by INT UNSIGNED NOT NULL,revision INT UNSIGNED NOT NULL DEFAULT 1,status VARCHAR(16) NOT NULL DEFAULT 'queued',progress_cursor INT UNSIGNED NOT NULL DEFAULT 0,config_hash CHAR(64) NOT NULL DEFAULT '',results_json MEDIUMTEXT NOT NULL,requested_at DATETIME NOT NULL,finished_at DATETIME NULL,native_started VARCHAR(30) NOT NULL DEFAULT '',error VARCHAR(255) NOT NULL DEFAULT '') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 	);
 	nms_category_execute(
-		"CREATE TABLE IF NOT EXISTS plugin_nms_diagnostic_profiles (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,name VARCHAR(100) NOT NULL,tools VARCHAR(80) NOT NULL,ping_count TINYINT UNSIGNED NOT NULL DEFAULT 4,trace_hops TINYINT UNSIGNED NOT NULL DEFAULT 20,bandwidth_seconds TINYINT UNSIGNED NOT NULL DEFAULT 10,updated_by INT UNSIGNED NOT NULL,updated_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+		"CREATE TABLE IF NOT EXISTS plugin_nms_diagnostic_profiles (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,name VARCHAR(100) NOT NULL,tools VARCHAR(255) NOT NULL,ping_count TINYINT UNSIGNED NOT NULL DEFAULT 4,trace_hops TINYINT UNSIGNED NOT NULL DEFAULT 20,bandwidth_seconds TINYINT UNSIGNED NOT NULL DEFAULT 10,updated_by INT UNSIGNED NOT NULL,updated_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 	);
 	nms_category_execute(
 		"CREATE TABLE IF NOT EXISTS plugin_nms_diagnostic_devices (host_id MEDIUMINT UNSIGNED PRIMARY KEY,profile_id INT UNSIGNED NOT NULL,KEY(profile_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
@@ -44,6 +44,8 @@ function nms_discovery_schema()
 			nms_category_execute("ALTER TABLE plugin_nms_device_metadata ADD COLUMN " . $column . " " . $definition);
 		}
 	}
+	// Preserve existing profiles while allowing all protocol-specific tool choices.
+	nms_category_execute("ALTER TABLE plugin_nms_diagnostic_profiles MODIFY tools VARCHAR(255) NOT NULL");
 	// Additive migration preserves existing LLDP/CDP assignments and snapshots.
 	nms_category_execute("ALTER TABLE plugin_nms_discovery_presets MODIFY protocol VARCHAR(64) NOT NULL");
 	foreach (

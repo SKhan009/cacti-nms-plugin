@@ -407,6 +407,7 @@ body.nms-standalone .nms-pagination .nms-page-button:focus-visible,
 body.nms-standalone .nms-list-action:focus-visible { outline:2px solid #555; outline-offset:3px; }
 .nms-test-status { display:inline-flex; align-items:center; padding:4px 9px; border-radius:5px; font-weight:600; font-size:12px; white-space:nowrap; }
 .nms-test-status.passed { background:#eaf7ee; color:#185b30; }
+.nms-test-status.completed { background:#eef2f6; color:#334155; }
 .nms-test-status.failed { background:#fff0f0; color:#8c2020; }
 .nms-test-status.pending { background:#eef4fc; color:#234f80; }
 #diagnostic-history, #diagnostic-result { scroll-margin-top:110px; }

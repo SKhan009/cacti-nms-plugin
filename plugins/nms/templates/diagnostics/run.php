@@ -1,68 +1,55 @@
-<section class="nms-panel nms-diagnostic-readiness">
-	<div class="nms-panel-head">
-		<div>
-			<h2>Collector tool requirements</h2>
-			<p>Tests start on the selected device’s collector as soon as its runner is ready. Results appear automatically.</p>
-		</div>
-	</div>
-
-	<div class="nms-diagnostic-readiness-grid">
-		<?php foreach (nms_diag_labels() as $key => $label) {
-			$tool = $nms_diagnostic_readiness[$key]; ?>
-			<article data-diagnostic-tool="<?php print nms_h($key); ?>">
-				<h3><?php print nms_h($label); ?></h3>
-				<strong data-diagnostic-availability>Checking collector</strong>
-				<p><?php print nms_h($tool["purpose"]); ?></p>
-				<small><?php print nms_h($tool["requirement"]); ?></small>
-			</article>
-		<?php } ?>
-	</div>
-</section>
-
-
 <?php
-/** Render the on-demand diagnostic form, collector readiness and last result. */
+/** Separate reachability checks from bandwidth measurements while sharing saved results. */
+$diagnostic_groups = [
+    'device' => ['title' => 'Device diagnostics', 'description' => 'Check device replies, delays and the network path.',
+        'tools' => ['ping', 'traceroute', 'traceroute_icmp', 'traceroute_tcp', 'mtr_icmp', 'mtr_tcp', 'nping_icmp', 'nping_tcp', 'hping3_icmp', 'hping3_tcp', 'arp']],
+    'bandwidth' => ['title' => 'Bandwidth tests', 'description' => 'Measure transfer speed or estimate path capacity. iPerf3 and Netperf need a test server on remote devices.',
+        'tools' => ['iperf3', 'netperf', 'pathchar']],
+];
+foreach ($diagnostic_groups as $group_key => $group) {
+    $group_id = $group_key === 'device' ? 'diagnostic-run' : 'bandwidth-run';
+    $host_id = $group_key === 'device' ? 'nmsDiagnosticHost' : 'nmsBandwidthHost';
+    $tool_id = $group_key === 'device' ? 'nmsDiagnosticTool' : 'nmsBandwidthTool';
 ?>
-<section id="diagnostic-run" class="nms-panel">
-	<div class="nms-panel-head">
-		<div>
-			<h2>Run a diagnostic</h2>
-			<p>Ping and traceroute test reachability. Collector ARP lookup displays the full collector neighbour cache. iPerf3 and Netperf generate test traffic to the selected device.</p>
-		</div>
-	</div>
-
-	<?php if (!$devices) { ?>
-		<p class="nms-empty">No device has a diagnostic profile. Create a profile, then choose it in Add/Edit device → On-demand diagnostics.</p>
-	<?php } else { ?>
-		<form method="post" action="diagnostics.php#diagnostic-run" class="nms-config-form nms-diagnostic-run-form">
-			<input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>">
-			<input type="hidden" name="nms_action" value="run_diagnostic">
-
-			<label>
-				Device
-				<select id="nmsDiagnosticHost" name="host_id" required>
-					<?php foreach ($devices as $device) { ?>
-						<option value="<?php print (int) $device["id"]; ?>" data-collector="<?php print (int) $device["poller_id"]; ?>" data-tools="<?php print nms_h($device["tools"]); ?>" <?php print (int) $device["id"] === $selected_diagnostic_host_id ? "selected" : ""; ?>>
-							<?php print nms_h($device["description"] . " · " . $device["hostname"] . " · " . $device["profile_name"] . " · Collector " . (int) $device["poller_id"]); ?>
-						</option>
-					<?php } ?>
-				</select>
-			</label>
-
-			<label>
-				Tool
-				<select id="nmsDiagnosticTool" name="tool" required>
-					<?php foreach (nms_diag_labels() as $key => $label) { ?>
-						<option value="<?php print nms_h($key); ?>" <?php print $key === $selected_diagnostic_tool ? "selected" : ""; ?>><?php print nms_h($label); ?></option>
-					<?php } ?>
-				</select>
-			</label>
-
-
-			<button type="submit" class="nms-diagnostic-run-button">Run selected test</button>
-		</form>
-	<?php } ?>
+<section id="<?php print $group_id; ?>" class="nms-panel nms-diagnostic-readiness" data-diagnostic-group="<?php print $group_key; ?>">
+    <div class="nms-panel-head"><div>
+        <h2><?php print nms_h($group['title']); ?></h2>
+        <p><?php print nms_h($group['description']); ?></p>
+    </div></div>
+    <div class="nms-diagnostic-readiness-grid">
+        <?php foreach ($group['tools'] as $key) { ?>
+        <article tabindex="0" data-diagnostic-tool="<?php print nms_h($key); ?>" data-nms-tip="<?php print nms_h($nms_diagnostic_readiness[$key]); ?>">
+            <h3><?php print nms_h(nms_diag_labels()[$key]); ?></h3>
+            <span class="nms-help-icon" aria-hidden="true">?</span>
+        </article>
+        <?php } ?>
+    </div>
+    <?php if (!$devices) { ?>
+    <p class="nms-empty">Assign a diagnostic profile to a device to run these checks.</p>
+    <?php } else { ?>
+    <form method="post" action="diagnostics.php?node_id=<?php print $node_id; ?>#<?php print $group_id; ?>" class="nms-config-form nms-diagnostic-run-form" data-diagnostic-form="<?php print $group_key; ?>">
+        <input type="hidden" name="__csrf_magic" value="<?php print nms_h($nms_csrf_token); ?>">
+        <input type="hidden" name="nms_action" value="run_diagnostic">
+        <label>Device
+            <select id="<?php print $host_id; ?>" name="host_id" required>
+            <?php foreach ($devices as $device) { ?>
+                <option value="<?php print (int)$device['id']; ?>" data-collector="<?php print (int)$device['poller_id']; ?>" data-tools="<?php print nms_h($device['tools']); ?>" <?php print (int)$device['id'] === $selected_diagnostic_host_id ? 'selected' : ''; ?>><?php print nms_h($device['description'] . ' · ' . $device['hostname']); ?></option>
+            <?php } ?>
+            </select>
+        </label>
+        <label>Test
+            <select id="<?php print $tool_id; ?>" name="tool" required>
+            <?php foreach ($group['tools'] as $key) { ?>
+                <option value="<?php print nms_h($key); ?>" <?php print $key === $selected_diagnostic_tool ? 'selected' : ''; ?>><?php print nms_h(nms_diag_labels()[$key]); ?></option>
+            <?php } ?>
+            </select>
+        </label>
+        <p class="nms-empty" data-no-tools hidden>This device’s profile has no tests enabled in this section.</p>
+        <button type="submit" class="nms-diagnostic-run-button"><?php print $group_key === 'device' ? 'Run device diagnostic' : 'Run bandwidth test'; ?></button>
+    </form>
+    <?php } ?>
 </section>
+<?php } ?>
 
 <?php if ($diagnostic_job && in_array($diagnostic_job['status'], ['queued', 'running'], true)) { ?>
     <section id="nms-diagnostic-status" class="nms-panel nms-diagnostic-status" aria-live="polite" data-job-id="<?php print (int) $diagnostic_job['id']; ?>">
@@ -100,6 +87,14 @@
                 <?php foreach ($description['lines'] as $explanation) { ?><p><?php print nms_h($explanation); ?></p><?php } ?>
             </div>
             <div id="result-technical" role="tabpanel" aria-labelledby="result-technical-tab" hidden>
+                <?php if (preg_match('/\A\$ ([^\r\n]+)(?:\r?\n|$)/', (string) ($result['output'] ?? ''), $recorded_command)) { ?>
+                <p><strong>Manual sudo command</strong> — run on the execution host shown above.</p>
+                <pre class="nms-diagnostic-output"><?php print nms_h('sudo ' . $recorded_command[1]); ?></pre>
+                <?php if (!empty($result['self_test']) && in_array($result['tool'] ?? '', ['iperf3', 'netperf'], true)) { ?>
+                <p>This test used a temporary local server that has stopped. Start a matching server on the recorded address and port before repeating this command.</p>
+                <?php } ?>
+                <p><strong>Recorded collector command and output</strong> — the collector ran this without sudo.</p>
+                <?php } ?>
                 <pre class="nms-diagnostic-output"><?php print nms_h(($result["output"] ?? "") ?: "No output returned."); ?></pre>
             </div>
         </div>

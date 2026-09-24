@@ -22,6 +22,11 @@ require_once $config["base_path"] . "/plugins/nms/includes/graph_template_manage
 // Require an explicit lifecycle upgrade; viewing devices never renames core templates.
 nms_require_database();
 
+if (get_nfilter_request_var("tab") === "nodes") {
+    require __DIR__ . "/includes/nodes/page.php";
+    exit;
+}
+
 if ($_SERVER["REQUEST_METHOD"] === "GET" && get_nfilter_request_var("nms_status") === "snmpsim") {
 	header("Content-Type: application/json");
 	header("Cache-Control: no-store");
@@ -96,7 +101,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset_request_var("nms_action")) {
 			throw new RuntimeException("Invalid request token.");
 		}
 		if (in_array($action, ["add_device", "update_device"], true)) {
-			$discovery_assignment = nms_nd_assignment_validate($_POST);
+			$node_lock = nms_nodes_lock();
+            if (!array_key_exists('node_id', $_POST)) throw new InvalidArgumentException('Select a node or explicitly choose Unassigned.');
+            $node_assignment = nms_node_assignment_validate($_POST['node_id'], get_filter_request_var('site_id'));
+            $discovery_assignment = nms_nd_assignment_validate($_POST);
 			$diagnostic_assignment = nms_diag_assignment_validate($_POST);
 			$identity_manual = nms_identity_manual_validate($_POST);
 			$short_name = nms_short_name_validate($_POST["short_name"] ?? "");
@@ -370,7 +378,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset_request_var("nms_action")) {
 			]);
 			nms_nd_assignment_write($device_id, $discovery_assignment);
 			nms_diag_assignment_write($device_id, $diagnostic_assignment);
-			nms_identity_manual_save($device_id, $identity_manual);
+			nms_node_assign_device($device_id, $node_assignment);
+            nms_nodes_unlock($node_lock);
+            $node_lock = null;
+            nms_identity_manual_save($device_id, $identity_manual);
 			nms_short_name_save($device_id, $short_name);
 			header(
 				"Location: devices.php?tab=edit&id=" .
@@ -417,7 +428,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset_request_var("nms_action")) {
 			]);
 			nms_nd_assignment_write($device_id, $discovery_assignment);
 			nms_diag_assignment_write($device_id, $diagnostic_assignment);
-			nms_identity_manual_save($device_id, $identity_manual);
+			nms_node_assign_device($device_id, $node_assignment);
+            nms_nodes_unlock($node_lock);
+            $node_lock = null;
+            nms_identity_manual_save($device_id, $identity_manual);
 			nms_short_name_save($device_id, $short_name);
 			// Classification and the manually recorded serial belong to NMS metadata, but
 			// are edited alongside the device identity so operators have one coherent form.
@@ -510,6 +524,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset_request_var("nms_action")) {
 			exit();
 		}
 	} catch (Throwable $exception) {
+		if (!empty($node_lock)) { nms_nodes_unlock($node_lock); $node_lock = null; }
 		// Surface helper failures on the relevant form so invalid configuration does not crash the page.
 		$page_error = $exception->getMessage();
 		$tab = in_array($action, ["import_snmprec", "mib_preview", "mib_create"], true)
@@ -779,7 +794,7 @@ nms_prepare_page(
 			? "NMS · File Repository"
 			: "NMS · Device Management"),
 	"css/nms-devices.css",
-	"js/nms-devices.js,js/nms-readings.js",
+	"js/nms-devices.js,js/nms-readings.js,js/nms-nodes.js",
 );
 require $config["base_path"] . "/plugins/nms/templates/app_header.php";
 ?>
@@ -866,6 +881,7 @@ require $config["base_path"] . "/plugins/nms/templates/app_header.php";
 		<a class="<?php print $tab === "add"
   	? "selected"
   	: ""; ?>" href="?tab=add" data-nms-tip="Create a real device in Cacti using the same core fields and defaults.">Add device</a>
+		<a href="?tab=nodes">Nodes</a>
 		<?php if ($tab === "edit") { ?><a class="selected" href="?tab=edit&id=<?php print (int) $edit_device[
 	"id"
 ]; ?>" data-nms-tip="Edit this live Cacti device and manage its graph templates and data queries.">Edit device</a><?php } ?>

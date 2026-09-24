@@ -312,6 +312,10 @@ $reported_interfaces = $identity_auto["interfaces"] ?? [];
 ]; ?>" <?php print $selected_site_id === (int) $site["id"] ? "selected" : ""; ?>><?php print nms_h(
 	$site["name"],
 ); ?></option><?php } ?></select></label>
+            <?php $node_options = nms_nodes_list();
+            $selected_node = isset($_POST['node_id']) ? nms_node_id($_POST['node_id']) :
+                ($device_form_is_edit ? (int) db_fetch_cell_prepared('SELECT node_id FROM plugin_nms_node_devices WHERE host_id=?', [(int)$edit_device['id']]) : 0); ?>
+            <label><span>Node</span><select name="node_id" data-device-node><option value="0">Unassigned</option><?php foreach($node_options as $node_option){ ?><option value="<?php print (int)$node_option['id']; ?>" data-site="<?php print (int)$node_option['site_id']; ?>" <?php print $selected_node === (int)$node_option['id'] ? 'selected' : ''; ?>><?php print nms_h($node_option['name'].' · '.$node_option['code']); ?></option><?php } ?></select><small>Select a node at this site. Membership is saved only when you save the device.</small></label>
 			<label><span>Data collector</span><select name="poller_id"><?php foreach (
    	$pollers
    	as $poller

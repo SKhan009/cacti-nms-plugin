@@ -13,7 +13,7 @@ if (isset_request_var("canvas_api")) {
 			nms_canvas_write(get_nfilter_request_var("nms_action"), $site_id, $_POST);
 			print json_encode(["ok" => true]);
 		} else {
-			print json_encode(nms_canvas_data($site_id), JSON_THROW_ON_ERROR);
+			print json_encode(nms_canvas_data($site_id, $_GET['node_id'] ?? 0), JSON_THROW_ON_ERROR);
 		}
 	} catch (Throwable $e) {
 		http_response_code(400);
@@ -75,8 +75,8 @@ $base_url = "topology.php?tab=" . rawurlencode($topology_tab) . "&site_id=" . $s
 nms_prepare_page(
 	"topology",
 	"NMS · Topology configuration",
-	"css/nms-topology-config.css",
-	$config_section === "view" ? "js/nms-hybrid.js" : "js/nms-topology-config.js",
+	"css/nms-topology-config.css,css/nms-map.css",
+	$config_section === "view" ? "js/nms-hybrid.js" : "",
 );
 require __DIR__ . "/../../templates/app_header.php";
 /** Output common authenticated POST fields without duplicating business data. */

@@ -1,3 +1,46 @@
+/** Shared sidebar, dialogs, confirmation and feedback components for every NMS page. */
+(function () {
+    "use strict";
+    document.querySelectorAll("dialog[data-nms-auto-open]").forEach(function (dialog) {
+        dialog.querySelectorAll("[data-nms-dialog-close]").forEach(function (button) {
+            button.addEventListener("click", function () { dialog.close(); });
+        });
+        if (!dialog.open) dialog.showModal();
+    });
+    document.addEventListener("submit", function (event) {
+        var form = event.target;
+        if (form.matches("form[data-confirm]") && !window.confirm(form.dataset.confirm)) {
+            event.preventDefault();
+        }
+    }, true);
+})();
+
+	(/** Persist the shared sidebar state; only the hamburger can reopen a collapsed menu. */ function() {
+		var button = document.getElementById('nmsSidebarToggle');
+		if (!button) return;
+		var key = 'nms.sidebar.collapsed';
+		/** Apply sidebar visibility and accessible toggle state. */
+		function sync(collapsed) {
+			document.body.classList.toggle('nms-sidebar-collapsed', collapsed);
+			button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+			button.setAttribute('aria-label', collapsed ? 'Open sidebar' : 'Collapse sidebar');
+		}
+		var collapsed = false;
+		try { collapsed = window.localStorage.getItem(key) === '1'; } catch (error) {}
+		sync(collapsed);
+		button.addEventListener('click', function() {
+			document.body.classList.remove('nms-sidebar-menu-open');
+			var collapsed = !document.body.classList.contains('nms-sidebar-collapsed');
+			try { window.localStorage.setItem(key, collapsed ? '1' : '0'); } catch (error) {}
+			sync(collapsed);
+		});
+		document.querySelectorAll('.nms-template-menu > summary').forEach(function(menu) {
+			menu.addEventListener('click', function(event) {
+				if (document.body.classList.contains('nms-sidebar-collapsed')) event.preventDefault();
+			});
+		});
+	})();
+
 /** Consistent feedback for confirmed server results and native form submissions. */
 (function () {
     'use strict';

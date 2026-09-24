@@ -29,6 +29,19 @@ if ($requested_tab === "configuration") {
 	exit();
 }
 
+if ($requested_tab === "map") {
+    require_once __DIR__ . "/includes/topology/map.php";
+    if (isset($_GET['map_tile'])) { nms_map_tile(); exit; }
+    header("Cache-Control: private, no-store");
+    $map_data = nms_map_data();
+    $map_configured = !empty($config['nms_geoserver_wms_url']) && !empty($config['nms_geoserver_layer']);
+    nms_prepare_page("topology", "NMS · Map view", "vendor/leaflet/leaflet.css,css/nms-map.css", "vendor/leaflet/leaflet.js,js/nms-map.js");
+    require __DIR__ . "/templates/app_header.php";
+    require __DIR__ . "/templates/topology/map.php";
+    require __DIR__ . "/templates/app_footer.php";
+    exit;
+}
+
 // Site membership comes from Cacti core; choose a valid site before loading or changing map layout.
 $sites = nms_topology_sites();
 $site_id = isset_request_var("site_id") ? get_filter_request_var("site_id") : 0;
@@ -49,9 +62,6 @@ if (!$selected_site && $site_id > 0 && !in_array($_GET["tab"] ?? "discovered", [
 
 // Keep the consolidated canvas and the retained, hidden results view.
 $topology_tab = isset_request_var("tab") ? get_nfilter_request_var("tab") : "discovered";
-if ($topology_tab === "map") {
-	$topology_tab = "discovered";
-}
 if (!in_array($topology_tab, ["discovery", "discovered"], true)) {
 	$topology_tab = "discovered";
 }

@@ -21,8 +21,8 @@ if (!isset($nms_page_title)) {
 	<link rel="stylesheet" href="<?php print nms_h(nms_asset_url("css/nms-v1.1.css")); ?>">
 	<link rel="stylesheet" href="<?php print nms_h(nms_asset_url("css/nms-tooltips.css")); ?>">
 	<link rel="stylesheet" href="<?php print nms_h(nms_asset_url("css/nms-snmpsim.css")); ?>">
-	<?php if (!empty($nms_extra_css)) { ?><link rel="stylesheet" href="<?php print nms_h(
-	nms_asset_url($nms_extra_css),
+	<?php foreach (array_filter(array_map("trim", explode(",", (string) $nms_extra_css))) as $nms_stylesheet) { ?><link rel="stylesheet" href="<?php print nms_h(
+	nms_asset_url($nms_stylesheet),
 ); ?>"><?php } ?>
 	<link rel="stylesheet" href="<?php print nms_h(nms_asset_url("css/nms-typography.css")); ?>">
 	<link rel="stylesheet" href="<?php print nms_h(nms_asset_url("css/nms-layout.css")); ?>">

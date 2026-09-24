@@ -7,9 +7,11 @@ require_once __DIR__ . "/../device_metadata.php";
 require_once __DIR__ . "/../discovery_endpoints.php";
 require_once __DIR__ . "/../discovery_display.php";
 /** Public canvas payload contains no core credentials or raw snapshots. */
-function nms_canvas_data($site_id)
+function nms_canvas_data($site_id, $node_id = 0)
 {
-	$site_id = nms_single_topology_site() ?: null;
+	$node_id = nms_node_id($node_id);
+    $container = $node_id ? nms_node_get($node_id) : null;
+    $site_id = $container ? (int)$container['site_id'] : (nms_single_topology_site() ?: null);
 	if ($site_id && !(int) db_fetch_cell_prepared("SELECT COUNT(*) FROM sites WHERE id=?", [$site_id])) {
 		throw new RuntimeException(
 			"The configured topology site no longer exists. Restore the Cacti site or update the topology site setting.",
@@ -19,9 +21,10 @@ function nms_canvas_data($site_id)
 	$nodes = [];
 	$links = [];
 	$visible = nms_visible_host_sql();
+	$member_filter = $node_id ? " AND h.id IN (SELECT host_id FROM plugin_nms_node_devices WHERE node_id=" . $node_id . ")" : "";
 	$site_filter = $site_id ? " AND h.site_id=" . (int) $site_id : "";
 	$rows = db_fetch_assoc(
-		"SELECT h.id,h.description,h.hostname,h.status,h.cur_time,h.availability,h.total_polls,h.last_updated,cat.name AS category_name,c.category_id,c.device_type,c.device_role,t.name AS template_name,l.pos_x,l.pos_y,dp.name AS diagnostic_profile,dp.tools AS diagnostic_tools FROM host h LEFT JOIN plugin_nms_device_classification c ON c.host_id=h.id LEFT JOIN plugin_nms_categories cat ON cat.id=c.category_id LEFT JOIN host_template t ON t.id=h.host_template_id LEFT JOIN plugin_nms_topology l ON l.host_id=h.id LEFT JOIN plugin_nms_diagnostic_devices dd ON dd.host_id=h.id LEFT JOIN plugin_nms_diagnostic_profiles dp ON dp.id=dd.profile_id WHERE h.deleted='' AND h.disabled='' AND $visible $site_filter ORDER BY h.description",
+		"SELECT h.id,h.description,h.hostname,h.status,h.cur_time,h.availability,h.total_polls,h.last_updated,cat.name AS category_name,c.category_id,c.device_type,c.device_role,t.name AS template_name,l.pos_x,l.pos_y,dp.name AS diagnostic_profile,dp.tools AS diagnostic_tools FROM host h LEFT JOIN plugin_nms_device_classification c ON c.host_id=h.id LEFT JOIN plugin_nms_categories cat ON cat.id=c.category_id LEFT JOIN host_template t ON t.id=h.host_template_id LEFT JOIN plugin_nms_topology l ON l.host_id=h.id LEFT JOIN plugin_nms_diagnostic_devices dd ON dd.host_id=h.id LEFT JOIN plugin_nms_diagnostic_profiles dp ON dp.id=dd.profile_id WHERE h.deleted='' AND h.disabled='' AND $visible $site_filter $member_filter ORDER BY h.description",
 	);
 	$columns = max(1, (int) ceil(sqrt(count($rows))));
 	$row_count = max(1, (int) ceil(count($rows) / $columns));

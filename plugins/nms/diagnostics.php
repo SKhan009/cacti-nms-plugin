@@ -11,6 +11,12 @@ require_once __DIR__ . "/includes/diagnostics_queue.php";
 nms_require_database();
 nms_require_management(3);
 
+$node_id=0; $selected_node=null;
+try {
+    $node_id=nms_node_id($_GET['node_id'] ?? $_POST['node_id'] ?? 0);
+    if ($node_id) $selected_node=nms_node_get($node_id);
+} catch (InvalidArgumentException $e) { http_response_code(400); exit('Invalid or inaccessible node.'); }
+
 // Diagnostic pages always reflect current saved results and collector state.
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
@@ -64,15 +70,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 		if ($action === "run_diagnostic") {
 			$selected_diagnostic_host_id = (int) ($_POST['host_id'] ?? 0);
 			$selected_diagnostic_tool = (string) ($_POST['tool'] ?? 'ping');
-			$job_id = nms_diag_run($selected_diagnostic_host_id, $selected_diagnostic_tool);
-			header('Location: diagnostics.php?section=run&job_id=' . $job_id . '#diagnostic-run', true, 303);
+			if ($node_id && !in_array($selected_diagnostic_host_id,array_map('intval',array_column(nms_node_members($node_id),'id')),true)) throw new InvalidArgumentException('Select a current member of this node.');
+            $job_id = nms_diag_run($selected_diagnostic_host_id, $selected_diagnostic_tool);
+			header('Location: diagnostics.php?section=run&node_id=' . $node_id . '&job_id=' . $job_id . '#diagnostic-run', true, 303);
 			exit();
 		} else {
 			throw new RuntimeException("Unsupported diagnostic action.");
 		}
 	} catch (Throwable $exception) {
         $feedback = ['error' => $exception->getMessage()];
-        $target = ['section' => 'run'];
+        $target = ['section' => 'run', 'node_id'=>$node_id];
         if (($_POST['nms_action'] ?? '') === 'save_diagnostic_profile') {
             $target = ['section' => 'profiles'];
             // Retain only bounded form values, never the CSRF token or arbitrary POST fields.
@@ -104,19 +111,38 @@ $devices = db_fetch_assoc(
 	ORDER BY h.description",
 );
 
-// Availability is checked by the execution collector, never guessed from web-host binaries.
+if ($node_id) {
+    $member_ids=array_map('intval',array_column(nms_node_members($node_id),'id'));
+    $devices=array_values(array_filter($devices,static fn($device)=>in_array((int)$device['id'],$member_ids,true)));
+}
+
+if ($selected_diagnostic_host_id && !in_array($selected_diagnostic_host_id,array_map('intval',array_column($devices,'id')),true)) {
+    $error='This device is not an enabled member with a diagnostic profile. Configure the device or select another member.';
+    $devices=[];
+}
+
+// Short explanations shared by the diagnostic cards.
 $nms_diagnostic_readiness = [
-	'ping' => ['purpose' => 'Tests collector-to-device reachability.', 'requirement' => 'Requires the ping executable and ICMP permission in the existing poller runtime.'],
-	'traceroute' => ['purpose' => 'Shows the route and responding hops.', 'requirement' => 'Uses traceroute or tracepath on the assigned collector. Partial output is retained on timeout.'],
-	'arp' => ['purpose' => 'Reads the collector IPv4 ARP and IPv6 neighbour cache.', 'requirement' => 'Requires ip. This is the collector cache, not the selected device ARP table.'],
-	'iperf3' => ['purpose' => 'Measures TCP throughput.', 'requirement' => 'Remote devices need an iperf3 server on TCP 5201. IPs assigned to the collector test the collector itself using a temporary local server.'],
-	'netperf' => ['purpose' => 'Measures TCP stream throughput.', 'requirement' => 'Remote devices need netserver on TCP 12865 and its data connection. IPs assigned to the collector use a temporary local server.'],
-	'pathchar' => ['purpose' => 'Estimates path capacity by hop.', 'requirement' => 'Requires pathchar or pchar installed on this collector, with raw-socket permission. Offline installs need an approved build for its OS and architecture.'],
+	"ping" => "Checks whether the device replies and how quickly.",
+	"traceroute" => "Shows the network path to the device to help find where a connection stops.",
+	"traceroute_icmp" => "Traces the path to the device using ping-style checks to help locate connection problems.",
+	"traceroute_tcp" => "Traces the path to port 443 when ordinary ping checks are blocked.",
+	"mtr_icmp" => "Repeats path checks to help find delays and lost replies on the way to the device.",
+	"mtr_tcp" => "Checks the path to port 443 repeatedly to help investigate slow or unstable connections.",
+	"nping_icmp" => "Sends a few ping-style checks to compare device response time and missing replies.",
+	"nping_tcp" => "Checks whether the device responds on port 443 when ordinary ping is blocked.",
+	"hping3_icmp" => "Checks whether an IPv4 device replies and helps spot delays or lost replies.",
+	"hping3_tcp" => "Checks how an IPv4 device responds on port 443 to help investigate blocked connections.",
+	"arp" => "Shows nearby device addresses already learned by the collector.",
+	"iperf3" => "Measures transfer speed to a device running an iPerf3 test server.",
+	"netperf" => "Measures transfer speed to a device running a Netperf test server.",
+	"pathchar" => "Estimates where network capacity may be limited along the path to the device.",
 ];
 $job_id = isset_request_var('job_id') ? (int) get_filter_request_var('job_id') : 0;
 if ($job_id) {
 	try {
 		$diagnostic_job = nms_diag_job($job_id);
+        if ($node_id && !in_array((int)$diagnostic_job['host_id'],$member_ids,true)) { $diagnostic_job=null; throw new InvalidArgumentException('This result is not for a current member of the selected node.'); }
 		$selected_diagnostic_host_id = (int) $diagnostic_job['host_id'];
 		$selected_diagnostic_tool = $diagnostic_job['tool'];
 		if ($diagnostic_job['result_json'] !== '') {

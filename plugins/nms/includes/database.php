@@ -8,6 +8,7 @@
 require_once __DIR__ . "/functions.php";
 require_once __DIR__ . "/categories.php";
 require_once __DIR__ . "/groups.php";
+require_once __DIR__ . "/nodes/service.php";
 require_once __DIR__ . "/relationships.php";
 require_once __DIR__ . "/topology/connections.php";
 require_once __DIR__ . "/topology/config.php";
@@ -24,7 +25,7 @@ function nms_database_ready()
 			"equipment_categories_v1",
 		]) === "complete" &&
 		db_fetch_cell_prepared("SELECT meta_value FROM plugin_nms_meta WHERE meta_key = ?", ["nms_schema_version"]) ===
-			"1.10.97";
+			"1.10.99";
 }
 
 /** Ordinary page views never perform install DDL or silently repair a partial upgrade. */
@@ -311,6 +312,7 @@ function nms_apply_database_schema()
 	nms_category_migrate();
 	nms_category_normalize_legacy_default();
 	nms_group_schema();
+	nms_nodes_schema();
 	nms_relationship_schema();
 	nms_connection_schema();
 	nms_topology_config_schema();
@@ -327,7 +329,7 @@ function nms_apply_database_schema()
 		"CREATE TABLE IF NOT EXISTS plugin_nms_mib_objects (host_id INT UNSIGNED NOT NULL, oid VARCHAR(191) NOT NULL, report_json MEDIUMTEXT NOT NULL, created_at DATETIME NOT NULL, PRIMARY KEY(host_id,oid)) ENGINE=InnoDB",
 	);
 	nms_category_execute("INSERT INTO plugin_nms_meta (meta_key, meta_value, updated_at)
-		VALUES ('nms_schema_version', '1.10.97', NOW()) ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value), updated_at = NOW()");
+		VALUES ('nms_schema_version', '1.10.99', NOW()) ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value), updated_at = NOW()");
 }
 
 /** Preserve the known legacy status rule; refuse to silently delete or stop evaluating other old metrics. */
@@ -371,6 +373,8 @@ function nms_drop_database()
 	db_execute("DROP TABLE IF EXISTS plugin_nms_connection_types");
 	db_execute("DROP TABLE IF EXISTS plugin_nms_group_members");
 	db_execute("DROP TABLE IF EXISTS plugin_nms_groups");
+	db_execute("DROP TABLE IF EXISTS plugin_nms_node_devices");
+	db_execute("DROP TABLE IF EXISTS plugin_nms_nodes");
 	db_execute("DROP TABLE IF EXISTS plugin_nms_device_classification");
 	db_execute("DROP TABLE IF EXISTS plugin_nms_category_migration");
 	db_execute("DROP TABLE IF EXISTS plugin_nms_categories");

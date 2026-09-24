@@ -22,6 +22,12 @@ function nms_diag_plain_summary(array $result): array
         'netperf' => 'Measures TCP data transfer speed during this test.',
         'pathchar' => 'Estimates capacity along the network route.'
     ];
+    foreach (['traceroute_icmp', 'traceroute_tcp', 'mtr_icmp', 'mtr_tcp'] as $key) {
+        $purpose[$key] = 'Shows the network path and responding hops using ' . (str_ends_with($key, '_tcp') ? 'TCP port 443.' : 'ICMP.');
+    }
+    foreach (['nping_icmp', 'nping_tcp', 'hping3_icmp', 'hping3_tcp'] as $key) {
+        $purpose[$key] = 'Sends a bounded number of ' . (str_ends_with($key, '_tcp') ? 'TCP SYN probes to port 443.' : 'ICMP echo probes.');
+    }
     $lines = [$purpose[$tool] ?? 'Checks the selected device from its collector.'];
     if (nms_diag_summary_local($result)) {
         $lines[] = 'This test stayed inside the collector. It does not measure your cable, switch, internet speed or a remote device.';
@@ -47,9 +53,23 @@ function nms_diag_plain_summary(array $result): array
             }
             if (preg_match('/(?:rtt|round-trip)[^=]*=\s*[\d.]+\/([\d.]+)\//', $output, $m)) $lines[] = "Average reply time: $m[1] milliseconds. Lower values mean faster replies.";
             break;
+        case 'traceroute_icmp':
+        case 'traceroute_tcp':
         case 'traceroute':
             $lines[] = 'Each numbered line is a network hop. A * means no reply arrived for that probe; it does not by itself mean a broken link.';
             $lines[] = 'A completed command does not guarantee the destination replied. Check the last responding address in Technical output.';
+            break;
+        case 'mtr_icmp':
+        case 'mtr_tcp':
+            $lines[] = 'Loss% and reply times describe each responding hop. Loss at an intermediate hop alone does not prove end-to-end packet loss; routers can limit probe replies.';
+            $lines[] = 'Review the final hop in Technical output to check whether the destination replied.';
+            break;
+        case 'nping_icmp':
+        case 'nping_tcp':
+        case 'hping3_icmp':
+        case 'hping3_tcp':
+            $lines[] = 'Review replies in Technical output. Missing replies can mean filtering or loss; an ICMP error is not an echo reply.';
+            if (str_ends_with($tool, '_tcp')) $lines[] = 'A TCP reset is a response, but it does not mean port 443 is open. These SYN probes do not test a complete HTTPS connection.';
             break;
         case 'arp':
             preg_match_all('/^\S+\s+dev\s+\S+.*$/m', $output, $rows);
@@ -82,6 +102,10 @@ function nms_diag_description(array $result): array
     $failed = !isset($result['exit']) || (int) $result['exit'] !== 0;
     $warning = !empty($result['truncated']);
     $metrics = ['Target' => $result['target'] ?? 'Not reported'];
+    if (preg_match('/_(icmp|tcp)$/', $tool, $protocol)) {
+        $metrics['Probe protocol'] = strtoupper($protocol[1]);
+        if ($protocol[1] === 'tcp') $metrics['Destination port'] = '443';
+    }
     $missing = 'Not reported';
     switch ($tool) {
         case 'netperf':
@@ -129,6 +153,8 @@ function nms_diag_description(array $result): array
             $metrics['Unresolved entries']=(string)$issues;
             if ($issues) $warning=true;
             break;
+        case 'traceroute_icmp':
+        case 'traceroute_tcp':
         case 'traceroute':
             preg_match_all('/^\s*\d+[ :]+.*$/m', $text, $rows);
             $metrics['Reported hop lines']=(string)count($rows[0]);
@@ -171,6 +197,11 @@ function nms_diag_description(array $result): array
 
             break;
     }
+    if (preg_match('/^(mtr|nping|hping3)_/', $tool)) {
+        $probe = nms_diag_probe_metrics($result);
+        $metrics += $probe['metrics'];
+        $warning = $warning || !$probe['confirmed'];
+    }
     $lines=nms_diag_plain_summary($result);
     if ($tool === 'pathchar') {
         $lines = array_values(array_filter($lines, static fn($line)=>!str_starts_with($line,'Capacity values are estimates')));
@@ -183,4 +214,50 @@ function nms_diag_description(array $result): array
     return ['tone'=>$failed?'error':($warning?'warning':'success'),
         'status'=>$failed?'Test failed':($warning?'Review required':($tool==='pathchar' && nms_diag_summary_local($result)?'Local self-test completed':'Test completed')),
         'metrics'=>$metrics, 'lines'=>$lines];
+}
+
+/** Read probe statistics while requiring actual endpoint replies for a successful summary. */
+function nms_diag_probe_metrics(array $result): array
+{
+    $tool = $result['tool'] ?? '';
+    $text = (string) ($result['output'] ?? '');
+    $metrics = ['Destination reachability' => 'No confirmed endpoint reply'];
+    $confirmed = false;
+    if (str_starts_with($tool, 'mtr_')) {
+        preg_match_all('/^\s*\d+\.\|--\s+(\S+)\s+([\d.]+)%\s+(\d+)\s+([\d.]+)\s+([\d.]+)/m', $text, $rows, PREG_SET_ORDER);
+        $metrics['Reported hops'] = (string) count($rows);
+        if ($rows) {
+            $last = end($rows);
+            $metrics['Last responding address'] = $last[1];
+            $metrics['Final hop packet loss'] = $last[2] . '%';
+            $metrics['Final hop probes sent'] = $last[3];
+            $metrics['Final hop average reply time'] = $last[5] . ' ms';
+            $expected = @inet_pton((string) ($result['target'] ?? ''));
+            $confirmed = $expected !== false && $expected === @inet_pton($last[1]) && (int)$last[3] > 0 && (float)$last[2] === 0.0;
+        }
+    } else {
+        $nping = str_starts_with($tool, 'nping_');
+        $pattern = $nping
+            ? '/Raw packets sent:\s*(\d+)\s*\([^)]*\)\s*\|\s*Rcvd:\s*(\d+)\s*\([^)]*\)\s*\|\s*Lost:\s*\d+\s*\(([\d.]+)%\)/'
+            : '/(\d+) packets transmitted,\s*(\d+) packets received,\s*([\d.]+)% packet loss/';
+        if (preg_match($pattern, $text, $stats)) {
+            $metrics['Packets sent'] = $stats[1];
+            $metrics['Packets received'] = $stats[2];
+            $metrics['Packet loss'] = $stats[3] . '%';
+            $tcp = str_ends_with($tool, '_tcp');
+            if ($nping) {
+                $replyPattern = $tcp ? '/^RCVD .* TCP .* SA(?: |$)/m' : '/^RCVD .* Echo reply \(type=0\/code=0\)/m';
+            } else {
+                $replyPattern = $tcp ? '/^len=.* flags=SA(?: |$)/m' : '/^len=.* icmp_seq=\d+ /m';
+            }
+            $replies = preg_match_all($replyPattern, $text);
+            $metrics[$tcp ? 'TCP SYN-ACK replies' : 'ICMP echo replies'] = (string) $replies;
+            $confirmed = (int)$stats[1] > 0 && (int)$stats[1] === (int)$stats[2] && (float)$stats[3] === 0.0 && $replies === (int)$stats[1];
+        }
+        if (preg_match('/Avg rtt:\s*([\d.]+)ms/', $text, $rtt) || preg_match('/round-trip min\/avg\/max = [\d.]+\/([\d.]+)\//', $text, $rtt)) {
+            $metrics['Average reply time'] = $rtt[1] . ' ms';
+        }
+    }
+    if ($confirmed) $metrics['Destination reachability'] = str_ends_with($tool, '_tcp') ? 'TCP probe replies received (not an application test)' : 'ICMP probe replies received';
+    return ['metrics' => $metrics, 'confirmed' => $confirmed];
 }

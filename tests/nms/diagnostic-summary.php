@@ -37,3 +37,25 @@ foreach ([str_replace('0 / 33','1 / 33',$path), str_replace('100000 Kbps','0 Kbp
 $d=nms_diag_description(['tool'=>'pathchar','exit'=>1,'target'=>'::1','output'=>$path]); check($d['tone']==='error');
 $d=nms_diag_description(['tool'=>'pathchar','exit'=>0,'self_test'=>true,'target'=>'192.0.2.1','output'=>$path]); check($d['status']==='Local self-test completed');
 echo "Pathchar scope, hop, loss and warning checks passed\n";
+$probeFixtures = [
+ 'nping_icmp'=>"RCVD (0.1s) ICMP [127.0.0.1 > 127.0.0.1 Echo reply (type=0/code=0)]\nRaw packets sent: 1 (28B) | Rcvd: 1 (28B) | Lost: 0 (0.00%)\nAvg rtt: 0.1ms",
+ 'nping_tcp'=>"RCVD (0.1s) TCP 127.0.0.1:443 > 127.0.0.1:10000 SA ttl=64\nRaw packets sent: 1 (40B) | Rcvd: 1 (44B) | Lost: 0 (0.00%)",
+ 'hping3_icmp'=>"len=28 ip=127.0.0.1 ttl=64 icmp_seq=0 rtt=0.1 ms\n1 packets transmitted, 1 packets received, 0% packet loss\nround-trip min/avg/max = 0.1/0.2/0.3 ms",
+ 'hping3_tcp'=>"len=44 ip=127.0.0.1 sport=443 flags=SA seq=0 rtt=0.1 ms\n1 packets transmitted, 1 packets received, 0% packet loss",
+ 'mtr_icmp'=>"  1.|-- 127.0.0.1 0.0% 4 0.3 0.2 0.1 0.4 0.1",
+ 'mtr_tcp'=>"  1.|-- 127.0.0.1 0.0% 4 0.3 0.2 0.1 0.4 0.1",
+];
+foreach ($probeFixtures as $tool=>$output) {
+ $r=['tool'=>$tool,'exit'=>0,'target'=>'127.0.0.1','output'=>$output];
+ check(nms_diag_description($r)['tone']==='success');
+ check(nms_diag_description(array_replace($r,['exit'=>1]))['tone']==='error');
+ check(nms_diag_description(array_replace($r,['truncated'=>true]))['tone']==='warning');
+ check(nms_diag_description(array_replace($r,['output'=>'unrecognized output']))['tone']==='warning');
+ if(str_ends_with($tool,'tcp') && !str_starts_with($tool,'mtr')) check(nms_diag_description(array_replace($r,['output'=>str_replace('SA','RA',$output)]))['tone']==='warning');
+ if(str_starts_with($tool,'mtr')) {
+  check(nms_diag_description(array_replace($r,['target'=>'192.0.2.1']))['tone']==='warning');
+  check(nms_diag_description(array_replace($r,['output'=>str_replace('0.0%','25.0%',$output)]))['tone']==='warning');
+ }
+}
+check(nms_diag_description(['tool'=>'nping_icmp','exit'=>0,'output'=>"Raw packets sent: 4 (112B) | Rcvd: 0 (0B) | Lost: 4 (100.00%)"])['tone']==='warning');
+echo "Probe summaries: replies, resets, loss, missing endpoint and execution failures checked.\n";

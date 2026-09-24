@@ -4,6 +4,7 @@ function nms_diag_history(array $input)
 {
     $value = static function ($key) use ($input) { return is_scalar($input[$key] ?? null) ? (string) $input[$key] : ''; };
     $filters = [
+        'node_id' => max(0, (int) $value('node_id')),
         'history_device' => max(0, (int) $value('history_device')),
         'history_tool' => $value('history_tool'),
         'history_status' => $value('history_status'),
@@ -20,6 +21,10 @@ function nms_diag_history(array $input)
     if (!in_array($filters['history_size'], [5, 10, 25, 50, 100], true)) $filters['history_size'] = 10;
     $base = " FROM plugin_nms_diagnostic_jobs j JOIN host h ON h.id=j.host_id WHERE j.user_id=? AND h.deleted='' AND " . nms_visible_host_sql('h.id');
     $params = [nms_current_user_id()];
+    if ($filters['node_id']) {
+        $base .= ' AND EXISTS (SELECT 1 FROM plugin_nms_node_devices nm WHERE nm.host_id=h.id AND nm.node_id=?)';
+        $params[]=$filters['node_id'];
+    }
     $devices = db_fetch_assoc_prepared('SELECT DISTINCT h.id,h.description,h.hostname' . $base . ' ORDER BY h.description,h.id', $params);
     foreach (['history_device' => 'j.host_id', 'history_tool' => 'j.tool', 'history_status' => 'j.status'] as $key => $column) {
         if ($filters[$key] !== '' && $filters[$key] !== 0) { $base .= " AND $column=?"; $params[] = $filters[$key]; }

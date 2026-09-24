@@ -50,7 +50,7 @@ $enabled_tools = nms_diag_tools($profile_values["tools"]);
 		<section class="nms-diagnostic-profile-section">
 			<fieldset class="nms-discovery-methods nms-diagnostic-tools">
 				<legend>Enabled tools</legend>
-				<p class="nms-diagnostic-section-help">Choose the checks this profile can run for an assigned device.</p>
+				<p class="nms-diagnostic-section-help">Choose the checks this profile can run for an assigned device. TCP probe checks use port 443.</p>
 				<div class="nms-diagnostic-tool-grid">
 					<?php foreach (nms_diag_labels() as $key => $label) { ?>
 						<label>
@@ -66,11 +66,11 @@ $enabled_tools = nms_diag_tools($profile_values["tools"]);
 			<h3>Test limits</h3>
 			<div class="nms-diagnostic-limits">
 				<label>
-					<span>Ping packets</span>
+					<span>Probe count / MTR cycles</span>
 					<input type="number" name="ping_count" min="1" max="10" value="<?php print (int) $profile_values["ping_count"]; ?>">
 				</label>
 				<label>
-					<span>Traceroute maximum hops</span>
+					<span>Traceroute / MTR maximum hops</span>
 					<input type="number" name="trace_hops" min="1" max="30" value="<?php print (int) $profile_values["trace_hops"]; ?>">
 				</label>
 				<label>

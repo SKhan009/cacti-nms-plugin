@@ -395,6 +395,8 @@
 					height: 112 + Math.ceil(ps.length / 12) * 12,
 					rx: 12,
 					fill: "none",
+					// The empty card interior must receive pointer events instead of panning the canvas.
+					"pointer-events": "all",
 					stroke: source === n.id ? "#2563eb" : color,
 					"stroke-width": source === n.id ? 2 : 1.5,
 				}),
@@ -1099,7 +1101,7 @@
 			__csrf_magic: root.dataset.csrf,
 		});
 		const r = await fetch(
-			`topology.php?tab=discovered&site_id=${root.dataset.site}&canvas_api=1`,
+			`topology.php?tab=discovered&site_id=${root.dataset.site}&node_id=${root.dataset.node || 0}&canvas_api=1`,
 			{ method: "POST", credentials: "same-origin", body },
 		);
 		if (!r.ok) throw Error("Save failed; check session and permissions.");
@@ -1322,7 +1324,7 @@
 		busy = true;
 		try {
 			const r = await fetch(
-				`topology.php?tab=discovered&site_id=${root.dataset.site}&canvas_api=1`,
+				`topology.php?tab=discovered&site_id=${root.dataset.site}&node_id=${root.dataset.node || 0}&canvas_api=1`,
 				{ credentials: "same-origin", cache: "no-store" },
 			);
 			if (!r.ok || r.redirected) throw Error("Refresh failed");
