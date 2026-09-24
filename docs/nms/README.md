@@ -30,3 +30,5 @@ The project uses `.editorconfig`: tabs in PHP, four-column display width, UTF-8 
 - [Netperf on RHEL 9](Netperf_Offline_RHEL_9_Guide.docx) covers installation and verification.
 - [Nodes](NODE_SETUP.md) documents manual membership and automatic member-data updates.
 - [Topology map](TOPOLOGY_MAP.md) documents the local GeoServer and bundled map assets.
+
+The node editor includes a compact responsive device list, search by name/IP/site, multiple checkboxes, Select visible and Clear selection. Choose a site before assigning devices; searching preserves existing selections.

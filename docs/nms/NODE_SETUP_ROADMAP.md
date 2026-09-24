@@ -1,6 +1,6 @@
 # Node setup roadmap — one node, multiple devices
 
-Scope: NMS plugin only. No GNSS, clock integration or ICCT Rack work. This supersedes the GNSS roadmap for the current request. Phases 1–3 implemented in 1.10.99. See NODE_SETUP.md for configuration and verification. Later phases remain planned.
+Scope: NMS plugin only. No GNSS, clock integration or ICCT Rack work. This supersedes the GNSS roadmap for the current request. Phases 1–3 and phase 6 are implemented in 1.10.99. Phase 4 includes node-filtered network topology; map popup node grouping remains planned. Phase 5 includes explicit device moves and safe node removal; node disable and persistent lifecycle audit history remain planned. See NODE_SETUP.md and NODE_PHASE6_QA.md for implemented behavior and verification.
 
 ## What exists
 
@@ -23,12 +23,12 @@ If one node is always exactly one site, native sites already provide the basic g
 
 ## Configuration workflow
 
-Proposed NMS > Device management > Nodes:
-1. Create node: name, unique code, site, description and enabled state.
+Current NMS > Device management > Nodes:
+1. Create node: name, unique code, site, and description. Node disable remains planned.
 2. Add devices: choose existing accessible Cacti devices from that site, with search and multi-select.
 3. Node details: member devices, Up/Down/Unknown/Disabled counts, alarms and links to device readings/graphs.
 4. Device Add/Edit: choose Site, then optional Node filtered to that site.
-5. Topology: select Node to display its member devices and their real connections; separately distinguish external neighbours. Never infer physical connectivity just from shared node membership.
+5. Topology: select Node to display its member devices and their real connections; links outside the selected membership are omitted. Never infer physical connectivity just from shared node membership.
 
 ## Implementation phases
 
@@ -61,7 +61,7 @@ Keep reachability, alarm severity and membership separate. Show visible-device c
 
 ## First milestone
 
-Implement Nodes under Device management with create/edit, same-site multi-device assignment and node details. Keep topology visualization as the next step. Hardware model and GNSS details are not needed.
+Completed: Nodes under Device management with create/edit, searchable checkbox selection, same-site multi-device assignment, node details and node-filtered network topology. Membership stays manual; device settings and monitoring data are read from Cacti. Remaining roadmap items are listed in the status above.
 
 ## Phase 4–5 delivery update
 

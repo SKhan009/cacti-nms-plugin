@@ -24,10 +24,20 @@
 <label>Site<select name="site_id" required data-node-site><option value="">Select a site</option><?php foreach ($sites as $site) { ?><option value="<?php print (int)$site['id']; ?>" <?php print (string)$values['site_id']===(string)$site['id']?'selected':''; ?>><?php print nms_h($site['name']); ?></option><?php } ?></select></label>
 <label>Description<textarea name="description" maxlength="512"><?php print nms_h($values['description']); ?></textarea></label>
 </div>
-<h3>Devices</h3><p>Choose devices from this site. Devices in another node must be moved explicitly through Device Edit. Unchecking a member unassigns it; it does not delete the device.</p>
-<label>Search devices<input type="search" data-node-search placeholder="Name or IP address"></label>
-<div class="nms-node-members"><?php foreach ($candidates as $device) { $other=!empty($device['node_id'])&&(int)$device['node_id']!==(int)$values['node_id']; ?><label data-node-member data-site="<?php print (int)$device['site_id']; ?>" data-other="<?php print $other?'1':'0'; ?>"><input type="checkbox" name="members[]" value="<?php print (int)$device['id']; ?>" <?php print in_array((string)$device['id'],array_map('strval',(array)$values['members']),true)?'checked':''; ?> <?php print $other?'disabled':''; ?>><span><?php print nms_h($device['description'].' · '.$device['hostname']); ?><?php if($other){ ?> <small>Assigned to another node</small><?php } ?></span></label><?php } ?></div>
-<p data-node-empty hidden>No matching devices at this site.</p>
+<h3>Devices</h3><p data-node-guidance>Select a site, then choose one or more devices. Devices in another node must be moved through Device Edit.</p>
+<div class="nms-node-member-tools">
+<label>Search devices<input type="search" data-node-search placeholder="Search name, IP address or site" aria-controls="nmsNodeMembers"></label>
+<div class="nms-node-member-actions"><button type="button" class="nms-cancel-button" data-node-select-visible>Select visible</button><button type="button" class="nms-cancel-button" data-node-clear-selection>Clear selection</button></div>
+</div>
+<p data-node-selection role="status" aria-live="polite"></p>
+<div class="nms-node-members" id="nmsNodeMembers" role="group" aria-label="Device selection">
+<?php $site_names=array_column($sites,'name','id'); foreach ($candidates as $device) { $other=!empty($device['node_id'])&&(int)$device['node_id']!==(int)$values['node_id']; ?>
+<label data-node-member data-nms-help-ready="1" data-site="<?php print (int)$device['site_id']; ?>" data-other="<?php print $other?'1':'0'; ?>">
+<input type="checkbox" name="members[]" value="<?php print (int)$device['id']; ?>" <?php print in_array((string)$device['id'],array_map('strval',(array)$values['members']),true)?'checked':''; ?> <?php print $other?'disabled':''; ?>>
+<span class="nms-node-member-name"><strong><?php print nms_h($device['description']); ?></strong><span><?php print nms_h($device['hostname']); ?></span></span>
+<span class="nms-node-member-site"><?php print nms_h($site_names[$device['site_id']] ?? 'No site'); ?><?php if($other){ ?><small><?php print nms_h('Assigned to '.$device['node_name']); ?></small><?php } ?></span>
+</label><?php } ?></div>
+<p data-node-empty hidden></p>
 <button type="submit" class="nms-node-button">Save node</button> <a class="nms-cancel-button" href="devices.php?tab=nodes<?php print $selected ? '&amp;node_id='.$node_id : ''; ?>">Cancel</a>
 </form></section>
 <?php } elseif ($selected) { ?>

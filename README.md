@@ -25,3 +25,5 @@ Validation used RHEL 9.8 aarch64 with SELinux enforcing. Ping, Traceroute, ARP a
 NMS 1.10.98 adds explicit ICMP/TCP Traceroute, MTR, Nping and hping3 profile options. TCP probes use port 443; hping3 is IPv4 only. Upgrade NMS through Plugin Management, then enable the desired checks in the assigned diagnostic profile. See [protocol checks](docs/nms/diagnostic-runner.md#tcp-and-icmp-checks-11098) for requirements and validation limits.
 
 NMS 1.10.99 adds manually managed nodes with live member data, consistent diagnostic results, topology drag fixes and an offline geographic map using bundled Leaflet, India state boundaries and local GeoServer. See [node setup](docs/nms/NODE_SETUP.md), [map setup](docs/nms/TOPOLOGY_MAP.md), and the [GeoServer and Pathchar RHEL 9 guide](docs/nms/GeoServer_and_Pathchar_RHEL_9_Installation_Guide.docx).
+
+The node editor now shows accessible devices before site selection and provides a compact searchable list with multi-selection and explicit bulk controls. Selecting a site enables same-site assignments; membership remains manual.

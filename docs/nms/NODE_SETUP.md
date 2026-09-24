@@ -7,7 +7,7 @@ Implemented in NMS 1.10.99. Scope: node containers, explicit device membership a
 1. Create the required site in Cacti Console > Sites and assign existing devices to it.
 2. Open NMS > Device management > Nodes > Create node.
 3. Enter name, globally unique code, site and optional description.
-4. Search and select existing devices from that site, then Save node. The node may also be saved empty.
+4. Search by device name, IP address or site. Select devices individually or use Select visible, then Save node. The node may also be saved empty.
 5. Open the node to see its accessible members, availability counts, active alarms, readings and native graph links.
 6. Device Add/Edit now includes Node. Select the desired same-site node or explicitly select Unassigned. Changing Site does not silently choose a replacement node: the form requires a valid selection.
 
@@ -55,3 +55,13 @@ Membership remains manual. Node details read live Cacti device records, diagnost
 Node protocol checks scopes both device/bandwidth selectors and saved history to current members. Refresh and result navigation retain the node. Manual and discovered connections uses the same membership for device/interface choices and existing links. Shared-node membership never creates a physical connection; automatic topology still needs enabled discovery and evidence.
 
 Cancel controls share the standard secondary-button style. Create Cancel returns to the node list; Edit/Remove Cancel returns to the node details. Dialog Cancel closes without saving. Verified on the VM with temporary memberships: node profile/discovery labels, filtered protocol selectors/history, refresh retention, manual interface choices and dialog cancellation. Integration tests now isolate their fixture helper names so they can run safely when the real plugin is enabled.
+
+## Compact searchable device selection
+
+The create/edit form initially lists all accessible devices with their name, IP address and site. Choose a site to enable eligible checkboxes and filter the list to that site. Devices assigned to another node remain unavailable for selection; move them explicitly through Device Edit.
+
+Search updates the visible rows without clearing selected devices. Select visible checks only currently visible, eligible devices. Clear selection clears all eligible selections, including those hidden by a search. The counter reports both shown and selected totals. Changing Site clears incompatible selections.
+
+The responsive list uses compact columns on wider screens and a single column on narrow screens. Site details sit directly below the device identity. The search field has a bounded width, with bulk actions beside it when space permits. Repeated help icons are omitted from device rows.
+
+Browser verification on the RHEL VM: 12 accessible devices shown before site selection; 9 candidates for the lab site; searching Switch returned 3 devices and Select visible selected all 3. A search with no matches retained the selected count. The compact list and controls were checked visually. No node was saved during these form-only checks.
