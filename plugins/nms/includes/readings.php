@@ -204,7 +204,7 @@ function nms_reading_snapshot_summary($snapshot)
 	$data = json_decode((string) $snapshot['data_json'], true);
 	$data = is_array($data) ? $data : [];
 	$parts = [];
-	foreach (['interfaces' => 'interface', 'neighbors' => 'neighbour', 'endpoints' => 'endpoint'] as $key => $label) {
+	foreach (['interfaces' => 'interface', 'neighbors' => 'neighbour', 'endpoints' => 'endpoint', 'own_addresses' => 'own IP address'] as $key => $label) {
 		$count = count($data[$key] ?? []);
 		if ($count) {
 			$parts[] = $count . ' ' . $label . ($count === 1 ? '' : 's');

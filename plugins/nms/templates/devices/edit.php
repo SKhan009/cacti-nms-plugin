@@ -15,6 +15,8 @@ $core_base = nms_cacti_url_path();
 $snmp_uptime_ticks = (int) ($edit_device["snmp_sysUpTimeInstance"] ?? 0);
 $snmp_uptime_text = $snmp_uptime_ticks > 0 && function_exists("get_uptime") ? get_uptime($edit_device) : "Not reported";
 $device_status = nms_device_status_name($edit_device);
+require_once __DIR__.'/../../includes/configuration/monitoring.php';
+$serial_connection = nms_config_connection_status($device_id);
 $device_state_tone =
 	strtolower($device_status) === "up"
 		? "success"
@@ -31,6 +33,13 @@ $serial_tone =
 				: "muted"));
 $availability_value = (float) $edit_device["availability"];
 $availability_tone = $availability_value >= 99 ? "success" : ($availability_value >= 90 ? "warning" : "danger");
+$availability_label = 'Availability';
+$availability_text = number_format($availability_value, 1).'%';
+if ($serial_connection !== null) {
+	$availability_label = 'Serial response';
+	$availability_text = $device_status;
+	$availability_tone = $device_state_tone;
+}
 $snmp_location = $edit_device["snmp_sysLocation"] ?: "Not reported";
 $snmp_contact = $edit_device["snmp_sysContact"] ?: "Not reported";
 $snmp_location_tone =
@@ -66,8 +75,9 @@ $device_actions = [
 			<?php if (false && api_user_realm_auth("ssh_console.php")) { ?><a class="nms-panel-action" href="<?php print nms_h(
 	nms_plugin_url("ssh_console.php?id=" . $device_id),
 ); ?>">SSH Console</a><?php } ?>
-			<details class="nms-device-tools-menu">
-				<summary><span>Device actions</span><small>ID <?php print $device_id; ?></small></summary>
+
+            <details class="nms-device-tools-menu">
+                <summary><span>Device actions</span><small>ID <?php print $device_id; ?></small></summary>
 				<nav aria-label="Cacti device actions"><?php foreach ($device_actions as $device_action) {
     	if (
     		!empty($device_action[3])
@@ -127,9 +137,7 @@ $device_actions = [
 			<div class="<?php print (int) $edit_device["graph_count"] > 0
    	? "success"
    	: "muted"; ?>"><span>Graphs</span><strong><?php print (int) $edit_device["graph_count"]; ?></strong></div>
-			<div class="<?php print $availability_tone; ?>"><span>Availability</span><strong><?php print nms_h(
-	number_format($availability_value, 1),
-); ?>%</strong></div>
+			<div class="<?php print $availability_tone; ?>"><span><?php print nms_h($availability_label); ?></span><strong><?php print nms_h($availability_text); ?></strong></div>
 	</div>
 	<section class="nms-snmp-information" aria-labelledby="nms-snmp-information-title">
 		<div class="nms-snmp-information-head">
@@ -158,6 +166,7 @@ $device_actions = [
 </section>
 
 	<?php require $config["base_path"] . "/plugins/nms/templates/devices/add.php"; ?>
+    <?php if(is_realm_allowed(3) && !$serial_connection) require __DIR__."/serial_setup.php"; ?>
 
 <div class="nms-device-associations">
 	<section class="nms-panel" id="graph-templates">

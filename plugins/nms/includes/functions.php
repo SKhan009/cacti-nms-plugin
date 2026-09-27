@@ -19,9 +19,25 @@ function nms_require_management($realm = 3)
 /** Apply native per-device visibility before accepting a device-specific web action. */
 function nms_require_device_access($host_id)
 {
-	if (!function_exists("is_device_allowed") || !is_device_allowed((int) $host_id)) {
-		throw new RuntimeException("Your Cacti account cannot access this device.");
-	}
+    if (function_exists('is_device_allowed') && is_device_allowed((int)$host_id)) return;
+    // Cacti's list helper applies hide_disabled before checking permissions.
+    // For an existing disabled host, evaluate the same native ACL without that display filter.
+    $user=nms_current_user_id();
+    if (($user > 0 || (int)read_config_option('auth_method') === 0)
+        && function_exists('auth_valid_user') && auth_valid_user($user)
+        && function_exists('get_simple_device_perms') && function_exists('get_policy_where')
+        && function_exists('get_policies')) {
+        $where="WHERE h.id=".(int)$host_id." AND h.deleted='' AND h.disabled='on'";
+        if ((int)read_config_option('auth_method')!==0 && !get_simple_device_perms($user)) {
+            $where=get_policy_where(read_config_option('graph_auth_method'),get_policies($user),$where);
+        }
+        $allowed=db_fetch_cell("SELECT COUNT(DISTINCT h.id) FROM host h
+            LEFT JOIN graph_local gl ON h.id=gl.host_id
+            LEFT JOIN graph_templates gt ON gt.id=gl.graph_template_id
+            LEFT JOIN host_template ht ON h.host_template_id=ht.id $where");
+        if ((int)$allowed>0) return;
+    }
+    throw new RuntimeException('Your Cacti account cannot access this device.');
 }
 
 /** Reuse Cacti's device ACL evaluation once per web request for all NMS summaries. */
@@ -70,6 +86,15 @@ function nms_device_inventory_counts($devices)
 			continue;
 		}
 		$counts["enabled"]++;
+        if (!empty($device['id'])) {
+            require_once __DIR__.'/configuration/monitoring.php';
+            $serial = $device['serial_monitoring'] ?? nms_config_connection_status((int)$device['id']);
+            if ($serial !== null) {
+                if ($serial['status'] === 'Responding') $counts['up']++;
+                // Missing serial evidence is unknown, not a native no-ping Up or confirmed Down.
+                continue;
+            }
+        }
 		if (!nms_parameter_is_fresh($device["last_updated"] ?? "")) {
 			continue;
 		}
@@ -808,6 +833,14 @@ function nms_device_status_name($device)
 	if (($device["disabled"] ?? "") !== "") {
 		return "Disabled";
 	}
+	if (!empty($device["id"])) {
+        require_once __DIR__.'/configuration/monitoring.php';
+        $serial = $device['serial_monitoring'] ?? nms_config_connection_status((int)$device['id']);
+        if ($serial !== null) {
+            // Cacti's no-ping status is not evidence that a serial unit answered.
+            return $serial['status'] === 'Responding' ? 'Up' : $serial['status'];
+        }
+    }
 	$updated = (string) ($device["last_updated"] ?? "");
 	if ($updated === "" || $updated === "0000-00-00 00:00:00") {
 		return "Pending";

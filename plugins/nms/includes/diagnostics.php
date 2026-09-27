@@ -26,6 +26,12 @@ function nms_diag_labels()
 	];
 }
 
+/** Available choices; legacy labels remain readable in saved history. */
+function nms_diag_available_labels()
+{
+    return array_diff_key(nms_diag_labels(), array_flip(['nping_icmp', 'nping_tcp', 'hping3_icmp', 'hping3_tcp']));
+}
+
 /** Normalize a saved comma-separated tool list or submitted tool array. */
 function nms_diag_tools($value)
 {
@@ -75,6 +81,7 @@ function nms_diag_profile_validate($input)
 function nms_diag_profile_save($input)
 {
 	nms_require_management(3);
+	$input['diagnostic_tools'] = array_values(array_intersect(nms_diag_tools($input['diagnostic_tools'] ?? []), array_keys(nms_diag_available_labels())));
 	$profile = nms_diag_profile_validate($input);
 	$id = (int) ($input["diagnostic_profile_id"] ?? 0);
 
@@ -198,7 +205,7 @@ function nms_diag_drain($pipe, &$buffer, &$truncated, $limit)
 }
 
 /** Execute a direct argument array, preserve errors, and always reap the child. */
-function nms_diag_run_command($command, $timeout = 40)
+function nms_diag_run_command($command, $timeout = 40, ?callable $heartbeat = null)
 {
 	if (!is_array($command) || !$command || !is_string($command[0]) || $command[0] === '') {
 		throw new InvalidArgumentException('Invalid diagnostic command.');
@@ -217,6 +224,7 @@ function nms_diag_run_command($command, $timeout = 40)
 	$exit = -1;
 	$limit = 262144; // Per stream; enough for bounded iPerf3 JSON, never unbounded memory.
 	$started = hrtime(true);
+	$lastHeartbeat = 0;
 	try {
 		fclose($pipes[0]);
 		stream_set_blocking($pipes[1], false);
@@ -229,6 +237,12 @@ function nms_diag_run_command($command, $timeout = 40)
 				$exit = (int) $status['exitcode'];
 				if ($exit < 0 && !empty($status['signaled'])) $exit = 128 + (int) $status['termsig'];
 				break;
+			}
+			// The listener remains alive while waiting for a bounded worker subprocess.
+			// Exceptions stop and reap the child through the existing finally block.
+			if ($heartbeat !== null && hrtime(true) - $lastHeartbeat >= 1000000000) {
+				$heartbeat();
+				$lastHeartbeat = hrtime(true);
 			}
 			if ((hrtime(true) - $started) / 1e9 >= $timeout) {
 				$timed_out = true;

@@ -52,7 +52,7 @@ $enabled_tools = nms_diag_tools($profile_values["tools"]);
 				<legend>Enabled tools</legend>
 				<p class="nms-diagnostic-section-help">Choose the checks this profile can run for an assigned device. TCP probe checks use port 443.</p>
 				<div class="nms-diagnostic-tool-grid">
-					<?php foreach (nms_diag_labels() as $key => $label) { ?>
+					<?php foreach (nms_diag_available_labels() as $key => $label) { ?>
 						<label>
 							<input type="checkbox" name="diagnostic_tools[]" value="<?php print nms_h($key); ?>" <?php if (in_array($key, $enabled_tools, true)) { print "checked"; } ?>>
 							<span><?php print nms_h($label); ?></span>

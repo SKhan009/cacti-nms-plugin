@@ -13,7 +13,7 @@ require_once $config["base_path"] . "/plugins/nms/includes/database.php";
 require_once $config["base_path"] . "/plugins/nms/includes/readings.php";
 require_once $config["base_path"] . "/plugins/nms/includes/snmprec.php";
 require_once $config["base_path"] . "/plugins/nms/includes/template_manager.php";
-require_once __DIR__ . "/includes/mib_import.php";
+require_once __DIR__ . "/includes/mib_templates.php";
 require_once __DIR__ . "/includes/discovery.php";
 require_once __DIR__ . "/includes/diagnostics.php";
 require_once $config["base_path"] . "/plugins/nms/includes/device_manager.php";
@@ -21,6 +21,43 @@ require_once $config["base_path"] . "/plugins/nms/includes/graph_template_manage
 
 // Require an explicit lifecycle upgrade; viewing devices never renames core templates.
 nms_require_database();
+
+// Dedicated serial workflow; legacy edit links remain valid.
+require_once __DIR__.'/includes/configuration/service.php';
+if (get_nfilter_request_var('tab') === 'serial') {
+    require __DIR__.'/includes/configuration/serial_page.php'; exit;
+}
+if ($_SERVER['REQUEST_METHOD']==='GET' && empty($_GET['shared_settings']) && in_array(get_nfilter_request_var('tab'),['edit','connection'],true)) {
+    $serial_id=(int)get_filter_request_var('id');
+    if (($serial_id && nms_serial_assignment($serial_id)) || (!$serial_id && get_nfilter_request_var('tab')==='connection')) {
+        header('Location: devices.php?tab=serial'.($serial_id?'&id='.$serial_id:'')); exit;
+    }
+}
+
+if (get_nfilter_request_var("tab") === "readings") {
+    // Preserve old bookmarks and in-flight forms after moving diagnosis to its own page.
+    if (($_GET['section'] ?? '') === 'diagnosis' || in_array($_POST['workspace_action'] ?? '', ['diagnose_device','run_diagnostic','run_service_check','cancel_service_check'],true) || isset($_GET['job_id'])) {
+        require_once __DIR__.'/includes/workspace/evidence.php';
+        $legacy_id=$_GET['id'] ?? 0;
+        if(!is_scalar($legacy_id) || !ctype_digit((string)$legacy_id)){http_response_code(400);exit('Invalid device ID.');}
+        $extra=[];
+        if(isset($_GET['job_id']) && is_scalar($_GET['job_id']) && ctype_digit((string)$_GET['job_id']))$extra['job_id']=(int)$_GET['job_id'];
+        header('Location: '.nms_workspace_url('diagnosis',(int)$legacy_id,$extra),true,$_SERVER['REQUEST_METHOD']==='POST'?307:302);exit;
+    }
+
+    require __DIR__ . "/includes/workspace/page.php";
+    exit;
+}
+
+if (get_nfilter_request_var("tab") === "configuration") {
+    require __DIR__ . "/includes/configuration/page.php";
+    exit;
+}
+
+if (get_nfilter_request_var("tab") === "connection") {
+    require __DIR__ . "/includes/configuration/connection_page.php";
+    exit;
+}
 
 if (get_nfilter_request_var("tab") === "nodes") {
     require __DIR__ . "/includes/nodes/page.php";
@@ -394,6 +431,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset_request_var("nms_action")) {
 		}
 
 		if ($action === "update_device") {
+			// Complete permission-checked metadata while an enabled device remains
+			// visible. Cacti's hide-disabled preference also affects device ACL queries.
+			$disable_after_save = array_key_exists("disabled", $_POST) &&
+				db_fetch_cell_prepared("SELECT disabled FROM host WHERE id=?", [get_filter_request_var("id")]) !== "on";
 			$device_id = nms_device_update(get_filter_request_var("id"), [
 				"description" => get_nfilter_request_var("description"),
 				"hostname" => get_nfilter_request_var("hostname"),
@@ -424,7 +465,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset_request_var("nms_action")) {
 				// Checkboxes are absent from POST when clear. Read the submitted form
 				// directly so their state is not affected by Cacti request filtering.
 				"proxy" => array_key_exists("proxy", $_POST),
-				"disabled" => array_key_exists("disabled", $_POST),
+				"disabled" => !$disable_after_save && array_key_exists("disabled", $_POST),
 			]);
 			nms_nd_assignment_write($device_id, $discovery_assignment);
 			nms_diag_assignment_write($device_id, $diagnostic_assignment);
@@ -455,6 +496,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset_request_var("nms_action")) {
 				throw new InvalidArgumentException("The serial number field was not submitted.");
 			}
 			nms_manual_serial_save($device_id, get_nfilter_request_var("manual_serial_number"));
+			if ($disable_after_save) {
+				nms_require_management();
+				nms_require_device_access($device_id);
+				api_device_disable_devices([$device_id]);
+				if (db_fetch_cell_prepared("SELECT disabled FROM host WHERE id=?", [$device_id]) !== "on") {
+					throw new RuntimeException("Device settings were saved, but Cacti did not disable monitoring.");
+				}
+				// Respect the native hidden-device preference after the completed save.
+				header("Location: devices.php?tab=inventory&device_updated=1");
+				exit();
+			}
 			// Suppress an immediate SNMP suggestion after a deliberate manual clear;
 			// a later clean visit may offer the fresh value again as an unsaved suggestion.
 			header(
@@ -473,6 +525,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset_request_var("nms_action")) {
 				$_SESSION["nms_mib_preview"] = nms_mib_preview(
 					$_FILES["mib_files"] ?? [],
 					(int) get_filter_request_var("mib_host_id"),
+                    (string) ($_POST["mib_template_name"] ?? ""),
+                    (int) ($_POST["mib_category_id"] ?? 0),
 				);
 			} else {
 				$preview = $_SESSION["nms_mib_preview"] ?? null;
@@ -487,7 +541,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset_request_var("nms_action")) {
 				if (!is_array($selected)) {
 					throw new InvalidArgumentException("Select metrics.");
 				}
-				$mib_report = nms_mib_create($preview, $selected);
+				if (empty($preview['host_id'])) {
+                    nms_mib_prepare_templates($preview,$selected);
+                    unset($_SESSION['nms_mib_preview']);
+                    header('Location: file_repository.php?kind=mib&prepared=1');exit;
+                }
+                $mib_report = nms_mib_create($preview, $selected);
 				unset($_SESSION["nms_mib_preview"]);
 				$_SESSION["nms_mib_success"] = ["preview" => $preview, "rows" => $mib_report];
 			}
@@ -678,11 +737,14 @@ if (in_array($tab, ["edit", "readings"], true)) {
 			[$edit_device_id],
 		);
 	}
-	if (!$edit_device) {
-		$page_error = "The selected Cacti device was not found.";
+	// Native visibility may change during save (for example, hide-disabled).
+	// Keep a denied detail request out of the template without an uncaught
+	// exception that makes Cacti disable the entire plugin.
+	if (!$edit_device || !is_device_allowed($edit_device_id)) {
+		$page_error = $page_error ?: "The selected Cacti device is unavailable or not visible to your account.";
+		$edit_device = [];
 		$tab = "inventory";
 	} elseif ($edit_device) {
-		nms_require_device_access($edit_device_id);
 		if ($tab === "readings") {
 			$device_readings = nms_readings_load_live_rrd_values(nms_device_readings($edit_device_id));
 			$device_discovery_readings = nms_device_discovery_readings($edit_device_id);
@@ -874,19 +936,7 @@ require $config["base_path"] . "/plugins/nms/templates/app_header.php";
 	<?php if (
  	!$template_workspace &&
  	!$repository_workspace
- ) { ?><div class="nms-page-tabs" role="tablist" aria-label="Device management views">
-		<a class="<?php print $tab === "inventory"
-  	? "selected"
-  	: ""; ?>" href="?tab=inventory" data-nms-tip="View live Cacti device status, polling totals, data-source counts, graph counts, and management actions.">Device dashboard</a>
-		<a class="<?php print $tab === "add"
-  	? "selected"
-  	: ""; ?>" href="?tab=add" data-nms-tip="Create a real device in Cacti using the same core fields and defaults.">Add device</a>
-		<a href="?tab=nodes">Nodes</a>
-		<?php if ($tab === "edit") { ?><a class="selected" href="?tab=edit&id=<?php print (int) $edit_device[
-	"id"
-]; ?>" data-nms-tip="Edit this live Cacti device and manage its graph templates and data queries.">Edit device</a><?php } ?>
-		<?php if ($reading_tab_device_id) { ?><a class="<?php print $tab === "readings" ? "selected" : ""; ?>" href="?tab=readings&amp;id=<?php print $reading_tab_device_id; ?>" data-nms-tip="See actual RRD readings, discovery evidence, diagnosis, and raw device responses.">Device readings</a><?php } ?>
-	</div><?php } ?>
+ ) { ?><?php $device_nav_active=$tab;$device_nav_id=$reading_tab_device_id;require __DIR__.'/templates/devices/tabs.php'; ?><?php } ?>
 
 	<?php require $config["base_path"] .
  	($repository_workspace

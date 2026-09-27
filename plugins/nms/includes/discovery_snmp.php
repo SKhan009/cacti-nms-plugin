@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . "/discovery_neighbors.php";
 require_once __DIR__ . "/discovery_endpoints.php";
+require_once __DIR__ . "/discovery_identity.php";
 /**
  * Handles nd snmp value.
  */
@@ -275,6 +276,7 @@ function nms_nd_collect_identity($host, $jobDeadline)
 			}
 		}
 		$counterCollected = time();
+
 		try {
 			$entity = nms_nd_snmp_subtree($session, "1.3.6.1.2.1.47.1.1.1.1", $deadline, $budget);
 		} catch (RuntimeException $e) {
@@ -282,6 +284,14 @@ function nms_nd_collect_identity($host, $jobDeadline)
 			$hardware_error = $e->getMessage();
 		}
 		$battery = nms_nd_collect_battery($session, $deadline);
+        $addressValues = []; $addressErrors = [];
+        foreach (["1.3.6.1.2.1.4.20.1.2", "1.3.6.1.2.1.4.34.1"] as $root) {
+            try {
+                $addressValues += nms_nd_snmp_subtree($session, $root, $deadline, $budget);
+            } catch (RuntimeException $e) {
+                $addressErrors[] = $e->getMessage();
+            }
+        }
 		$interfaces = [];
 		$interface_error = "";
 		try {
@@ -306,6 +316,8 @@ function nms_nd_collect_identity($host, $jobDeadline)
 		return [
 			"interfaces" => $interfaces,
 			"hardware" => $hardware,
+            "own_addresses" => nms_nd_own_addresses($addressValues),
+            "own_address_errors" => $addressErrors,
 			"battery" => $battery,
             "uptime" => $after["value"] ?? null,
 			"interface_error" => $interface_error,
@@ -341,6 +353,7 @@ function nms_nd_collect_direct($host, $protocol, $jobDeadline)
 		if ($protocol === "lldp") {
 			$values += nms_nd_snmp_optional_subtree($session, "1.0.8802.1.1.2.1.3", $deadline, $budget);
 			$values += nms_nd_snmp_optional_subtree($session, "1.0.8802.1.1.2.1.4.1.1", $deadline, $budget);
+			$values += nms_nd_snmp_optional_subtree($session, "1.0.8802.1.1.2.1.4.2.1", $deadline, $budget);
 			try {
 				$data = nms_nd_parse_lldp($values, $interfaces);
 			} catch (RuntimeException $e) {

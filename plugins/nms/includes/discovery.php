@@ -118,10 +118,10 @@ function nms_nd_hash($host)
 	}
 	return hash("sha256", json_encode($values, JSON_THROW_ON_ERROR));
 }
-function nms_nd_hosts()
+function nms_nd_hosts($include_disabled = false)
 {
 	return db_fetch_assoc(
-		"SELECT h.*,d.preset_id,d.last_attempt,d.methods,d.collection_enabled,p.name AS preset_name,p.protocol,p.enabled,p.interval_seconds,p.stale_seconds,p.refresh_seconds FROM host h JOIN plugin_nms_discovery_devices d ON d.host_id=h.id JOIN plugin_nms_discovery_presets p ON p.id=d.preset_id WHERE h.deleted='' AND h.disabled=''",
+		"SELECT h.*,d.preset_id,d.last_attempt,d.methods,d.collection_enabled,p.name AS preset_name,p.protocol,p.enabled,p.interval_seconds,p.stale_seconds,p.refresh_seconds FROM host h JOIN plugin_nms_discovery_devices d ON d.host_id=h.id JOIN plugin_nms_discovery_presets p ON p.id=d.preset_id WHERE h.deleted=''" . ($include_disabled ? "" : " AND h.disabled=''"),
 	);
 }
 /** Poller-owned collection, one device at a time, no web-triggered SNMP or fallback. */

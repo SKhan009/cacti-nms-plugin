@@ -62,7 +62,8 @@ $classify=null;
 $classifyKey=$error && ($_POST['nms_action'] ?? '')==='connection_classify' ? ($_POST['link_key'] ?? '') : ($_GET['classify'] ?? '');
 foreach ($rows as $row) if (($row['link_key'] ?? null)===$classifyKey) $classify=$row;
 $can=is_realm_allowed(3);
-nms_prepare_page('topology','NMS · Edit topology','css/nms-topology-config.css','js/nms-connection-preview.js');
+$topology_tab = 'appearance';
+nms_prepare_page('topology','NMS · Device appearance','css/nms-topology-config.css','js/nms-connection-preview.js');
 require __DIR__ . '/../../templates/app_header.php';
 function nms_connection_fields($action,$id=0) { global $nms_csrf_token;
     print '<input type="hidden" name="__csrf_magic" value="'.nms_h($nms_csrf_token).'"><input type="hidden" name="nms_action" value="'.nms_h($action).'"><input type="hidden" name="id" value="'.(int)$id.'">';
@@ -82,9 +83,8 @@ function nms_connection_delete_button($action,$id,$type='') {
 }
 ?>
 <main class="nms-shell nms-topology-config nms-connections-page">
-<h1><?php print $styles ? 'Connection types' : 'Edit topology'; ?></h1>
-<p>Configure connections in the NMS map. This does not change device ports or network settings.</p>
-<nav class="nms-preset-tabs"><a href="topology.php?tab=discovered&amp;node_id=<?php print $node_id; ?>">View topology</a><a href="topology.php?tab=connections&amp;node_id=<?php print $node_id; ?>" class="<?php print !$styles?'active':''; ?>">Connections</a><a href="topology.php?tab=connections&amp;section=types" class="<?php print $styles?'active':''; ?>">Connection types</a><a href="topology.php?tab=appearance">Device appearance</a></nav>
+<h1>Device appearance</h1>
+<?php $appearance_section = $styles ? 'connection_types' : 'connections'; require __DIR__ . '/../../templates/topology/appearance_nav.php'; ?>
 <?php if ($error || $notice) { ?><p class="nms-action-feedback <?php print $error?'error':''; ?>" role="<?php print $error?'alert':'status'; ?>"><?php print nms_h($error ?: $notice); ?></p><?php } ?>
 <?php if ($styles) { ?>
 <p>These styles identify manually configured connection types. They do not represent live health.</p>
@@ -95,7 +95,7 @@ function nms_connection_delete_button($action,$id,$type='') {
 <p><?php print nms_h(ucfirst($type['line_style']).' · '.ucfirst($type['symbol']).' endpoints'); ?></p>
 <?php if ($can) { ?><div class="nms-connection-actions"><a class="nms-catalog-button" href="<?php print nms_h('topology.php?tab=connections&section=types&type_edit='.rawurlencode($type['name'])); ?>">Edit</a><?php nms_connection_delete_button('connection_type_delete',0,$type['name']); ?></div><?php } ?></article><?php } ?>
 </div>
-<?php if ($can) { ?><dialog id="type-dialog" class="nms-connection-dialog" aria-labelledby="type-dialog-title" data-auto-open="<?php print $typeOriginal!=='' || ($error && ($_POST['nms_action'] ?? '')==='connection_type_save')?'1':'0'; ?>">
+<?php if ($can) { ?><dialog id="type-dialog" class="nms-connection-dialog" aria-labelledby="type-dialog-title" data-auto-open="<?php print $typeOriginal!=='' || isset($_GET['new']) || ($error && ($_POST['nms_action'] ?? '')==='connection_type_save')?'1':'0'; ?>">
 <header><h2 id="type-dialog-title"><?php print $typeOriginal!==''?'Edit':'Add'; ?> connection type</h2><button type="button" data-close-dialog aria-label="Close" class="nms-popup-close"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
 <form method="post" class="nms-connection-form"><?php nms_connection_fields('connection_type_save'); ?><input type="hidden" name="original_type" value="<?php print nms_h($typeOriginal); ?>">
 <?php if ($error) { ?><p role="alert"><?php print nms_h($error); ?></p><?php } ?>

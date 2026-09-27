@@ -145,7 +145,8 @@ body.nms-upload-open { overflow: hidden; }
 .nms-upload-trigger { background: #e3f3e8; color: #195c34; border-color: #add3ba; }
 .nms-upload-trigger:hover { background: #d2eadb; border-color: #8abd9c; }
 .nms-upload-dialog::backdrop { background: rgba(0, 0, 0, .42); }
-.nms-upload-dialog-head { border-radius: 10px 10px 0 0; }
+.nms-upload-dialog .nms-upload-dialog-head { border-radius: 10px 10px 0 0; display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 16px; }
+.nms-upload-dialog-head > div { min-width: 0; }
 .nms-upload-dialog-close {
 	align-items: center;
 	background: rgba(255, 255, 255, .14);

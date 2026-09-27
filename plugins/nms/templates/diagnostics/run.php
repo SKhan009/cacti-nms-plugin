@@ -2,7 +2,7 @@
 /** Separate reachability checks from bandwidth measurements while sharing saved results. */
 $diagnostic_groups = [
     'device' => ['title' => 'Device diagnostics', 'description' => 'Check device replies, delays and the network path.',
-        'tools' => ['ping', 'traceroute', 'traceroute_icmp', 'traceroute_tcp', 'mtr_icmp', 'mtr_tcp', 'nping_icmp', 'nping_tcp', 'hping3_icmp', 'hping3_tcp', 'arp']],
+        'tools' => ['ping', 'traceroute', 'traceroute_icmp', 'traceroute_tcp', 'mtr_icmp', 'mtr_tcp', 'arp']],
     'bandwidth' => ['title' => 'Bandwidth tests', 'description' => 'Measure transfer speed or estimate path capacity. iPerf3 and Netperf need a test server on remote devices.',
         'tools' => ['iperf3', 'netperf', 'pathchar']],
 ];

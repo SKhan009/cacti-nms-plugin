@@ -22,10 +22,12 @@ function nms_setup_registration()
 	api_plugin_register_hook("nms", "page_head", "nms_page_head", "setup.php");
 	api_plugin_register_hook("nms", "poller_output", "nms_poller_output", "includes/polling.php");
 	api_plugin_register_hook("nms", "poller_bottom", "nms_poller_bottom", "includes/polling.php");
+	api_plugin_register_hook("nms", "device_remove", "nms_config_device_removed", "includes/configuration/lifecycle.php");
+	api_plugin_register_hook("nms", "api_device_new", "nms_config_device_saved", "includes/configuration/lifecycle.php");
 
 	api_plugin_register_realm(
 		"nms",
-		"nms.php,devices.php,file_repository.php,network_discovery.php,diagnostics.php,fault_config.php,capabilities.php,topology.php,graphs.php,templates.php,discovery_presets.php",
+		"nms.php,devices.php,file_repository.php,network_discovery.php,diagnostics.php,fault_config.php,capabilities.php,topology.php,graphs.php,templates.php,discovery_presets.php,serial_profiles.php",
 		"View NMS Faults, Devices, Rules, Capabilities, Topology, Graphs, and Templates",
 		1,
 	);

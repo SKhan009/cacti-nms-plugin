@@ -29,7 +29,7 @@
 						<td><?php print nms_h($profile["name"]); ?></td>
 							<td>
 								<?php print nms_h(
-        	implode(", ", array_map(fn($tool) => nms_diag_labels()[$tool], nms_diag_tools($profile["tools"]))),
+			implode(", ", array_map(fn($tool) => nms_diag_labels()[$tool], array_values(array_intersect(nms_diag_tools($profile["tools"]),array_keys(nms_diag_available_labels()))))),
         ); ?>
 							</td>
 							<td>

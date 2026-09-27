@@ -5,8 +5,10 @@ require_once __DIR__ . '/diagnostics.php';
 /** A recent heartbeat is required; offline collectors never accumulate waiting tests. */
 function nms_diag_runner($collector)
 {
-    $raw = db_fetch_cell_prepared("SELECT meta_value FROM plugin_nms_meta WHERE meta_key=? AND updated_at > DATE_SUB(NOW(), INTERVAL 5 SECOND)", ['diagnostic_runner_' . (int) $collector]);
-    return $raw ? json_decode($raw, true) : null;
+    $row = db_fetch_row_prepared("SELECT meta_value,updated_at FROM plugin_nms_meta WHERE meta_key=? AND updated_at > DATE_SUB(NOW(), INTERVAL 5 SECOND)", ['diagnostic_runner_' . (int) $collector]);
+    if(!$row)return null;
+    $runner=json_decode($row['meta_value'],true);
+    return is_array($runner)?array_merge($runner,['heartbeat_at'=>$row['updated_at']]):null;
 }
 
 /** Admit one immediate test per collector, bound to current settings. */
@@ -14,9 +16,13 @@ function nms_diag_run($host_id, $tool)
 {
 	nms_require_management(3);
 	nms_require_device_access($host_id);
+	if (!isset(nms_diag_available_labels()[(string)$tool])) throw new InvalidArgumentException("This diagnostic is no longer available. Choose Ping, Traceroute or MTR.");
 	$row = nms_diag_assignment($host_id, (string) $tool);
 	$user = nms_current_user_id();
 	if ($user < 1) throw new RuntimeException('Sign in before requesting a diagnostic.');
+	if ((int) db_fetch_cell_prepared('SELECT status FROM plugin_config WHERE directory=?', ['nms']) !== 1) {
+		throw new RuntimeException('The NMS plugin is disabled in Cacti. Enable it in Cacti Plugin Management so the poller can start the diagnostic runner. No test was submitted.');
+	}
 	if (!(int) db_fetch_cell_prepared("SELECT COUNT(*) FROM poller WHERE id=? AND disabled=''", [(int) $row['poller_id']])) {
 		throw new RuntimeException('The assigned collector is missing or disabled.');
 	}
@@ -70,6 +76,17 @@ function nms_diag_authorize_job($job)
 	}
 }
 
+/** Recheck execution eligibility before transport and again before publishing its result. */
+function nms_diag_execution_context($job,$collector)
+{
+    nms_diag_authorize_job($job);
+    if((int)db_fetch_cell_prepared('SELECT status FROM plugin_config WHERE directory=?',['nms'])!==1)throw new RuntimeException('NMS was disabled; diagnostic result was not accepted.');
+    if(!db_fetch_cell_prepared("SELECT id FROM poller WHERE id=? AND disabled=''",[$collector]))throw new RuntimeException('Assigned collector is unavailable; diagnostic result was not accepted.');
+    $row=nms_diag_assignment((int)$job['host_id'],$job['tool']);
+    if((int)$row['poller_id']!==$collector || !hash_equals($job['config_hash'],nms_diag_signature($row)))throw new RuntimeException('Device, profile or collector changed after submission. Run a new test.');
+    return $row;
+}
+
 /** One bounded test per worker; locks prevent concurrent or repeated execution. */
 function nms_diag_poll()
 {
@@ -88,13 +105,10 @@ function nms_diag_poll()
 		$job = db_fetch_row_prepared("SELECT * FROM plugin_nms_diagnostic_jobs WHERE poller_id=? AND status='queued' ORDER BY id LIMIT 1", [$collector]);
 		if (!$job) return;
 		try {
-			nms_diag_authorize_job($job);
-			$row = nms_diag_assignment((int) $job['host_id'], $job['tool']);
-			if ((int) $row['poller_id'] !== $collector || !hash_equals($job['config_hash'], nms_diag_signature($row))) {
-				throw new RuntimeException('Device, profile or collector changed after submission. Run a new test.');
-			}
+			$row = nms_diag_execution_context($job,$collector);
 			nms_category_execute("UPDATE plugin_nms_diagnostic_jobs SET status='running',started_at=NOW() WHERE id=? AND status='queued'", [$job['id']]);
 			$result = nms_diag_execute($row, $job['tool']);
+			nms_diag_execution_context($job,$collector);
 			$status = $result['exit'] === 0 && empty($result['protocol_error']) ? 'complete' : 'failed';
 		} catch (Throwable $error) {
 			$status = 'failed';
@@ -132,6 +146,10 @@ function nms_diag_dispatch()
 {
 	global $config;
 	if (PHP_SAPI !== 'cli' || PHP_OS_FAMILY !== 'Linux') return;
+	// A managed service owns startup/recovery; do not race it from each poller cycle.
+	$launcher = $config['nms_diagnostic_listener_launcher'] ?? 'poller';
+	if ($launcher === 'service') return;
+	if ($launcher !== 'poller') throw new RuntimeException('Invalid NMS listener launcher; use poller or service.');
 	require_once $config['base_path'] . '/lib/poller.php';
 	// Both executable and script are installation paths, never request parameters.
 	exec_background(PHP_BINARY, '-q ' . escapeshellarg(dirname(__DIR__) . '/diagnostic_listener.php'));

@@ -9,11 +9,13 @@ require_once __DIR__ . "/functions.php";
 require_once __DIR__ . "/categories.php";
 require_once __DIR__ . "/groups.php";
 require_once __DIR__ . "/nodes/service.php";
+require_once __DIR__ . "/configuration/service.php";
 require_once __DIR__ . "/relationships.php";
 require_once __DIR__ . "/topology/connections.php";
 require_once __DIR__ . "/topology/config.php";
 require_once __DIR__ . "/ssh_schema.php";
 require_once __DIR__ . "/discovery_schema.php";
+require_once __DIR__ . "/workspace/schema.php";
 
 /** Read schema readiness without DDL, process termination, or an implicit repair. */
 function nms_database_ready()
@@ -25,7 +27,7 @@ function nms_database_ready()
 			"equipment_categories_v1",
 		]) === "complete" &&
 		db_fetch_cell_prepared("SELECT meta_value FROM plugin_nms_meta WHERE meta_key = ?", ["nms_schema_version"]) ===
-			"1.10.99";
+			"1.11.8";
 }
 
 /** Ordinary page views never perform install DDL or silently repair a partial upgrade. */
@@ -313,11 +315,13 @@ function nms_apply_database_schema()
 	nms_category_normalize_legacy_default();
 	nms_group_schema();
 	nms_nodes_schema();
+	nms_configuration_schema();
 	nms_relationship_schema();
 	nms_connection_schema();
 	nms_topology_config_schema();
 	nms_ssh_schema();
 	nms_discovery_schema();
+	nms_workspace_schema();
 	nms_category_execute("CREATE TABLE IF NOT EXISTS plugin_nms_mib_uploads (
  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
  host_id INT UNSIGNED NOT NULL, user_id INT UNSIGNED NOT NULL,
@@ -329,7 +333,7 @@ function nms_apply_database_schema()
 		"CREATE TABLE IF NOT EXISTS plugin_nms_mib_objects (host_id INT UNSIGNED NOT NULL, oid VARCHAR(191) NOT NULL, report_json MEDIUMTEXT NOT NULL, created_at DATETIME NOT NULL, PRIMARY KEY(host_id,oid)) ENGINE=InnoDB",
 	);
 	nms_category_execute("INSERT INTO plugin_nms_meta (meta_key, meta_value, updated_at)
-		VALUES ('nms_schema_version', '1.10.99', NOW()) ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value), updated_at = NOW()");
+		VALUES ('nms_schema_version', '1.11.8', NOW()) ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value), updated_at = NOW()");
 }
 
 /** Preserve the known legacy status rule; refuse to silently delete or stop evaluating other old metrics. */
@@ -359,6 +363,11 @@ function nms_migrate_legacy_fault_rules()
 /** Remove plugin-owned tables during uninstall; Cacti core tables are not dropped. */
 function nms_drop_database()
 {
+	foreach (["config_profiles", "config_devices", "config_jobs", "serial_readings"] as $table) db_execute("DROP TABLE IF EXISTS plugin_nms_".$table);
+	db_execute("DROP TABLE IF EXISTS plugin_nms_serial_devices");
+	db_execute("DROP TABLE IF EXISTS plugin_nms_serial_connections");
+	db_execute("DROP TABLE IF EXISTS plugin_nms_serial_profiles");
+	foreach (["consolidation_jobs", "consolidation_reviews", "service_jobs", "management_changes", "onboarding_requests", "candidate_checks", "scan_results", "scan_runs", "workspace_audit", "identity_reviews"] as $table) db_execute("DROP TABLE IF EXISTS plugin_nms_" . $table);
 	db_execute("DROP TABLE IF EXISTS plugin_nms_diagnostic_jobs");
 	foreach (["sessions", "state", "devices", "profiles", "presets"] as $suffix) {
 		db_execute("DROP TABLE IF EXISTS plugin_nms_ssh_" . $suffix);

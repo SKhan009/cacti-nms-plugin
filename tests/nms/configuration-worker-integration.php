@@ -1,0 +1,97 @@
+<?php
+/** Temporary-table Cacti integration + local simulated RTU gateway; no real equipment. */
+require __DIR__.'/serial-profiles-integration.php';
+require __DIR__.'/../../plugins/nms/includes/configuration/runner.php';
+$process=proc_open(['/usr/bin/python3',__DIR__.'/serial-transport.py','--serve'],[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);
+if(!is_resource($process)) throw new RuntimeException('Cannot start simulator');
+stream_set_timeout($pipes[1],5);
+$port=(int)trim(fgets($pipes[1]));
+check($port>0,'Simulator did not publish a port');
+$locks=sys_get_temp_dir().'/nms-worker-locks-'.bin2hex(random_bytes(8));
+mkdir($locks,0700); $config['nms_serial_lock_dir']=$locks;
+try {
+    $profile=nms_serial_profile_get($id);
+    $tcp=nms_serial_connection_create(['name'=>'Temporary RTU gateway','transport'=>'rtu_tcp','endpoint'=>'127.0.0.1','port'=>$port,'poller_id'=>$hosts[0]['poller_id'],'profile_id'=>$id,'profile_revision'=>$profile['revision']]);
+    $current=nms_serial_assignment($hosts[0]['id']);
+    nms_serial_assign($hosts[0]['id'],['connection_id'=>$tcp,'assignment_revision'=>$current['revision'],'device_address'=>1]);
+    $display=['id'=>$hosts[0]['id'],'disabled'=>'','status'=>3,'last_updated'=>date('Y-m-d H:i:s')];
+    check(nms_device_status_name($display)==='Unavailable','Native no-ping Up leaked before a serial reply');
+    check(nms_device_inventory_counts([$display])['up']===0,'Dashboard counted missing serial evidence as Up');
+    check(nms_device_status_name(array_replace($display,['disabled'=>'on']))==='Disabled','Disabled serial device lost its disabled state');
+    $read=nms_config_job_enqueue($hosts[0]['id'],'limit');
+    nms_config_worker_once($hosts[0]['poller_id']);
+    $completed=db_fetch_row_prepared('SELECT status,result_json FROM plugin_nms_config_jobs WHERE id=?',[$read]);
+    check($completed['status']==='complete','Worker read failed: '.$completed['result_json']);
+    check(json_decode($completed['result_json'],true)['value']===17,'Worker did not read simulated value');
+    $write=nms_config_job_enqueue($hosts[0]['id'],'limit','write',23,$read);
+    nms_config_worker_once($hosts[0]['poller_id']);
+    $completed=db_fetch_row_prepared('SELECT status,result_json FROM plugin_nms_config_jobs WHERE id=?',[$write]);
+    check($completed['status']==='verified','Worker write failed: '.$completed['result_json']);
+    check(json_decode($completed['result_json'],true)['observed']===23,'Write did not read back actual simulator value');
+    check(!db_fetch_cell_prepared('SELECT host_id FROM plugin_nms_serial_readings WHERE host_id=?',[$hosts[0]['id']]),'Pre-write readings were retained');
+    // Simulate a process crash: this write must be closed as unverified, not replayed.
+    nms_category_execute("UPDATE plugin_nms_config_jobs SET status='running' WHERE id=?",[$write]);
+    nms_config_worker_once($hosts[0]['poller_id']);
+    check(db_fetch_cell_prepared('SELECT status FROM plugin_nms_config_jobs WHERE id=?',[$write])==='unverified','Crashed write was not marked unverified');
+    nms_config_worker_once($hosts[0]['poller_id']);
+    $reading=nms_config_reading($hosts[0]['id'],'limit');
+    check(nms_device_status_name($display)==='Up','Verified serial response did not drive device status');
+    check(nms_device_inventory_counts([$display])['up']===1,'Dashboard missed verified serial response');
+    require_once __DIR__.'/../../plugins/nms/includes/topology/map.php';
+    $map=nms_map_data(); $mapped=$map['unlocated'];
+    foreach($map['sites'] as $site) $mapped=array_merge($mapped,$site['devices']);
+    $mapped=array_column($mapped,null,'id');
+    check(($mapped[$hosts[0]['id']]['status'] ?? '')==='Up','Map did not use serial response evidence');
+    check($mapped[$hosts[0]['id']]['response_ms']===null,'Map invented network latency for serial equipment');
+    check($reading['status']==='current' && $reading['value']===23,'Scheduled read did not obtain device value');
+    check(nms_config_graph_value($hosts[0]['id'],'limit',$hosts[0]['poller_id'])==='23','Graph input lost actual value');
+    check(nms_config_graph_value($hosts[0]['id'],'limit',$hosts[0]['poller_id'],$model_id,1)==='23','Bound graph lost actual value');
+    check(nms_config_graph_value($hosts[0]['id'],'limit',$hosts[0]['poller_id'],$model_id+100,1)==='U','Different model reused old graph');
+    check(nms_config_graph_value($hosts[0]['id'],'limit',$hosts[0]['poller_id'],$model_id,2)==='U','Different revision reused old graph');
+    check(nms_config_graph_value($hosts[0]['id'],'limit',(int)$hosts[0]['poller_id']+10000)==='U','Wrong collector graph input accepted');
+    check(nms_config_monitor_once($hosts[0]['poller_id'])===false,'Collection interval was ignored');
+    nms_category_execute('UPDATE plugin_nms_serial_readings SET observed_at=DATE_SUB(NOW(),INTERVAL 20 MINUTE) WHERE host_id=?',[$hosts[0]['id']]);
+    check(nms_device_status_name($display)==='Stale','Device status concealed an aged serial reply');
+    check(nms_config_reading($hosts[0]['id'],'limit')['status']==='stale','Old sample reported current');
+    check(nms_config_graph_value($hosts[0]['id'],'limit',$hosts[0]['poller_id'])==='U','Stale graph sample did not produce U');
+    nms_config_worker_once($hosts[0]['poller_id']);
+    check(nms_config_reading($hosts[0]['id'],'limit')['status']==='current','Due read was not refreshed');
+    nms_category_execute('UPDATE plugin_nms_serial_connections SET revision=revision+1 WHERE id=?',[$tcp]);
+    check(nms_device_status_name($display)==='Unavailable','Device status reused a reply after connection settings changed');
+    check(nms_config_reading($hosts[0]['id'],'limit')['status']==='unavailable','Changed connection reused old sample');
+    nms_config_worker_once($hosts[0]['poller_id']);
+    check(nms_config_reading($hosts[0]['id'],'limit')['value']===23,'Changed connection was not sampled anew');
+    nms_config_store_reading(nms_config_target($hosts[0]['id']),'limit',['status'=>'failed','error'=>'Simulated timeout']);
+    check(nms_device_status_name($display)==='Read failed','Failed serial read displayed native Up');
+    check(nms_device_inventory_counts([$display])['up']===0,'Dashboard counted failed serial read as Up');
+    $map=nms_map_data(); $mapped=$map['unlocated'];
+    foreach($map['sites'] as $site) $mapped=array_merge($mapped,$site['devices']);
+    $mapped=array_column($mapped,null,'id');
+    check(($mapped[$hosts[0]['id']]['status'] ?? '')==='Read failed','Map concealed failed serial readings');
+    nms_category_execute('UPDATE plugin_nms_config_devices SET updated_by=0 WHERE host_id=?',[$hosts[0]['id']]);
+    check(nms_config_monitor_once($hosts[0]['poller_id'])===false,'Revoked operator still collected');
+    nms_category_execute('UPDATE plugin_nms_config_devices SET updated_by=1 WHERE host_id=?',[$hosts[0]['id']]);
+    foreach(['revoked operator','changed connection'] as $rejection) {
+        $read=nms_config_job_enqueue($hosts[0]['id'],'limit');
+        nms_config_worker_once($hosts[0]['poller_id']);
+        $denied=nms_config_job_enqueue($hosts[0]['id'],'limit','write',24,$read);
+        if($rejection==='revoked operator') nms_category_execute('UPDATE plugin_nms_config_jobs SET user_id=0 WHERE id=?',[$denied]);
+        else nms_category_execute('UPDATE plugin_nms_serial_connections SET revision=revision+1 WHERE id=?',[$tcp]);
+        nms_config_worker_once($hosts[0]['poller_id']);
+        check(db_fetch_cell_prepared('SELECT status FROM plugin_nms_config_jobs WHERE id=?',[$denied])==='failed','Pre-execution rejection incorrectly uncertain: '.$rejection);
+        $confirm=nms_config_job_enqueue($hosts[0]['id'],'limit');
+        nms_config_worker_once($hosts[0]['poller_id']);
+        $result=json_decode(db_fetch_cell_prepared('SELECT result_json FROM plugin_nms_config_jobs WHERE id=?',[$confirm]),true);
+        check(($result['value']??null)===23,'Rejected write changed simulator: '.$rejection);
+    }
+    nms_equipment_assign($hosts[0]['id'],['profile_id'=>0,'revision'=>1]);
+    check(!db_fetch_cell_prepared('SELECT host_id FROM plugin_nms_serial_readings WHERE host_id=?',[$hosts[0]['id']]),'Unassignment retained cached sample');
+    echo "PASS: scheduled reads, interval, staleness, numeric graph input/U gaps, collector scope, connection revision, revoked permissions and unassignment invalidation\n";
+    echo "PASS: real PHP worker to local RTU simulator, read 17/write 23/read-back 23, stale cache invalidation and crash without replay\n";
+    echo "PASS: revoked operator and changed connection reject writes as Failed before dispatch; simulator remains 23\n";
+} finally {
+    fclose($pipes[0]); fclose($pipes[1]); fclose($pipes[2]);
+    proc_terminate($process); proc_close($process);
+    foreach(glob($locks.'/*.lock') as $file) unlink($file);
+    rmdir($locks);
+}

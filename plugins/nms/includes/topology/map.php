@@ -1,5 +1,8 @@
 <?php
+require_once __DIR__."/diagnostics.php";
+require_once __DIR__."/appearance.php";
 /** Geographic topology reads native Cacti sites and device permissions. */
+require_once __DIR__.'/../configuration/monitoring.php';
 
 /** Reject missing/default or out-of-range native site coordinates. */
 function nms_map_coordinates($latitude, $longitude)
@@ -29,11 +32,12 @@ function nms_map_metrics($readings)
 function nms_map_data()
 {
     $visible = nms_visible_host_sql();
-    $rows = db_fetch_assoc("SELECT h.id, h.description, h.hostname, h.snmp_sysDescr, h.status, h.disabled, h.site_id,
+    $rows = db_fetch_assoc("SELECT h.id, h.description, h.hostname, h.poller_id, h.snmp_sysDescr, h.status, h.disabled, h.site_id,
         h.cur_time, h.total_polls, h.last_updated, cat.name AS category,
         COALESCE(NULLIF(m.serial_number,''), CASE WHEN inv.status IN ('ok','changed') THEN inv.observed_value END) AS serial,
-        s.name AS site_name, s.city, s.state, s.country, s.address1, s.latitude, s.longitude FROM host h
+        cls.category_id, cls.device_type, ht.name AS template_name, s.name AS site_name, s.city, s.state, s.country, s.address1, s.latitude, s.longitude FROM host h
         LEFT JOIN sites s ON s.id = h.site_id
+        LEFT JOIN host_template ht ON ht.id = h.host_template_id
         LEFT JOIN plugin_nms_device_classification cls ON cls.host_id=h.id
         LEFT JOIN plugin_nms_categories cat ON cat.id=cls.category_id
         LEFT JOIN plugin_nms_device_metadata m ON m.host_id=h.id
@@ -55,17 +59,33 @@ function nms_map_data()
         AND newer.status IN ('open','acknowledged') AND (newer.last_seen>i.last_seen OR (newer.last_seen=i.last_seen AND newer.id>i.id)))") as $alarm) {
         $alarms[$alarm['host_id']] = $alarm;
     }
+    $measurements = nms_topology_measurements($rows);
+    $appearance = nms_appearance_read();
     $sites = [];
     $unlocated = [];
     foreach ($rows as $row) {
+        $serial = nms_config_connection_status((int)$row['id']);
         $device = ['id' => (int) $row['id'], 'name' => $row['description'],
-            'status' => $row['disabled'] === 'on' ? 'Disabled' : ([0 => 'Unknown', 1 => 'Down', 2 => 'Recovering', 3 => 'Up'][(int) $row['status']] ?? 'Unknown')];
+            'status' => $row['disabled'] === 'on' ? 'Disabled' : ($serial !== null
+                ? ($serial['status'] === 'Responding' ? 'Up' : $serial['status'])
+                : ([0 => 'Unknown', 1 => 'Down', 2 => 'Recovering', 3 => 'Up'][(int)$row['status']] ?? 'Unknown'))];
+        $device['serial_state'] = $serial['status'] ?? null;
         $metrics = nms_map_metrics($readings[$row['id']] ?? []);
+        $device['diagnostic_measurement'] = $measurements[(int)$row['id']];
+        $metrics['packet_loss'] = $device['diagnostic_measurement']['packet_loss'];
         $fresh_host = !empty($row['last_updated']) && strtotime($row['last_updated']) >= time() - $fresh_seconds;
         $device += $metrics + ['address' => $row['hostname'] ?? '', 'system' => $row['snmp_sysDescr'] ?? '',
             'category' => $row['category'] ?? '', 'serial' => $row['serial'] ?? '',
-            'response_ms' => $fresh_host && $device['status'] === 'Up' && ($row['total_polls'] ?? 0) > 0 ? (float) $row['cur_time'] : null,
+            'response_ms' => $serial === null && $fresh_host && $device['status'] === 'Up' && ($row['total_polls'] ?? 0) > 0 ? (float) $row['cur_time'] : null,
             'alarm' => $alarms[$row['id']] ?? null];
+        $device['image'] = '';
+        foreach ($appearance['types'] as $profile) {
+            if ((int)$profile['category_id'] === (int)$row['category_id'] && strcasecmp($profile['name'], (string)($row['device_type'] ?: $row['template_name'])) === 0) {
+                $device['image'] = nms_appearance_display_mode($profile,'map') === 'image' ? nms_appearance_image($profile) : '';
+                if ($device['image'] === '') $device['image'] = 'data:image/svg+xml;base64,' . base64_encode(nms_appearance_icon_svg($profile['icon']));
+                break;
+            }
+        }
         $coordinates = nms_map_coordinates($row['latitude'], $row['longitude']);
         if (!$coordinates || !$row['site_name']) {
             $device['site'] = $row['site_name'] ?: 'No site';

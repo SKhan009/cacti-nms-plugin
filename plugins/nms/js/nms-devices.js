@@ -194,7 +194,21 @@
 				if (opening) {
 					search.value = "";
 					search.dispatchEvent(new Event("input"));
-					search.focus();
+                    // Keep the menu inside the viewport, including near the page footer.
+                    panel.style.top = "calc(100% + 5px)";
+                    panel.style.bottom = "auto";
+                    list.style.maxHeight = "280px";
+                    var rect = trigger.getBoundingClientRect();
+                    var below = window.innerHeight - rect.bottom - 12;
+                    var above = Math.max(0, rect.top - 80);
+                    var upward = below < panel.offsetHeight && above > below;
+                    if (upward) {
+                        panel.style.top = "auto";
+                        panel.style.bottom = "calc(100% + 5px)";
+                    }
+                    var chromeHeight = panel.offsetHeight - list.offsetHeight;
+                    list.style.maxHeight = Math.max(60, Math.min(280, (upward ? above : below) - chromeHeight)) + "px";
+                    search.focus({ preventScroll: true });
 				}
 			},
 		);

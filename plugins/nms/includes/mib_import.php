@@ -2,6 +2,30 @@
 /** MIB definitions are parsed by Net-SNMP; reads and core writes use Cacti. */
 require_once __DIR__ . "/discovery_snmp.php";
 require_once __DIR__ . "/template_manager.php";
+/** Validate PHP upload failures before trying to inspect the temporary file. */
+function nms_mib_upload_path($upload, $index)
+{
+    $error = $upload['error'][$index] ?? UPLOAD_ERR_NO_FILE;
+    $errors = [
+        UPLOAD_ERR_INI_SIZE => 'The MIB exceeds the RHEL PHP upload_max_filesize limit (' . ini_get('upload_max_filesize') . ').',
+        UPLOAD_ERR_FORM_SIZE => 'The MIB exceeds the form upload size limit.',
+        UPLOAD_ERR_PARTIAL => 'The MIB upload was interrupted. Select the file and retry.',
+        UPLOAD_ERR_NO_FILE => 'Select a MIB file to upload.',
+        UPLOAD_ERR_NO_TMP_DIR => 'PHP has no upload temporary directory. Ask the RHEL administrator to configure upload_tmp_dir.',
+        UPLOAD_ERR_CANT_WRITE => 'PHP cannot write the uploaded MIB. Check temporary-directory permissions, free space and SELinux labels on RHEL.',
+        UPLOAD_ERR_EXTENSION => 'A PHP extension stopped the MIB upload. Check the RHEL PHP-FPM log.',
+    ];
+    if ($error !== UPLOAD_ERR_OK) throw new InvalidArgumentException($errors[$error] ?? 'The MIB upload failed. Select the file and retry.');
+    $name = $upload['name'][$index] ?? '';
+    if (!is_string($name) || !in_array(strtolower(pathinfo($name, PATHINFO_EXTENSION)), ['mib', 'my', 'txt'], true)) {
+        throw new InvalidArgumentException('Select .mib, .my or .txt MIB definition files.');
+    }
+    $path = $upload['tmp_name'][$index] ?? '';
+    if (!is_string($path) || !is_file($path) || !is_readable($path)) {
+        throw new RuntimeException('The uploaded MIB temporary file is unavailable. Select the file and retry.');
+    }
+    return $path;
+}
 function nms_mib_command($args)
 {
 	$pipes = [];
@@ -9,7 +33,7 @@ function nms_mib_command($args)
 		"bypass_shell" => true,
 	]);
 	if (!is_resource($p)) {
-		throw new RuntimeException("Net-SNMP snmptranslate is required on this Cacti server.");
+		throw new RuntimeException("Net-SNMP snmptranslate is required locally. On offline RHEL, install net-snmp-utils and its dependencies from matching RHEL installation media or an offline RPM repository.");
 	}
 	fclose($pipes[0]);
 	stream_set_blocking($pipes[1], false);
@@ -40,6 +64,12 @@ function nms_mib_command($args)
 		fclose($pipes[2]);
 		proc_close($p);
 	}
+    if ($exit === 127) {
+        throw new RuntimeException('Cannot run snmptranslate. Install net-snmp-utils locally on RHEL and check the configured executable path. Offline installation can use matching RHEL media or an offline RPM repository.');
+    }
+    if (preg_match_all('/Cannot find module \(([^)]+)\)/', $err, $missing)) {
+        throw new RuntimeException('Missing MIB dependencies: ' . implode(', ', array_unique($missing[1])) . '. Upload these modules together with the main MIB, or have the administrator install them in /usr/share/snmp/mibs. Internet access is not required.');
+    }
 	if (
 		$exit !== 0 ||
 		preg_match(
@@ -48,7 +78,7 @@ function nms_mib_command($args)
 		)
 	) {
 		throw new RuntimeException(
-			"MIB parsing failed. Install snmptranslate and supply valid MIBs with all imported dependencies. " .
+			"MIB parsing failed locally. Check the MIB syntax and its imported dependencies. " .
 				substr($err, 0, 500),
 		);
 	}
@@ -57,14 +87,18 @@ function nms_mib_command($args)
 /**
  * Handles mib preview.
  */
-function nms_mib_preview($upload, $host_id)
+function nms_mib_preview($upload, $host_id, $template_name = "", $category_id = 0)
 {
 	global $config;
-	nms_require_device_access($host_id);
+	if ($host_id) nms_require_device_access($host_id);
 	$host = db_fetch_row_prepared("SELECT * FROM host WHERE id=? AND deleted='' AND disabled=''", [$host_id]);
-	if (!$host) {
+	if ($host_id && !$host) {
 		throw new InvalidArgumentException("Select an enabled Cacti device.");
 	}
+    if (!$host_id) {
+        $template_name=nms_template_clean_name($template_name);
+        if ($template_name==='' || !nms_category_exists($category_id)) throw new InvalidArgumentException('Enter a template name and select a device type.');
+    }
 	$names = $upload["name"] ?? [];
 	if (!is_array($names) || !count($names) || count($names) > 8) {
 		throw new InvalidArgumentException("Upload 1–8 MIB files, including dependencies.");
@@ -78,18 +112,13 @@ function nms_mib_preview($upload, $host_id)
 	$total = 0;
 	try {
 		foreach ($names as $i => $name) {
-			if (
-				($upload["error"][$i] ?? -1) !== UPLOAD_ERR_OK ||
-				!in_array(strtolower(pathinfo($name, PATHINFO_EXTENSION)), ["mib", "txt"], true)
-			) {
-				throw new InvalidArgumentException("Select .mib or .txt MIB definition files.");
-			}
-			$size = filesize($upload["tmp_name"][$i]);
+            $path = nms_mib_upload_path($upload, $i);
+            $size = filesize($path);
 			$total += $size;
 			if ($size < 1 || $size > 1048576 || $total > 4194304) {
 				throw new InvalidArgumentException("Limit: 1 MB per MIB and 4 MB total.");
 			}
-			$text = file_get_contents($upload["tmp_name"][$i]);
+			$text = file_get_contents($path);
 			if (
 				strpos($text, "\0") !== false ||
 				!preg_match("/\b([A-Za-z][A-Za-z0-9-]*)\s+DEFINITIONS\s*::=\s*BEGIN\b/", $text, $m)
@@ -101,7 +130,9 @@ function nms_mib_preview($upload, $host_id)
 				throw new InvalidArgumentException("Duplicate MIB module.");
 			}
 			$modules[$module] = true;
-			file_put_contents($dir . DIRECTORY_SEPARATOR . $module . ".txt", $text);
+			if (file_put_contents($dir . DIRECTORY_SEPARATOR . $module . ".txt", $text) !== strlen($text)) {
+                throw new RuntimeException('Cannot write the private MIB parsing file. Check free space and temporary-directory permissions on RHEL.');
+            }
 			preg_match_all(
 				"/^\s*([A-Za-z][A-Za-z0-9-]*)\s+OBJECT-TYPE\b/m",
 				preg_replace("/\bIMPORTS\b.*?;/s", "", $text),
@@ -119,7 +150,7 @@ function nms_mib_preview($upload, $host_id)
 		$bin = read_config_option("path_snmptranslate") ?: "snmptranslate";
 		$args = [$bin, "-M", "+" . $dir, "-m", implode(":", array_keys($modules))];
 		nms_mib_command(array_merge($args, ["-Tz"]));
-		$session = nms_nd_discovery_session($host);
+		$session = $host_id ? nms_nd_discovery_session($host) : null;
 		$records = [];
 		$skipped = [];
 		$deadline = microtime(true) + 25;
@@ -150,6 +181,17 @@ function nms_mib_preview($upload, $host_id)
 				if (preg_match('/UNITS\s+"([^"]*)"/', $definition, $u)) {
 					$units = $u[1];
 				}
+                if (!$host_id) {
+                    $parent=preg_replace('/\.[0-9]+$/','',$oid[1]);
+                    $parent_definition=nms_mib_command(array_merge($args,['-Td','-On',$parent]));
+                    if (preg_match('/\b(?:INDEX|AUGMENTS)\s*\{|SYNTAX\s+SEQUENCE\b/',$parent_definition)) {
+                        $skipped[]=$symbol.': table column requires device-specific indexes';continue;
+                    }
+                    $numeric_type=['Integer32'=>2,'INTEGER'=>2,'Unsigned32'=>66,'Gauge32'=>66,'Counter32'=>65,'Counter64'=>70,'TimeTicks'=>67][$type[1]];
+                    $records[]=['oid'=>$oid[1].'.0','type'=>$numeric_type,'tag'=>(string)$numeric_type,'value'=>'','section'=>$symbol,'graphable'=>true,'units'=>$units,'reading_index'=>1,'reading_total'=>1];
+                    if(count($records)>64)throw new InvalidArgumentException('At most 64 numeric scalar objects can be prepared per upload.');
+                    continue;
+                }
 				try {
 					$values = nms_nd_snmp_subtree($session, $oid[1], $deadline, $budget);
 				} catch (RuntimeException $e) {
@@ -184,16 +226,18 @@ function nms_mib_preview($upload, $host_id)
 				}
 			}
 		} finally {
-			$session->close();
+			if ($session) $session->close();
 		}
 		if (!$records) {
 			throw new InvalidArgumentException(
-				"No graphable instances found. " . implode("; ", array_slice($skipped, 0, 8)),
+				"No supported numeric scalar objects or readable instances found. " . implode("; ", array_slice($skipped, 0, 8)),
 			);
 		}
 		return [
 			"files" => array_map("basename", $names),
 			"host_id" => $host_id,
+            "template_name" => $template_name,
+            "category_id" => (int)$category_id,
 			"modules" => array_keys($modules),
 			"records" => $records,
 			"skipped" => $skipped,

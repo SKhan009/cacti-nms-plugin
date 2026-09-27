@@ -57,13 +57,16 @@
 				</nav>
 			</details>
 
-			<a class="nms-sidebar-link <?php print $nms_active_module === "devices" && ($tab ?? "") !== "import"
-   	? "selected"
-   	: ""; ?>"
-				href="<?php print nms_h(nms_plugin_url("devices.php")); ?>">
-				<span class="nms-sidebar-icon">＋</span>
-				<span class="nms-sidebar-copy"><strong>Device management</strong></span>
-			</a>
+            <details class="nms-template-menu" <?php if($nms_active_module==='devices') print 'open'; ?>>
+                <summary class="nms-sidebar-link <?php if($nms_active_module==='devices') print 'selected'; ?>">
+                    <span class="nms-sidebar-icon">＋</span><span class="nms-sidebar-copy"><strong>Device management</strong></span><span class="nms-submenu-arrow">⌄</span>
+                </summary>
+                <nav class="nms-template-subnav" aria-label="Device management sections">
+                    <?php foreach(['inventory'=>'Device dashboard','add'=>'Add network device','serial'=>'Add serial device','nodes'=>'Nodes','readings'=>'Device readings'] as $key=>$label){ ?>
+                    <a href="<?php print nms_h(nms_plugin_url('devices.php?tab='.$key)); ?>" <?php if(($tab ?? '')===$key) print 'aria-current="page"'; ?>><?php print $label; ?></a>
+                    <?php } ?>
+                </nav>
+            </details>
 
 			<?php if (api_user_realm_auth("devices.php") && is_realm_allowed(3)) { ?>
 				<?php $nms_repo_open = $nms_active_module === "repository"; ?>
@@ -109,6 +112,7 @@
 							<?php if (get_current_page() === "diagnostics.php") {
        	print 'aria-current="page"';
        } ?>>Protocol checks</a>
+                        <?php if (is_realm_allowed(3) && api_user_realm_auth("serial_profiles.php")) { ?><a href="<?php print nms_h(nms_plugin_url("serial_profiles.php")); ?>" <?php if (get_current_page() === "serial_profiles.php") print 'aria-current="page"'; ?>>Serial profiles</a><a href="<?php print nms_h(nms_plugin_url("devices.php?tab=configuration&view=profiles")); ?>" <?php if ($nms_active_module === "presets" && get_current_page() === "devices.php" && ($view ?? "") === "profiles") print 'aria-current="page"'; ?>>Equipment profiles</a><?php } ?>
 					</nav>
 				</details>
 			<?php } ?>

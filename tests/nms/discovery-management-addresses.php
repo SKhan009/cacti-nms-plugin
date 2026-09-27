@@ -1,0 +1,31 @@
+<?php
+require __DIR__.'/../../plugins/nms/includes/discovery_neighbors.php';
+function verify($ok,$message){if(!$ok)throw new RuntimeException($message);echo "PASS: $message\n";}
+$root='1.0.8802.1.1.2.1.4.2.1.';
+$index='99.7.2';
+$v6=implode('.',array_values(unpack('C*',inet_pton('2001:db8::5'))));
+$values=[$root.'3.'.$index.'.1.4.192.0.2.8'=>['type'=>2,'value'=>2],$root.'4.'.$index.'.1.4.192.0.2.8'=>['type'=>2,'value'=>7],$root.'3.'.$index.'.2.16.'.$v6=>['type'=>2,'value'=>2]];
+$r=nms_nd_lldp_management_addresses($values);
+verify(count($r['rows'][$index])===2 && !$r['errors'],'LLDP index maps IPv4 and IPv6 to the same remote neighbour without column duplicates');
+verify($r['rows'][$index][1]['address']==='2001:db8::5' && $r['rows'][$index][1]['verified']===false,'IPv6 is decoded from octets without claiming verification');
+$bad=nms_nd_lldp_management_addresses([$root.'3.99.7.2.1.4.192.0.2.999'=>['type'=>2,'value'=>2]]);
+verify(!$bad['rows'] && count($bad['errors'])===1,'Malformed optional address is reported without accepting a candidate');
+$bad=nms_nd_lldp_management_addresses([$root.'3.99.7.2.1.4.192.0.2'=>['type'=>2,'value'=>2]]);
+verify(!$bad['rows'] && count($bad['errors'])===1,'Truncated address index is rejected');
+$scoped=nms_nd_management_address(inet_pton('fe80::1'),6,'test');
+verify($scoped['requires_scope'] && !$scoped['eligible_target'],'Link-local IPv6 cannot be probed without interface scope');
+verify(nms_nd_management_address(inet_pton('0.0.0.0'),4,'test')===null,'Unspecified CDP address means no usable management address');
+verify(!nms_nd_management_address(inet_pton('ff02::1'),6,'test')['eligible_target'],'Multicast is not an onboarding target');
+$c='1.3.6.1.4.1.9.9.23.1.2.1.1';$i='7.1';
+$cdp=[$c.'.19.'.$i=>['type'=>2,'value'=>1],$c.'.20.'.$i=>['type'=>4,'value'=>inet_pton('192.0.2.9')],$c.'.3.'.$i=>['type'=>2,'value'=>1],$c.'.4.'.$i=>['type'=>4,'value'=>inet_pton('192.0.2.9')]];
+$r=nms_nd_cdp_management_addresses($cdp,$c,$i);
+verify(count($r['addresses'])===1 && $r['addresses'][0]['source']==='CDP primary management address','CDP prefers primary address and deduplicates fallback');
+$cdp[$c.'.19.'.$i]['value']=99;unset($cdp[$c.'.3.'.$i],$cdp[$c.'.4.'.$i]);
+$r=nms_nd_cdp_management_addresses($cdp,$c,$i);
+verify(!$r['addresses'] && count($r['errors'])===1,'Unknown CDP network protocol is not guessed from byte length');
+verify(nms_nd_cdp_management_addresses([],$c,$i)===['addresses'=>[],'errors'=>[]],'Restricted views with no address columns retain empty evidence');
+$local='1.0.8802.1.1.2.1.3';$remote='1.0.8802.1.1.2.1.4.1.1';
+$mandatory=[$local.'.1.0'=>['type'=>2,'value'=>7],$local.'.2.0'=>['type'=>4,'value'=>'local-chassis'],$local.'.7.1.2.7'=>['type'=>2,'value'=>5],$local.'.7.1.3.7'=>['type'=>4,'value'=>'eth0'],$remote.'.4.'.$index=>['type'=>2,'value'=>7],$remote.'.5.'.$index=>['type'=>4,'value'=>'peer-chassis'],$remote.'.6.'.$index=>['type'=>2,'value'=>5],$remote.'.7.'.$index=>['type'=>4,'value'=>'eth1']];
+$parsed=nms_nd_parse_lldp($mandatory+$values,[]);$plain=nms_nd_parse_lldp($mandatory,[]);
+verify(count(array_values($parsed['neighbors'])[0]['management_addresses'])===2,'Full LLDP parser attaches management addresses to the correct neighbour');
+verify(array_keys($parsed['neighbors'])===array_keys($plain['neighbors']),'Address enrichment preserves the existing topology neighbour key');

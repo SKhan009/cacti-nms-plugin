@@ -22,9 +22,14 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
 header("Expires: 0");
 
-$section = isset_request_var("section") ? get_nfilter_request_var("section") : "run";
-if (!in_array($section, ["run", "profiles"], true)) {
+$section = isset_request_var("section") ? get_nfilter_request_var("section") : ((isset($_POST["nms_action"]) || isset($_GET["job_id"]) || $node_id) ? "run" : "diagnosis");
+if (!in_array($section, ["diagnosis", "run", "profiles"], true)) {
 	$section = "run";
+}
+
+if ($section === 'diagnosis' && !isset($_GET['job_status'])) {
+    require __DIR__.'/includes/diagnosis_page.php';
+    exit;
 }
 
 // Read-only progress endpoint uses the same requester and device permission checks.
@@ -170,7 +175,7 @@ $open_profile_modal = $section === "profiles" && (isset_request_var("profile_new
 $open_profile_modal =
 	$open_profile_modal || ($error !== "" && is_array($failed_profile_input));
 
-nms_prepare_page("diagnostics", "NMS · Protocol checks", "css/nms-topology-config.css", "");
+nms_prepare_page("diagnostics", "NMS · Protocol checks", "css/nms-devices.css,css/nms-topology-config.css", "");
 require __DIR__ . "/templates/app_header.php";
 require __DIR__ . "/templates/diagnostics.php";
 require __DIR__ . "/templates/app_footer.php";

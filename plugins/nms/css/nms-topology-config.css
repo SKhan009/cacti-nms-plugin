@@ -380,3 +380,15 @@
 .nms-diagnostic-readiness-grid article{gap:8px}
 
 .nms-canvas-node-filter{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px}.nms-canvas-node-filter select,.nms-canvas-node-filter button{font:inherit;padding:8px 12px;border:1px solid #ccc;border-radius:8px}.nms-canvas-node-filter button{background:#191919;color:white}.nms-canvas-node-filter span{font-size:12px;color:#666}
+
+/* Stable diagnostic navigation shared by diagnosis, run/history and profiles. */
+body.nms-standalone .nms-shell .nms-diagnostics-tabs{display:flex;width:fit-content;max-width:100%;box-sizing:border-box;flex-wrap:wrap;gap:6px;padding:4px;margin:0 0 18px;align-items:center}
+body.nms-standalone .nms-shell .nms-diagnostics-tabs a{display:inline-flex;align-items:center;box-sizing:border-box;min-height:38px;padding:9px 14px;font-size:12px;line-height:20px;font-weight:700;white-space:nowrap}
+
+.nms-type-image-field { grid-column:1/-1; display:grid; gap:12px; padding:16px; background:#f7f8f9; border:1px solid #ddd; border-radius:8px; }
+.nms-type-image-field .nms-catalog-button { justify-self:start; }
+.nms-type-image-preview { width:128px; height:84px; object-fit:contain; }
+.nms-type-image-field input[type=checkbox] { width:auto; min-height:0; }
+
+.nms-display-mode-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+@media(max-width:650px) { .nms-display-mode-grid { grid-template-columns:1fr; } }

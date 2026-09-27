@@ -9,9 +9,9 @@
 
 Copy only the required folder under `plugins/` into a Cacti installation. Documentation and tests are maintained separately.
 
-Cacti-facing PHP pages, `setup.php`, `index.php`, and `INFO` remain at each plugin root because Cacti hooks, page permissions and existing URLs depend on those paths. Shared code, page templates, CSS, JavaScript and images remain in their existing dedicated directories. Runtime contents were verified unchanged during this cleanup.
+Cacti-facing PHP pages, `setup.php`, `index.php`, and `INFO` remain at each plugin root because Cacti hooks, page permissions and existing URLs depend on those paths. Shared code, page templates, CSS, JavaScript and images remain in their existing dedicated directories.
 
-No Markdown or Word documents remain inside `plugins/`. Removed clutter is recoverable from macOS Trash. Hidden Git history is retained.
+Documentation stays outside `plugins/`. Generated previews and QA outputs under `outputs/`, Python caches and macOS metadata are excluded from Git.
 
 Run the NMS admission check from the project root with:
 

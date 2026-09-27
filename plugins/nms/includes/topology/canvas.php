@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__."/diagnostics.php";
 require_once __DIR__ . "/discovery.php";
 require_once __DIR__ . "/../relationships.php";
 require_once __DIR__ . "/appearance.php";
@@ -24,24 +25,30 @@ function nms_canvas_data($site_id, $node_id = 0)
 	$member_filter = $node_id ? " AND h.id IN (SELECT host_id FROM plugin_nms_node_devices WHERE node_id=" . $node_id . ")" : "";
 	$site_filter = $site_id ? " AND h.site_id=" . (int) $site_id : "";
 	$rows = db_fetch_assoc(
-		"SELECT h.id,h.description,h.hostname,h.status,h.cur_time,h.availability,h.total_polls,h.last_updated,cat.name AS category_name,c.category_id,c.device_type,c.device_role,t.name AS template_name,l.pos_x,l.pos_y,dp.name AS diagnostic_profile,dp.tools AS diagnostic_tools FROM host h LEFT JOIN plugin_nms_device_classification c ON c.host_id=h.id LEFT JOIN plugin_nms_categories cat ON cat.id=c.category_id LEFT JOIN host_template t ON t.id=h.host_template_id LEFT JOIN plugin_nms_topology l ON l.host_id=h.id LEFT JOIN plugin_nms_diagnostic_devices dd ON dd.host_id=h.id LEFT JOIN plugin_nms_diagnostic_profiles dp ON dp.id=dd.profile_id WHERE h.deleted='' AND h.disabled='' AND $visible $site_filter $member_filter ORDER BY h.description",
+		"SELECT h.id,h.description,h.hostname,h.poller_id,h.status,h.cur_time,h.availability,h.total_polls,h.last_updated,cat.name AS category_name,c.category_id,c.device_type,c.device_role,t.name AS template_name,l.pos_x,l.pos_y,dp.name AS diagnostic_profile,dp.tools AS diagnostic_tools FROM host h LEFT JOIN plugin_nms_device_classification c ON c.host_id=h.id LEFT JOIN plugin_nms_categories cat ON cat.id=c.category_id LEFT JOIN host_template t ON t.id=h.host_template_id LEFT JOIN plugin_nms_topology l ON l.host_id=h.id LEFT JOIN plugin_nms_diagnostic_devices dd ON dd.host_id=h.id LEFT JOIN plugin_nms_diagnostic_profiles dp ON dp.id=dd.profile_id WHERE h.deleted='' AND h.disabled='' AND $visible $site_filter $member_filter ORDER BY h.description",
 	);
+	$measurements = nms_topology_measurements($rows);
 	$columns = max(1, (int) ceil(sqrt(count($rows))));
 	$row_count = max(1, (int) ceil(count($rows) / $columns));
 	$ids = [];
 	foreach ($rows as $i => $h) {
 		$ids[(int) $h["id"]] = true;
+        require_once __DIR__.'/../configuration/monitoring.php';
+        $serial = nms_config_connection_status((int)$h['id']);
+        $display_status = $serial === null ? (int)$h['status'] : ($serial['status'] === 'Responding' ? 3 : 0);
 		$nodes[] = [
 			"id" => (int) $h["id"],
 			"name" => $h["description"],
 			"address" => $h["hostname"],
-			"status" => (int) $h["status"],
+			"status" => $display_status,
+            "serial_state" => $serial["status"] ?? null,
 			"category_id" => (int) $h["category_id"],
             "category" => (string) ($h["category_name"] ?? ""),
-            "response_ms" => (int) $h["status"] === 3 && (int) $h["total_polls"] > 0 ? (float) $h["cur_time"] : null,
-            "poll_availability" => (int) $h["total_polls"] > 0 ? (float) $h["availability"] : null,
+            "response_ms" => $serial === null && (int) $h["status"] === 3 && (int) $h["total_polls"] > 0 ? (float) $h["cur_time"] : null,
+            "poll_availability" => $serial === null && (int) $h["total_polls"] > 0 ? (float) $h["availability"] : null,
             "last_polled" => (string) ($h["last_updated"] ?? ""),
-            "packet_loss" => null,
+            "packet_loss" => $measurements[(int)$h["id"]]["packet_loss"],
+            "diagnostic_measurement" => $measurements[(int)$h["id"]],
             "recent_alarm" => null,
 			"device_role" => (string) $h["device_role"],
 			"device_type" => (string) $h["device_type"],
@@ -65,6 +72,7 @@ function nms_canvas_data($site_id, $node_id = 0)
     }
 	$appearance = nms_appearance_read();
 	$identity_warnings = nms_nd_identity_warnings($d["snapshots"]);
+    $deviceIdentities = nms_nd_device_identities(array_intersect_key($d["hosts"], $ids), $d["snapshots"]);
     $interfaceSnapshots = array_values($d["snapshots"]);
     usort($interfaceSnapshots, static fn($a, $b) => (($b["protocol"] === "identity") <=> ($a["protocol"] === "identity")));
 	foreach ($nodes as &$node) {
@@ -94,6 +102,8 @@ function nms_canvas_data($site_id, $node_id = 0)
 			$node["icon"] = $appearance_profile["icon"];
 			$node["color"] = $appearance_profile["color"];
 		}
+		$image_view = ($node["icon"] ?? "") === "switch" ? "rack" : "network";
+		$node["image"] = nms_appearance_display_mode($appearance_profile ?? [], $image_view) === "image" ? nms_appearance_image($appearance_profile ?? []) : "";
 		$node["icon_path"] = nms_appearance_icons()[$node["icon"] ?? "device"][1] ?? "";
 		$node["short_name"] = substr(nms_short_name_get($node["id"]) ?: nms_short_name_auto($node["name"], $node["id"]), 0, 8);
 		$node["ports"] = [];
@@ -153,6 +163,7 @@ function nms_canvas_data($site_id, $node_id = 0)
 			"mac" => (string) ($identity["mac"] ?? ""),
 		];
 		$node["discovery_warnings"] = $identity_warnings[$node["id"]] ?? [];
+        $node["address_identity"] = $deviceIdentities[$node["id"]] ?? ['addresses' => [], 'matches' => [], 'message' => 'Assign an enabled discovery preset to collect device addresses.', 'checked_at' => ''];
 	}
 	unset($node);
 	foreach ($d["links"] as $i => $l) {

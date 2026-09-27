@@ -134,6 +134,7 @@ function nms_node_health($devices, $fresh_after)
         $state = $device['disabled'] === 'on' ? 'Disabled' :
             ((!$device['last_updated'] || strtotime($device['last_updated']) < $fresh_after) ? 'Unknown' :
             ([0=>'Unknown',1=>'Down',2=>'Recovering',3=>'Up'][(int)$device['status']] ?? 'Unknown'));
+        if($state!=='Disabled' && isset($device['serial_monitoring'])) $state=$device['serial_monitoring']['status']==='Responding'?'Up':'Unknown';
         $counts[$state]++;
     }
     $total = count($devices);
@@ -145,12 +146,18 @@ function nms_node_health($devices, $fresh_after)
 function nms_node_members($id)
 {
     $visible = nms_visible_host_sql();
-    return db_fetch_assoc_prepared("SELECT h.id,h.description,h.hostname,h.status,h.disabled,h.last_updated,h.site_id,dp.name AS diagnostic_profile,sp.name AS discovery_profile,sd.collection_enabled,sp.enabled AS discovery_enabled,
+    $devices=db_fetch_assoc_prepared("SELECT h.id,h.description,h.hostname,h.status,h.disabled,h.last_updated,h.site_id,dp.name AS diagnostic_profile,sp.name AS discovery_profile,sd.collection_enabled,sp.enabled AS discovery_enabled,
         (SELECT COUNT(*) FROM graph_local g WHERE g.host_id=h.id) AS graph_count
         FROM plugin_nms_node_devices m JOIN host h ON h.id=m.host_id
         LEFT JOIN plugin_nms_diagnostic_devices dd ON dd.host_id=h.id LEFT JOIN plugin_nms_diagnostic_profiles dp ON dp.id=dd.profile_id
         LEFT JOIN plugin_nms_discovery_devices sd ON sd.host_id=h.id LEFT JOIN plugin_nms_discovery_presets sp ON sp.id=sd.preset_id
         WHERE m.node_id=? AND h.deleted='' AND $visible ORDER BY h.description",[$id]);
+    require_once __DIR__.'/../configuration/monitoring.php';
+    foreach($devices as &$device) {
+        try { $device['serial_monitoring']=nms_config_connection_status($device['id']); }
+        catch(Throwable $e) { $device['serial_monitoring']=['connection'=>'Unavailable','status'=>'Unavailable']; }
+    } unset($device);
+    return $devices;
 }
 
 /** Remove only the container, after an explicit disposition of its members. */

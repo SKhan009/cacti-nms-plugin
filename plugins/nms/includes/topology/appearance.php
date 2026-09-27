@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . "/config.php";
+require_once __DIR__ . "/appearance_images.php";
 /** Appearance catalogue uses existing NMS metadata and segment storage. */
 function nms_appearance_read()
 {
@@ -117,11 +118,22 @@ function nms_appearance_save($input)
 					"This type is assigned. Edit its icon/colour, or reassign devices before renaming or moving it.",
 				);
 			}
+            $connection_type = $input['connection_type'] ?? ($old['connection_type'] ?? '');
+            if (!is_string($connection_type) || ($connection_type !== '' && !db_fetch_cell_prepared('SELECT name FROM plugin_nms_connection_types WHERE name=?', [$connection_type]))) {
+                throw new InvalidArgumentException('Choose an existing connection type.');
+            }
+			$image = nms_appearance_image_upload($_FILES["device_image"] ?? null);
+			$image_key = empty($input["remove_image"]) ? ($old["image_key"] ?? "") : "";
+			if ($image !== null) $image_key = "appearance_image_" . $id;
+			$display_modes = nms_appearance_display_modes($input, $old ?? [], $image_key !== "");
 			$data["types"][$id] = [
 				"name" => $name,
 				"category_id" => $category,
 				"icon" => $icon,
 				"color" => strtolower($color),
+                "image_key" => $image_key,
+                "display_modes" => $display_modes,
+                "connection_type" => $connection_type,
 			];
 		} elseif ($action === "type_delete") {
 			$id = $input["id"] ?? "";
@@ -145,6 +157,9 @@ function nms_appearance_save($input)
 		if (strlen($json) > 60000) {
 			throw new InvalidArgumentException("The appearance catalogue is full.");
 		}
+        if (isset($image) && $image !== null) {
+            nms_category_execute("REPLACE INTO plugin_nms_meta (meta_key,meta_value,updated_at) VALUES (?,?,NOW())", [$image_key,$image]);
+        }
 		nms_category_execute("REPLACE INTO plugin_nms_meta (meta_key,meta_value,updated_at) VALUES (?,?,NOW())", [
 			"topology_appearance",
 			$json,
@@ -260,7 +275,7 @@ function nms_appearance_default($category_id, $device_type, $template = "")
 function nms_appearance_icon_svg($icon)
 {
 	$entry = nms_appearance_icons()[$icon] ?? nms_appearance_icons()["device"];
-	return '<svg viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="' .
+	return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="' .
 		$entry[1] .
 		'"/></svg>';
 }

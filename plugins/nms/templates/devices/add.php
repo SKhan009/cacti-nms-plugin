@@ -155,12 +155,10 @@ $device_thread_options = array_keys($fields_host_edit["device_threads"]["array"]
 	"id"
 ]; ?>"><?php } ?>
 		<fieldset><legend>Device identity</legend><div class="nms-form-grid">
-			<label><span>Device segment</span><select name="equipment_category_id" required><?php if (
-   	!$device_form_is_edit
-   ) { ?><option value="">Select a device segment</option><?php } ?><option value="0" <?php print $selected_category_id ===
+			<label><span>Device segment</span><select name="equipment_category_id" required><option value="0" <?php print $selected_category_id ===
 "0"
 	? "selected"
-	: ""; ?>>Unclassified</option><?php
+	: ""; ?>>Select device segment</option><?php
 if (!$device_form_is_edit) { ?><option value="template" <?php print $selected_category_id === "template"
 	? "selected"
 	: ""; ?>>Use selected template's saved suggestion</option><?php }
@@ -170,34 +168,7 @@ foreach ($categories as $category) { ?><option value="<?php print (int) $categor
 	$category["name"],
 ); ?></option><?php }
 ?></select><small>NMS device classification. Select the segment that describes this device.</small></label>
-			<label><span>Device type</span><input list="nms-device-types" name="device_type" maxlength="150" placeholder="UPS, switch, sensor" value="<?php print nms_h(
-   	$selected_device_type,
-   ); ?>"></label>
-			<datalist id="nms-device-types"><?php
-   foreach (nms_appearance_read()["types"] as $profile) { ?><option value="<?php print nms_h(
-	$profile["name"],
-); ?>"><?php print nms_h($profile["icon"]); ?></option><?php }
-   foreach (
-   	[
-   		"Switch",
-   		"Router",
-   		"Server",
-   		"PC / desktop",
-   		"Laptop",
-   		"Phone",
-   		"Desk phone",
-   		"UPS / battery",
-   		"Sensor",
-   		"Printer",
-   		"Camera",
-   		"Wireless AP",
-   		"Firewall",
-   		"Satellite / VSAT",
-   		"Generic device",
-   	]
-   	as $default_type
-   ) { ?><option value="<?php print nms_h($default_type); ?>"></option><?php }
-   ?></datalist>
+<?php $type_value=$selected_device_type; $type_segment=$selected_category_id; $type_keep_saved=$device_form_is_edit; require __DIR__.'/type_select.php'; ?>
             <label><span>Serial number</span><input id="nmsManualSerial" name="manual_serial_number" maxlength="191" value="<?php print nms_h(
             	is_string($manual_serial_value) ? $manual_serial_value : "",
             ); ?>" placeholder="Serial printed on the device"><small>Optional NMS metadata. A current SNMP serial may be suggested; review before saving.</small><?php if (

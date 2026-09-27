@@ -13,7 +13,7 @@
 		$names[$c["id"]] = $c["name"];
 	}
 	?>
-<p>Assign segments and device types in Add/Edit device. Matching profiles control topology icons and chassis colours. Status lights retain Cacti health colours.</p>
+
 <?php
 $section =
 	($_GET["section"] ?? "") === "types" || isset($_GET["type"]) || strpos($_POST["nms_action"] ?? "", "type_") === 0
@@ -41,15 +41,11 @@ if ($error && ($_POST["nms_action"] ?? "") === "segment_save") {
 if ($error && ($_POST["nms_action"] ?? "") === "type_save") {
 	$type = array_merge($type, array_intersect_key($_POST, $type));
 	$id = $_POST["id"] ?? "";
+    $type["connection_type"] = is_string($_POST["connection_type"] ?? null) ? $_POST["connection_type"] : "";
 }
 $base = "topology.php?tab=appearance";
 ?>
-<nav class="nms-preset-tabs" aria-label="Appearance sections"><a class="<?php print $section === "segments"
-	? "active"
-	: ""; ?>" href="<?php print $base; ?>&amp;section=segments">Device segments</a><a class="<?php print $section ===
-"types"
-	? "active"
-	: ""; ?>" href="<?php print $base; ?>&amp;section=types">Device types and icons</a><a href="topology.php?tab=connections&amp;section=types">Connection types</a></nav>
+<?php $appearance_section = $section; require __DIR__ . '/appearance_nav.php'; ?>
 <section class="nms-panel nms-appearance-list"><div class="nms-panel-head"><h2><?php print $section === "types"
 	? "Device types and icons"
 	: "Device segments"; ?></h2><a class="nms-catalog-button" href="<?php print $base .
@@ -64,9 +60,9 @@ $base = "topology.php?tab=appearance";
 	$names[$item["category_id"]] ?? "Unclassified",
 ); ?></td><td><?php print nms_h(
 	$item["name"],
-); ?></td><td><span class="nms-icon-preview"><?php print nms_appearance_icon_svg(
+); ?></td><td><?php if ($item_image = nms_appearance_image($item)) { ?><img class="nms-type-image-preview" src="<?php print nms_h($item_image); ?>" alt="<?php print nms_h($item['name']); ?>"><?php } else { ?><span class="nms-icon-preview"><?php print nms_appearance_icon_svg(
 	$item["icon"],
-); ?></span><?php print nms_h(
+); ?></span><?php } ?><?php print nms_h(
 	nms_appearance_icons()[$item["icon"]][0] ?? $item["icon"],
 ); ?></td><td><span class="nms-color-swatch" style="background:<?php print nms_h(
 	$item["color"],
@@ -92,7 +88,7 @@ $base = "topology.php?tab=appearance";
 	: ($segment["id"] ? "Edit" : "Add") .
 		" segment"; ?></h2><button type="button" data-nms-dialog-close aria-label="Close form" class="nms-popup-close nms-catalog-button"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 <?php if ($error) { ?><p class="nms-catalog-error" role="alert"><?php print nms_h($error); ?></p><?php } ?>
-<form method="post" class="nms-catalog-form">
+<form method="post" enctype="multipart/form-data" class="nms-catalog-form">
 <?php if ($section === "segments") {
 	nms_catalog_fields(
 		"segment_save",
@@ -114,6 +110,24 @@ $base = "topology.php?tab=appearance";
 ); ?></option><?php } ?></select></label><label>Device type<input name="name" required maxlength="150" placeholder="IP phone" value="<?php print nms_h(
 	$type["name"],
 ); ?>"></label>
+<div class="nms-type-image-field">
+<label>Topology image<input type="file" name="device_image" accept="image/png,image/jpeg,image/webp"><small>PNG, JPEG or WebP · up to 2 MB. Choose where to use it below.</small></label>
+<?php if ($preview_image = nms_appearance_image($type)) { ?><img class="nms-type-image-preview" src="<?php print nms_h($preview_image); ?>" alt="Current device type image"><label><input type="checkbox" name="remove_image" value="1"> Remove uploaded image</label><?php } ?>
+<div class="nms-display-mode-grid">
+<?php foreach (['network'=>'Network','rack'=>'Rack-style devices','map'=>'Map device details'] as $view=>$label) { $mode = nms_appearance_display_mode($type, $view); if ($error && is_string($_POST['display_'.$view] ?? null)) $mode = $_POST['display_'.$view]; ?>
+<label><?php print nms_h($label); ?><select name="display_<?php print $view; ?>">
+<option value="icon"<?php if($mode==='icon') print ' selected'; ?>>Icon</option>
+<option value="image"<?php if($mode==='image') print ' selected'; ?>>Image</option>
+</select></label>
+<?php } ?>
+</div>
+<label>Connection type<select name="connection_type">
+<option value="">Not assigned</option>
+<?php foreach (db_fetch_assoc('SELECT name FROM plugin_nms_connection_types ORDER BY name') as $connection_type) { ?>
+<option value="<?php print nms_h($connection_type['name']); ?>"<?php if (($type['connection_type'] ?? '') === $connection_type['name']) print ' selected'; ?>><?php print nms_h($connection_type['name']); ?></option>
+<?php } ?>
+</select></label>
+</div>
 <fieldset class="nms-icon-picker"><legend>Choose an icon</legend><p>Select the picture that represents this device type.</p><div class="nms-icon-grid"><?php foreach (
 	nms_appearance_icons()
 	as $key => $icon
@@ -126,7 +140,7 @@ $base = "topology.php?tab=appearance";
 ); ?></b></span></label><?php } ?></div></fieldset>
 <label>Icon colour<input type="color" name="color" value="<?php print nms_h(
 	$type["color"],
-); ?>"><small>Health lights keep their status colour. Switches retain the metallic chassis design.</small></label><?php
+); ?>"><small>Health indicators keep their status colour. The built-in icon is used when no image is uploaded.</small></label><?php
 } ?>
 <div class="nms-catalog-footer"><button type="button" data-nms-dialog-close class="nms-cancel-button nms-catalog-button">Cancel</button><button type="submit">Save <?php print $section ===
 "types"

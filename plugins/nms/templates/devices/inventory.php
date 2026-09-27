@@ -100,6 +100,7 @@ $devices = array_values(
 			<?php foreach ($devices as $device) {
 
    	$status = nms_device_status_name($device);
+        $serial = nms_config_connection_status((int)$device["id"]);
    	$status_class = strtolower($status);
    	?>
 			<tr>
@@ -149,14 +150,14 @@ if (
  ]; ?> data sources · <?php print (int) $device["graph_count"]; ?> graphs</small><small><?php print nms_h(
  	$device["poller_name"] ?: "Collector not found",
  ); ?></small></td>
-				<td data-label="Availability"><strong><?php print nms_h(
+				<td data-label="Availability"><?php if ($serial !== null) { ?><strong><?php print nms_h($status); ?></strong><small>Serial response</small><?php } else { ?><strong><?php print nms_h(
     	number_format((float) $device["availability"], 1),
     ); ?>%</strong><small><?php print nms_h(
 	number_format((float) $device["cur_time"], 2),
 ); ?> ms last recorded</small><small><?php print (int) $device["failed_polls"]; ?> of <?php print (int) $device[
  	"total_polls"
- ]; ?> polls failed</small></td>
-				<td class="nms-nowrap" data-label="Last update"><?php print nms_h(nms_time_ago($device["last_updated"])); ?></td>
+ ]; ?> polls failed</small><?php } ?></td>
+				<td data-label="Last update" style="white-space:normal;overflow-wrap:anywhere"><?php print nms_h(($serial !== null ? "See device readings" : nms_time_ago($device["last_updated"]))); ?></td>
 				<td data-label="Actions"><div class="nms-row-actions"><a class="nms-row-link" href="?tab=edit&id=<?php print (int) $device[
     	"id"
     ]; ?>">Manage</a><a class="nms-row-link secondary" href="<?php print nms_h(

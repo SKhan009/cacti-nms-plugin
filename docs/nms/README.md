@@ -32,3 +32,11 @@ The project uses `.editorconfig`: tabs in PHP, four-column display width, UTF-8 
 - [Topology map](TOPOLOGY_MAP.md) documents the local GeoServer and bundled map assets.
 
 The node editor includes a compact responsive device list, search by name/IP/site, multiple checkboxes, Select visible and Clear selection. Choose a site before assigning devices; searching preserves existing selections.
+
+## Serial monitoring and configuration
+
+- [RHEL setup and verification](SERIAL_CONFIGURATION_RHEL.md)
+- [Word installation guide](SERIAL_CONFIGURATION_RHEL.docx)
+- [Implementation and verification record](SERIAL_CONFIGURATION_ROADMAP.md)
+
+Device readings validation: [acceptance checklist and real-device prerequisites](READINGS_ACCEPTANCE.md).

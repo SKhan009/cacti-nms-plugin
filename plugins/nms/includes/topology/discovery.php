@@ -1,7 +1,8 @@
 <?php
+require_once __DIR__ . "/../discovery_identity.php";
 require_once __DIR__ . "/../discovery.php";
 /** Read only NMS-owned evidence for permitted core devices in the selected site. */
-function nms_topology_discovery($site_id)
+function nms_topology_discovery($site_id, $review_disabled = false)
 {
 	$out = [
 		"ready" => false,
@@ -19,7 +20,7 @@ function nms_topology_discovery($site_id)
 	}
 	try {
 		$stale = 0;
-		foreach (nms_nd_hosts() as $host) {
+		foreach (nms_nd_hosts($review_disabled) as $host) {
 			if (
 				($site_id === null || (int) $host["site_id"] === (int) $site_id) &&
 				is_device_allowed((int) $host["id"])
@@ -34,7 +35,8 @@ function nms_topology_discovery($site_id)
 			if (!$h || ($s["protocol"] !== "identity" && !in_array($s["protocol"], nms_nd_host_methods($h), true))) {
 				continue;
 			}
-			$s["valid"] = $h["enabled"] && $h["collection_enabled"] && hash_equals($s["config_hash"], nms_nd_hash($h));
+			$s["valid"] = $h["enabled"] && $h["collection_enabled"] && nms_nd_review_snapshot_matches($s, $h, $review_disabled);
+			$s["polling_paused"] = $review_disabled && $h["disabled"] === "on";
 			$s["data"] = json_decode($s["data_json"], true, 512, JSON_THROW_ON_ERROR);
 			if (
 				$s["status"] === "success" &&
@@ -133,4 +135,13 @@ function nms_topology_discovery_state($snapshot, $stale, $now)
 		return ucfirst($snapshot["status"]);
 	}
 	return nms_nd_evidence_fresh($snapshot["data"]["collected"] ?? 0, $now, $stale) ? "Current" : "Stale";
+}
+
+/** Only identity review may reuse a pre-pause snapshot, with every other setting unchanged. */
+function nms_nd_review_snapshot_matches($snapshot, $host, $reviewDisabled)
+{
+    if(hash_equals($snapshot['config_hash'],nms_nd_hash($host)))return true;
+    if(!$reviewDisabled || ($host['disabled']??'')!=='on' || $snapshot['protocol']!=='identity')return false;
+    $host['disabled']='';
+    return hash_equals($snapshot['config_hash'],nms_nd_hash($host));
 }

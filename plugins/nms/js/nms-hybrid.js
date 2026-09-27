@@ -23,6 +23,7 @@
 		NS = "http://www.w3.org/2000/svg";
 	const colors = { 3: "#228848", 1: "#cf3535", 2: "#d69c13", 0: "#7d8790" },
 		states = { 3: "Up", 1: "Down", 2: "Recovering", 0: "Unknown" };
+	const deviceState = (node) => node.serial_state || states[node.status] || "Unknown";
 	/**
 	 * Handles el.
 	 */
@@ -401,7 +402,10 @@
 					"stroke-width": source === n.id ? 2 : 1.5,
 				}),
 			);
-		if (kind === "switch") {
+		if (n.image) {
+            body.append(el("image", {href:n.image, x:-w/2, y:-42, width:w, height:84, preserveAspectRatio:"xMidYMid meet"}));
+            body.append(el("circle", {cx:w/2, cy:-40, r:5, fill:color, stroke:"#fff"}));
+        } else if (kind === "switch") {
 			const rackHeight =
 				90 + Math.max(0, Math.ceil(ps.length / 24) - 2) * 28;
 			body.append(
@@ -506,7 +510,7 @@
 						"font-size": 11,
 						"font-weight": 600,
 					},
-					n.status === 3 ? "SYS OK" : states[n.status] || "Unknown",
+					n.serial_state ? deviceState(n) : n.status === 3 ? "SYS OK" : deviceState(n),
 				),
 			);
 		} else if (n.icon_path) {
@@ -904,14 +908,14 @@
 				"data-node": n.id,
 				tabindex: 0,
 				role: "button",
-				"aria-label": n.name + " " + (states[n.status] || "Unknown"),
+				"aria-label": n.name + " " + deviceState(n),
 				class: "nms-canvas-node" + (editable && deviceKind(n) !== "switch" ? "" : " nms-node-readonly"),
 			});
 			deviceGraphic(n, g);
 			hover(g, n.name, [
 				["Type", n.device_type || deviceKind(n)],
 				["IP address", n.address],
-				["Status", states[n.status] || "Unknown"],
+				["Status", deviceState(n)],
 				["Physical ports", n.physical_port_count || "Not reported"],
 				["Port source", n.physical_port_source || "Not reported"],
 				[
@@ -1256,12 +1260,16 @@
 		} else if (node && port) {
 			interfaceCard(node, port.name, port.index);
 		} else if (node) {
-			add((states[node.status] || "Unknown") + " · " + node.address + " · " + (node.device_type || node.template || "Unknown model"), "nms-detail-subtitle");
+			add(deviceState(node) + " · " + node.address + " · " + (node.device_type || node.template || "Unknown model"), "nms-detail-subtitle");
 			metricRows(details, [
-				["Availability", states[node.status] || "Unknown"], ["Category", node.category],
+				["Availability", deviceState(node)], ["Category", node.category],
 				["Device type", node.device_type || node.template], ["Serial number", node.identity?.serial],
 				["Response time", node.response_ms == null ? null : node.response_ms + " ms"],
-				["Packet loss", node.packet_loss == null ? null : node.packet_loss + "%"],
+				["Diagnostic packet loss", node.packet_loss == null ? (node.diagnostic_measurement?.state || "Not measured") : node.packet_loss + "%"],
+                ["Diagnostic latency", node.diagnostic_measurement?.latency_ms == null ? null : node.diagnostic_measurement.latency_ms + " ms"],
+                ["Diagnostic method / target", node.diagnostic_measurement?.method ? node.diagnostic_measurement.method + " / " + node.diagnostic_measurement.target : null],
+                ["Diagnostic collector", node.diagnostic_measurement?.collector_id],
+                ["Diagnostic collected", node.diagnostic_measurement?.collected_at],
 				["Poll availability", node.poll_availability == null ? null : node.poll_availability.toFixed(2) + "% (lifetime)"],
 				["Last polled", node.last_polled],
 			]);
@@ -1271,6 +1279,14 @@
 			metricRows(alarm, a ? [["Title", a.title], ["Severity", a.severity], ["Status", a.status], ["Message", a.message], ["Last seen", a.last_seen]] : [["Status", "No active NMS alarms"]]);
 			details.append(alarm);
 			(node.discovery_warnings || []).forEach((warning) => add(warning));
+            if (node.address_identity) {
+                add("Device IP addresses: " + (node.address_identity.addresses.map((a) => a.address + (a.zone ? "%" + a.zone : "") + " (ifIndex " + a.ifindex + ")").join(", ") || "Not collected"));
+                add(node.address_identity.message);
+                node.address_identity.matches.forEach((m) => {
+                    const peer = data.nodes.find((n) => n.id === m.host_id);
+                    if (peer) add(m.state + ": " + peer.name + " · " + peer.address + ". " + m.reason);
+                });
+            }
 			const evidence = document.createElement("details"), summary = document.createElement("summary");
 			summary.textContent = "Connections and discovery evidence"; evidence.append(summary);
             evidence.open = Boolean(evidenceOpen);

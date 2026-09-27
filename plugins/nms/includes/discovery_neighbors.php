@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__.'/discovery_management_addresses.php';
 /** Pure parsing and reconciliation of typed SNMP evidence; no database, DNS or sample fallback. */
 
 /** Require a typed ASN.1 value, retaining octets as bytes rather than guessing printed encodings. */
@@ -131,6 +132,7 @@ function nms_nd_lldp_label($subtype, $bytes, $macSubtype)
 /** Parse the IEEE LLDP local and remote tables with their TimeMark/LocalPort/RemoteIndex keys. */
 function nms_nd_parse_lldp($values, $interfaces)
 {
+	$management=nms_nd_lldp_management_addresses($values);
 	$local = "1.0.8802.1.1.2.1.3";
 	$remote = "1.0.8802.1.1.2.1.4.1.1";
 	$identity = nms_nd_lldp_identity(
@@ -171,10 +173,12 @@ function nms_nd_parse_lldp($values, $interfaces)
 			"remote_key" => $remoteKey,
 			"remote_port" => nms_nd_lldp_label(nms_nd_value($values, $remote . ".6." . $index, 2), $remotePort, 3),
 			"remote_name" => nms_nd_octets(nms_nd_value($values, $remote . ".9." . $index, 4, false)),
+            "management_addresses" => $management['rows'][$index] ?? [],
 		];
 	}
 	return [
 		"identity" => $identity,
+        "management_address_errors" => $management['errors'],
 		"name" => nms_nd_octets(nms_nd_value($values, $local . ".3.0", 4, false)),
 		"ports" => array_values($ports),
 		"interfaces" => $interfaces,
@@ -216,6 +220,7 @@ function nms_nd_parse_cdp($values, $interfaces)
 			throw new RuntimeException("CDP neighbor is missing a valid Device-ID or Port-ID.");
 		}
 		$key = hash("sha256", $local . "|" . bin2hex($peer) . "|" . bin2hex($port));
+        $management=nms_nd_cdp_management_addresses($values,$cache,$index);
 		$neighbors[$key] = [
 			"key" => $key,
 			"local_key" => (string) $local,
@@ -226,6 +231,8 @@ function nms_nd_parse_cdp($values, $interfaces)
 			"remote_key" => bin2hex($port),
 			"remote_port" => nms_nd_octets($port),
 			"remote_name" => nms_nd_octets(nms_nd_value($values, $cache . ".17." . $index, 4, false)),
+            "management_addresses" => $management['addresses'],
+            "management_address_errors" => $management['errors'],
 		];
 	}
 	return [

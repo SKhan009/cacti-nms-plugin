@@ -14,6 +14,12 @@ $discovery = nms_topology_discovery(null);
 		print "<small>" . nms_h($label . ": " . $node["identity"][$key]) . "</small>";
 	}
 } ?>
+<details><summary>IP addresses and identity</summary>
+<?php
+$address_identity = $node['address_identity'];
+$address_hosts = $discovery['hosts'];
+require __DIR__ . '/../devices/address_identity.php';
+?></details>
 <?php foreach ($node["discovery_warnings"] ?? [] as $warning) { ?><p role="status"><?php print nms_h(
 	$warning,
 ); ?></p><?php } ?></td>

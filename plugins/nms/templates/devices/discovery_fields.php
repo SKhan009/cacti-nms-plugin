@@ -75,7 +75,7 @@ $diag_assignment = $device_form_is_edit
 	: 0;
 $diag_selected = $nd_post ? (int) ($_POST["diagnostic_profile_id"] ?? 0) : $diag_assignment;
 ?>
-<fieldset id="diagnostic-profile"><legend>On-demand diagnostics</legend><p>These are manual tests from the collector. They are separate from scheduled SNMP discovery so bandwidth tests never create traffic during polling.</p><div class="nms-form-grid"><label>Diagnostic profile<select name="diagnostic_profile_id"><option value="0">Not assigned</option><?php foreach (
+<fieldset id="diagnostic-profile"><legend>On-demand diagnostics</legend><p>Choose a profile for manual device diagnostics and bandwidth tests from the assigned collector. Tests run only when requested.</p><div class="nms-form-grid"><label>Diagnostic profile<select name="diagnostic_profile_id"><option value="0">Not assigned</option><?php foreach (
 	$diag_profiles
 	as $profile
 ) { ?><option value="<?php print (int) $profile["id"]; ?>" <?php if ($diag_selected === (int) $profile["id"]) {
@@ -83,5 +83,5 @@ $diag_selected = $nd_post ? (int) ($_POST["diagnostic_profile_id"] ?? 0) : $diag
 } ?>><?php print nms_h(
 	$profile["name"] .
 		" · " .
-		implode(", ", array_map(fn($tool) => nms_diag_labels()[$tool], nms_diag_tools($profile["tools"]))),
-); ?></option><?php } ?></select><small><a href="diagnostics.php">Manage diagnostic profiles and run tests</a></small></label></div><p>Ping and traceroute check reachability. ARP reads the collector cache. iPerf3 and Netperf require their server service at the selected device.</p></fieldset>
+		implode(", ", array_map(fn($tool) => nms_diag_available_labels()[$tool], array_values(array_intersect(nms_diag_tools($profile["tools"]), array_keys(nms_diag_available_labels()))))),
+); ?></option><?php } ?></select><small><a href="diagnostics.php?section=profiles">Manage diagnostic profiles</a> · <a href="diagnostics.php">Run tests</a></small></label></div><p>Ping checks reachability; Traceroute and MTR show the network path. ARP shows the collector’s neighbour cache. iPerf3 and Netperf measure throughput with a compatible server; Pathchar estimates path capacity.</p></fieldset>

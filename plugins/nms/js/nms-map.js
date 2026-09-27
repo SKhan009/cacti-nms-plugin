@@ -39,7 +39,8 @@
     var raster = null, pendingRaster = null, rasterTimer;
     function drawBasemap() {
         if (!data.tiles) return;
-        if (pendingRaster) { pendingRaster.off(); map.removeLayer(pendingRaster); }
+        // Preserve Leaflet's remove handler so obsolete overlays detach their map listeners.
+        if (pendingRaster) map.removeLayer(pendingRaster);
         var view = map.getBounds();
         var bounds = L.latLngBounds(
             [Math.max(-85.051128, view.getSouth()), Math.max(-179.99999, view.getWest())],
@@ -124,6 +125,11 @@
             var body = popup.querySelector('.nms-map-device');
             if (body) body.remove();
             body = document.createElement('div'); body.className = 'nms-map-device';
+            if (device.image) {
+                var picture = document.createElement('img'); picture.src = device.image;
+                picture.alt = device.name; picture.style.cssText = 'display:block;width:96px;height:64px;object-fit:contain;margin-bottom:8px';
+                body.appendChild(picture);
+            }
             var title = document.createElement('a');
             title.className = 'nms-map-device-name'; title.textContent = device.name;
             title.href = 'devices.php?tab=edit&id=' + encodeURIComponent(device.id);
@@ -135,7 +141,11 @@
             [['Availability', device.status], ['Category', device.category],
              ['Memory', device.memory == null ? null : device.memory + '%'], ['Serial number', device.serial],
              ['Response time', device.response_ms == null ? null : device.response_ms + ' ms'],
-             ['Packet loss', device.packet_loss == null ? null : device.packet_loss + '%'],
+             ['Diagnostic packet loss', device.packet_loss == null ? (device.diagnostic_measurement?.state || 'Not measured') : device.packet_loss + '%'],
+             ['Diagnostic latency', device.diagnostic_measurement?.latency_ms == null ? null : device.diagnostic_measurement.latency_ms + ' ms'],
+             ['Diagnostic method / target', device.diagnostic_measurement?.method ? device.diagnostic_measurement.method + ' / ' + device.diagnostic_measurement.target : null],
+             ['Diagnostic collector', device.diagnostic_measurement?.collector_id],
+             ['Diagnostic collected', device.diagnostic_measurement?.collected_at],
              ['CPU', device.cpu == null ? null : device.cpu + '%']].forEach(function (field) {
                 var cell = document.createElement('div');
                 var label = document.createElement('dt'); label.textContent = field[0];

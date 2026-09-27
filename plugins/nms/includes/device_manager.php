@@ -246,6 +246,8 @@ function nms_device_delete($device_id)
 		throw new InvalidArgumentException("Only a device created through NMS can be deleted here.");
 	}
 	api_device_remove($device_id);
+	require_once __DIR__.'/configuration/lifecycle.php';
+	nms_config_device_removed([$device_id]);
 	// The native delete API owns Cacti records. Remove only transient NMS state,
 	// retain incident/audit history, and archive connection evidence for review.
 	nms_storage_execute("START TRANSACTION");
@@ -312,6 +314,14 @@ function nms_device_activate_imported_templates($device_id, $host_template_id)
 		ORDER BY o.graph_template_id",
 		[$host_template_id, $device_id],
 	);
+    $bundle=json_decode((string)db_fetch_cell_prepared('SELECT meta_value FROM plugin_nms_meta WHERE meta_key=?',['mib_bundle_'.$host_template_id]),true);
+    if(is_array($bundle)) {
+        $known=array_column($templates,'graph_template_id');
+        foreach($bundle['rows'] as $row) {
+            $graph_id=(int)$row['graph_template_id'];
+            if(!in_array($graph_id,$known) && db_fetch_cell_prepared('SELECT id FROM graph_templates WHERE id=?',[$graph_id]) && !db_fetch_cell_prepared('SELECT id FROM graph_local WHERE host_id=? AND graph_template_id=?',[$device_id,$graph_id]))$templates[]=['graph_template_id'=>$graph_id];
+        }
+    }
 	$created = 0;
 
 	foreach ($templates as $template) {
@@ -354,6 +364,9 @@ function nms_device_reconcile_imported_templates()
 			AND NOT EXISTS (SELECT 1 FROM graph_local AS gl
 				WHERE gl.host_id = h.id AND gl.graph_template_id = o.graph_template_id)
 		)");
+    $mib_devices=db_fetch_assoc("SELECT h.id,h.host_template_id FROM host h JOIN plugin_nms_meta m ON m.meta_key=CONCAT('mib_bundle_',h.host_template_id) WHERE h.deleted='' AND h.disabled=''");
+    $ids=array_column($devices,'id');
+    foreach($mib_devices as $device)if(!in_array($device['id'],$ids))$devices[]=$device;
 	$created = 0;
 	foreach ($devices as $device) {
 		try {
@@ -476,8 +489,13 @@ function nms_device_save($device_id, $input)
 	) {
 		throw new InvalidArgumentException("A Cacti device already uses this name.");
 	}
+	// Serial members share a physical endpoint; bus-address uniqueness is enforced by NMS.
+	$serial_identity = $device_id > 0 && $snmp_version === 0 && (bool) db_fetch_cell_prepared(
+		'SELECT d.host_id FROM plugin_nms_serial_devices d JOIN plugin_nms_serial_connections c ON c.id=d.connection_id WHERE d.host_id=? AND c.endpoint=?',
+		[$device_id, $hostname]
+	);
 	if (
-		!$proxy &&
+		!$proxy && !$serial_identity &&
 		(int) db_fetch_cell_prepared(
 			"SELECT COUNT(*) FROM host WHERE hostname = ? AND snmp_port = ? AND snmp_community = ? AND id != ? AND deleted = ''",
 			[$hostname, $snmp_port, $community, $device_id],

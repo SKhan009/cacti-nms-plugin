@@ -53,7 +53,7 @@ function nms_nd_network_probe($ip, $method, $port, $timeout)
 {
 	global $config;
 	if (
-		!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) ||
+		!filter_var($ip, FILTER_VALIDATE_IP) ||
 		!in_array($method, ["icmp", "tcp", "udp"], true) ||
 		$timeout < 100 ||
 		$timeout > 2000 ||

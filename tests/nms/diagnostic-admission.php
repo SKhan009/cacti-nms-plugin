@@ -5,25 +5,27 @@ $mode='ready';$inserts=0;$released=0;$allowed='ping';
 function nms_require_management($realm){}
 function nms_require_device_access($id){}
 function nms_current_user_id(){return 1;}
-function db_fetch_row_prepared($sql,$args){global $allowed;return ['host_id'=>1,'hostname'=>'127.0.0.1','description'=>'Test','poller_id'=>1,'disabled'=>'','id'=>1,'name'=>'Test','tools'=>$allowed,'ping_count'=>1,'trace_hops'=>5,'bandwidth_seconds'=>1];}
+function db_fetch_row_prepared($sql,$args){global $allowed,$mode;if(str_contains($sql,'FROM plugin_nms_meta'))return $mode==='offline'?[]:['meta_value'=>json_encode(['tools'=>array_fill_keys(array_keys(nms_diag_labels()),$mode!=='missing')]),'updated_at'=>'2026-09-21 12:00:00'];return ['host_id'=>1,'hostname'=>'127.0.0.1','description'=>'Test','poller_id'=>1,'disabled'=>'','id'=>1,'name'=>'Test','tools'=>$allowed,'ping_count'=>1,'trace_hops'=>5,'bandwidth_seconds'=>1];}
 function db_fetch_cell_prepared($sql,$args){
  global $mode,$released;
  if(str_contains($sql,'RELEASE_LOCK')) {$released++;return 1;}
- if(str_contains($sql,'GET_LOCK') || str_contains($sql,'FROM poller'))return 1;
+ if(str_contains($sql,'FROM plugin_config'))return $mode==='plugin_disabled'?4:1;
+ if(str_contains($sql,'FROM poller'))return $mode==='collector_disabled'?0:1;
+ if(str_contains($sql,'GET_LOCK'))return 1;
  if(str_contains($sql,'meta_value'))return $mode==='offline'?false:json_encode(['tools'=>array_fill_keys(array_keys(nms_diag_labels()), $mode!=='missing')]);
  if(str_contains($sql,'COUNT(*)'))return $mode==='busy'?1:0;
  throw new Exception($sql);
 }
 function nms_category_execute($sql,$args){global $inserts;$inserts++;}
 function db_fetch_cell($sql){return 12;}
-foreach(['offline','missing','busy'] as $mode){
+foreach(['plugin_disabled','collector_disabled','offline','missing','busy'] as $mode){
  $rejected=false;try{nms_diag_run(1,'ping');}catch(RuntimeException $e){$rejected=true;}
  if(!$rejected || $inserts)throw new Exception('Must reject without creating test: '.$mode);
 }
 $mode='ready';if(nms_diag_run(1,'ping')!==12||$inserts!==1||$released!==4)throw new Exception('Ready admission/lock release');
-echo "PASS: offline, missing tool and busy refused without insertion; ready accepted; locks released.\n";
+echo "PASS: disabled plugin/collector, offline, missing tool and busy refused without insertion; ready accepted; locks released.\n";
 
-foreach (array_keys(nms_diag_labels()) as $tool) {
+foreach (array_keys(nms_diag_available_labels()) as $tool) {
  if (!str_contains($tool, '_')) continue;
  $allowed=$tool;
  foreach (['missing','offline','busy'] as $mode) {
@@ -38,3 +40,10 @@ foreach (array_keys(nms_diag_labels()) as $tool) {
  if (!$rejected || $inserts!==$before) throw new Exception('Profile restriction bypass: '.$tool);
 }
 echo "PASS: TCP/ICMP modes respect runner availability, collector load and profile authorization.\n";
+
+foreach (['nping_icmp','nping_tcp','hping3_icmp','hping3_tcp'] as $tool) {
+ $allowed=$tool;$mode='ready';$before=$inserts;$rejected=false;
+ try { nms_diag_run(1,$tool); } catch (InvalidArgumentException $e) { $rejected=true; }
+ if (!$rejected || $inserts!==$before || !isset(nms_diag_labels()[$tool])) throw new Exception('Retired test admission/history regression: '.$tool);
+}
+echo "PASS: duplicate probes rejected without insertion; historical labels retained.\n";

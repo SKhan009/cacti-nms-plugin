@@ -27,6 +27,9 @@ if ($node_id) {
     try { $selected=nms_node_get($node_id); } catch (Throwable $e) { http_response_code(404); $error=$e->getMessage(); $editing=false; }
 }
 $members = $selected ? nms_node_members($node_id) : [];
+require_once __DIR__.'/../configuration/node.php';
+$serial_states=[];
+foreach($members as $member) $serial_states[$member['id']]=$member['serial_monitoring'] ?? null;
 $health = nms_node_health($members,time()-max(60,nms_poller_interval()*2));
 $alarms = [];
 if ($selected) {

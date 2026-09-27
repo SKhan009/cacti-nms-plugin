@@ -1,6 +1,6 @@
 # Cacti NMS plugins
 
-Installable Cacti plugins are maintained under `plugins/`. The current NMS version is **1.10.99**.
+Installable Cacti plugins are maintained under `plugins/`. The current NMS version is **1.11.8**.
 
 - `plugins/nms/`: device management, topology, discovery, diagnostics and SSH monitoring.
 - `plugins/topology/`: topology runtime.
@@ -27,3 +27,5 @@ NMS 1.10.98 adds explicit ICMP/TCP Traceroute, MTR, Nping and hping3 profile opt
 NMS 1.10.99 adds manually managed nodes with live member data, consistent diagnostic results, topology drag fixes and an offline geographic map using bundled Leaflet, India state boundaries and local GeoServer. See [node setup](docs/nms/NODE_SETUP.md), [map setup](docs/nms/TOPOLOGY_MAP.md), and the [GeoServer and Pathchar RHEL 9 guide](docs/nms/GeoServer_and_Pathchar_RHEL_9_Installation_Guide.docx).
 
 The node editor now shows accessible devices before site selection and provides a compact searchable list with multi-selection and explicit bulk controls. Selecting a site enables same-site assignments; membership remains manual.
+
+NMS 1.11.8 includes the readings workspace, serial device presets and configuration, Cacti serial graphs, and offline MIB template preparation. See [serial setup](docs/nms/SERIAL_DEVICE_UI.md), [serial QA](docs/nms/SERIAL_QA.md), [offline MIB QA](docs/nms/MIB_OFFLINE_QA.md), and [UI structure](docs/nms/UI_STRUCTURE.md).
