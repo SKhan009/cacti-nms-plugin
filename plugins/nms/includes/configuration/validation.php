@@ -34,6 +34,7 @@ function nms_config_choice($value, $choices, $label)
 function nms_serial_profile_validate(array $input)
 {
     $settings = [
+        'interface' => nms_config_choice($input['interface'] ?? 'unspecified', ['unspecified','rs232','rs485'], 'serial interface'),
         'protocol' => nms_config_choice($input['protocol'] ?? '', ['modbus_rtu'], 'protocol'),
         'baud_rate' => nms_config_integer((($input['baud_rate'] ?? '') === 'custom' ? ($input['custom_baud_rate'] ?? '') : ($input['baud_rate'] ?? '')), 50, 4000000, 'Baud rate'),
         'data_bits' => nms_config_integer($input['data_bits'] ?? '', 8, 8, 'Modbus RTU data bits'),
@@ -43,6 +44,9 @@ function nms_serial_profile_validate(array $input)
         'timeout_ms' => nms_config_integer($input['timeout_ms'] ?? '', 100, 10000, 'Timeout (ms)'),
         'retries' => nms_config_integer($input['retries'] ?? '', 0, 3, 'Read retries'),
     ];
+    if ($settings['interface'] === 'rs485' && $settings['flow_control'] !== 'none') {
+        throw new InvalidArgumentException('RS-485 requires flow control None and an adapter with automatic direction control, or a configured RS-485 gateway.');
+    }
     return [
         'name' => nms_config_text($input['name'] ?? '', 150, 'Profile name'),
         'description' => nms_config_text($input['description'] ?? '', 512, 'Description', false),

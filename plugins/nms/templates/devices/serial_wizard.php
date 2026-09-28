@@ -75,6 +75,7 @@ $input_field('endpoint','Serial port or gateway IP *','required placeholder="/de
 <label class="nms-serial-check"><input type="checkbox" name="custom_serial_settings" value="1" <?php print !empty($values['custom_serial_settings'])?'checked':''; ?>>Customize settings for this new connection</label>
 <div class="nms-node-fields" id="nmsSerialSettings">
 <?php
+$select_field('interface','Serial interface',['unspecified'=>'Not specified (existing hardware)','rs232'=>'RS-232','rs485'=>'RS-485']);
 $input_field('baud_rate','Baud rate','type="number" min="50" max="4000000" required');
 $select_field('data_bits','Data bits',[8=>'8']);
 $select_field('parity','Parity',['even'=>'Even','odd'=>'Odd','none'=>'None','mark'=>'Mark','space'=>'Space']);
@@ -85,7 +86,7 @@ $input_field('retries','Additional read retries','type="number" min="0" max="3" 
 ?>
 </div></div>
 <dl id="nmsSerialEffective" class="nms-serial-kv" aria-live="polite"></dl>
-<p>Match the equipment's configured settings. For transparent RTU over TCP, configure the gateway's serial side separately. RS-232, RS-422 and RS-485 require the appropriate hardware interface.</p>
+<p>Match the equipment's configured settings. For transparent RTU over TCP, configure the gateway's serial side separately. RS-232 requires matching hardware. RS-485 requires automatic direction control on the adapter or a gateway configured for RS-485, with flow control None. Selecting an interface does not switch the hardware's electrical mode.</p>
 <a href="serial_profiles.php" target="_blank" rel="noopener">Manage serial profiles</a>
 <?php if($host_id){ ?><a href="devices.php?tab=connection&amp;shared_settings=1&amp;id=<?php print $host_id; ?>">Review shared connection settings</a><?php } ?>
 </fieldset>

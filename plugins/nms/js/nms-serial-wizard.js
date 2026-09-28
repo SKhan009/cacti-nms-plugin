@@ -6,8 +6,8 @@
         var data = JSON.parse(document.getElementById('nmsSerialFormData').textContent);
         var connection = form.elements.connection_id;
         var preset = document.getElementById('nmsSerialPresetFields');
-        var settingNames = ['baud_rate','data_bits','parity','stop_bits','flow_control','timeout_ms','retries'];
-        var labels = {baud_rate:'Baud rate',data_bits:'Data bits',parity:'Parity',stop_bits:'Stop bits',flow_control:'Flow control',timeout_ms:'Timeout (ms)',retries:'Read retries'};
+        var settingNames = ['interface','baud_rate','data_bits','parity','stop_bits','flow_control','timeout_ms','retries'];
+        var labels = {interface:'Serial interface',baud_rate:'Baud rate',data_bits:'Data bits',parity:'Parity',stop_bits:'Stop bits',flow_control:'Flow control',timeout_ms:'Timeout (ms)',retries:'Read retries'};
         function pairs(target, values) {
             target.replaceChildren();
             values.forEach(function (pair) {
@@ -53,7 +53,7 @@
         function profileSettings() {
             var profile=data.profiles[form.elements.profile_id.value];
             if (!profile) return;
-            settingNames.forEach(function (name) { form.elements[name].value=profile.settings[name]; });
+            settingNames.forEach(function (name) { form.elements[name].value=profile.settings[name] ?? (name==='interface'?'unspecified':''); });
             form.elements.profile_revision.value=profile.revision;
         }
         function review() {
@@ -97,7 +97,7 @@
             var profile=data.profiles[form.elements.profile_id.value];
             var settings=shared?shared.settings:(profile?profile.settings:null);
             if(custom) { settings={};settingNames.forEach(function(name){settings[name]=form.elements[name].value;}); }
-            pairs(document.getElementById('nmsSerialEffective'),settings?settingNames.map(function(name){return [labels[name],settings[name]];}):[['Settings','Select a serial profile.']]);
+            pairs(document.getElementById('nmsSerialEffective'),settings?settingNames.map(function(name){return [labels[name],name==='interface'?({rs232:'RS-232',rs485:'RS-485',unspecified:'Not specified (existing hardware)'}[settings[name] || 'unspecified']):settings[name]];}):[['Settings','Select a serial profile.']]);
             document.getElementById('nmsSerialConnectionInfo').textContent=shared?'Shared endpoint: '+shared.endpoint+'. Its saved settings apply to every device on this bus.':(tcp?'Enter a literal gateway IP. Configure matching serial settings on the gateway.':'Use the serial port on the assigned collector, preferably /dev/serial/by-id/.');
             Array.from(form.elements.node_id.options).forEach(function(option){
                 option.disabled=option.value!=='0' && option.dataset.site!==form.elements.site_id.value;

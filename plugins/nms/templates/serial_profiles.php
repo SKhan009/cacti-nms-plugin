@@ -11,7 +11,7 @@
 <div class="nms-node-fields">
 <?php foreach (['name'=>['Name',150],'description'=>['Description',512],'manufacturer'=>['Manufacturer',120],'model'=>['Model',120]] as $key=>[$label,$max]) { ?>
 <label><?php print $label; ?><input name="<?php print $key; ?>" maxlength="<?php print $max; ?>" <?php print $key!=='description'?'required':''; ?> value="<?php print nms_h($values[$key]); ?>"></label><?php } ?>
-<?php foreach (['protocol'=>['Protocol',['modbus_rtu'=>'Modbus RTU']], 'parity'=>['Parity',['even'=>'Even','odd'=>'Odd','none'=>'None','mark'=>'Mark','space'=>'Space']], 'flow_control'=>['Flow control',['none'=>'None','rtscts'=>'RTS/CTS']]] as $key=>[$label,$choices]) { ?>
+<?php foreach (['interface'=>['Serial interface',['unspecified'=>'Not specified (existing hardware)','rs232'=>'RS-232','rs485'=>'RS-485']], 'protocol'=>['Protocol',['modbus_rtu'=>'Modbus RTU']], 'parity'=>['Parity',['even'=>'Even','odd'=>'Odd','none'=>'None','mark'=>'Mark','space'=>'Space']], 'flow_control'=>['Flow control',['none'=>'None','rtscts'=>'RTS/CTS']]] as $key=>[$label,$choices]) { ?>
 <label><?php print $label; ?><select name="<?php print $key; ?>"><?php foreach($choices as $value=>$text) { ?><option value="<?php print $value; ?>" <?php print (string)$values[$key]===$value?'selected':''; ?>><?php print $text; ?></option><?php } ?><?php if($key==='flow_control'){ ?><option disabled>XON/XOFF — unavailable for binary RTU</option><option disabled>DTR/DSR — unavailable on this Linux adapter</option><?php } ?></select></label><?php } ?>
 <?php
 $baud_rates=[50,75,110,134,150,200,300,600,1200,1800,2400,4800,9600,19200,38400,57600,115200,230400,460800,500000,576000,921600,1000000,1152000,1500000,2000000,2500000,3000000,3500000,4000000];
@@ -20,6 +20,7 @@ if(ctype_digit($current_baud) && (int)$current_baud>=50 && (int)$current_baud<=4
 ?>
 <label>Baud rate<select name="baud_rate"><?php foreach($baud_rates as $rate){ ?><option value="<?php print $rate; ?>" <?php print $current_baud===(string)$rate?'selected':''; ?>><?php print $rate; ?></option><?php } ?><option value="custom" <?php print $current_baud==='custom'?'selected':''; ?>>Custom</option></select></label>
 <label>Custom baud rate<input type="number" name="custom_baud_rate" min="50" max="4000000" step="1" value="<?php print nms_h($values['custom_baud_rate'] ?? ''); ?>"><small>Used only when Baud rate is Custom. The port must support this rate.</small></label>
+<p>RS-485 requires an adapter with automatic direction control or a gateway configured for RS-485. Select flow control None. This setting does not switch the electrical mode of hardware.</p>
 <label>Data bits<select name="data_bits"><option value="8">8</option><option disabled>5 — not supported by Modbus RTU</option><option disabled>6 — not supported by Modbus RTU</option><option disabled>7 — not supported by Modbus RTU</option></select></label>
 <label>Stop bits<select name="stop_bits"><?php foreach([1,2] as $bits){ ?><option value="<?php print $bits; ?>" <?php print (string)$values['stop_bits']===(string)$bits?'selected':''; ?>><?php print $bits; ?></option><?php } ?><option disabled>1.5 — not supported by this RTU adapter</option></select></label>
 <?php foreach (['timeout_ms'=>['Timeout (ms)',100,10000], 'retries'=>['Read retries',0,3]] as $key=>[$label,$min,$max]) { ?>

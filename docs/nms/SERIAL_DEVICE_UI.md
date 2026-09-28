@@ -16,3 +16,11 @@ Only Modbus RTU through a direct Linux serial port or transparent RTU-over-TCP g
 After saving, **Test serial response** queues a read of one configured register through the assigned collector. Refresh displays the result; **View readings** displays collected values. The form contains no synthetic readings, simulated success, sample collectors, or arbitrary executable command inputs.
 
 Validation includes pure profile/override checks and a CLI-only rendered fixture (`tests/nms/serial-form-fixture.php`) for browser interaction and responsive layout checks. Hardware acceptance and native device-creation integration require the QA Cacti environment.
+
+## RS-232 and RS-485
+
+Serial profiles and custom new-connection settings include a **Serial interface** choice: **RS-232** or **RS-485**. The saved choice is copied into the connection snapshot and displayed when reusing that bus. Existing records without a choice remain **Not specified (existing hardware)**; they are not automatically relabelled.
+
+Modbus RTU remains the supported protocol on either interface. Select the physical port/adapter that matches the equipment. RS-485 currently requires automatic direction control provided by the adapter, or a transparent gateway configured for RS-485. Flow control must be None for RS-485; PHP admission and the collector both reject RTS/CTS in that combination. Selecting RS-485 does not switch a port's electrical mode or configure kernel/software RTS direction control. Gateway serial-side settings must be configured on the gateway itself.
+
+Verification: profile validation/snapshot tests and all 19 transport tests passed on RHEL, including legacy settings, both interface selections through the local RTU TCP fixture, invalid-interface rejection, RS-485 flow rejection and existing pseudo-terminal tests. Real electrical RS-232/RS-485 hardware was not available for verification.

@@ -7,7 +7,7 @@ nms_require_database();
 try { nms_require_management(); } catch (Throwable $e) { http_response_code(403); die(nms_h($e->getMessage())); }
 $error = '';
 $values = ['id'=>0,'revision'=>0,'name'=>'','description'=>'','manufacturer'=>'','model'=>'',
-    'custom_baud_rate'=>'','protocol'=>'modbus_rtu','baud_rate'=>9600,'data_bits'=>8,'parity'=>'even','stop_bits'=>1,
+    'interface'=>'unspecified','custom_baud_rate'=>'','protocol'=>'modbus_rtu','baud_rate'=>9600,'data_bits'=>8,'parity'=>'even','stop_bits'=>1,
     'flow_control'=>'none','timeout_ms'=>1000,'retries'=>1];
 $editing = isset($_GET['new']) || isset($_GET['id']);
 try {

@@ -66,3 +66,15 @@ try {
     throw new RuntimeException('Invalid override accepted');
 } catch(InvalidArgumentException $e) {}
 echo "PASS: custom connection settings, preset preservation and invalid override rejection\n";
+
+foreach (['rs232','rs485'] as $interface) {
+    $profile=nms_serial_profile_validate(array_replace($input,['interface'=>$interface]));
+    check($profile['settings']['interface']===$interface,'Interface was not retained');
+    check(nms_serial_profile_snapshot($profile,4,1)['settings']['interface']===$interface,'Interface snapshot was lost');
+}
+check(nms_serial_profile_validate($input)['settings']['interface']==='unspecified','Legacy settings were relabelled');
+foreach ([['interface'=>'invalid'],['interface'=>'rs485','flow_control'=>'rtscts']] as $change) {
+    try { nms_serial_profile_validate(array_replace($input,$change)); throw new LogicException('Unsupported interface combination accepted'); }
+    catch(InvalidArgumentException $e) {}
+}
+echo "PASS: RS-232/RS-485 snapshots, legacy interface preservation and invalid RS-485 flow rejection\n";

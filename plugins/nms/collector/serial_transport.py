@@ -74,6 +74,10 @@ def validate(job):
     settings = connection['settings']
     if settings.get('protocol') != 'modbus_rtu':
         raise ValueError('Unsupported serial protocol')
+    if settings.get('interface', 'unspecified') not in ('unspecified', 'rs232', 'rs485'):
+        raise ValueError('Unsupported serial interface')
+    if settings.get('interface') == 'rs485' and settings['flow_control'] != 'none':
+        raise ValueError('RS-485 requires automatic direction control and flow control None')
     integer(settings['baud_rate'], 50, 4000000, 'Baud rate')
     integer(settings['data_bits'], 8, 8, 'Data bits')
     integer(settings['stop_bits'], 1, 2, 'Stop bits')

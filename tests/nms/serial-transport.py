@@ -98,6 +98,20 @@ class TransportTests(unittest.TestCase):
     def execute(self, request):
         return t.execute(request, self.directory.name)
 
+    def test_interface_selection(self):
+        with Simulator() as sim:
+            for interface in ('rs232', 'rs485'):
+                request = job(sim)
+                request['connection']['settings']['interface'] = interface
+                t.validate(request)
+                self.assertEqual(self.execute(request)['values'], [17])
+            request['connection']['settings']['flow_control'] = 'rtscts'
+            with self.assertRaises(ValueError):
+                t.validate(request)
+            request['connection']['settings']['interface'] = 'invalid'
+            with self.assertRaises(ValueError):
+                t.validate(request)
+
     def test_serial_option_mapping(self):
         for parity, code in [('none', 'N'), ('even', 'E'), ('odd', 'O'), ('mark', 'M'), ('space', 'S')]:
             for flow in ('none', 'rtscts'):
