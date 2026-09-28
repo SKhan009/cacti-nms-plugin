@@ -669,6 +669,9 @@ $host_templates = db_fetch_assoc("SELECT id, name FROM host_template ORDER BY na
 $sites = db_fetch_assoc("SELECT id, name FROM sites ORDER BY name");
 $pollers = db_fetch_assoc("SELECT id, name FROM poller ORDER BY id");
 $categories = nms_categories();
+// Recording history and simulator controls belong only to the repository.
+$imports = [];
+if ($tab === 'import') {
 $imports = db_fetch_assoc("SELECT i.*, c.name AS category_name, ht.name AS host_template_name,
 	u.username AS uploaded_by_name FROM plugin_nms_snmprec_imports AS i
 	LEFT JOIN plugin_nms_categories AS c ON c.id = i.category_id
@@ -678,6 +681,8 @@ foreach ($imports as &$import) {
 	$import["fcaps_targets"] = nms_snmprec_fcaps_targets((int) $import["id"]);
 }
 unset($import);
+}
+
 
 // Seed normal device forms from Cacti settings before applying any explicit imported-simulator defaults.
 // Reuse configured defaults from the installed device form, including site/template/poller.

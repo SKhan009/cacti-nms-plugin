@@ -21,3 +21,9 @@ Prepared 2026-09-27. Includes the accumulated readings workspace, diagnostics, d
 - See `SERIAL_QA.md` and `MIB_OFFLINE_QA.md` for earlier live/native integration checks and their limitations.
 
 These checks do not certify every device model, hardware interface, collector configuration or end-to-end workflow. Database/native integration tests were not indiscriminately run against the live installation as part of this preparation.
+
+## Optional simulator follow-up
+
+The recording repository's **Add device** action now opens ordinary device creation with the generated Cacti template and category. It does not pass simulator endpoint, community or import identity. **Add simulated device** is a separate action shown when simulator configuration is available; its existing validation remains mandatory. Normal Add/Edit pages no longer load recording history or FCAPS recording controls.
+
+`tests/nms/device-without-simulator.php` creates and edits a randomly named disabled SNMP device using native Cacti APIs with an unavailable simulator configuration path, verifies persisted values, and removes its fixture. It also confirms explicit simulator creation still rejects unavailable configuration. Passed on the RHEL QA installation. The other installation's detailed error was not supplied, so this verifies independence from simulator configuration and corrects the ambiguous repository link, rather than identifying every possible cause of the generic error banner.

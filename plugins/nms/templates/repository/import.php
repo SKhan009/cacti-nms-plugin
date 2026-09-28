@@ -164,9 +164,8 @@ $simulator_badge = nms_snmpsim_status_badge($simulator_health);
 			<input type="hidden" name="import_id" value="<?php print (int) $import["id"]; ?>">
 			<button class="nms-row-link nms-import-primary" type="submit">Check live SNMP</button>
 		</form>
-		<a class="nms-row-link" href="devices.php?tab=add&amp;snmpsim_import_id=<?php print (int) $import[
-  	"id"
-  ]; ?>">Add device</a></div></td>
+		<a class="nms-row-link" href="devices.php?tab=add&amp;host_template_id=<?php print (int) $import['host_template_id']; ?>&amp;equipment_category_id=<?php print (int) $import['category_id']; ?>">Add device</a>
+        <?php if (!empty($simulator_config)) { ?><a class="nms-row-link" href="devices.php?tab=add&amp;snmpsim_import_id=<?php print (int) $import['id']; ?>">Add simulated device</a><?php } ?></div></td>
 	</tr><?php } ?>
 	</tbody></table></div>
 </section>
