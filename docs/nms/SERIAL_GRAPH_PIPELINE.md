@@ -26,3 +26,11 @@ New scheduled samples must fill a completed consolidation interval before the ch
 - Native scheduled Cacti poller: RRD `lastupdate` advances and receives 23; the completed 22:25 QA-server bucket contains `2.3000000000e+01` in AVERAGE. Native graph rendering succeeds.
 
 For other NaN cases inspect, in order: current reading/signature, input output under the poller account, poller-cache binding/countdown, last RRD update, then the graph's selected time range. A stale or model-mismatched sample must remain unknown until its real configuration is corrected.
+
+## Invisible-line correction
+
+A serial graph could show numeric legend values while drawing no line: automatic template creation inherited Cacti's color ID 0 (no color). Equipment graph creation now selects an installed visible color, preferring blue, and repairs legacy colorless LINE1 items for the selected equipment graph and its template. Explicit nonzero color choices are preserved. No RRD data or history is rewritten.
+
+Verified on graph 208/source 216: live value 23, historical storage step 300 seconds, realtime cache step 10 seconds and visible blue line with Current/Average/Minimum/Maximum 23.00 in Chrome. Realtime mode uses a separate cache that initially has no history, so NaN can appear during its initial collection window even when historical polling is healthy. This is distinct from the missing-line-color defect.
+
+The native graph integration test verifies new graph color, deliberate legacy color-zero repair, duplicate-free provisioning and RRD creation/update/fetch/render. It passed; the CLI render emitted a Cacti missing-theme warning (`lib/rrd.php`, empty theme key), while the browser render was confirmed visually. Test-owned graph objects and RRD were removed. The deployed source backup is `/var/lib/cacti/nms-serial-graph-repair/graphs.php.before-color`.

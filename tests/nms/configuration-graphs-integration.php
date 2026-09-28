@@ -15,7 +15,12 @@ $graphs=[]; $rrd_path=null;
 try {
     $graphs=nms_config_graphs_create($host_id);
     check(count($graphs)===1,'Expected one numeric graph');
+    $graph_id=(int)reset($graphs);
+    $line=db_fetch_row_prepared('SELECT id,color_id,graph_template_id FROM graph_templates_item WHERE local_graph_id=? AND graph_type_id=4',[$graph_id]);
+    check((int)$line['color_id']>0,'Automatic equipment graph has no visible line color');
+    nms_category_execute('UPDATE graph_templates_item SET color_id=0 WHERE id=?',[$line['id']]);
     check(nms_config_graphs_create($host_id)===$graphs,'Repeat provisioning duplicated graphs');
+    check((int)db_fetch_cell_prepared('SELECT color_id FROM graph_templates_item WHERE id=?',[$line['id']])>0,'Legacy colorless line was not repaired');
     $rows=db_fetch_assoc_prepared('SELECT pi.local_data_id,pi.arg1,pi.host_id FROM poller_item pi JOIN data_template_data d ON d.local_data_id=pi.local_data_id JOIN data_input i ON i.id=d.data_input_id WHERE i.hash=?',[$input_hash]);
     check(count($rows)===1,'Expected a native poller item for the graph');
     check((int)$rows[0]['host_id']===$host_id,'Native poller item has wrong device');

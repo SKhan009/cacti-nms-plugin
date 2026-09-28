@@ -27,6 +27,15 @@ function nms_config_native_object($table,$type,$identity,array $row)
     return $id;
 }
 
+/** Automatic numeric graphs need a visible line; native editor defaults allow no color. */
+function nms_config_graph_color()
+{
+    $id=(int)db_fetch_cell("SELECT id FROM colors WHERE UPPER(hex)='0000FF' ORDER BY id LIMIT 1");
+    if(!$id) $id=(int)db_fetch_cell("SELECT id FROM colors WHERE LENGTH(hex)=6 AND UPPER(hex)<>'FFFFFF' ORDER BY id LIMIT 1");
+    if(!$id) throw new RuntimeException('Add a visible graph color in Cacti before creating equipment graphs.');
+    return $id;
+}
+
 function nms_config_graphs_create($host_id)
 {
     nms_require_management(); nms_require_device_access($host_id);
@@ -58,7 +67,7 @@ function nms_config_graphs_create($host_id)
             $rrd=(int)db_fetch_cell_prepared('SELECT id FROM data_template_rrd WHERE data_template_id=? AND local_data_id=0',[$template]);
             if(!$rrd) $rrd=nms_config_native_save('data_template_rrd',['id'=>0,'hash'=>md5('nms:equipment:v1:rrd:'.$identity),'data_template_id'=>$template,'local_data_id'=>0,'local_data_template_rrd_id'=>0,'data_source_name'=>'value','data_source_type_id'=>1,'rrd_minimum'=>(string)$field['min'],'rrd_maximum'=>(string)$field['max'],'rrd_heartbeat'=>$profile['heartbeat'],'data_input_field_id'=>$fields['value']]);
             $graph_template=(int)db_fetch_cell_prepared("SELECT i.graph_template_id FROM graph_templates_item i JOIN plugin_nms_managed_objects m ON m.object_id=i.graph_template_id AND m.object_type='graph_template' WHERE i.task_item_id=? AND i.local_graph_id=0 LIMIT 1",[$rrd]);
-            if(!$graph_template) $graph_template=nms_graph_template_create($rrd,$title,$field['unit']);
+            if(!$graph_template) $graph_template=nms_graph_template_create($rrd,$title,$field['unit'],['color_id'=>nms_config_graph_color()]);
             nms_category_execute('REPLACE INTO host_graph(host_id,graph_template_id) VALUES (?,?)',[$host_id,$graph_template]);
             $graph=(int)db_fetch_cell_prepared('SELECT id FROM graph_local WHERE host_id=? AND graph_template_id=?',[$host_id,$graph_template]);
             if(!$graph) {
@@ -69,6 +78,9 @@ function nms_config_graphs_create($host_id)
                 nms_managed_object_record('graph',$graph);
                 foreach($created['local_data_id'] ?? [] as $data_id) { nms_managed_object_record('data_source',(int)$data_id); push_out_host($host_id,(int)$data_id); }
             }
+            // Repair legacy automatic LINE1 items with no color; preserve explicit styling.
+            nms_category_execute('UPDATE graph_templates_item SET color_id=? WHERE graph_template_id=? AND local_graph_id IN (0,?) AND graph_type_id=4 AND color_id=0',
+                [nms_config_graph_color(),$graph_template,$graph]);
             $graphs[$key]=$graph;
         }
         if(!$graphs) throw new RuntimeException('This equipment profile has no numeric fields to graph.');
