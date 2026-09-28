@@ -53,7 +53,7 @@ The VM test used its dynamically discovered local interface address. The test co
 
 ## Offline bundle
 
-On this Mac, the source archive, compiler patch, aarch64 binary and checksums are saved under VirtualBox VMs/Cacti-RHEL9/offline-packages/pchar. The source and binary are kept outside the plugin repository. The Git download includes the plugin integration, build patch and this guide; it does not automatically install pchar.
+On this Mac, the source archive, compiler patch, aarch64 binary and checksums are saved under VirtualBox VMs/Cacti-RHEL9/offline-packages/pchar. The source, patch, binary and checksums are also included in `packages/pchar/pchar-offline-rhel9-aarch64.zip`, outside the plugin runtime. See [offline packages](../../packages/README.md). Downloading the repository does not automatically install pchar.
 
 ## Remove executable permission or uninstall
 

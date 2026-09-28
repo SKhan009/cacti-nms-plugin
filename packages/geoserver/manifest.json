@@ -1,0 +1,23 @@
+{
+  "archive": "geoserver-2.28.5-bin.zip",
+  "bytes": 123042718,
+  "sha256": "77cdc75f94c017fd9b8b85273136ebe0056e8436658d610890a24ddb6f3e6620",
+  "source": "https://downloads.sourceforge.net/project/geoserver/GeoServer/2.28.5/geoserver-2.28.5-bin.zip",
+  "parts": [
+    {
+      "file": "geoserver-2.28.5-bin.zip.part01",
+      "bytes": 50331648,
+      "sha256": "5e19b6cd95cfd8e2be4e15264abe8e814b62fe72e856c2e88ef4bd1fafb66713"
+    },
+    {
+      "file": "geoserver-2.28.5-bin.zip.part02",
+      "bytes": 50331648,
+      "sha256": "1567d2dc118c458a8b7e60246d6f534b06212f122d4de9b3404b0dafe2919b28"
+    },
+    {
+      "file": "geoserver-2.28.5-bin.zip.part03",
+      "bytes": 22379422,
+      "sha256": "78b58f1939a6b5859f710202591f11c8c32124ca2655d63548ed042d183f4c43"
+    }
+  ]
+}

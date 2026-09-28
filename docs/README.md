@@ -5,6 +5,7 @@
 - `plugins/icct_rack/` — rack plugin runtime.
 - `docs/nms/`, `docs/topology/`, `docs/icct_rack/` — documentation grouped by plugin.
 - `docs/nms/vendor/` — reference documentation for bundled SSH libraries. Licence files remain with their libraries.
+- `packages/` — offline application archives, checksums and reconstruction instructions; never copy into Cacti plugins.
 - `tests/nms/`, `tests/topology/` — development checks and fixtures, outside installable plugins.
 
 Copy only the required folder under `plugins/` into a Cacti installation. Documentation and tests are maintained separately.
