@@ -134,10 +134,11 @@ $max_oid_options = array_keys($fields_snmp_item_with_oids["max_oids"]["array"]);
 $device_thread_options = array_keys($fields_host_edit["device_threads"]["array"]);
 ?>
 <link rel="stylesheet" href="<?php print nms_h(nms_asset_url("css/nms-snmp-form.css")); ?>">
+<?php if (!$device_form_is_edit) { $add_connection_type='network'; require __DIR__.'/connection_type.php'; } ?>
 <section class="nms-panel nms-form-panel">
 	<div class="nms-panel-head"><div><h2><?php print $device_form_is_edit
  	? "Edit " . nms_h($device_values["description"])
- 	: "Add a Cacti device"; ?></h2><p><?php print $device_form_is_edit
+	: "Network device settings"; ?></h2><p><?php print $device_form_is_edit
 	? "Live settings from Cacti core. Saving updates this device directly."
 	: "Uses the same Cacti device API as the core console."; ?></p></div><?php if (
 	$device_form_is_edit

@@ -22,15 +22,19 @@ require_once $config["base_path"] . "/plugins/nms/includes/graph_template_manage
 // Require an explicit lifecycle upgrade; viewing devices never renames core templates.
 nms_require_database();
 
-// Dedicated serial workflow; legacy edit links remain valid.
+// One Add device entry point; keep existing serial edit and submitted legacy forms valid.
 require_once __DIR__.'/includes/configuration/service.php';
-if (get_nfilter_request_var('tab') === 'serial') {
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && get_nfilter_request_var('tab') === 'serial' && empty($_GET['id'])) {
+    header('Location: devices.php?tab=add&connection_type=serial', true, 302); exit;
+}
+if (get_nfilter_request_var('tab') === 'serial' ||
+    (get_nfilter_request_var('tab') === 'add' && ($_GET['connection_type'] ?? '') === 'serial')) {
     require __DIR__.'/includes/configuration/serial_page.php'; exit;
 }
 if ($_SERVER['REQUEST_METHOD']==='GET' && empty($_GET['shared_settings']) && in_array(get_nfilter_request_var('tab'),['edit','connection'],true)) {
     $serial_id=(int)get_filter_request_var('id');
     if (($serial_id && nms_serial_assignment($serial_id)) || (!$serial_id && get_nfilter_request_var('tab')==='connection')) {
-        header('Location: devices.php?tab=serial'.($serial_id?'&id='.$serial_id:'')); exit;
+        header('Location: '.($serial_id?'devices.php?tab=serial&id='.$serial_id:'devices.php?tab=add&connection_type=serial')); exit;
     }
 }
 
@@ -876,7 +880,7 @@ require $config["base_path"] . "/plugins/nms/templates/app_header.php";
   ) { ?><div><p class="nms-eyebrow">NMS / Templates</p><h1>Create graph template</h1><p>Use an existing data-source template item to create a reusable Cacti graph template.</p><a href="templates.php?section=graph">All graph templates and native editor</a></div><?php } else { ?>
 		<?php if (
   	$repository_workspace
-  ) { ?><div><p class="nms-eyebrow">NMS / File repository</p><h1>File repository</h1><p>Browse uploaded files and their linked Cacti objects.</p></div><?php } else { ?><div><p class="nms-eyebrow">NMS / Device Management</p><h1>Device management</h1><p>Manage existing Cacti devices and their connection settings.</p></div><?php } ?>
+  ) { ?><div><p class="nms-eyebrow">NMS / File repository</p><h1>File repository</h1><p>Browse uploaded files and their linked Cacti objects.</p></div><?php } else { ?><div><p class="nms-eyebrow">NMS / Device Management</p><h1><?php print $tab === "add" ? "Add device" : "Device management"; ?></h1><p>Manage Cacti devices and their connection settings.</p></div><?php } ?>
 		<?php } ?>
 	</div>
 

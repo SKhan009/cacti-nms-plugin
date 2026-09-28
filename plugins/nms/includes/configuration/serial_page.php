@@ -2,7 +2,7 @@
 /** One serial setup entry point; native device creation remains in device.php. */
 require_once __DIR__.'/device.php';
 nms_require_management();
-$tab='serial';
+$tab=empty($_GET['id'])?'add':'serial';
 $host_id=nms_config_integer($_GET['id'] ?? 0,0,16777215,'Device ID');
 $host=['id'=>0,'poller_id'=>1]; $assignment=null; $equipment=[];
 if($host_id) {

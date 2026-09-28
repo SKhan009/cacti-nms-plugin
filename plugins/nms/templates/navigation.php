@@ -62,7 +62,7 @@
                     <span class="nms-sidebar-icon">＋</span><span class="nms-sidebar-copy"><strong>Device management</strong></span><span class="nms-submenu-arrow">⌄</span>
                 </summary>
                 <nav class="nms-template-subnav" aria-label="Device management sections">
-                    <?php foreach(['inventory'=>'Device dashboard','add'=>'Add network device','serial'=>'Add serial device','nodes'=>'Nodes','readings'=>'Device readings'] as $key=>$label){ ?>
+                    <?php foreach(['inventory'=>'Device dashboard','add'=>'Add device','nodes'=>'Nodes','readings'=>'Device readings'] as $key=>$label){ ?>
                     <a href="<?php print nms_h(nms_plugin_url('devices.php?tab='.$key)); ?>" <?php if(($tab ?? '')===$key) print 'aria-current="page"'; ?>><?php print $label; ?></a>
                     <?php } ?>
                 </nav>

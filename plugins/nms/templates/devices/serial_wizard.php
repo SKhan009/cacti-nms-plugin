@@ -17,7 +17,8 @@ $equipment_data=[];
 foreach($equipment_choices as $equipment_choice) $equipment_data[(int)$equipment_choice['id']]=$equipment_choice;
 ?>
 <main class="nms-shell nms-devices-shell nms-serial-page">
-<div class="nms-heading"><div><p class="nms-eyebrow">NMS / Devices / Serial</p><h1><?php print $host_id?'Edit serial device':'Add a serial Cacti device'; ?></h1><p>Device identity, serial communication, readings and Cacti graphs in one form.</p></div></div>
+<div class="nms-heading"><div><p class="nms-eyebrow">NMS / Devices / Serial</p><h1><?php print $host_id?'Edit serial device':'Add device'; ?></h1><p>Device identity, serial communication, readings and Cacti graphs in one form.</p></div></div>
+<?php if (!$host_id) { $device_nav_active='add'; $device_nav_id=0; require __DIR__.'/tabs.php'; $add_connection_type='serial'; require __DIR__.'/connection_type.php'; } ?>
 <?php if($error){ ?><div role="alert" class="nms-form-message error"><?php print nms_h($error); ?></div><?php } ?>
 <?php if(isset($_GET['saved'])){ ?><div role="status" class="nms-form-message success">Serial device saved.</div><?php } ?>
 <?php if($association_error){ ?><div role="alert" class="nms-form-message error"><?php print nms_h($association_error); ?></div><?php } ?>

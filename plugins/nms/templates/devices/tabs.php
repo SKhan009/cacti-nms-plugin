@@ -2,7 +2,7 @@
 /** One persistent navigation row for all Device Management pages. */
 $device_nav_active=$device_nav_active??'inventory';
 $device_nav_id=max(0,(int)($device_nav_id??0));
-$device_nav_links=['inventory'=>'Device dashboard','add'=>'Add device','serial'=>'Add serial device','nodes'=>'Nodes'];
+$device_nav_links=['inventory'=>'Device dashboard','add'=>'Add device','nodes'=>'Nodes'];
 $device_nav_links['readings']='Device readings';
 ?>
 <nav class="nms-page-tabs" aria-label="Device management">
