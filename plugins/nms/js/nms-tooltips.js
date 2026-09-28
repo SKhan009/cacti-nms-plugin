@@ -314,12 +314,23 @@
 	}
 
 	/** Open the tooltip in the browser top layer when available. */
-	function openTooltip() {
-		if (!tooltip || typeof tooltip.showPopover !== "function") return;
+	function openTooltip(target) {
+        if (!tooltip) return;
+        // A body-level z-index cannot rise above a modal dialog's top layer.
+        // Keep help in its owning dialog even on browsers without Popover API.
+        var parent = target.closest("dialog[open]") || document.body;
+        closeTooltip();
+        if (tooltip.parentNode !== parent) parent.appendChild(tooltip);
+        if (typeof tooltip.showPopover !== "function") {
+            tooltip.removeAttribute("popover");
+            return;
+        }
+        tooltip.setAttribute("popover", "manual");
 		try {
 			if (!tooltip.matches(":popover-open")) tooltip.showPopover();
 		} catch (error) {
-			// The normal fixed-position fallback remains available in older browsers.
+			// Failed popovers are hidden by browser styles until the attribute is removed.
+            tooltip.removeAttribute("popover");
 		}
 	}
 
@@ -417,7 +428,7 @@
 				},
 			);
 		tooltip.classList.add("visible");
-		openTooltip();
+		openTooltip(target);
 		if (pointerMode) positionAtPointer();
 		else position(target);
 	}
@@ -651,6 +662,11 @@
 			bind,
 		);
 	}
+
+    // Dialog close events do not bubble; capture them to clear shared help.
+    document.addEventListener("close", function (event) {
+        if (activeTarget && event.target.contains(activeTarget)) hide();
+    }, true);
 
 	document.addEventListener(
 		"keydown",
