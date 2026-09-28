@@ -184,7 +184,7 @@ function nms_device_create($input)
 	$device_role = nms_classification_text($input["device_role"] ?? "", 150);
 	// Reject malformed metadata before creating a core device. It is never passed to Cacti's device API.
 	$manual_serial = nms_manual_serial_validate($input["manual_serial_number"] ?? "");
-	if (!empty($input["snmpsim_import_id"])) {
+	if (!empty($input["proxy"]) && !empty($input["snmpsim_import_id"])) {
 		require_once __DIR__ . "/snmpsim.php";
 		$defaults = nms_snmpsim_import_defaults($input["snmpsim_import_id"]);
 		foreach (

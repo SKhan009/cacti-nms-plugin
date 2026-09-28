@@ -481,3 +481,20 @@
 	short.addEventListener("input", update);
 	update();
 })();
+
+/** Simulator imports are optional and follow the shared-IP checkbox. */
+(function () {
+    var form = document.getElementById('nms-device-form');
+    if (!form) return;
+    var shared = form.querySelector('input[name="proxy"]');
+    var imported = form.querySelector('input[name="snmpsim_import_id"]');
+    if (!shared || !imported) return;
+    function syncSimulator() {
+        imported.disabled = !shared.checked;
+        form.querySelectorAll('[data-nms-simulator-help]').forEach(function (help) {
+            help.hidden = !shared.checked;
+        });
+    }
+    shared.addEventListener('change', syncSimulator);
+    syncSimulator();
+})();

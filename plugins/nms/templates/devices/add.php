@@ -149,7 +149,7 @@ $device_thread_options = array_keys($fields_host_edit["device_threads"]["array"]
 		<input type="hidden" name="nms_action" value="<?php print $device_form_is_edit ? "update_device" : "add_device"; ?>">
 		<?php if (!$device_form_is_edit && !empty($snmpsim_import_id)) { ?>
 		<input type="hidden" name="snmpsim_import_id" value="<?php print (int) $snmpsim_import_id; ?>">
-		<p>Simulator address and port come from the shared server configuration; community and template come from this imported record. Keep these connection fields unchanged. Use normal Add device for real hardware.</p>
+		<p data-nms-simulator-help>While shared IP is checked, simulator address and port come from the server configuration; community and template come from this record. Uncheck shared IP and enter the real device connection settings to add normal hardware.</p>
 		<?php } ?>
 		<?php if ($device_form_is_edit) { ?><input type="hidden" name="id" value="<?php print (int) $device_values[
 	"id"

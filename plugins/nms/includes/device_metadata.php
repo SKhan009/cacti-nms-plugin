@@ -274,6 +274,7 @@ function nms_identity_observation($host_id)
 /** A selected SNMPSim record can provide saved identity before its first poll. */
 function nms_identity_record_for_host($host_id)
 {
+	if (!nms_shared_endpoint_get($host_id)) return [];
 	$import_id = (int) db_fetch_cell_prepared(
 		'SELECT i.id FROM host AS h
         INNER JOIN plugin_nms_snmprec_imports AS i ON i.host_template_id=h.host_template_id AND i.community=h.snmp_community

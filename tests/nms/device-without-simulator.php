@@ -20,15 +20,15 @@ $input=['description'=>$name,'hostname'=>'192.0.2.254','host_template_id'=>0,'si
 'snmp_priv_passphrase'=>'','snmp_context'=>'','snmp_engine_id'=>'','availability_method'=>0,
 'ping_method'=>2,'ping_port'=>0,'ping_timeout'=>400,'ping_retries'=>1,'max_oids'=>10,'device_threads'=>1,
 'notes'=>'','location'=>'','external_id'=>'','disabled'=>true,'proxy'=>false,'equipment_category_id'=>0,
-'device_type'=>'QA fixture','manual_serial_number'=>'','snmpsim_import_id'=>0];
+'device_type'=>'QA fixture','manual_serial_number'=>'','snmpsim_import_id'=>1];
 try {
  $id=nms_device_create($input);
  if (!$id || db_fetch_cell_prepared('SELECT description FROM host WHERE id=?',[$id])!==$name)throw new RuntimeException('Create failed');
  $input['notes']='Edited without simulator configuration';
  nms_device_update($id,$input);
  if(db_fetch_cell_prepared('SELECT notes FROM host WHERE id=?',[$id])!==$input['notes'])throw new RuntimeException('Edit failed');
- echo "PASS: native SNMP device create/edit with unavailable simulator configuration\n";
- $input['snmpsim_import_id']=1;
+ echo "PASS: unchecked shared IP ignores stale import ID: native create/edit without simulator configuration\n";
+ $input['proxy']=true;
  try {nms_device_create(array_replace($input,['description'=>$name.' simulator']));throw new LogicException('Explicit simulator bypassed configuration');}
  catch(RuntimeException $e){if($e instanceof LogicException)throw $e;}
  echo "PASS: explicit simulator creation still requires its configuration\n";

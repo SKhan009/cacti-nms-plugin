@@ -697,6 +697,10 @@ foreach ($fields_host_edit as $field_name => $field) {
 // Only Add device links carrying an import ID opt into the configured simulator endpoint and record community.
 $snmpsim_import_id =
 	$tab === "add" && isset_request_var("snmpsim_import_id") ? (int) get_filter_request_var("snmpsim_import_id") : 0;
+// An unchecked checkbox opts out even when a stale import ID is posted.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['proxy'])) {
+    $snmpsim_import_id = 0;
+}
 if ($snmpsim_import_id > 0) {
 	try {
 		$cacti_device_defaults = array_merge($cacti_device_defaults, nms_snmpsim_import_defaults($snmpsim_import_id));
