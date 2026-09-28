@@ -42,15 +42,15 @@ function nms_appearance_image($profile)
 function nms_appearance_display_mode($profile, $view)
 {
     $mode=$profile['display_modes'][$view] ?? (empty($profile['image_key']) ? 'icon' : 'image');
-    return $mode === 'image' ? 'image' : 'icon';
+    return in_array($mode, ['none', 'icon', 'image'], true) ? $mode : 'icon';
 }
 function nms_appearance_display_modes($input, $profile, $has_image)
 {
     $modes=[];
     foreach (['network','rack','map'] as $view) {
         $mode=$input['display_'.$view] ?? nms_appearance_display_mode($profile,$view);
-        if (!is_string($mode) || !in_array($mode,['icon','image'],true)) throw new InvalidArgumentException('Choose Icon or Image for each topology view.');
-        if ($mode==='image' && !$has_image) throw new InvalidArgumentException('Upload an image or choose Icon for each view.');
+        if (!is_string($mode) || !in_array($mode,['none','icon','image'],true)) throw new InvalidArgumentException('Choose None, Icon or Image for each topology view.');
+        if ($mode==='image' && !$has_image) throw new InvalidArgumentException('Upload an image or choose None or Icon for each view.');
         $modes[$view]=$mode;
     }
     return $modes;

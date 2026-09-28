@@ -116,11 +116,13 @@ $base = "topology.php?tab=appearance";
 <div class="nms-display-mode-grid">
 <?php foreach (['network'=>'Network','rack'=>'Rack-style devices','map'=>'Map device details'] as $view=>$label) { $mode = nms_appearance_display_mode($type, $view); if ($error && is_string($_POST['display_'.$view] ?? null)) $mode = $_POST['display_'.$view]; ?>
 <label><?php print nms_h($label); ?><select name="display_<?php print $view; ?>">
+<option value="none"<?php if($mode==='none') print ' selected'; ?>>None</option>
 <option value="icon"<?php if($mode==='icon') print ' selected'; ?>>Icon</option>
 <option value="image"<?php if($mode==='image') print ' selected'; ?>>Image</option>
 </select></label>
 <?php } ?>
 </div>
+<p>None hides the device picture in that view. Device names, health status and connections remain visible.</p>
 <label>Connection type<select name="connection_type">
 <option value="">Not assigned</option>
 <?php foreach (db_fetch_assoc('SELECT name FROM plugin_nms_connection_types ORDER BY name') as $connection_type) { ?>
@@ -128,7 +130,7 @@ $base = "topology.php?tab=appearance";
 <?php } ?>
 </select></label>
 </div>
-<fieldset class="nms-icon-picker"><legend>Choose an icon</legend><p>Select the picture that represents this device type.</p><div class="nms-icon-grid"><?php foreach (
+<fieldset class="nms-icon-picker"><legend>Choose an icon</legend><p>Used in views set to Icon. You can keep this selection when using Image or None.</p><div class="nms-icon-grid"><?php foreach (
 	nms_appearance_icons()
 	as $key => $icon
 ) { ?><label data-nms-help-ready="1"><input type="radio" required name="icon" value="<?php print $key; ?>" <?php if (
@@ -140,7 +142,7 @@ $base = "topology.php?tab=appearance";
 ); ?></b></span></label><?php } ?></div></fieldset>
 <label>Icon colour<input type="color" name="color" value="<?php print nms_h(
 	$type["color"],
-); ?>"><small>Health indicators keep their status colour. The built-in icon is used when no image is uploaded.</small></label><?php
+); ?>"><small>Applies to views set to Icon. Health indicators keep their status colour.</small></label><?php
 } ?>
 <div class="nms-catalog-footer"><button type="button" data-nms-dialog-close class="nms-cancel-button nms-catalog-button">Cancel</button><button type="submit">Save <?php print $section ===
 "types"

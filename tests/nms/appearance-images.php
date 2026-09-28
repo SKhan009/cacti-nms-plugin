@@ -22,3 +22,12 @@ foreach ([['display_network'=>'image'],['display_map'=>'invalid']] as $invalid) 
     catch (InvalidArgumentException $expected) {}
 }
 echo "PASS: independent display modes, legacy fallback, missing-image and invalid-mode rejection\n";
+
+foreach (['network','rack','map'] as $view) {
+    $modes=nms_appearance_display_modes(['display_'.$view=>'none'],[],false);
+    $saved=json_decode(json_encode(['display_modes'=>$modes]),true);
+    if (nms_appearance_display_mode($saved,$view)!=='none') throw new Exception('None did not survive save/reload');
+}
+$modes=nms_appearance_display_modes(['display_network'=>'none','display_rack'=>'none','display_map'=>'none'],['image_key'=>'existing'],false);
+if (array_unique(array_values($modes))!==['none']) throw new Exception('Removing an image with None selected failed');
+echo "PASS: None in every view, save/reload and image removal without forced icon fallback\n";

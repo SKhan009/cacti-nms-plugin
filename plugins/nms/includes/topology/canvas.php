@@ -103,7 +103,8 @@ function nms_canvas_data($site_id, $node_id = 0)
 			$node["color"] = $appearance_profile["color"];
 		}
 		$image_view = ($node["icon"] ?? "") === "switch" ? "rack" : "network";
-		$node["image"] = nms_appearance_display_mode($appearance_profile ?? [], $image_view) === "image" ? nms_appearance_image($appearance_profile ?? []) : "";
+		$node["display_mode"] = nms_appearance_display_mode($appearance_profile ?? [], $image_view);
+		$node["image"] = $node["display_mode"] === "image" ? nms_appearance_image($appearance_profile ?? []) : "";
 		$node["icon_path"] = nms_appearance_icons()[$node["icon"] ?? "device"][1] ?? "";
 		$node["short_name"] = substr(nms_short_name_get($node["id"]) ?: nms_short_name_auto($node["name"], $node["id"]), 0, 8);
 		$node["ports"] = [];

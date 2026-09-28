@@ -387,7 +387,7 @@
 			w = chassisWidth(n),
 			ps = kind === "switch" ? physicalPorts(n) : ports(n);
 		const body = el("g", { class: "nms-device-chassis" });
-		if (kind !== "switch")
+		if (kind !== "switch" || n.display_mode === "none")
 			body.append(
 				el("rect", {
 					x: -w / 2 - 14,
@@ -402,7 +402,10 @@
 					"stroke-width": source === n.id ? 2 : 1.5,
 				}),
 			);
-		if (n.image) {
+		if (n.display_mode === "none") {
+            // Keep the status and connection targets without a device picture.
+            body.append(el("circle", {cx:w/2, cy:-40, r:5, fill:color, stroke:"#fff"}));
+        } else if (n.image) {
             body.append(el("image", {href:n.image, x:-w/2, y:-42, width:w, height:84, preserveAspectRatio:"xMidYMid meet"}));
             body.append(el("circle", {cx:w/2, cy:-40, r:5, fill:color, stroke:"#fff"}));
         } else if (kind === "switch") {

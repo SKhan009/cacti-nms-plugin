@@ -81,8 +81,9 @@ function nms_map_data()
         $device['image'] = '';
         foreach ($appearance['types'] as $profile) {
             if ((int)$profile['category_id'] === (int)$row['category_id'] && strcasecmp($profile['name'], (string)($row['device_type'] ?: $row['template_name'])) === 0) {
-                $device['image'] = nms_appearance_display_mode($profile,'map') === 'image' ? nms_appearance_image($profile) : '';
-                if ($device['image'] === '') $device['image'] = 'data:image/svg+xml;base64,' . base64_encode(nms_appearance_icon_svg($profile['icon']));
+                $mode = nms_appearance_display_mode($profile,'map');
+                $device['image'] = $mode === 'image' ? nms_appearance_image($profile) : '';
+                if ($mode !== 'none' && $device['image'] === '') $device['image'] = 'data:image/svg+xml;base64,' . base64_encode(nms_appearance_icon_svg($profile['icon']));
                 break;
             }
         }
