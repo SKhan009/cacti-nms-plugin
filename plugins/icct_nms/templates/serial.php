@@ -29,7 +29,7 @@ $value
     <h3>2. Connection Settings</h3>
     <div class="protocol-grid cols-4">
         <?php
-        $ports = ["" => "Select Serial Port"];
+        $ports = ["" => "None"];
         foreach ($connections as $connection) {
             $ports[$connection["id"]] =
                 $connection["endpoint"] . " · " . $connection["name"];
@@ -44,7 +44,7 @@ $value
         icct_nms_select(
             "Baud Rate *",
             "baud_rate",
-            array_combine(
+            ["" => "None"] + array_combine(
                 [
                     300,
                     600,
@@ -72,41 +72,42 @@ $value
                     230400,
                 ],
             ),
-            $serialValues["baud_rate"] ?? 9600,
+            $serialValues["baud_rate"] ?? "",
             "required",
         );
         icct_nms_select(
             "Data Bits *",
             "data_bits",
-            [7 => 7, 8 => 8],
-            $serialValues["data_bits"] ?? 8,
+            ["" => "None", 7 => 7, 8 => 8],
+            $serialValues["data_bits"] ?? "",
             "required",
         );
         icct_nms_select(
             "Parity *",
             "parity",
             [
-                "none" => "None",
+                "" => "None",
+                "none" => "No parity",
                 "even" => "Even",
                 "odd" => "Odd",
                 "mark" => "Mark",
                 "space" => "Space",
             ],
-            $serialValues["parity"] ?? "even",
+            $serialValues["parity"] ?? "",
             "required",
         );
         icct_nms_select(
             "Stop Bits *",
             "stop_bits",
-            [1 => 1, 2 => 2],
-            $serialValues["stop_bits"] ?? 1,
+            ["" => "None", 1 => 1, 2 => 2],
+            $serialValues["stop_bits"] ?? "",
             "required",
         );
         icct_nms_select(
             "Flow Control",
             "flow_control",
-            ["none" => "None", "rtscts" => "RTS/CTS"],
-            $serialValues["flow_control"] ?? "none",
+            ["" => "None", "none" => "No flow control", "rtscts" => "RTS/CTS"],
+            $serialValues["flow_control"] ?? "",
         );
         ?>
     </div>

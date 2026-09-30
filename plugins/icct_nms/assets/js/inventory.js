@@ -418,7 +418,7 @@ if (serialData) {
       : "Modbus RTU Parameters";
     const bits = scope.querySelector('[name="data_bits"]');
     bits.querySelector('option[value="7"]').disabled = !ascii;
-    if (changeDefaults || (!ascii && bits.value === "7"))
+    if (bits.value && (changeDefaults || (!ascii && bits.value === "7")))
       bits.value = ascii ? "7" : "8";
     scope
       .querySelector('.serial-modbus [name="device_address"]')
@@ -427,6 +427,21 @@ if (serialData) {
   protocolFields.forEach((field) =>
     field.addEventListener("change", () => updateSerialProtocol(true)),
   );
+  const updateSerialInterface = () => {
+    const flow = scope.querySelector('[name="flow_control"]');
+    const selectedInterface = scope.querySelector('[name="serial_interface"]:checked')?.value;
+    const row = connections.find(c => String(c.id) === selector.value);
+    const direct = row?.transport === "direct";
+    const physicalSelected = ["rs232", "rs485"].includes(selectedInterface);
+    for (const name of ["baud_rate", "data_bits", "parity", "stop_bits", "flow_control"]) {
+      scope.querySelector(`[name="${name}"]`).disabled = !direct || !physicalSelected;
+    }
+    scope.closest("form").querySelector('button[type="submit"], button:not([type])').disabled = !row || (direct && !physicalSelected);
+    const rs485 = selectedInterface === "rs485";
+    flow.querySelector('option[value="rtscts"]').disabled = rs485;
+    if (rs485 && flow.value === "rtscts") flow.value = "none";
+  };
+  scope.querySelectorAll('[name="serial_interface"]').forEach(field => field.addEventListener("change", updateSerialInterface));
   const updateSerial = () => {
     const row = connections.find((c) => String(c.id) === selector.value);
     const direct = row?.transport === "direct";
@@ -434,8 +449,8 @@ if (serialData) {
     scope.querySelector(".serial-physical-heading").hidden = false;
     scope.querySelector(".serial-physical-note").hidden = !row || direct;
     scope.querySelectorAll('[name="serial_interface"]').forEach((field) => {
-      field.disabled = !!row && !direct;
-      field.required = !row || !!direct;
+      field.disabled = !direct;
+      field.required = !!direct;
       field.checked = field.value === row?.settings.interface;
     });
     for (const name of [
@@ -447,17 +462,21 @@ if (serialData) {
     ]) {
       const field = scope.querySelector(`[name="${name}"]`);
       field.closest(".field").hidden = false;
-      field.disabled = !!row && !direct;
-      if (row && row.settings[name] !== undefined)
-        setValue(name, row.settings[name]);
+      field.disabled = !direct;
+      setValue(name, direct ? (row.settings[name] ?? "") : "");
     }
     protocolFields.forEach((field) => {
-      if (field.value === "modbus_ascii") field.disabled = !!row && !direct;
+      if (field.value === "modbus_ascii") field.disabled = !direct;
       if (field.value !== "vendor")
         field.checked =
-          field.value === (row?.settings.protocol || "modbus_rtu");
+          !!row && field.value === (row.settings.protocol || "modbus_rtu");
     });
+    for (const name of ["response_timeout", "serial_retries", "serial_interval", "device_address"]) {
+      scope.querySelector(`[name="${name}"]`).disabled = !row;
+    }
+    scope.closest("form").querySelector('button[type="submit"], button:not([type])').disabled = !row;
     updateSerialProtocol();
+    updateSerialInterface();
     setValue("connection_revision", row?.revision || "");
     if (row) {
       setValue("response_timeout", row.settings.timeout_ms / 1000);

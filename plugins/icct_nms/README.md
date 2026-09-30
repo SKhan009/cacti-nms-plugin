@@ -89,3 +89,5 @@ Serial saves keep connection preset IDs separate from equipment reading profile 
 Basic Information shows device fields only. Selecting a device template does not show graph or data-query lists in step 1. Cacti applies those associations when saving the new device; steps 4 and 5 show and configure them.
 
 Serial connection selection appears in step 2 after adding Serial Communication. Selecting a saved TCP gateway automatically fills its gateway hostname/IP address and port. Physical controls and the gateway explanation follow the selected connection transport.
+
+Serial dropdowns start at None without a selected connection. Dependent fields and Save remain disabled until a saved connection is selected. Direct physical settings require an RS-232 or RS-485 selection; RS-485 excludes RTS/CTS. TCP gateway physical fields show None and remain disabled, while the stored connection parameters are retained. Edit forms load applicable saved settings from the selected connection.
