@@ -1233,4 +1233,3 @@ document.querySelectorAll('[data-remove-data-query]').forEach(form => {
   });
 });
 document.querySelectorAll('[data-query-method]').forEach(input => input.addEventListener('change', () => input.form.requestSubmit()));
-

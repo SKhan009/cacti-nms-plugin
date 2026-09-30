@@ -275,4 +275,3 @@
             JSON_THROW_ON_ERROR,
     ) ?>
 </script>
-
