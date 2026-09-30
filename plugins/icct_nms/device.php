@@ -119,16 +119,6 @@ try {
             }
         }
     }
-    $createConnections = !$id && !$readonly ? icct_backend_serial_connections() : [];
-    $templateAssociations = [];
-    if (!$id) {
-        foreach (db_fetch_assoc("SELECT htg.host_template_id,gt.name FROM host_template_graph htg JOIN graph_templates gt ON gt.id=htg.graph_template_id ORDER BY gt.name") as $row) {
-            $templateAssociations[$row["host_template_id"]]["graphs"][] = $row["name"];
-        }
-        foreach (db_fetch_assoc("SELECT htq.host_template_id,q.name FROM host_template_snmp_query htq JOIN snmp_query q ON q.id=htq.snmp_query_id ORDER BY q.name") as $row) {
-            $templateAssociations[$row["host_template_id"]]["queries"][] = $row["name"];
-        }
-    }
     $title = $readonly
         ? "Device Details"
         : ($id

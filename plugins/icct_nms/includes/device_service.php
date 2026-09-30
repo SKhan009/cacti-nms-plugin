@@ -97,23 +97,8 @@ function icct_nms_save_device($id, $old, $input)
         }
         $placement = ['rack_id' => $rack, 'start_unit' => $start, 'unit_height' => $height];
     }
-    $createConnection = null;
-    if (!$id && !empty($input['create_connection_id'])) {
-        $createConnection = icct_backend_serial_connection_get($input['create_connection_id']);
-        if (!$createConnection['enabled'] || (int)$createConnection['poller_id'] !== (int)$values['poller_id']) {
-            throw new InvalidArgumentException('Select an enabled serial connection on the assigned poller.');
-        }
-        $createAddress = icct_backend_serial_device_address($input['create_bus_address'] ?? '');
-        if (db_fetch_cell_prepared('SELECT host_id FROM plugin_icct_nms_serial_devices WHERE connection_id=? AND device_address=?', [$createConnection['id'], $createAddress])) {
-            throw new InvalidArgumentException('This bus address is already used on the selected serial connection.');
-        }
-    }
     $saved = icct_backend_device_save($id, $values);
     try {
-        if ($createConnection) {
-            icct_backend_serial_assign($saved, ['connection_id' => $createConnection['id'], 'device_address' => $createAddress, 'assignment_revision' => 0]);
-            icct_backend_protocol_state_write($saved, 'serial', true);
-        }
         $classification = $id
             ? db_fetch_row_prepared(
                 'SELECT device_role FROM plugin_icct_nms_device_classification WHERE host_id=?',

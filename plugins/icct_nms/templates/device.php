@@ -218,33 +218,6 @@
             );
             ?>
         </div>
-        <?php if (!$id): ?>
-        <section id="template-association-preview" hidden>
-            <h3>Selected Device Template</h3>
-            <div class="protocol-grid cols-2">
-                <div><h4>Graph Templates</h4><ul data-template-graphs></ul></div>
-                <div><h4>Data Queries</h4><ul data-template-queries></ul></div>
-            </div>
-            <p>These associations are added automatically when you save the device. Configure them in steps 4 and 5.</p>
-        </section>
-        <?php if (!$readonly): ?>
-        <section id="create-serial-connection">
-            <h3>Serial Connection (Optional)</h3>
-            <div class="protocol-grid cols-3">
-                <?php
-                $createPorts = ["" => "Select Serial Port"];
-                foreach ($createConnections as $connection) {
-                    if ($connection["enabled"]) $createPorts[$connection["id"]] = $connection["endpoint"] . " · " . $connection["name"];
-                }
-                icct_nms_select("Serial Port", "create_connection_id", $createPorts, $_POST["create_connection_id"] ?? "");
-                icct_nms_input("Gateway Address", "create_gateway_address", "", "text", "readonly");
-                icct_nms_input("Gateway Port", "create_gateway_port", "", "number", "readonly");
-                icct_nms_input("Device Bus Address *", "create_bus_address", $_POST["create_bus_address"] ?? "", "number", 'min="1" max="247"');
-                ?>
-            </div>
-            <p data-create-serial-note hidden></p>
-        </section>
-        <?php endif; endif; ?>
         <label class="field notes">
             <span class="notes-heading">
                 <span class="field-label">Notes/Description</span>
@@ -303,7 +276,3 @@
     ) ?>
 </script>
 
-<?php if (!$id): ?>
-<script type="application/json" id="create-template-data"><?= json_encode($templateAssociations, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script>
-<script type="application/json" id="create-serial-data"><?= json_encode(array_map(static fn($row) => array_intersect_key($row, array_flip(["id", "endpoint", "transport", "poller_id"])), $createConnections), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script>
-<?php endif; ?>

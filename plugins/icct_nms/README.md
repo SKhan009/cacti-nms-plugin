@@ -86,6 +86,6 @@ Serial saves keep connection preset IDs separate from equipment reading profile 
 
 ## New device selection
 
-Add Device shows an optional saved serial connection selector filtered by the assigned poller. TCP gateway address and port, bus address, and the gateway explanation appear when applicable. Saving assigns the chosen connection without changing its shared settings. Direct serial settings can be configured in Protocol Config after creation.
+Basic Information shows device fields only. Selecting a device template does not show graph or data-query lists in step 1. Cacti applies those associations when saving the new device; steps 4 and 5 show and configure them.
 
-Selecting a device template immediately lists its native graph templates and data queries. Cacti applies these associations when saving the new device; steps 4 and 5 show and configure them.
+Serial connection selection appears in step 2 after adding Serial Communication. Selecting a saved TCP gateway automatically fills its gateway hostname/IP address and port. Physical controls and the gateway explanation follow the selected connection transport.
