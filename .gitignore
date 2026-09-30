@@ -1,9 +1,22 @@
-__pycache__/
-*.py[cod]
-
-# Local generated previews, QA artifacts and machine files
+# Keep only the current plugin source in this repository.
+/docs/
+/packages/
+/html-css/
 /outputs/
+/prototypes/
+/tests/
+/plugins/*
+!/plugins/icct_nms/
+
+# Generated files and private runtime configuration.
 .DS_Store
 ._*
-# Superseded private specification notes
-/docs/nms/NODE_GNSS_ROADMAP.md
+__pycache__/
+*.py[cod]
+*.log
+ssh.config.local.json
+config.local.json
+.env
+.env.*
+*.pem
+*.key
