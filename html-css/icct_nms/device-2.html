@@ -1,0 +1,136 @@
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Edit Device · ICCT NMS</title>
+        <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
+        <link rel="stylesheet" href="css/inventory.css?v=2af0ff4f5ef7" />
+    <script type="text/javascript" nonce="DvWnb0DzfT9f-FWR3wPCbIkq">if (top != self) {top.location.href = self.location.href;}</script></head>
+    <body class="icct-inventory">
+        <header class="topbar">
+            <div class="header-menu">
+                <button class="icon-button" type="button" aria-label="Navigation menu" aria-expanded="false">☰</button>
+                <nav class="header-menu-panel" aria-label="Main navigation">
+                    <a href="http://127.0.0.1:8080/cacti/index.php">Dashboard</a>
+                    <a href="index.html">Inventory</a>
+                </nav>
+            </div>
+            <div class="brand">
+                <span class="brand-seal" aria-hidden="true">✺</span>
+                <span class="brand-mark">BE</span>
+                <span class="brand-name">
+                    <span lang="hi">भारत इलेक्ट्रॉनिक्स</span>
+                    <strong>BHARAT ELECTRONICS</strong>
+                </span>
+            </div>
+            <div class="station">
+                <strong>ICCT NMS</strong>
+                <span>Main Poller</span>
+            </div>
+            <div class="system-metrics"><span>Poller: 300 sec</span></div>
+            <a class="profile" href="http://127.0.0.1:8080/cacti/auth_profile.php">
+                <span class="user-avatar" aria-hidden="true">◉</span>
+                <span>
+                    <strong>admin</strong>
+                    <small>Administrator</small>
+                </span>
+            </a>
+        </header>
+        <main class="workspace">
+            <section class="device-panel">
+                                <form data-static-preview="true" method="post" class="device-form" id="device-form" >
+        <div class="titlebar">
+        <h1>Edit Device</h1>
+        <div class="title-actions">
+            <a class="button" href="index.html">Cancel</a>
+                        <button class="button primary">Save &amp; Next</button>
+                    </div>
+    </div>
+        <nav class="steps" aria-label="Device configuration">
+        <ol>
+            <li class="current">
+                <span class="step-marker"></span>
+                <span>
+                    Basic Information
+                    <small>1/7</small>
+                </span>
+            </li>
+            <li>
+                <a href="protocol-2.html">
+                    Protocol Config
+                    <small>2/7</small>
+                </a>
+            </li>
+            <li>
+                <a href="protocol-2.html#diagnostics">
+                    Device Diagnostics
+                    <small>3/7</small>
+                </a>
+            </li>
+            <li ><a href="protocol-2.html#graphs">Graphs<small>4/7</small></a></li>
+            <li ><a href="protocol-2.html#data-query">Data Query<small>5/7</small></a></li>
+                        <li aria-disabled="true">
+                <span>
+                    Port Config                    <small>6/7</small>
+                </span>
+            </li>
+                        <li aria-disabled="true">
+                <span>
+                    FCAPS                    <small>7/7</small>
+                </span>
+            </li>
+                    </ol>
+    </nav>
+    <fieldset class="device-fields" >
+        <div class="enable-field">
+            <span class="field-label">Enable/Disable Device</span>
+            <label class="switch-label">
+                <input class="switch-input" type="checkbox" name="enabled" checked />
+                <span class="switch-track"></span>
+                <span>Enable</span>
+            </label>
+        </div>
+        <div class="form-grid">
+            <label class="field"><span class="field-label">Device Name</span><input type="text" name="description" value="Cacti RHEL 9 Local" required></label><label class="field"><span class="field-label">Short Name</span><input type="text" name="short_name" value="CR9L" maxlength="8" data-auto-short="0"></label><label class="field"><span class="field-label">Hostname/IP Address</span><input type="text" name="hostname" value="127.0.0.1" required></label><label class="field"><span class="field-label">Segment</span><span class="select-wrap"><select name="category_id" ><option value="0">Unclassified</option><option value="7" selected>Computers</option><option value="10">Fire Prevention</option><option value="1">General</option><option value="6">LOS</option><option value="4">Network</option><option value="8">Power</option><option value="3">Security</option><option value="11">Sensors &amp; Instrumentation</option><option value="9">Timing</option><option value="2">Voice / Video</option><option value="5">VSAT</option><option value="12">Voice/Video</option><option value="13">Satellite/VSAT</option><option value="14">LOS Communications</option><option value="15">Sensors/Instrumentation</option></select></span></label><label class="field"><span class="field-label">Device Type</span><input type="text" name="device_type" value="Server" readonly></label><label class="field"><span class="field-label">Device Site Location</span><span class="select-wrap"><select name="site_id" ><option value="0">None</option><option value="2">Core</option><option value="4">Demo — Bengaluru</option><option value="6">Demo — Delhi</option><option value="5">Demo — Mumbai</option><option value="1">Edge</option><option value="3" selected>Topology Lab Location 01</option></select></span></label><label class="field"><span class="field-label">Rack Name</span><span class="select-wrap"><select name="rack_id" ><option value="0" selected>Unassigned</option></select></span></label><label class="field"><span class="field-label">Placement in the Rack</span><span class="select-wrap"><select name="rack_position" ><option value="" selected>Unassigned</option><option value="1:1">1U</option><option value="2:1">2U</option><option value="3:1">3U</option><option value="4:1">4U</option><option value="5:1">5U</option><option value="6:1">6U</option><option value="7:1">7U</option><option value="8:1">8U</option><option value="9:1">9U</option><option value="10:1">10U</option><option value="11:1">11U</option><option value="12:1">12U</option><option value="13:1">13U</option><option value="14:1">14U</option><option value="15:1">15U</option><option value="16:1">16U</option><option value="17:1">17U</option><option value="18:1">18U</option><option value="19:1">19U</option><option value="20:1">20U</option><option value="21:1">21U</option><option value="22:1">22U</option><option value="23:1">23U</option><option value="24:1">24U</option><option value="25:1">25U</option><option value="26:1">26U</option><option value="27:1">27U</option><option value="28:1">28U</option><option value="29:1">29U</option><option value="30:1">30U</option><option value="31:1">31U</option><option value="32:1">32U</option><option value="33:1">33U</option><option value="34:1">34U</option><option value="35:1">35U</option><option value="36:1">36U</option><option value="37:1">37U</option><option value="38:1">38U</option><option value="39:1">39U</option><option value="40:1">40U</option><option value="41:1">41U</option><option value="42:1">42U</option><option value="43:1">43U</option><option value="44:1">44U</option><option value="45:1">45U</option><option value="46:1">46U</option><option value="47:1">47U</option><option value="48:1">48U</option><option value="49:1">49U</option><option value="50:1">50U</option><option value="51:1">51U</option><option value="52:1">52U</option><option value="53:1">53U</option><option value="54:1">54U</option><option value="55:1">55U</option><option value="56:1">56U</option><option value="57:1">57U</option><option value="58:1">58U</option><option value="59:1">59U</option><option value="60:1">60U</option><option value="61:1">61U</option><option value="62:1">62U</option><option value="63:1">63U</option><option value="64:1">64U</option><option value="65:1">65U</option><option value="66:1">66U</option><option value="67:1">67U</option><option value="68:1">68U</option><option value="69:1">69U</option><option value="70:1">70U</option><option value="71:1">71U</option><option value="72:1">72U</option><option value="73:1">73U</option><option value="74:1">74U</option><option value="75:1">75U</option><option value="76:1">76U</option><option value="77:1">77U</option><option value="78:1">78U</option><option value="79:1">79U</option><option value="80:1">80U</option><option value="81:1">81U</option><option value="82:1">82U</option><option value="83:1">83U</option><option value="84:1">84U</option><option value="85:1">85U</option><option value="86:1">86U</option><option value="87:1">87U</option><option value="88:1">88U</option><option value="89:1">89U</option><option value="90:1">90U</option><option value="91:1">91U</option><option value="92:1">92U</option><option value="93:1">93U</option><option value="94:1">94U</option><option value="95:1">95U</option><option value="96:1">96U</option><option value="97:1">97U</option><option value="98:1">98U</option><option value="99:1">99U</option><option value="100:1">100U</option></select></span></label><label class="field"><span class="field-label">MAC Address</span><input type="text" name="mac_address" value="" data-identity-auto="0"></label><label class="field"><span class="field-label">Serial Number</span><input type="text" name="serial_number" value="" data-identity-auto="0"></label><label class="field"><span class="field-label">Chassis ID</span><input type="text" name="chassis_id" value="" data-identity-auto="0"></label><label class="field"><span class="field-label">Device Template</span><span class="select-wrap"><select name="host_template_id" ><option value="0">None</option><option value="1">ACME</option><option value="2">AKCP Device</option><option value="3">Apache Webserver</option><option value="4">APC InfraStruXure InRow CRAC</option><option value="5">APC InfraStruXure PDU</option><option value="6">Aruba Instant AP Cluster</option><option value="7">Aruba OSCX switch 6x00</option><option value="8">Aruba Wireless Controller</option><option value="9">ArubaOS switch</option><option value="10">BayTech PDU</option><option value="11">Cacti Stats</option><option value="12">Cisco Router</option><option value="13">Citrix NetScaler VPX</option><option value="14">Clearpass policy manager</option><option value="15">Dell iDrac</option><option value="16">ESXi Device</option><option value="17">Fortigate</option><option value="18">Generic SNMP Device</option><option value="19">HPE iLO</option><option value="20">HPE Nimble/Alletra storage</option><option value="21" selected>Local Linux Machine</option><option value="22">MikroTik Device</option><option value="23">MikroTik Switch (SWOS)</option><option value="24">Motorola SB6141</option><option value="25">Net-SNMP Device</option><option value="33">NMS Demo Environmental Device</option><option value="41">NMS Final QA browser</option><option value="40">NMS Final QA offline</option><option value="39">NMS Final QA online</option><option value="30">NMS Imported Sensor Demo</option><option value="32">Serial Device Server</option><option value="26">SNMP Printer</option><option value="27">SNMP UPS</option><option value="28">Synology NAS</option><option value="36">Topology Lab 1 - Topology Lab Switch A</option><option value="37">Topology Lab 2 - Topology Lab Switch B</option><option value="38">Topology Lab 3 - Topology Upload QA 0.11.0</option><option value="29">Windows Device</option></select></span></label><label class="field"><span class="field-label">Poller Association</span><span class="select-wrap"><select name="poller_id" ><option value="1" selected>Main Poller</option></select></span></label><label class="field"><span class="field-label">No. of Collection Threads</span><span class="select-wrap"><select name="device_threads" ><option value="1" selected>1 Thread</option><option value="2">2 Threads</option><option value="3">3 Threads</option><option value="4">4 Threads</option><option value="5">5 Threads</option><option value="6">6 Threads</option><option value="7">7 Threads</option><option value="8">8 Threads</option><option value="9">9 Threads</option><option value="10">10 Threads</option></select></span></label><label class="field"><span class="field-label">Cross Launch URL</span><input type="url" name="cross_launch_url" value="" ></label>        </div>
+        <label class="field notes">
+            <span class="notes-heading">
+                <span class="field-label">Notes/Description</span>
+                <span id="notes-count"></span>
+            </span>
+            <textarea name="notes" maxlength="148"></textarea>
+        </label>
+    </fieldset>
+        <footer class="form-footer">
+        <!-- Basic Information is the first step; Next validates and saves before advancing. -->
+        <button class="button previous" type="button" disabled aria-label="Previous step">Previous ←</button>
+        <button class="button next" type="submit" aria-label="Next step">Next →</button>
+    </footer>
+    </form>
+<script type="application/json" id="rack-data">
+    []</script>
+
+<script type="application/json" id="segment-data">
+    {"0":"","7":"Server","10":"","1":"","6":"","4":"Switch","8":"","3":"","11":"","9":"","2":"","5":"","12":"","13":"","14":"","15":""}</script>
+
+<script type="application/json" id="identity-endpoint">
+    "127.0.0.1"</script>
+
+        </section>
+    </main>
+    <dialog id="message-dialog" aria-labelledby="message-title" aria-describedby="message-text">
+        <div class="message-heading">
+            <h2 id="message-title"></h2>
+            <button type="button" id="message-close" aria-label="Close message">×</button>
+        </div>
+        <p id="message-text"></p>
+        <div class="message-actions">
+            <button class="button" type="button" id="message-cancel">Cancel</button>
+            <button class="button primary" type="button" id="message-confirm">OK</button>
+        </div>
+    </dialog>
+    <script src="js/inventory.js?v=63842fc19d04" defer></script>
+    <script src="js/preview.js" defer></script>
+</body>
+</html>

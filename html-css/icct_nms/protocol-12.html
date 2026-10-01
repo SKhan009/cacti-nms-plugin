@@ -1,0 +1,738 @@
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Protocol Config · ICCT NMS</title>
+        <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
+        <link rel="stylesheet" href="css/inventory.css?v=2af0ff4f5ef7" />
+    <script type="text/javascript" nonce="dS-UlE7XQOXW7rbYjRTzFzCN">if (top != self) {top.location.href = self.location.href;}</script></head>
+    <body class="icct-inventory">
+        <header class="topbar">
+            <div class="header-menu">
+                <button class="icon-button" type="button" aria-label="Navigation menu" aria-expanded="false">☰</button>
+                <nav class="header-menu-panel" aria-label="Main navigation">
+                    <a href="http://127.0.0.1:8080/cacti/index.php">Dashboard</a>
+                    <a href="index.html">Inventory</a>
+                </nav>
+            </div>
+            <div class="brand">
+                <span class="brand-seal" aria-hidden="true">✺</span>
+                <span class="brand-mark">BE</span>
+                <span class="brand-name">
+                    <span lang="hi">भारत इलेक्ट्रॉनिक्स</span>
+                    <strong>BHARAT ELECTRONICS</strong>
+                </span>
+            </div>
+            <div class="station">
+                <strong>ICCT NMS</strong>
+                <span>Main Poller</span>
+            </div>
+            <div class="system-metrics"><span>Poller: 300 sec</span></div>
+            <a class="profile" href="http://127.0.0.1:8080/cacti/auth_profile.php">
+                <span class="user-avatar" aria-hidden="true">◉</span>
+                <span>
+                    <strong>admin</strong>
+                    <small>Administrator</small>
+                </span>
+            </a>
+        </header>
+        <main class="workspace">
+            <section class="device-panel">
+                                <div class="titlebar">
+    <h1>NMS Final QA online</h1>
+    <a class="button" href="index.html">Done</a>
+</div>
+<nav class="steps">
+    <ol>
+        <li>
+            <a href="device-12.html">
+                Basic Information
+                <small>1/7</small>
+            </a>
+        </li>
+        <li class="current" data-protocol-step="1">
+            <a href="#protocol">
+                Protocol Config
+                <small>2/7</small>
+            </a>
+        </li>
+        <li data-protocol-step="2">
+            <a href="#diagnostics">
+                Device Diagnostics
+                <small>3/7</small>
+            </a>
+        </li>
+        <li data-protocol-step="3"><a href="protocol-12.html#graphs">Graphs<small>4/7</small></a></li>
+        <li data-protocol-step="4"><a href="#data-query">Data Query<small>5/7</small></a></li>
+                <li aria-disabled="true">
+            <span>
+                Port Config                <small>6/7</small>
+            </span>
+        </li>
+                <li aria-disabled="true">
+            <span>
+                FCAPS                <small>7/7</small>
+            </span>
+        </li>
+            </ol>
+</nav>
+<script type="application/json" id="protocol-states">{"cdp":true,"lldp":true,"snmp":true,"ssh":true,"serial":true}</script>
+<form data-static-preview="true" method="post" id="toggle-protocol-form" hidden>
+        <input type="hidden" name="action" value="toggle_protocol" />
+    <input type="hidden" name="protocol" value="" />
+    <input type="hidden" name="enabled" value="" />
+</form>
+<div class="device-form protocol-form">
+    <div id="protocol-workspace">
+        <button class="add-protocol" id="add-protocol" type="button" aria-expanded="false">
+            + Add Protocol
+        </button>
+        <form data-static-preview="true" method="post" id="remove-protocol-form" hidden>
+                        <input type="hidden" name="action" value="remove_protocol" />
+            <input type="hidden" name="protocol" value="" />
+            <input type="hidden" name="assignment_revision" value="0" />
+        </form>
+        <div id="protocol-picker" class="protocol-picker" hidden>
+            <div id="protocol-options">
+                                <label class="check-row">
+                    <input type="checkbox" data-protocol-target="cdp" />
+                    <span>CDP (Cisco Discovery Protocol)</span>
+                </label>
+                                <label class="check-row">
+                    <input type="checkbox" data-protocol-target="lldp" />
+                    <span>LLDP (Link Layer Discovery Protocol)</span>
+                </label>
+                                <label class="check-row">
+                    <input type="checkbox" data-protocol-target="snmp" />
+                    <span>SNMP</span>
+                </label>
+                                <label class="check-row">
+                    <input type="checkbox" data-protocol-target="ssh" />
+                    <span>SSH</span>
+                </label>
+                                <label class="check-row">
+                    <input type="checkbox" data-protocol-target="serial" />
+                    <span>Serial Communication</span>
+                </label>
+                                <label class="check-row">
+                    <input type="checkbox" data-protocol-target="syslog" />
+                    <span>Syslog</span>
+                </label>
+                                <label class="check-row">
+                    <input type="checkbox" data-protocol-target="netflow" />
+                    <span>Netflow</span>
+                </label>
+                                <label class="check-row">
+                    <input type="checkbox" data-protocol-target="ntp" />
+                    <span>NTP</span>
+                </label>
+                                <label class="check-row">
+                    <input type="checkbox" data-protocol-target="tacacs" />
+                    <span>TACACS+</span>
+                </label>
+                            </div>
+            <button class="button" type="button" id="confirm-protocols">Add</button>
+        </div>
+                <details class="protocol-item" id="protocol-cdp" data-saved="0" hidden>
+            <summary>
+                <span class="accordion-chevron" aria-hidden="true"></span>
+                <span>CDP (Cisco Discovery Protocol)</span>
+                <button type="button" class="delete-protocol" aria-label="Remove CDP"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg></button>
+            </summary>
+            <div class="protocol-content">
+                <form data-static-preview="true" method="post">
+                                        <input type="hidden" name="action" value="discovery" />
+                    <input type="hidden" name="discovery_protocol" value="cdp" />
+                    <div class="protocol-grid cols-4">
+                        <label class="field"><span class="field-label">Collection Mode</span><span class="select-wrap"><select name="mode" disabled><option value="snmp" selected>SNMP</option></select></span></label><label class="field"><span class="field-label">Collection Interval (Sec)</span><input type="number" name="interval_seconds" value="300" required min="1"></label><label class="field"><span class="field-label">Stale (Seconds)</span><input type="number" name="stale_seconds" value="900" required min="1"></label><label class="field"><span class="field-label">Display Refresh (Seconds)</span><input type="number" name="refresh_seconds" value="30" required min="1"></label>                    </div>
+                    <div class="protocol-actions"><button class="button primary">Save</button></div>
+                </form>
+            </div>
+        </details>
+                <details class="protocol-item" id="protocol-lldp" data-saved="1" >
+            <summary>
+                <span class="accordion-chevron" aria-hidden="true"></span>
+                <span>LLDP (Link Layer Discovery Protocol)</span>
+                <button type="button" class="delete-protocol" aria-label="Remove LLDP"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg></button>
+            </summary>
+            <div class="protocol-content">
+                <form data-static-preview="true" method="post">
+                                        <input type="hidden" name="action" value="discovery" />
+                    <input type="hidden" name="discovery_protocol" value="lldp" />
+                    <div class="protocol-grid cols-4">
+                        <label class="field"><span class="field-label">Collection Mode</span><span class="select-wrap"><select name="mode" disabled><option value="snmp" selected>SNMP</option></select></span></label><label class="field"><span class="field-label">Collection Interval (Sec)</span><input type="number" name="interval_seconds" value="300" required min="1"></label><label class="field"><span class="field-label">Stale (Seconds)</span><input type="number" name="stale_seconds" value="900" required min="1"></label><label class="field"><span class="field-label">Display Refresh (Seconds)</span><input type="number" name="refresh_seconds" value="30" required min="1"></label>                    </div>
+                    <div class="protocol-actions"><button class="button primary">Save</button></div>
+                </form>
+            </div>
+        </details>
+                <details class="protocol-item" id="protocol-snmp" data-saved="1" open>
+            <summary>
+                <span class="accordion-chevron" aria-hidden="true"></span>
+                <span>SNMP (Simple Network Management Protocol)</span>
+                <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
+                </button>
+            </summary>
+            <div class="protocol-content">
+                <form data-static-preview="true" method="post">
+                                        <input type="hidden" name="action" value="snmp" />
+                    <fieldset class="radio-group">
+    <legend>Select SNMP Version</legend>
+        <label><input type="radio" name="snmp_version" value="1"  required />SNMP V1</label>
+        <label><input type="radio" name="snmp_version" value="2" checked required />SNMP V2</label>
+        <label><input type="radio" name="snmp_version" value="3"  required />SNMP V3</label>
+    </fieldset>
+<div class="snmp-community">
+<div class="protocol-grid cols-4">
+    <label class="field"><span class="field-label">SNMP Community String</span><input type="password" name="snmp_community" value="" autocomplete="new-password"></label><label class="field"><span class="field-label">SNMP Port</span><input type="number" name="snmp_port" value="1161" required min="1" max="65535"></label><label class="field"><span class="field-label">SNMP Timeout (ms)</span><input type="number" name="snmp_timeout" value="500" required min="1"></label><label class="field"><span class="field-label">Maximum OIDs Per Get Request</span><span class="select-wrap"><select name="max_oids" ><option value="1">1 OID</option><option value="2">2 OID&apos;s</option><option value="3">3 OID&apos;s</option><option value="4">4 OID&apos;s</option><option value="5" selected>5 OID&apos;s</option><option value="10">10 OID&apos;s</option><option value="15">15 OID&apos;s</option><option value="20">20 OID&apos;s</option><option value="25">25 OID&apos;s</option><option value="30">30 OID&apos;s</option><option value="35">35 OID&apos;s</option><option value="40">40 OID&apos;s</option><option value="45">45 OID&apos;s</option><option value="50">50 OID&apos;s</option><option value="55">55 OID&apos;s</option><option value="60">60 OID&apos;s</option></select></span></label></div>
+<hr />
+<div class="protocol-grid cols-4">
+    <label class="field"><span class="field-label">Downed Device Detection</span><span class="select-wrap"><select name="availability_method" ><option value="0">None</option><option value="1">Ping and SNMP Uptime</option><option value="4">Ping or SNMP Uptime</option><option value="2" selected>SNMP Uptime</option><option value="5">SNMP Desc</option><option value="6">SNMP getNext</option><option value="3">Ping</option></select></span></label><label class="field"><span class="field-label">Ping Method</span><span class="select-wrap"><select name="ping_method" ><option value="1">ICMP Ping</option><option value="3" selected>TCP Ping</option><option value="5">TCP Ping Closed</option><option value="2">UDP Ping</option></select></span></label><label class="field"><span class="field-label">Ping Timeout (ms)</span><input type="number" name="ping_timeout" value="500" required min="1"></label><label class="field"><span class="field-label">Ping Retry Count</span><input type="number" name="ping_retries" value="3" required min="0"></label></div>
+</div>
+<div class="snmp-v3-fields">
+    <fieldset class="radio-group">
+        <legend>SNMP Security Level</legend>
+                <label><input type="radio" name="snmp_security_level" value="noAuthNoPriv" checked />noAuthNoPriv</label>
+                <label><input type="radio" name="snmp_security_level" value="authNoPriv"  />authNoPriv</label>
+                <label><input type="radio" name="snmp_security_level" value="authPriv"  />authPriv</label>
+            </fieldset>
+    <div class="protocol-grid cols-4">
+    <label class="field"><span class="field-label">SNMP Auth Protocol (V3)</span><span class="select-wrap"><select name="snmp_auth_protocol" ><option value="[None]">[None]</option><option value="MD5">MD5</option><option value="SHA">SHA</option><option value="SHA224">SHA-224</option><option value="SHA256">SHA-256</option><option value="SHA384">SHA-384</option><option value="SHA512">SHA-512</option></select></span></label><label class="field"><span class="field-label">SNMP Username (V3)</span><input type="text" name="snmp_username" value="" ></label><label class="field"><span class="field-label">SNMP Password (V3)</span><input type="password" name="snmp_password" value="" autocomplete="new-password" placeholder="Leave blank to retain saved credential"></label><label class="field"><span class="field-label">Re-enter SNMP Password (V3)</span><input type="password" name="snmp_password_confirm" value="" autocomplete="new-password"></label><label class="field"><span class="field-label">SNMP Privacy Protocol (V3)</span><span class="select-wrap"><select name="snmp_priv_protocol" ><option value="[None]">[None]</option><option value="DES">DES</option><option value="AES">AES</option><option value="AES128">AES-128</option><option value="AES192">AES-192</option><option value="AES192C">AES-192-C</option><option value="AES256">AES-256</option><option value="AES256C">AES-256-C</option></select></span></label><label class="field"><span class="field-label">SNMP Privacy Passphrase (V3)</span><input type="password" name="snmp_priv_passphrase" value="" autocomplete="new-password" placeholder="Leave blank to retain saved credential"></label><label class="field"><span class="field-label">Re-enter SNMP Privacy Passphrase (V3)</span><input type="password" name="snmp_priv_confirm" value="" autocomplete="new-password"></label><label class="field"><span class="field-label">SNMP Context (V3)</span><input type="text" name="snmp_context" value="" ></label></div>
+
+</div>
+                    <div class="protocol-actions"><button class="button primary">Save</button></div>
+                </form>
+            </div>
+        </details>
+        <details class="protocol-item" id="protocol-ssh" data-saved="0" hidden>
+            <summary>
+                <span class="accordion-chevron" aria-hidden="true"></span>
+                <span>SSH</span>
+                <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
+                </button>
+            </summary>
+            <div class="protocol-content">
+                <form data-static-preview="true" method="post" enctype="multipart/form-data">
+                                        <input type="hidden" name="action" value="ssh" />
+                    <div class="protocol-grid cols-5">
+                        <label class="field"><span class="field-label">Port Number</span><input type="number" name="port" value="" required min="1" max="65535"></label><label class="field"><span class="field-label">Timeout (Sec)</span><input type="number" name="connect_timeout" value="" required min="1" max="120"></label><label class="field"><span class="field-label">Authentication Method</span><span class="select-wrap"><select name="auth_method" ><option value="password" selected>Username &amp; Password</option><option value="key">Private Key</option></select></span></label><label class="field"><span class="field-label">Username</span><input type="text" name="username" value="" required></label><label class="field"><span class="field-label">Password</span><input type="password" name="secret" value="" autocomplete="new-password" placeholder="Blank retains saved credential"></label>                    </div>
+                    <div class="protocol-grid cols-3 ssh-common-settings">
+                        <label class="field"><span class="field-label">Command Timeout (Sec)</span><input type="number" name="command_timeout" value="" required min="1" max="300"></label><label class="field"><span class="field-label">Retries</span><input type="number" name="retries" value="" required min="0" max="2"></label><label class="field"><span class="field-label">Keepalive (Sec)</span><input type="number" name="keepalive" value="" required min="0" max="300"></label>                    </div>
+                    <div class="ssh-private-key">
+                        <h3>Upload files</h3>
+                        <p>
+                            Maximum 64 KB. Supported
+                            formats: .ppk, PEM, OpenSSH.
+                        </p>
+                        <label class="upload-zone">
+                            Upload +
+                            <input
+                                name="key_file"
+                                type="file"
+                                accept=".ppk,.pem,.key"
+                                aria-label="Upload private key"
+                            />
+                        </label>
+                        <span class="selected-file" aria-live="polite"></span>
+                        <label class="field"><span class="field-label">Key Passphrase</span><input type="password" name="passphrase" value="" autocomplete="new-password"></label>                    </div>
+                    <label class="check-row">
+                        <input name="monitoring" type="checkbox"  />
+                        Enable SSH monitoring
+                    </label>
+                    <div class="protocol-actions"><button class="button primary">Save</button></div>
+                </form>
+            </div>
+        </details>
+        <details class="protocol-item" id="protocol-serial" data-saved="0" hidden>
+            <summary>
+                <span class="accordion-chevron" aria-hidden="true"></span>
+                <span>Serial Communication</span>
+                <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
+                </button>
+            </summary>
+            <div class="protocol-content">
+                <form data-static-preview="true" method="post">
+                                        <input type="hidden" name="action" value="serial" />
+                    <input type="hidden" name="assignment_revision" value="0" />
+                    <section class="serial-communication">
+    <h3 class="serial-physical-heading">1. Physical Interface</h3>
+    <fieldset class="radio-group serial-physical">
+        <legend>Interface Type *</legend>
+                <label><input type="radio" name="serial_interface" value="rs232"   />RS-232</label>
+                <label><input type="radio" name="serial_interface" value="rs485"   />RS-485</label>
+            </fieldset>
+    <p class="serial-physical-note" hidden>RS-232/RS-485 and serial line settings are managed by the selected gateway. Select a direct serial port to configure them here.</p>
+    <h3>2. Connection Settings</h3>
+    <div class="protocol-grid cols-4">
+        <label class="field"><span class="field-label">Serial Port *</span><span class="select-wrap"><select name="connection_id" required><option value="" selected>None</option><option value="10">[127.0.0.1]:15020 · Serial Demo - Local RTU TCP</option></select></span></label><label class="field"><span class="field-label">Baud Rate *</span><span class="select-wrap"><select name="baud_rate" required><option value="" selected>None</option><option value="300">300</option><option value="600">600</option><option value="1200">1200</option><option value="2400">2400</option><option value="4800">4800</option><option value="9600">9600</option><option value="19200">19200</option><option value="38400">38400</option><option value="57600">57600</option><option value="115200">115200</option><option value="230400">230400</option></select></span></label><label class="field"><span class="field-label">Data Bits *</span><span class="select-wrap"><select name="data_bits" required><option value="" selected>None</option><option value="7">7</option><option value="8">8</option></select></span></label><label class="field"><span class="field-label">Parity *</span><span class="select-wrap"><select name="parity" required><option value="" selected>None</option><option value="none">No parity</option><option value="even">Even</option><option value="odd">Odd</option><option value="mark">Mark</option><option value="space">Space</option></select></span></label><label class="field"><span class="field-label">Stop Bits *</span><span class="select-wrap"><select name="stop_bits" required><option value="" selected>None</option><option value="1">1</option><option value="2">2</option></select></span></label><label class="field"><span class="field-label">Flow Control</span><span class="select-wrap"><select name="flow_control" ><option value="" selected>None</option><option value="none">No flow control</option><option value="rtscts">RTS/CTS</option></select></span></label>    </div>
+    <div class="serial-gateway protocol-grid cols-4" hidden>
+        <label class="field"><span class="field-label">Gateway Address</span><input type="text" name="serial_gateway_address" value="" readonly></label><label class="field"><span class="field-label">Gateway Port</span><input type="number" name="serial_gateway_port" value="" readonly></label>    </div>
+    <h3>3. Communication Settings</h3>
+    <div class="protocol-grid cols-3">
+        <label class="field"><span class="field-label">Response Timeout (Sec) *</span><input type="number" name="response_timeout" value="3" required min="0.1" max="10" step="0.001"></label><label class="field"><span class="field-label">Retry Count *</span><input type="number" name="serial_retries" value="2" required min="0" max="3"></label><label class="field"><span class="field-label">Polling Interval (Sec) *</span><input type="number" name="serial_interval" value="60" required min="1" max="86400"></label>    </div>
+    <h3>4. Serial Protocol *</h3>
+    <fieldset class="radio-group">
+        <legend class="visually-hidden">Serial Protocol</legend>
+        <label><input type="radio" name="serial_protocol" value="modbus_rtu" checked required />Modbus RTU</label>
+        <label><input type="radio" name="serial_protocol" value="modbus_ascii"  />Modbus ASCII</label>
+        <label><input type="radio" name="serial_protocol" value="vendor" disabled title="Unavailable in the installed collector" />Vendor Specific</label>
+    </fieldset>
+    <h3 class="serial-parameter-heading">Modbus RTU Parameters</h3>
+    <div class="serial-modbus protocol-grid cols-4">
+        <label class="field"><span class="field-label">Device Bus Address *</span><input type="number" name="device_address" value="" required min="1" max="247"></label>    </div>
+    <input type="hidden" name="connection_revision" value="" />
+</section>
+                    <div class="protocol-actions"><button class="button primary">Save</button></div>
+                </form>
+            </div>
+        </details>
+                <details class="protocol-item" id="protocol-syslog" data-saved="0" hidden>
+            <summary>
+                <span class="accordion-chevron" aria-hidden="true"></span>
+                <span>Syslog</span>
+                <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
+                </button>
+            </summary>
+            <div class="protocol-content">
+                <p class="empty-state">Configuration unavailable.</p>
+            </div>
+        </details>
+                <details class="protocol-item" id="protocol-netflow" data-saved="0" hidden>
+            <summary>
+                <span class="accordion-chevron" aria-hidden="true"></span>
+                <span>Netflow</span>
+                <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
+                </button>
+            </summary>
+            <div class="protocol-content">
+                <p class="empty-state">Configuration unavailable.</p>
+            </div>
+        </details>
+                <details class="protocol-item" id="protocol-ntp" data-saved="0" hidden>
+            <summary>
+                <span class="accordion-chevron" aria-hidden="true"></span>
+                <span>NTP</span>
+                <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
+                </button>
+            </summary>
+            <div class="protocol-content">
+                <p class="empty-state">Configuration unavailable.</p>
+            </div>
+        </details>
+                <details class="protocol-item" id="protocol-tacacs" data-saved="0" hidden>
+            <summary>
+                <span class="accordion-chevron" aria-hidden="true"></span>
+                <span>TACACS+</span>
+                <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
+                </button>
+            </summary>
+            <div class="protocol-content">
+                <p class="empty-state">Configuration unavailable.</p>
+            </div>
+        </details>
+            </div>
+    <section id="diagnostics" class="diagnostics-page">
+        <h2>Device Diagnostics</h2>
+        <form data-static-preview="true" method="post">
+                        <input type="hidden" name="action" value="diagnostics" />
+            <span class="field-label">Select Diagnostics Methods <span class="field-info" tabindex="0" role="img" aria-label="Information about diagnostic methods" data-tooltip="Choose the diagnostics available for this device. Configure packet count, hop limit and test duration alongside the selected methods."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span></span>
+            <div class="diagnostics-list diagnostics-settings">
+              <div class="diagnostic-options">
+                                <div class="diagnostic-row">
+                    <div class="diagnostic-methods">
+                                                                        <label data-tooltip="Send ICMP probes to test reachability. The packet count controls how many probes are sent." class="check-row ">
+                            <input type="checkbox" name="diagnostic_tools[]" value="ping" checked />
+                            Ping (Packets)                        </label>
+                                            </div>
+
+                </div>
+                                <div class="diagnostic-row">
+                    <div class="diagnostic-methods">
+                                                <label class="check-row" data-tooltip="Select or clear all Traceroute methods. UDP, ICMP and TCP discover the route using different probe types.">
+                            <input type="checkbox" data-traceroute-group aria-label="Traceroute (Hops)" />
+                            Traceroute (Hops)
+                        </label>
+                                                                        <label data-tooltip="One-time path discovery using UDP probes." class="check-row diagnostic-child">
+                            <input type="checkbox" name="diagnostic_tools[]" value="traceroute" checked />
+                            UDP                        </label>
+                                                <label data-tooltip="One-time path discovery using ICMP probes." class="check-row diagnostic-child">
+                            <input type="checkbox" name="diagnostic_tools[]" value="traceroute_icmp" checked />
+                            ICMP                        </label>
+                                                <label data-tooltip="One-time path discovery using TCP probes." class="check-row diagnostic-child">
+                            <input type="checkbox" name="diagnostic_tools[]" value="traceroute_tcp" checked />
+                            TCP                        </label>
+                                            </div>
+
+                </div>
+                                <div class="diagnostic-row">
+                    <div class="diagnostic-methods">
+                                                <label class="check-row" data-tooltip="Select or clear both MTR modes for repeated path monitoring using ICMP or TCP probes.">
+                            <input type="checkbox" data-mtr-group aria-label="MTR" />
+                            MTR
+                        </label>
+                                                                        <label data-tooltip="Continuous path monitoring using ICMP probes during the diagnostic run." class="check-row diagnostic-child">
+                            <input type="checkbox" name="diagnostic_tools[]" value="mtr_icmp" checked />
+                            MTR ICMP                        </label>
+                                                <label data-tooltip="Continuous path monitoring using TCP probes during the diagnostic run." class="check-row diagnostic-child">
+                            <input type="checkbox" name="diagnostic_tools[]" value="mtr_tcp" checked />
+                            MTR TCP                        </label>
+                                            </div>
+
+                </div>
+                                <div class="diagnostic-row">
+                    <div class="diagnostic-methods">
+                                                                        <label data-tooltip="Show the assigned collector’s cached IP-to-MAC neighbours." class="check-row ">
+                            <input type="checkbox" name="diagnostic_tools[]" value="arp" checked />
+                            ARP                        </label>
+                                            </div>
+
+                </div>
+                                <div class="diagnostic-row">
+                    <div class="diagnostic-methods">
+                                                                        <label data-tooltip="Measure bandwidth against an iPerf3 server. Duration uses the Bandwidth Test setting." class="check-row ">
+                            <input type="checkbox" name="diagnostic_tools[]" value="iperf3" checked />
+                            iPerf (Sec)                        </label>
+                                            </div>
+
+                </div>
+                                <div class="diagnostic-row">
+                    <div class="diagnostic-methods">
+                                                                        <label data-tooltip="Estimate route characteristics using the available Pathchar tool and configured hop limit." class="check-row ">
+                            <input type="checkbox" name="diagnostic_tools[]" value="pathchar" checked />
+                            Pathchar (Sec)                        </label>
+                                            </div>
+
+                </div>
+                                <div class="diagnostic-row">
+                    <div class="diagnostic-methods">
+                                                                        <label data-tooltip="Measure network performance against netserver. Duration uses the Bandwidth Test setting." class="check-row ">
+                            <input type="checkbox" name="diagnostic_tools[]" value="netperf" checked />
+                            Netperf (Sec)                        </label>
+                                            </div>
+
+                </div>
+                              </div>
+              <div class="diagnostic-parameters">
+                                                        <div class="diagnostic-parameter" data-diagnostic-parameter="ping_count">
+                        <label class="field"><span class="field-label">Ping (Packets)</span><input type="number" name="ping_count" value="4" min="1" max="10"></label>                    </div>
+                                                                            <div class="diagnostic-parameter" data-diagnostic-parameter="trace_hops">
+                        <label class="field"><span class="field-label">Traceroute (Hops)</span><input type="number" name="trace_hops" value="5" min="1" max="30"></label>                    </div>
+                                                                                                                                                    <div class="diagnostic-parameter" data-diagnostic-parameter="bandwidth_seconds">
+                        <label class="field"><span class="field-label">Bandwidth Test (Sec)</span><input type="number" name="bandwidth_seconds" value="3" min="1" max="30"></label>                    </div>
+                                                                                                                          </div>
+            </div>
+            <div class="protocol-actions"><button class="button primary">Save</button></div>
+        </form>
+    </section>
+    <section id="device-graphs" class="graphs-page" hidden>
+    <h2>Associated Graph Templates</h2>
+    <form data-static-preview="true" method="post" class="graph-template-add">
+        <input type="hidden" name="action" value="add_graph_template"/>
+        <label class="field"><span class="field-label">Add Graph Template</span><span class="select-wrap"><select name="graph_template_id" data-searchable-template="Graph Template" required ><option value="">Select Graph Template</option><option value="9">ACME CPU Usage (5 min.)</option><option value="6">ACME CPU Usage (min.)</option><option value="8">ACME Mem Usage</option><option value="7">ACME Sessions</option><option value="19">Apache HTTP  Kbits Passed</option><option value="20">Apache HTTP  Thread Details</option><option value="22">Apache HTTP  Thread Details %</option><option value="21">Apache HTTP  Thread Scoreboard</option><option value="18">Apache HTTP  Web Hits / s</option><option value="16">Apache HTTP - Bytes/Hit</option><option value="17">Apache HTTP - CPU Usage</option><option value="23">APC InRow - Group Air Flow</option><option value="25">APC InRow - Unit Air Filter Run Hours</option><option value="26">APC InRow - Unit Airflow</option><option value="27">APC InRow - Unit Condensate Pump Run Hours</option><option value="28">APC InRow - Unit Fan Speed</option><option value="29">APC InRow - Unit Filter Differential Pressure</option><option value="30">APC InRow - Unit Fluid Flow</option><option value="24">APC InRow - Unit Fluid Valve Position</option><option value="31">APC InRow - Unit Supply Humidity</option><option value="41">APC PDU - System Output Frequency</option><option value="40">APC PDU - System Output Neutral Current</option><option value="42">APC PDU - System Output Total Apparent Power</option><option value="43">APC PDU - System Output Total Power</option><option value="44">APC PDU - System Output Total Power Factor</option><option value="76">Aruba controller  - User Stats</option><option value="73">Aruba controller - Associations &amp; Registrations</option><option value="75">Aruba controller - Connections</option><option value="74">Aruba controller - Memory Usage</option><option value="53">Aruba IAP Cluster - APs</option><option value="54">Aruba IAP Cluster - Clients</option><option value="80">ArubaOS switch - CPU</option><option value="81">ArubaOS switch - Learned MACs</option><option value="82">ArubaOS switch - Memory</option><option value="118">Cacti Stats - Boost Average Row Size</option><option value="106">Cacti Stats - Boost Memory</option><option value="119">Cacti Stats - Boost Records</option><option value="110">Cacti Stats - Boost Runtime</option><option value="120">Cacti Stats - Boost Table Size</option><option value="121">Cacti Stats - Boost Timing Detail</option><option value="102">Cacti Stats - Boost Updates</option><option value="100">Cacti Stats - Devices</option><option value="113">Cacti Stats - Export Duration (Legacy)</option><option value="112">Cacti Stats - Export Graphs (Legacy)</option><option value="101">Cacti Stats - Main Poller DS/RRD</option><option value="111">Cacti Stats - Main Poller Runtime</option><option value="105">Cacti Stats - Processes (Legacy)</option><option value="104">Cacti Stats - Recache (Legacy)</option><option value="114">Cacti Stats - Syslog Activity</option><option value="116">Cacti Stats - Syslog Alerts/Reports</option><option value="115">Cacti Stats - Syslog Runtime</option><option value="117">Cacti Stats - Thold Runtime</option><option value="103">Cacti Stats - Total Poller Items</option><option value="107">Cacti Stats - User Logins</option><option value="108">Cacti Stats - User Sessions</option><option value="109">Cacti Stats - User Types</option><option value="132">Cisco - CPU Usage</option><option value="194">Clearpass - Evaluation counters</option><option value="191">Clearpass - Memory</option><option value="193">Clearpass - Requests</option><option value="192">Clearpass - System disk</option><option value="190">Clearpass - Uptime</option><option value="201">Dell iDrac - Overall battery and SD card</option><option value="199">Dell iDrac - Overall cooling and temperature</option><option value="200">Dell iDrac - Overall cpu and memory</option><option value="198">Dell iDrac - Overall power and voltage</option><option value="197">Dell iDrac - Overall status</option><option value="83">Device - Polling Time</option><option value="84">Device - Uptime</option><option value="212">ESXi - MultiCPU Average</option><option value="211">ESXi - VHosts</option><option value="216">Fortigate - CPU Usage</option><option value="222">Fortigate - HA status</option><option value="224">Fortigate - IPS</option><option value="223">Fortigate - IPSec tunnels</option><option value="217">Fortigate - Memory Usage</option><option value="218">Fortigate - Sessions</option><option value="221">Fortigate - sslvpn logged users</option><option value="220">Fortigate - Sys Disk Usage</option><option value="219">Fortigate - Viruses</option><option value="209">Host MIB - Logged in Users</option><option value="210">Host MIB - Processes</option><option value="226">HPE iLO - System State</option><option value="250">Linux - Memory Usage</option><option value="256">MikroTik - Device - CPU Utilization</option><option value="259">MikroTik - Device - Disk Utilization</option><option value="262">MikroTik - Device - Health - 12.0 Voltage</option><option value="264">MikroTik - Device - Health - 3.3 Voltage</option><option value="263">MikroTik - Device - Health - 5.0 Voltage</option><option value="265">MikroTik - Device - Health - Core Voltage</option><option value="267">MikroTik - Device - Health - CPU Temperature</option><option value="272">MikroTik - Device - Health - Current</option><option value="271">MikroTik - Device - Health - Power</option><option value="268">MikroTik - Device - Health - Processor Temperature</option><option value="269">MikroTik - Device - Health - Sensor Temperature</option><option value="270">MikroTik - Device - Health - Temperature</option><option value="266">MikroTik - Device - Health - Voltage</option><option value="253">MikroTik - Device - IP Routes</option><option value="255">MikroTik - Device - IP/ARP Entries</option><option value="258">MikroTik - Device - Memory Utilization</option><option value="252">MikroTik - Device - PPP Active</option><option value="257">MikroTik - Device - Processes</option><option value="276">MikroTik - Device - Queues</option><option value="275">MikroTik - Device - Trees</option><option value="261">MikroTik - Device - Uptime</option><option value="260">MikroTik - Device - Users</option><option value="273">MikroTik - Device - Wireless APs</option><option value="254">MikroTik - Device - Wireless Connections</option><option value="274">MikroTik - Device - Wireless Regs</option><option value="277">MikroTik - DHCP - Leases</option><option value="311">Net-SNMP - Combined SCSI Disk Bytes</option><option value="310">Net-SNMP - Combined SCSI Disk I/O</option><option value="309">Net-SNMP - Context Switches</option><option value="87">Net-SNMP - CPU Utilization</option><option value="308">Net-SNMP - Interrupts</option><option value="85">Net-SNMP - Load Average</option><option value="86">Net-SNMP - Memory Usage</option><option value="155">NetScaler - CPU Usage (Global)</option><option value="140">NetScaler - DNS - Queries</option><option value="146">NetScaler - Global - Client Connection Counts</option><option value="143">NetScaler - Global - Client Connections</option><option value="145">NetScaler - Global - Server Connection Counts</option><option value="142">NetScaler - Global - Server Connections</option><option value="147">NetScaler - HTTP - Requests per Method</option><option value="148">NetScaler - HTTP - Requests per Version</option><option value="144">NetScaler - HTTP - Requests vs Responses</option><option value="149">NetScaler - HTTP - Responses per Version</option><option value="150">NetScaler - HTTP - Traffic</option><option value="153">NetScaler - HTTP Compression - Responses</option><option value="151">NetScaler - HTTP Compression - Traffic</option><option value="136">NetScaler - Integrated Caching - Memory Usage</option><option value="137">NetScaler - Integrated Caching - Objects</option><option value="152">NetScaler - Integrated Caching - Requests</option><option value="154">NetScaler - Integrated Caching - Traffic</option><option value="141">NetScaler - Memory Usage</option><option value="139">NetScaler - SSL - Decryption Traffic</option><option value="138">NetScaler - SSL - Encryption Traffic</option><option value="237">Nimble/Alletra -  total read cache hits</option><option value="238">Nimble/Alletra - IO total read/write bytes</option><option value="236">Nimble/Alletra - IO total reads/writes</option><option value="377">NMS Demo Environmental Device - Environmental sensors - Reading 1</option><option value="378">NMS Demo Environmental Device - Environmental sensors - Reading 2</option><option value="379">NMS Demo Environmental Device - Environmental sensors - Reading 3</option><option value="380">NMS Demo Environmental Device - Environmental sensors - Reading 4</option><option value="383">NMS Demo Environmental Device - Interface status and counters - Reading 1</option><option value="384">NMS Demo Environmental Device - Interface status and counters - Reading 2</option><option value="385">NMS Demo Environmental Device - Interface status and counters - Reading 3</option><option value="386">NMS Demo Environmental Device - Interface status and counters - Reading 4</option><option value="387">NMS Demo Environmental Device - Interface status and counters - Reading 5</option><option value="388">NMS Demo Environmental Device - Interface status and counters - Reading 6</option><option value="389">NMS Demo Environmental Device - Interface status and counters - Reading 7</option><option value="373">NMS Demo Environmental Device - Processor and memory - Reading 1</option><option value="374">NMS Demo Environmental Device - Processor and memory - Reading 2</option><option value="375">NMS Demo Environmental Device - Processor and memory - Reading 3</option><option value="376">NMS Demo Environmental Device - Processor and memory - Reading 4</option><option value="381">NMS Demo Environmental Device - Storage - Reading 1</option><option value="382">NMS Demo Environmental Device - Storage - Reading 2</option><option value="372">NMS Demo Environmental Device - System uptime</option><option value="618">NMS Equipment 3 Demo value (simulator) 300s</option><option value="610">NMS Final QA browser - Browser upload QA - Reading 2</option><option value="609">NMS Final QA browser - System uptime</option><option value="606">NMS Final QA offline - Offline QA copy of public Linksys recording - Reading 2</option><option value="605">NMS Final QA offline - System uptime</option><option value="391">NMS Full Graph Options Verification</option><option value="392">NMS Global Template Verification</option><option value="344">NMS Imported Sensor Demo - Environmental Sensors - Reading 1</option><option value="345">NMS Imported Sensor Demo - Environmental Sensors - Reading 2</option><option value="343">NMS Imported Sensor Demo - System uptime</option><option value="608">NMS MIB NMS Final QA offline - SNMPv2 MIB::sysORLastChange.0</option><option value="607">NMS MIB NMS Final QA offline - System uptime</option><option value="600">NMS MIB Topology Lab Switch A - System uptime</option><option value="390">NMS Router CPU - Custom Operator Graph</option><option value="360">NMS Serial Device Server - Interface Statistics - Reading 1</option><option value="361">NMS Serial Device Server - Interface Statistics - Reading 2</option><option value="362">NMS Serial Device Server - Interface Statistics - Reading 3</option><option value="363">NMS Serial Device Server - Interface Statistics - Reading 4</option><option value="364">NMS Serial Device Server - Interface Statistics - Reading 5</option><option value="365">NMS Serial Device Server - Interface Statistics - Reading 6</option><option value="366">NMS Serial Device Server - Interface Statistics - Reading 7</option><option value="367">NMS Serial Device Server - Interface Statistics - Reading 8</option><option value="368">NMS Serial Device Server - Serial Device Server CPU Monitoring - Reading 1</option><option value="369">NMS Serial Device Server - Serial Device Server CPU Monitoring - Reading 2</option><option value="370">NMS Serial Device Server - Serial Device Server Memory Monitoring - Reading 1</option><option value="371">NMS Serial Device Server - Serial Device Server Memory Monitoring - Reading 2</option><option value="359">NMS Serial Device Server - System uptime</option><option value="502">NMS SSH Linux CPU utilization</option><option value="503">NMS SSH Linux Memory utilization</option><option value="504">NMS SSH Linux Uptime</option><option value="320">PING - Advanced Ping</option><option value="303">SB6141 - Download - Noise Ratio</option><option value="302">SB6141 - Download - Power Level</option><option value="305">SB6141 - Stats - Correctable</option><option value="306">SB6141 - Stats - Uncorrectable</option><option value="307">SB6141 - Stats - Unerrored</option><option value="304">SB6141 - Upload - Power Level</option><option value="225">SNMP - Generic OID Template</option><option value="321">SNMP Printer - Actual printed pages</option><option value="322">SNMP Printer - Total printed pages</option><option value="324">SNMP UPS - Alarms</option><option value="325">SNMP UPS - Battery Voltage</option><option value="326">SNMP UPS - Remain time</option><option value="327">SNMP UPS - Temperature</option><option value="330">Synology - CPU Fan Status</option><option value="333">Synology - Power Status</option><option value="331">Synology - System Fan Status</option><option value="332">Synology - System Status</option><option value="565">Topology Lab 1 143190ff0a - Port 1 HC input octets</option><option value="555">Topology Lab 1 18ded16929 - Port 1 Speed</option><option value="563">Topology Lab 1 2cc17d01d0 - Port 1 Output octets</option><option value="562">Topology Lab 1 4026e99df0 - Port 2 Input octets</option><option value="558">Topology Lab 1 48a817831f - Port 2 Admin status</option><option value="553">Topology Lab 1 4edd67d661 - Port 1 MTU</option><option value="560">Topology Lab 1 55aaf3b4e1 - Port 2 Oper status</option><option value="548">Topology Lab 1 5a3f5b0b1b - Interface count</option><option value="552">Topology Lab 1 6fb1523163 - Port 2 Type</option><option value="550">Topology Lab 1 78ced6f27d - Port 2 Index</option><option value="557">Topology Lab 1 7a7bef1204 - Port 1 Admin status</option><option value="569">Topology Lab 1 7d3f0092c1 - Port 1 High speed</option><option value="556">Topology Lab 1 8c960da370 - Port 2 Speed</option><option value="551">Topology Lab 1 95b1d87c19 - Port 1 Type</option><option value="559">Topology Lab 1 acc0664d96 - Port 1 Oper status</option><option value="554">Topology Lab 1 b6d20229f4 - Port 2 MTU</option><option value="566">Topology Lab 1 b6e9667e55 - Port 2 HC input octets</option><option value="564">Topology Lab 1 b9038c26bb - Port 2 Output octets</option><option value="567">Topology Lab 1 cb0e8166a9 - Port 1 HC output octets</option><option value="547">Topology Lab 1 cbb6c7f190 - System uptime (ticks)</option><option value="561">Topology Lab 1 d50c70b782 - Port 1 Input octets</option><option value="568">Topology Lab 1 df1fd4a2ed - Port 2 HC output octets</option><option value="570">Topology Lab 1 e4a62969ca - Port 2 High speed</option><option value="549">Topology Lab 1 fc18f6f306 - Port 1 Index</option><option value="589">Topology Lab 2 143190ff0a - Port 1 HC input octets</option><option value="579">Topology Lab 2 18ded16929 - Port 1 Speed</option><option value="587">Topology Lab 2 2cc17d01d0 - Port 1 Output octets</option><option value="586">Topology Lab 2 4026e99df0 - Port 2 Input octets</option><option value="582">Topology Lab 2 48a817831f - Port 2 Admin status</option><option value="577">Topology Lab 2 4edd67d661 - Port 1 MTU</option><option value="584">Topology Lab 2 55aaf3b4e1 - Port 2 Oper status</option><option value="572">Topology Lab 2 5a3f5b0b1b - Interface count</option><option value="576">Topology Lab 2 6fb1523163 - Port 2 Type</option><option value="574">Topology Lab 2 78ced6f27d - Port 2 Index</option><option value="581">Topology Lab 2 7a7bef1204 - Port 1 Admin status</option><option value="593">Topology Lab 2 7d3f0092c1 - Port 1 High speed</option><option value="580">Topology Lab 2 8c960da370 - Port 2 Speed</option><option value="575">Topology Lab 2 95b1d87c19 - Port 1 Type</option><option value="583">Topology Lab 2 acc0664d96 - Port 1 Oper status</option><option value="578">Topology Lab 2 b6d20229f4 - Port 2 MTU</option><option value="590">Topology Lab 2 b6e9667e55 - Port 2 HC input octets</option><option value="588">Topology Lab 2 b9038c26bb - Port 2 Output octets</option><option value="591">Topology Lab 2 cb0e8166a9 - Port 1 HC output octets</option><option value="571">Topology Lab 2 cbb6c7f190 - System uptime (ticks)</option><option value="585">Topology Lab 2 d50c70b782 - Port 1 Input octets</option><option value="592">Topology Lab 2 df1fd4a2ed - Port 2 HC output octets</option><option value="594">Topology Lab 2 e4a62969ca - Port 2 High speed</option><option value="573">Topology Lab 2 fc18f6f306 - Port 1 Index</option><option value="599">Topology Lab 3 103c121372 - QA counter64</option><option value="597">Topology Lab 3 5c2796764b - QA counter32</option><option value="596">Topology Lab 3 8d1747af6a - QA signed gauge</option><option value="598">Topology Lab 3 c0ffba9ffb - QA unsigned gauge</option><option value="595">Topology Lab 3 cbb6c7f190 - QA system uptime</option><option value="248">Unix - Load Average</option><option value="249">Unix - Logged in Users</option><option value="88">Unix - Ping Latency</option><option value="247">Unix - Processes</option></select></span></label>
+        <button class="button primary" >Add</button>
+    </form>
+    <div class="graph-accordion-list">
+                <details class="graph-association">
+            <summary>
+                <span class="graph-association-name">1) NMS Final QA online - General readings - Reading 2</span>
+                <span class="graph-status">Is Being Graphed</span>
+                <form data-static-preview="true" method="post" data-remove-graph-template data-template-name="NMS Final QA online - General readings - Reading 2">
+                    <input type="hidden" name="action" value="remove_graph_template"/><input type="hidden" name="graph_template_id" value="602"/>
+                    <button class="icon-button" type="submit" aria-label="Remove NMS Final QA online - General readings - Reading 2 association" data-tooltip="Remove this template association. Existing graphs and data remain saved.">×</button>
+                </form>
+            </summary>
+            <div class="graph-association-content">
+                                                        <h3>NMS Final QA online - General readings - Reading 2</h3>
+                    <div class="protocol-grid cols-4 graph-parameter-grid">
+<label class="field"><span class="field-label">X Axis</span><input type="text" name="graph_120_x_axis" value="Time" readonly></label><label class="field"><span class="field-label">Y Axis</span><input type="text" name="graph_120_y_axis" value="General readings - R" readonly></label><label class="field"><span class="field-label">Y-Axis Minimum</span><input type="text" name="graph_120_lower_limit" value="0" readonly></label><label class="field"><span class="field-label">Y-Axis Maximum</span><input type="text" name="graph_120_upper_limit" value="100" readonly></label></div>
+<h3>Graph Items</h3>
+<div class="graph-items-wrap"><table class="graph-associations graph-items">
+    <colgroup><col style="width:7%"><col style="width:3%"><col style="width:25%"><col style="width:9%"><col style="width:8%"><col style="width:6%"><col style="width:7%"><col style="width:7%"><col style="width:10%"><col style="width:5%"><col style="width:5%"><col style="width:8%"></colgroup>
+    <thead><tr><th>Graph Item</th><th>#</th><th>Data Source</th><th>Graph Item Type</th><th>CF Type</th><th>Minimum</th><th>Maximum</th><th>GPrint</th><th>CDEF</th><th>VDEF</th><th>Alpha %</th><th>Item Color</th></tr></thead>
+    <tbody>
+            <tr><td data-label="Graph Item">Item # 1</td><td data-label="#">1</td>
+        <td data-label="Data Source">NMS Final QA online - General readings - Reading 2 (nms_general_readi_2): </td>
+        <td data-label="Graph Item Type">AREA</td>
+        <td data-label="CF Type">AVERAGE</td>
+                <td data-label="Minimum">0</td>
+                <td data-label="Maximum">Not set (U)</td>
+                <td data-label="GPrint">N/A</td>
+        <td data-label="CDEF"></td>
+        <td data-label="VDEF"></td>
+        <td data-label="Alpha %">100%</td>
+        <td data-label="Item Color"><span class="graph-item-color" style="background-color:#F5F800" aria-hidden="true"></span>F5F800</td></tr>
+            <tr><td data-label="Graph Item">Item # 2</td><td data-label="#">2</td>
+        <td data-label="Data Source">NMS Final QA online - General readings - Reading 2 (nms_general_readi_2): Current:</td>
+        <td data-label="Graph Item Type">GPRINT</td>
+        <td data-label="CF Type">LAST</td>
+                <td data-label="Minimum">0</td>
+                <td data-label="Maximum">Not set (U)</td>
+                <td data-label="GPrint">Normal</td>
+        <td data-label="CDEF"></td>
+        <td data-label="VDEF"></td>
+        <td data-label="Alpha %"></td>
+        <td data-label="Item Color"></td></tr>
+            <tr><td data-label="Graph Item">Item # 3</td><td data-label="#">3</td>
+        <td data-label="Data Source">NMS Final QA online - General readings - Reading 2 (nms_general_readi_2): Average:</td>
+        <td data-label="Graph Item Type">GPRINT</td>
+        <td data-label="CF Type">AVERAGE</td>
+                <td data-label="Minimum">0</td>
+                <td data-label="Maximum">Not set (U)</td>
+                <td data-label="GPrint">Normal</td>
+        <td data-label="CDEF"></td>
+        <td data-label="VDEF"></td>
+        <td data-label="Alpha %"></td>
+        <td data-label="Item Color"></td></tr>
+            <tr><td data-label="Graph Item">Item # 4</td><td data-label="#">4</td>
+        <td data-label="Data Source">NMS Final QA online - General readings - Reading 2 (nms_general_readi_2): Maximum: &lt;HR&gt;</td>
+        <td data-label="Graph Item Type">GPRINT</td>
+        <td data-label="CF Type">MAX</td>
+                <td data-label="Minimum">0</td>
+                <td data-label="Maximum">Not set (U)</td>
+                <td data-label="GPrint">Normal</td>
+        <td data-label="CDEF"></td>
+        <td data-label="VDEF"></td>
+        <td data-label="Alpha %"></td>
+        <td data-label="Item Color"></td></tr>
+            </tbody>
+</table></div>
+                            </div>
+        </details>
+                <details class="graph-association">
+            <summary>
+                <span class="graph-association-name">2) NMS Final QA online - System uptime</span>
+                <span class="graph-status">Is Being Graphed</span>
+                <form data-static-preview="true" method="post" data-remove-graph-template data-template-name="NMS Final QA online - System uptime">
+                    <input type="hidden" name="action" value="remove_graph_template"/><input type="hidden" name="graph_template_id" value="601"/>
+                    <button class="icon-button" type="submit" aria-label="Remove NMS Final QA online - System uptime association" data-tooltip="Remove this template association. Existing graphs and data remain saved.">×</button>
+                </form>
+            </summary>
+            <div class="graph-association-content">
+                                                        <h3>NMS Final QA online - System uptime</h3>
+                    <div class="protocol-grid cols-4 graph-parameter-grid">
+<label class="field"><span class="field-label">X Axis</span><input type="text" name="graph_119_x_axis" value="Time" readonly></label><label class="field"><span class="field-label">Y Axis</span><input type="text" name="graph_119_y_axis" value="System uptime" readonly></label><label class="field"><span class="field-label">Y-Axis Minimum</span><input type="text" name="graph_119_lower_limit" value="0" readonly></label><label class="field"><span class="field-label">Y-Axis Maximum</span><input type="text" name="graph_119_upper_limit" value="100" readonly></label></div>
+<h3>Graph Items</h3>
+<div class="graph-items-wrap"><table class="graph-associations graph-items">
+    <colgroup><col style="width:7%"><col style="width:3%"><col style="width:25%"><col style="width:9%"><col style="width:8%"><col style="width:6%"><col style="width:7%"><col style="width:7%"><col style="width:10%"><col style="width:5%"><col style="width:5%"><col style="width:8%"></colgroup>
+    <thead><tr><th>Graph Item</th><th>#</th><th>Data Source</th><th>Graph Item Type</th><th>CF Type</th><th>Minimum</th><th>Maximum</th><th>GPrint</th><th>CDEF</th><th>VDEF</th><th>Alpha %</th><th>Item Color</th></tr></thead>
+    <tbody>
+            <tr><td data-label="Graph Item">Item # 1</td><td data-label="#">1</td>
+        <td data-label="Data Source">NMS Final QA online - System uptime (nms_system_uptime_1): </td>
+        <td data-label="Graph Item Type">AREA</td>
+        <td data-label="CF Type">AVERAGE</td>
+                <td data-label="Minimum">0</td>
+                <td data-label="Maximum">Not set (U)</td>
+                <td data-label="GPrint">N/A</td>
+        <td data-label="CDEF"></td>
+        <td data-label="VDEF"></td>
+        <td data-label="Alpha %">100%</td>
+        <td data-label="Item Color"><span class="graph-item-color" style="background-color:#F5F800" aria-hidden="true"></span>F5F800</td></tr>
+            <tr><td data-label="Graph Item">Item # 2</td><td data-label="#">2</td>
+        <td data-label="Data Source">NMS Final QA online - System uptime (nms_system_uptime_1): Current:</td>
+        <td data-label="Graph Item Type">GPRINT</td>
+        <td data-label="CF Type">LAST</td>
+                <td data-label="Minimum">0</td>
+                <td data-label="Maximum">Not set (U)</td>
+                <td data-label="GPrint">Normal</td>
+        <td data-label="CDEF"></td>
+        <td data-label="VDEF"></td>
+        <td data-label="Alpha %"></td>
+        <td data-label="Item Color"></td></tr>
+            <tr><td data-label="Graph Item">Item # 3</td><td data-label="#">3</td>
+        <td data-label="Data Source">NMS Final QA online - System uptime (nms_system_uptime_1): Average:</td>
+        <td data-label="Graph Item Type">GPRINT</td>
+        <td data-label="CF Type">AVERAGE</td>
+                <td data-label="Minimum">0</td>
+                <td data-label="Maximum">Not set (U)</td>
+                <td data-label="GPrint">Normal</td>
+        <td data-label="CDEF"></td>
+        <td data-label="VDEF"></td>
+        <td data-label="Alpha %"></td>
+        <td data-label="Item Color"></td></tr>
+            <tr><td data-label="Graph Item">Item # 4</td><td data-label="#">4</td>
+        <td data-label="Data Source">NMS Final QA online - System uptime (nms_system_uptime_1): Maximum: &lt;HR&gt;</td>
+        <td data-label="Graph Item Type">GPRINT</td>
+        <td data-label="CF Type">MAX</td>
+                <td data-label="Minimum">0</td>
+                <td data-label="Maximum">Not set (U)</td>
+                <td data-label="GPrint">Normal</td>
+        <td data-label="CDEF"></td>
+        <td data-label="VDEF"></td>
+        <td data-label="Alpha %"></td>
+        <td data-label="Item Color"></td></tr>
+            </tbody>
+</table></div>
+                            </div>
+        </details>
+                <details class="graph-association">
+            <summary>
+                <span class="graph-association-name">3) NMS MIB NMS Final QA online - SNMPv2 MIB::sysORLastChange.0</span>
+                <span class="graph-status">Is Being Graphed</span>
+                <form data-static-preview="true" method="post" data-remove-graph-template data-template-name="NMS MIB NMS Final QA online - SNMPv2 MIB::sysORLastChange.0">
+                    <input type="hidden" name="action" value="remove_graph_template"/><input type="hidden" name="graph_template_id" value="604"/>
+                    <button class="icon-button" type="submit" aria-label="Remove NMS MIB NMS Final QA online - SNMPv2 MIB::sysORLastChange.0 association" data-tooltip="Remove this template association. Existing graphs and data remain saved.">×</button>
+                </form>
+            </summary>
+            <div class="graph-association-content">
+                                                        <h3>NMS Final QA online - SNMPv2 MIB::sysORLastChange.0</h3>
+                    <div class="protocol-grid cols-4 graph-parameter-grid">
+<label class="field"><span class="field-label">X Axis</span><input type="text" name="graph_122_x_axis" value="Time" readonly></label><label class="field"><span class="field-label">Y Axis</span><input type="text" name="graph_122_y_axis" value="SNMPv2 MIB::sysORLas" readonly></label><label class="field"><span class="field-label">Y-Axis Minimum</span><input type="text" name="graph_122_lower_limit" value="0" readonly></label><label class="field"><span class="field-label">Y-Axis Maximum</span><input type="text" name="graph_122_upper_limit" value="100" readonly></label></div>
+<h3>Graph Items</h3>
+<div class="graph-items-wrap"><table class="graph-associations graph-items">
+    <colgroup><col style="width:7%"><col style="width:3%"><col style="width:25%"><col style="width:9%"><col style="width:8%"><col style="width:6%"><col style="width:7%"><col style="width:7%"><col style="width:10%"><col style="width:5%"><col style="width:5%"><col style="width:8%"></colgroup>
+    <thead><tr><th>Graph Item</th><th>#</th><th>Data Source</th><th>Graph Item Type</th><th>CF Type</th><th>Minimum</th><th>Maximum</th><th>GPrint</th><th>CDEF</th><th>VDEF</th><th>Alpha %</th><th>Item Color</th></tr></thead>
+    <tbody>
+            <tr><td data-label="Graph Item">Item # 1</td><td data-label="#">1</td>
+        <td data-label="Data Source">NMS MIB NMS Final QA online - SNMPv2 MIB::sysORLastChange.0 (nms_snmpv2_mib_sy_1): </td>
+        <td data-label="Graph Item Type">AREA</td>
+        <td data-label="CF Type">AVERAGE</td>
+                <td data-label="Minimum">0</td>
+                <td data-label="Maximum">Not set (U)</td>
+                <td data-label="GPrint">N/A</td>
+        <td data-label="CDEF"></td>
+        <td data-label="VDEF"></td>
+        <td data-label="Alpha %">100%</td>
+        <td data-label="Item Color"><span class="graph-item-color" style="background-color:#F5F800" aria-hidden="true"></span>F5F800</td></tr>
+            <tr><td data-label="Graph Item">Item # 2</td><td data-label="#">2</td>
+        <td data-label="Data Source">NMS MIB NMS Final QA online - SNMPv2 MIB::sysORLastChange.0 (nms_snmpv2_mib_sy_1): Current:</td>
+        <td data-label="Graph Item Type">GPRINT</td>
+        <td data-label="CF Type">LAST</td>
+                <td data-label="Minimum">0</td>
+                <td data-label="Maximum">Not set (U)</td>
+                <td data-label="GPrint">Normal</td>
+        <td data-label="CDEF"></td>
+        <td data-label="VDEF"></td>
+        <td data-label="Alpha %"></td>
+        <td data-label="Item Color"></td></tr>
+            <tr><td data-label="Graph Item">Item # 3</td><td data-label="#">3</td>
+        <td data-label="Data Source">NMS MIB NMS Final QA online - SNMPv2 MIB::sysORLastChange.0 (nms_snmpv2_mib_sy_1): Average:</td>
+        <td data-label="Graph Item Type">GPRINT</td>
+        <td data-label="CF Type">AVERAGE</td>
+                <td data-label="Minimum">0</td>
+                <td data-label="Maximum">Not set (U)</td>
+                <td data-label="GPrint">Normal</td>
+        <td data-label="CDEF"></td>
+        <td data-label="VDEF"></td>
+        <td data-label="Alpha %"></td>
+        <td data-label="Item Color"></td></tr>
+            <tr><td data-label="Graph Item">Item # 4</td><td data-label="#">4</td>
+        <td data-label="Data Source">NMS MIB NMS Final QA online - SNMPv2 MIB::sysORLastChange.0 (nms_snmpv2_mib_sy_1): Maximum: &lt;HR&gt;</td>
+        <td data-label="Graph Item Type">GPRINT</td>
+        <td data-label="CF Type">MAX</td>
+                <td data-label="Minimum">0</td>
+                <td data-label="Maximum">Not set (U)</td>
+                <td data-label="GPrint">Normal</td>
+        <td data-label="CDEF"></td>
+        <td data-label="VDEF"></td>
+        <td data-label="Alpha %"></td>
+        <td data-label="Item Color"></td></tr>
+            </tbody>
+</table></div>
+                            </div>
+        </details>
+                <details class="graph-association">
+            <summary>
+                <span class="graph-association-name">4) NMS MIB NMS Final QA online - System uptime</span>
+                <span class="graph-status">Is Being Graphed</span>
+                <form data-static-preview="true" method="post" data-remove-graph-template data-template-name="NMS MIB NMS Final QA online - System uptime">
+                    <input type="hidden" name="action" value="remove_graph_template"/><input type="hidden" name="graph_template_id" value="603"/>
+                    <button class="icon-button" type="submit" aria-label="Remove NMS MIB NMS Final QA online - System uptime association" data-tooltip="Remove this template association. Existing graphs and data remain saved.">×</button>
+                </form>
+            </summary>
+            <div class="graph-association-content">
+                                                        <h3>NMS Final QA online - System uptime</h3>
+                    <div class="protocol-grid cols-4 graph-parameter-grid">
+<label class="field"><span class="field-label">X Axis</span><input type="text" name="graph_121_x_axis" value="Time" readonly></label><label class="field"><span class="field-label">Y Axis</span><input type="text" name="graph_121_y_axis" value="System uptime" readonly></label><label class="field"><span class="field-label">Y-Axis Minimum</span><input type="text" name="graph_121_lower_limit" value="0" readonly></label><label class="field"><span class="field-label">Y-Axis Maximum</span><input type="text" name="graph_121_upper_limit" value="100" readonly></label></div>
+<h3>Graph Items</h3>
+<div class="graph-items-wrap"><table class="graph-associations graph-items">
+    <colgroup><col style="width:7%"><col style="width:3%"><col style="width:25%"><col style="width:9%"><col style="width:8%"><col style="width:6%"><col style="width:7%"><col style="width:7%"><col style="width:10%"><col style="width:5%"><col style="width:5%"><col style="width:8%"></colgroup>
+    <thead><tr><th>Graph Item</th><th>#</th><th>Data Source</th><th>Graph Item Type</th><th>CF Type</th><th>Minimum</th><th>Maximum</th><th>GPrint</th><th>CDEF</th><th>VDEF</th><th>Alpha %</th><th>Item Color</th></tr></thead>
+    <tbody>
+            <tr><td data-label="Graph Item">Item # 1</td><td data-label="#">1</td>
+        <td data-label="Data Source">NMS MIB NMS Final QA online - System uptime (nms_system_uptime_1): </td>
+        <td data-label="Graph Item Type">AREA</td>
+        <td data-label="CF Type">AVERAGE</td>
+                <td data-label="Minimum">0</td>
+                <td data-label="Maximum">Not set (U)</td>
+                <td data-label="GPrint">N/A</td>
+        <td data-label="CDEF"></td>
+        <td data-label="VDEF"></td>
+        <td data-label="Alpha %">100%</td>
+        <td data-label="Item Color"><span class="graph-item-color" style="background-color:#F5F800" aria-hidden="true"></span>F5F800</td></tr>
+            <tr><td data-label="Graph Item">Item # 2</td><td data-label="#">2</td>
+        <td data-label="Data Source">NMS MIB NMS Final QA online - System uptime (nms_system_uptime_1): Current:</td>
+        <td data-label="Graph Item Type">GPRINT</td>
+        <td data-label="CF Type">LAST</td>
+                <td data-label="Minimum">0</td>
+                <td data-label="Maximum">Not set (U)</td>
+                <td data-label="GPrint">Normal</td>
+        <td data-label="CDEF"></td>
+        <td data-label="VDEF"></td>
+        <td data-label="Alpha %"></td>
+        <td data-label="Item Color"></td></tr>
+            <tr><td data-label="Graph Item">Item # 3</td><td data-label="#">3</td>
+        <td data-label="Data Source">NMS MIB NMS Final QA online - System uptime (nms_system_uptime_1): Average:</td>
+        <td data-label="Graph Item Type">GPRINT</td>
+        <td data-label="CF Type">AVERAGE</td>
+                <td data-label="Minimum">0</td>
+                <td data-label="Maximum">Not set (U)</td>
+                <td data-label="GPrint">Normal</td>
+        <td data-label="CDEF"></td>
+        <td data-label="VDEF"></td>
+        <td data-label="Alpha %"></td>
+        <td data-label="Item Color"></td></tr>
+            <tr><td data-label="Graph Item">Item # 4</td><td data-label="#">4</td>
+        <td data-label="Data Source">NMS MIB NMS Final QA online - System uptime (nms_system_uptime_1): Maximum: &lt;HR&gt;</td>
+        <td data-label="Graph Item Type">GPRINT</td>
+        <td data-label="CF Type">MAX</td>
+                <td data-label="Minimum">0</td>
+                <td data-label="Maximum">Not set (U)</td>
+                <td data-label="GPrint">Normal</td>
+        <td data-label="CDEF"></td>
+        <td data-label="VDEF"></td>
+        <td data-label="Alpha %"></td>
+        <td data-label="Item Color"></td></tr>
+            </tbody>
+</table></div>
+                            </div>
+        </details>
+                    </div>
+</section>
+    <section id="device-data-queries" class="graphs-page data-queries-page" hidden>
+    <h2>Associated Data Queries</h2>
+    <form data-static-preview="true" method="post" class="data-query-add">
+        <input type="hidden" name="action" value="add_data_query" />
+        <label class="field"><span class="field-label">Add Data Query</span><span class="select-wrap"><select name="snmp_query_id" data-searchable-template="Data Query" required ><option value="">Select Data Query</option><option value="2">Acme SD Combined Session Stats</option><option value="3">Acme SD Realm Session info</option><option value="4">Acme SD Temperature</option><option value="1">Acme SD Voltage</option><option value="8">AKCP - 4-20 mAmp</option><option value="7">AKCP - Airflow</option><option value="6">AKCP - Humidity</option><option value="5">AKCP - Temperature</option><option value="9">APC - InRow - Group Statistics</option><option value="10">APC - InRow - Unit Statistics</option><option value="11">APC - PDU - Breaker Statistics</option><option value="12">APC - PDU - Phase Statistics</option><option value="22">Aruba controller - Access Point - Stats</option><option value="21">Aruba controller - CPU Load</option><option value="14">Aruba IAP Cluster - AP stats</option><option value="15">Aruba IAP Cluster - Clients on wlan</option><option value="13">Aruba IAP Cluster - Radio stats</option><option value="17">Aruba OSCX 6x00 switch - Fan</option><option value="19">Aruba OSCX 6x00 switch - Power supply</option><option value="18">Aruba OSCX 6x00 switch - Temp. sensor</option><option value="20">Aruba OSCX 6x00 switch - VSF member</option><option value="24">BayTech 3 Phase RPC - Circuits</option><option value="23">BayTech PDU - RPC</option><option value="25">Cacti Stats - Data Collector Stats</option><option value="27">Cacti Stats - Graph Exports</option><option value="26">Cacti Stats - WebSeer Service Checks</option><option value="28">Cisco - BGP peer status</option><option value="29">Cisco - HSRP State</option><option value="37">Clearpass policy manager - Auth. sources</option><option value="38">Clearpass policy manager - Services</option><option value="42">Dell iDrac - Battery</option><option value="40">Dell iDrac - Controller</option><option value="45">Dell iDrac - Cooling</option><option value="41">Dell iDrac - Logical disk</option><option value="39">Dell iDrac - Physical disk</option><option value="43">Dell iDrac - Power supply</option><option value="44">Dell iDrac - Temperature</option><option value="47">ESXi - CPU</option><option value="48">ESXi - Hardware</option><option value="49">HPE iLO - CPU</option><option value="50">HPE iLO - Drives</option><option value="51">HPE iLO - Fans</option><option value="53">HPE iLO - Logical Drives</option><option value="54">HPE iLO - Memory</option><option value="52">HPE iLO - NIC</option><option value="55">HPE iLO - Temperatures</option><option value="63">MikroTik - Interfaces</option><option value="60">MikroTik - Queues</option><option value="61">MikroTik - Trees</option><option value="62">MikroTik - Users</option><option value="59">MikroTik - Wireless Reg</option><option value="64">Net-SNMP -  Get Monitored Partitions</option><option value="66">Net-SNMP - Get Device I/O</option><option value="67">Net-SNMP - Sensors - Fan Sensors</option><option value="68">Net-SNMP - Sensors - Thermal Sensors</option><option value="69">Net-SNMP - Sensors - Voltage Sensors</option><option value="30">NetScaler - CPU Table</option><option value="31">NetScaler - Disk Table</option><option value="36">NetScaler - Interface Table</option><option value="32">NetScaler - RNAT Statistics</option><option value="34">NetScaler - Service Group Member Table</option><option value="35">NetScaler - Service Table</option><option value="33">NetScaler - Virtual Server Table</option><option value="57">Nimble/Alletra - Volume usage</option><option value="56">Nimble/Alletra - Volumes</option><option value="46">SNMP - Get Mounted Partitions</option><option value="65">SNMP - Get Processor Information</option><option value="16">SNMP - Interface Statistics</option><option value="70">SNMP Printer - Printer supply</option><option value="72">SNMP UPS - Input lines</option><option value="71">SNMP UPS - Output lines</option><option value="76">Synology - Disk Smart Status</option><option value="77">Synology - Disk Statistics</option><option value="73">Synology - Disk Temperature/Status</option><option value="74">Synology - Raid Statistics</option><option value="75">Synology - Service Users</option><option value="58">Unix - Get Mounted Partitions</option></select></span></label>
+        <label class="field"><span class="field-label">Re-Index Method</span><span class="select-wrap"><select name="reindex_method"><option value="0" >None</option><option value="1" selected>Uptime</option><option value="2" >Index Count</option><option value="3" >Verify All</option></select></span></label>
+        <button class="button primary" >Add</button>
+    </form>
+    <div class="table-scroll"><table class="data-query-table">
+        <thead><tr><th>Data Query Name</th><th>Re-Index Method</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody><tr><td colspan="4" class="empty-state">No associated data queries.</td></tr></tbody>
+    </table></div>
+</section>
+    <footer class="form-footer">
+        <a class="button" id="protocol-previous" href="device-12.html">Previous ←</a>
+        <a class="button" id="protocol-next" href="#diagnostics">Next →</a>
+    </footer>
+</div>
+<script type="application/json" id="serial-data">
+    [{"id":"10","name":"Serial Demo - Local RTU TCP","poller_id":"1","transport":"rtu_tcp","endpoint":"[127.0.0.1]:15020","endpoint_key":"aa86d96698a66ef3178eea60e6d3c62d8382391f74c47d8b7318ab415ac7165f","profile_id":"3","profile_revision":"1","settings_json":"{\u0022protocol\u0022:\u0022modbus_rtu\u0022,\u0022baud_rate\u0022:9600,\u0022data_bits\u0022:8,\u0022parity\u0022:\u0022even\u0022,\u0022stop_bits\u0022:1,\u0022flow_control\u0022:\u0022none\u0022,\u0022timeout_ms\u0022:1000,\u0022retries\u0022:1}","revision":"1","enabled":"1","updated_by":"1","updated_at":"2026-09-21 18:41:32","settings":{"protocol":"modbus_rtu","baud_rate":9600,"data_bits":8,"parity":"even","stop_bits":1,"flow_control":"none","timeout_ms":1000,"retries":1}}]</script>
+        </section>
+    </main>
+    <dialog id="message-dialog" aria-labelledby="message-title" aria-describedby="message-text">
+        <div class="message-heading">
+            <h2 id="message-title"></h2>
+            <button type="button" id="message-close" aria-label="Close message">×</button>
+        </div>
+        <p id="message-text"></p>
+        <div class="message-actions">
+            <button class="button" type="button" id="message-cancel">Cancel</button>
+            <button class="button primary" type="button" id="message-confirm">OK</button>
+        </div>
+    </dialog>
+    <script src="js/inventory.js?v=63842fc19d04" defer></script>
+    <script src="js/preview.js" defer></script>
+</body>
+</html>

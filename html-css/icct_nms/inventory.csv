@@ -1,0 +1,14 @@
+ID,"Device Name","Short Name",Segment,"Device Type",Status,"Manual Serial Number","Manual MAC Address",Hostname/IP,Rack,"Start Unit",Height,Uptime,"Polling Interval (sec)","Availability (%)"
+2,"Cacti RHEL 9 Local",CR9L,Computers,Server,Up,,,127.0.0.1,,,,"01d 11h 42m 07s",300,100.00000
+1,"Local Linux Machine",,Computers,,Up,,,localhost,,,,"Not reported",300,100.00000
+14,"NMS Core Switch (Simulated)",,Network,Switch,Up,SIM-CORE-001,02:00:00:00:ff:01,127.0.0.1,,,,"00d 00h 20m 34s",300,100.00000
+13,"NMS Final QA offline",,,,Up,,,127.0.0.1,,,,"00d 01h 46m 22s",300,100.00000
+12,"NMS Final QA online",,,,Up,,,127.0.0.1,,,,"00d 01h 46m 22s",300,100.00000
+6,"NMS Imported Sensor Demo Device",,"Sensors & Instrumentation",,Up,,,127.0.0.1,,,,"00d 02h 00m 00s",300,100.00000
+3,"NMS Simulated Router",,Network,,Up,,,127.0.0.1,,,,"01d 00h 00m 00s",300,100.00000
+5,"NMS Simulated Sensor",,"Sensors & Instrumentation",,Up,,,127.0.0.1,,,,"Not reported",300,100.00000
+4,"NMS Simulated Server",,Computers,,Up,,,127.0.0.1,,,,"02d 00h 00m 00s",300,100.00000
+64,"Serial Demo - Modbus RTU Simulator",SDMRS,,,Unavailable,,,[127.0.0.1]:15020,,,,"Not reported",300,100.00000
+9,"Topology Lab Switch A",,,Switch,Up,,,127.0.0.1,,,,"01d 00h 00m 00s",300,100.00000
+10,"Topology Lab Switch B",,,,Up,,,127.0.0.1,,,,"01d 00h 00m 00s",300,100.00000
+11,"Topology Upload QA 0.11.0",,,,Up,,,127.0.0.1,,,,"00d 00h 20m 34s",300,100.00000
