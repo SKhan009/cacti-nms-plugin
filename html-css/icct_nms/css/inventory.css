@@ -2292,3 +2292,42 @@ body:has(#diagnostics:not([hidden])) .protocol-form {
 /* Wizard drafts never expose hidden panels or controls. */
 #device-wizard [hidden] { display: none !important; }
 .wizard-pending { padding: 12px; background: #f4f4f4; }
+
+/* Shared feedback: inline errors and nonblocking success toasts. */
+.inline-feedback {
+  display: block;
+  margin: 12px 0;
+  padding: 12px 16px;
+  border-left: 4px solid var(--blue);
+  background: #edf5ff;
+  color: #262626;
+  overflow-wrap: anywhere;
+}
+.inline-feedback.error { border-left-color: #da1e28; background: #fff1f1; }
+.inline-feedback > strong, .inline-feedback > span { display: block; }
+.inline-feedback > span { margin-top: 4px; white-space: pre-wrap; max-height: 42vh; overflow: auto; }
+.field > .inline-feedback { margin: 6px 0 0; font-size: 12px; }
+[aria-invalid="true"] { border-bottom-color: #da1e28; }
+#toast-region {
+  position: fixed;
+  top: 72px;
+  right: 24px;
+  width: min(380px, calc(100vw - 32px));
+  z-index: 11000;
+  pointer-events: none;
+}
+.notification-toast {
+  position: relative;
+  margin-bottom: 12px;
+  padding: 16px 44px 16px 16px;
+  border-left: 4px solid #24a148;
+  background: #fff;
+  color: #262626;
+  box-shadow: 0 4px 20px #0003;
+  pointer-events: auto;
+  overflow-wrap: anywhere;
+}
+.notification-toast > strong, .notification-toast > span { display: block; }
+.notification-toast > span { margin-top: 6px; font-size: 13px; line-height: 1.5; }
+.notification-toast > button { position: absolute; top: 8px; right: 8px; border: 0; background: transparent; font-size: 24px; padding: 4px; color: #525252; }
+@media(max-width:560px) { #toast-region { top: 64px; right: 16px; } }

@@ -190,6 +190,16 @@ try {
     $dataQueryMethods = icct_nms_data_query_methods($host);
     $defaultDataQueryMethod = (int) read_config_option("reindex_method");
     if (!isset($dataQueryMethods[$defaultDataQueryMethod])) $defaultDataQueryMethod = 0;
+    // Failed native POSTs must retain the selected panels even before an assignment exists.
+    $protocolDraft = [];
+    $failedProtocol = '';
+    if ($error !== '') {
+        $allowedProtocols = ['cdp','lldp','snmp','ssh','serial','syslog','netflow','ntp','tacacs'];
+        $protocolDraft = array_values(array_intersect($allowedProtocols, (array)($_POST['draft_protocols'] ?? [])));
+        $failedProtocol = (string)($_POST['action'] ?? '');
+        if ($failedProtocol === 'discovery') $failedProtocol = (string)($_POST['discovery_protocol'] ?? '');
+        if (in_array($failedProtocol, $allowedProtocols, true)) $protocolDraft[] = $failedProtocol;
+    }
     $title = "Protocol Config";
     require __DIR__ . "/templates/header.php";
     require __DIR__ . "/templates/protocol.php";

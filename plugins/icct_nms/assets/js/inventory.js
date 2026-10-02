@@ -1,78 +1,88 @@
 "use strict";
-// Shared application popups replace browser dialogs and inline result messages.
+// Errors stay beside their form; success notifications never interrupt editing.
 const messageDialog = document.querySelector("#message-dialog");
-function icctShowMessage({
-  title = "Information",
-  text,
-  confirm = false,
-  danger = false,
-  accept = "OK",
-}) {
+function icctInlineMessage({title, text, danger = false, context}) {
+  const target = context || document.querySelector('.device-panel') || document.querySelector('main');
+  if (!target) return;
+  let feedback = [...target.children].find(node => node.classList.contains('inline-feedback'));
+  if (!feedback) {
+    feedback = document.createElement(target.matches('.field') ? 'span' : 'div');
+    feedback.className = 'inline-feedback';
+    target.matches('.field') ? target.append(feedback) : target.prepend(feedback);
+  }
+  feedback.classList.toggle('error', danger);
+  feedback.setAttribute('role', danger ? 'alert' : 'status');
+  const heading = document.createElement('strong'), body = document.createElement('span');
+  heading.textContent = title;
+  body.textContent = text;
+  feedback.replaceChildren(heading, body);
+}
+function icctToast({title = 'Success', text}) {
+  let region = document.querySelector('#toast-region');
+  if (!region) {
+    region = document.createElement('div');region.id = 'toast-region';
+    region.setAttribute('aria-label', 'Notifications');document.body.append(region);
+  }
+  const toast = document.createElement('div');toast.className = 'notification-toast';
+  toast.setAttribute('role', 'status');
+  const heading = document.createElement('strong'), body = document.createElement('span'), close = document.createElement('button');
+  heading.textContent = title;body.textContent = text;
+  close.type = 'button';close.textContent = '×';close.setAttribute('aria-label', 'Dismiss notification');
+  toast.append(heading, body, close);region.append(toast);
+  let timer;
+  const dismiss = () => {clearTimeout(timer);toast.remove();};
+  const schedule = () => {clearTimeout(timer);timer = setTimeout(dismiss, 6000);};
+  close.addEventListener('click', dismiss);
+  toast.addEventListener('mouseenter', () => clearTimeout(timer));toast.addEventListener('mouseleave', schedule);
+  toast.addEventListener('focusin', () => clearTimeout(timer));toast.addEventListener('focusout', schedule);
+  schedule();
+}
+function icctQueueToast(message) {
+  try { sessionStorage.setItem('icct-next-toast', JSON.stringify(message)); }
+  catch (_) { icctToast(message); }
+}
+function icctShowMessage({title = "Information", text, confirm = false, danger = false, accept = "OK", context, inline = false}) {
+  if (!confirm) {
+    if (danger || inline) icctInlineMessage({title, text, danger, context});
+    else icctToast({title, text});
+    return Promise.resolve(true);
+  }
   if (!messageDialog || messageDialog.open) return Promise.resolve(false);
   const acceptButton = document.querySelector("#message-confirm");
   document.querySelector("#message-title").textContent = title;
   document.querySelector("#message-text").textContent = text;
-  document.querySelector("#message-cancel").hidden = !confirm;
-  acceptButton.textContent = accept;
-  acceptButton.classList.toggle("danger", danger);
-  messageDialog.returnValue = "";
-  messageDialog.setAttribute(
-    "role",
-    confirm || danger ? "alertdialog" : "dialog",
-  );
-  messageDialog.showModal();
-  if (confirm) document.querySelector("#message-cancel").focus();
-  return new Promise((resolve) => {
-    messageDialog.addEventListener(
-      "close",
-      () => resolve(messageDialog.returnValue === "accepted"),
-      { once: true },
-    );
-  });
+  document.querySelector("#message-cancel").hidden = false;
+  acceptButton.textContent = accept;acceptButton.classList.toggle("danger", danger);
+  messageDialog.returnValue = "";messageDialog.setAttribute("role", "alertdialog");
+  messageDialog.showModal();document.querySelector("#message-cancel").focus();
+  return new Promise(resolve => messageDialog.addEventListener("close", () => resolve(messageDialog.returnValue === "accepted"), {once: true}));
 }
 if (messageDialog) {
-  document
-    .querySelector("#message-close")
-    .addEventListener("click", () => messageDialog.close("cancelled"));
-  document
-    .querySelector("#message-cancel")
-    .addEventListener("click", () => messageDialog.close("cancelled"));
-  document
-    .querySelector("#message-confirm")
-    .addEventListener("click", () => messageDialog.close("accepted"));
-  const feedback = document.querySelector(".feedback");
-  if (feedback) {
-    feedback.hidden = true;
-    const error = feedback.classList.contains("error");
-    icctShowMessage({
-      title: error ? "Unable to complete action" : "Success",
-      text: feedback.textContent.trim(),
-      danger: error,
-    });
-  }
-  // Preserve native constraint checks while presenting the first invalid field in the UI.
-  document.addEventListener(
-    "invalid",
-    (event) => {
-      event.preventDefault();
-      if (messageDialog.open) return;
-      const field = event.target;
-      const label =
-        field.getAttribute("aria-label") ||
-        field
-          .closest(".field")
-          ?.querySelector(".field-label")
-          ?.textContent.trim() ||
-        "Field";
-      icctShowMessage({
-        title: "Check your entries",
-        text: `${label}: ${field.validationMessage}`,
-        danger: true,
-      }).then(() => field.focus());
-    },
-    true,
-  );
+  document.querySelector("#message-close").addEventListener("click", () => messageDialog.close("cancelled"));
+  document.querySelector("#message-cancel").addEventListener("click", () => messageDialog.close("cancelled"));
+  document.querySelector("#message-confirm").addEventListener("click", () => messageDialog.close("accepted"));
 }
+document.querySelectorAll('.feedback:not(.error)').forEach(feedback => {
+  feedback.hidden = true;icctToast({title:'Success', text:feedback.textContent.trim()});
+});
+try {
+  const queued = sessionStorage.getItem('icct-next-toast');
+  sessionStorage.removeItem('icct-next-toast');
+  if (queued) icctToast(JSON.parse(queued));
+} catch (_) { /* Notifications do not require browser storage. */ }
+document.addEventListener('invalid', event => {
+  event.preventDefault();
+  const field = event.target, panel = field.closest('.protocol-item');
+  if (panel) {panel.hidden = false;panel.open = true;}
+  const label = field.getAttribute('aria-label') || field.closest('.field')?.querySelector('.field-label')?.textContent.trim() || 'Field';
+  field.setAttribute('aria-invalid', 'true');
+  icctInlineMessage({title:'Check your entry', text:`${label}: ${field.validationMessage}`, danger:true, context:field.closest('.field') || field.form});
+}, true);
+document.addEventListener('input', event => {
+  if (!event.target.matches('input, select, textarea')) return;
+  event.target.removeAttribute('aria-invalid');
+  event.target.closest('.field')?.querySelector('.inline-feedback')?.remove();
+});
 
 // UI only: all writes are native authenticated, CSRF-protected POST forms.
 // Inventory views share one saved row set; filtering and pagination never change stored records.
@@ -1292,3 +1302,11 @@ document.querySelectorAll('[data-remove-data-query]').forEach(form => {
   });
 });
 // Re-index method changes are staged by wizard.js; selecting a method never submits or shows save feedback.
+
+// Preserve unsaved panel visibility if a legacy native form returns a validation error.
+document.querySelectorAll('.protocol-item form').forEach(form => form.addEventListener('submit', () => {
+  form.querySelectorAll('[name="draft_protocols[]"]').forEach(input=>input.remove());
+  document.querySelectorAll('.protocol-item:not([hidden])').forEach(panel=>{
+    const input=document.createElement('input');input.type='hidden';input.name='draft_protocols[]';input.value=panel.id.replace('protocol-','');form.append(input);
+  });
+}));

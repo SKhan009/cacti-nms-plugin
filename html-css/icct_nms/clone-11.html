@@ -6,8 +6,8 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Clone Device · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
-        <link rel="stylesheet" href="css/inventory.css?v=c7a8c7dbbfa3" />
-    <script type="text/javascript" nonce="ONcOSgh4iWyrbyY_xTkR7Xav">if (top != self) {top.location.href = self.location.href;}</script></head>
+        <link rel="stylesheet" href="css/inventory.css?v=ad6f08d44b8e" />
+    <script type="text/javascript" nonce="Bq3WnwZq_8e-ueSblQCYHJRi">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -15,6 +15,7 @@
                 <nav class="header-menu-panel" aria-label="Main navigation">
                     <a href="http://127.0.0.1:8080/cacti/index.php">Dashboard</a>
                     <a href="index.html">Inventory</a>
+                    <a href="rack-view.html">Rack View</a>
                 </nav>
             </div>
             <div class="brand">
@@ -164,7 +165,7 @@
                             </div>
             <button class="button" type="button" id="confirm-protocols">Add</button>
         </div>
-                <details class="protocol-item" id="protocol-cdp" data-saved="0" hidden>
+                <details class="protocol-item" id="protocol-cdp" data-saved="0" hidden >
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
                 <span>CDP (Cisco Discovery Protocol)</span>
@@ -180,7 +181,7 @@
                 </form>
             </div>
         </details>
-                <details class="protocol-item" id="protocol-lldp" data-saved="0" hidden>
+                <details class="protocol-item" id="protocol-lldp" data-saved="0" hidden >
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
                 <span>LLDP (Link Layer Discovery Protocol)</span>
@@ -234,7 +235,7 @@
                 </form>
             </div>
         </details>
-        <details class="protocol-item" id="protocol-ssh" data-saved="0" hidden>
+        <details class="protocol-item" id="protocol-ssh" data-saved="0" hidden >
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
                 <span>SSH</span>
@@ -273,7 +274,7 @@
                 </form>
             </div>
         </details>
-        <details class="protocol-item" id="protocol-serial" data-saved="0" hidden>
+        <details class="protocol-item" id="protocol-serial" data-saved="0" hidden >
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
                 <span>Serial Communication</span>
@@ -493,13 +494,13 @@
             <button class="button primary" type="button" id="message-confirm">OK</button>
         </div>
     </dialog>
-    <script src="js/inventory.js?v=9171e6a4f0f5" defer></script>
+    <script src="js/inventory.js?v=622598e9a6a2" defer></script>
     <dialog id="unsaved-dialog" aria-labelledby="unsaved-title">
         <div class="message-heading"><h2 id="unsaved-title">Unsaved changes</h2><button type="button" data-draft-choice="cancel" aria-label="Close unsaved changes">×</button></div>
         <p>Save your changes before leaving this device?</p>
         <div class="message-actions"><button type="button" class="button" data-draft-choice="cancel">Keep editing</button><button type="button" class="button" data-draft-choice="discard">Discard</button><button type="button" class="button primary" data-draft-choice="save">Save</button></div>
     </dialog>
-    <script src="js/wizard.js?v=cae642f49923" defer></script>
+    <script src="js/wizard.js?v=70c7c518f7b2" defer></script>
     <script src="js/preview.js" defer></script>
 </body>
 </html>

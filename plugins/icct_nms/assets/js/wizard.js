@@ -90,6 +90,8 @@
   }
   async function save() {
     if(busy)return false;
+    wizard.querySelectorAll('.inline-feedback.error').forEach(node=>node.remove());
+    wizard.querySelectorAll('[aria-invalid]').forEach(node=>node.removeAttribute('aria-invalid'));
     const changed=dirtyForms().filter(f => f===basic || !f.closest('.protocol-item')?.hidden);
     for(const form of forms){const panel=form.closest('.protocol-item');if(panel && !panel.hidden && protocolInitial.get(panel.id)?.hidden && !changed.includes(form))changed.push(form);}
     if(!id && !changed.includes(basic))changed.unshift(basic);
@@ -97,13 +99,15 @@
     if(active.some(f=>!valid(f)))return false;
     busy=true;wizard.inert=true;
     document.querySelectorAll('[data-wizard-save]').forEach(b=>b.disabled=true);
-    let saved=0;
+    let saved=0, errorContext=basic;
     try {
       if(active.includes(basic)) {
+        errorContext=basic;
         const data=new FormData(basic);data.set('action','basic');await post(data);baseline.set(basic,snapshot(basic));saved++;
       }
       for(const [name,state] of protocolChanges()) {
         const p=document.getElementById(name),enabled=p.querySelector('.protocol-enable input')?.checked;
+        errorContext=p;
         const data=new FormData();data.set('protocol',name.replace('protocol-',''));
         if(p.hidden && !state.hidden)data.set('action','remove_protocol');
         else if(!p.hidden && enabled !== state.enabled){data.set('action','toggle_protocol');data.set('enabled',enabled?'1':'0');}
@@ -111,9 +115,10 @@
         await post(data);protocolInitial.set(name,{hidden:p.hidden,enabled});saved++;
       }
       for(const form of active.filter(f=>f!==basic)) {
+        errorContext=form;
         await post(new FormData(form));baseline.set(form,snapshot(form));saved++;
       }
-      for(const [k,data] of staged) {await post(data);staged.delete(k);saved++;}
+      for(const [k,data] of staged) {errorContext=document.querySelector(k.startsWith('graph:')?'#device-graphs':'#device-data-queries');await post(data);staged.delete(k);saved++;}
       // Hidden/disabled draft edits are discarded after a successful explicit save.
       for(const form of changed)baseline.set(form,snapshot(form));
       for(const [name] of protocolInitial) {
@@ -122,7 +127,13 @@
       if(!basic.dataset.staticPreview)history.replaceState(null,'','device.php?id='+id+location.hash);
       return true;
     } catch(error) {
-      await icctShowMessage({title:'Unable to save changes',text:`${error.message}${saved ? ' Some changes were saved. Remaining edits are still in this draft.' : ' Your edits are still in this draft.'}`,danger:true});
+      const panel=errorContext.closest('.protocol-item');
+      if(panel){panel.hidden=false;panel.open=true;location.hash='protocol';showStep();}
+      else if(errorContext===basic){location.hash='basic';showStep();}
+      else if(errorContext.closest('#diagnostics')){location.hash='diagnostics';showStep();}
+      else if(errorContext.id==='device-graphs'){location.hash='graphs';showStep();}
+      else if(errorContext.id==='device-data-queries'){location.hash='data-query';showStep();}
+      await icctShowMessage({title:'Unable to save changes',text:`${error.message}${saved ? ' Some changes were saved. Remaining edits are still in this draft.' : ' Your edits are still in this draft.'}`,danger:true,context:errorContext});
       return false;
     } finally {busy=false;wizard.inert=false;document.querySelectorAll('[data-wizard-save]').forEach(b=>b.disabled=false);}
   }
@@ -132,13 +143,14 @@
     if(dialog.open)return;
     dialog.showModal();
     const choice=await new Promise(resolve=>dialog.addEventListener('close',()=>resolve(dialog.returnValue),{once:true}));
-    if(choice==='discard' || (choice==='save' && await save())){leaving=true;location.href=url;}
+    if(choice==='discard' || (choice==='save' && await save())){if(choice==='save')icctQueueToast({title:'Saved',text:basic.dataset.staticPreview ? 'Changes saved in this preview. Live device configuration is unchanged.' : 'Device changes saved successfully.'});leaving=true;location.href=url;}
   }
   dialog.querySelectorAll('[data-draft-choice]').forEach(b=>b.addEventListener('click',()=>dialog.close(b.dataset.draftChoice)));
   async function explicitSave(){
     if(!await save())return;
-    await icctShowMessage({title:'Saved',text:basic.dataset.staticPreview ? 'Changes saved in this preview. Live device configuration is unchanged.' : 'Device changes saved successfully.'});
-    if(!basic.dataset.staticPreview){leaving=true;location.href='device.php?id='+id+location.hash;}
+    const message={title:'Saved',text:basic.dataset.staticPreview ? 'Changes saved in this preview. Live device configuration is unchanged.' : 'Device changes saved successfully.'};
+    if(basic.dataset.staticPreview)icctToast(message);
+    else {icctQueueToast(message);leaving=true;location.reload();}
   }
   document.querySelectorAll('[data-wizard-save]').forEach(b=>b.addEventListener('click',explicitSave));
   document.addEventListener('click',event=>{
@@ -167,9 +179,9 @@
     const association = action?.includes('graph_template') ? 'graph' : 'query';
     const itemId=data.get('graph_template_id') || data.get('snmp_query_id');
     if(['reload_data_query','verbose_data_query'].includes(action)) {
-      if(!id || dirty()){icctShowMessage({title:'Save changes first',text:'Save the device changes before running a data query.'});return;}
+      if(!id || dirty()){icctShowMessage({title:'Save changes first',text:'Save the device changes before running a data query.',inline:true,context:document.querySelector('#device-data-queries')});return;}
       busy=true;wizard.inert=true;
-      post(data).then(payload=>icctShowMessage({title:action==='verbose_data_query'?'Data query details':'Data query reloaded',text:payload.message})).then(()=>{leaving=true;location.href='device.php?id='+id+'#data-query';}).catch(error=>icctShowMessage({title:'Unable to run data query',text:error.message,danger:true})).finally(()=>{busy=false;wizard.inert=false;});return;
+      post(data).then(payload=>{if(action==='verbose_data_query')icctInlineMessage({title:'Data query details',text:payload.message,context:document.querySelector('#device-data-queries')});else {icctQueueToast({title:'Data query reloaded',text:payload.message});leaving=true;location.reload();}}).catch(error=>icctShowMessage({title:'Unable to run data query',text:error.message,danger:true,context:document.querySelector('#device-data-queries')})).finally(()=>{busy=false;wizard.inert=false;});return;
     }
     if(action === 'change_data_query' && data.get('reindex_method') === form.querySelector('input[checked]')?.value)staged.delete(association+':'+itemId);
     else staged.set(association+':'+itemId,data);

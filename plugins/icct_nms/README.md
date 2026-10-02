@@ -80,7 +80,7 @@ Step 4 shows native `host_graph` associations as a template/status table, withou
 
 Graph associations expand inline as accordions. Only the time X axis, saved Y axis label, and saved graph minimum/maximum limits appear as read-only fields. The ordered graph items follow the native Graph Template Items columns, including source, type, CF, GPrint, CDEF, VDEF, alpha and color. Allowed graph instances are filtered through Cacti graph authorization before details are loaded; associations without a graph show template defaults. No graph images are rendered.
 
-Step 5 shows native data query associations and cached item/row counts. Its searchable Add Data Query selector is above the list. Re-index methods and add/change/remove/reload use the native Cacti query APIs with management permission, device access and CSRF validation. Verbose output appears in the shared popup. Removal retains existing graphs and data sources. Graphs Next opens Data Query; Data Query Previous returns to Graphs.
+Step 5 shows native data query associations and cached item/row counts. Its searchable Add Data Query selector is above the list. Re-index methods and add/change/remove/reload use the native Cacti query APIs with management permission, device access and CSRF validation. Verbose output appears inline in the Data Query section. Removal retains existing graphs and data sources. Graphs Next opens Data Query; Data Query Previous returns to Graphs.
 
 Serial saves keep connection preset IDs separate from equipment reading profile IDs. Existing connections can be reconfigured without an equipment profile; their polling interval is retained in device metadata. An existing equipment assignment retains its profile and receives the updated interval. Saving connection settings keeps native collector/address checks and revision validation.
 
@@ -95,3 +95,5 @@ Serial dropdowns start at None without a selected connection. Dependent fields a
 ## Unsaved device wizard changes
 
 Add and Edit Device use one in-page draft across Basic Information, Protocol Config, Diagnostics, Graphs, and Data Query. Next, Previous, and step links do not submit settings. Save validates and writes pending changes. Cancel, Done, and other navigation prompt with Save, Discard, or Keep editing only when the draft differs from saved values. Closing or refreshing the browser uses its native unsaved-change warning; cancel that warning to return and save. Draft credentials stay in page memory, never browser storage. A failed save retains remaining edits and reports if earlier actions succeeded.
+
+Protocol save errors keep the selected accordion open and preserve the in-page draft. Field validation appears beside the field; server errors appear within the affected form. Shared success notifications use dismissible toasts, including after save redirects. Only confirmation messages use popups; diagnostic and discovery dialogs remain interactive tool views.

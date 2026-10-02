@@ -2,6 +2,8 @@
 /**
  * Separate native POST forms for discovery, SNMP, SSH, serial assignments and diagnostics.
  */
+$protocolDraft = $protocolDraft ?? [];
+$failedProtocol = $failedProtocol ?? '';
 ?>
 <?php if (empty($wizard)): ?>
 <div class="titlebar">
@@ -111,7 +113,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
             $isSaved = in_array($protocolKey, $savedMethods, true); ?>
         <details class="protocol-item" id="protocol-<?= $protocolKey ?>" data-saved="<?= $isSaved
     ? "1"
-    : "0" ?>" <?= $isSaved ? "" : "hidden" ?>>
+    : "0" ?>" <?= $isSaved || in_array($protocolKey, $protocolDraft, true) ? "" : "hidden" ?> <?= $failedProtocol === $protocolKey ? "open" : "" ?>>
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
                 <span><?= $protocolLabel ?></span>
@@ -165,8 +167,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
         ] > 0
             ? "1"
             : "0" ?>" <?= (int) $host["snmp_version"] > 0
-    ? "open"
-    : "hidden" ?>>
+    || in_array('snmp', $protocolDraft, true) ? "open" : "hidden" ?>>
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
                 <span>SNMP (Simple Network Management Protocol)</span>
@@ -188,7 +189,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
         </details>
         <details class="protocol-item" id="protocol-ssh" data-saved="<?= $ssh
             ? "1"
-            : "0" ?>" <?= $ssh ? "" : "hidden" ?>>
+            : "0" ?>" <?= $ssh || in_array("ssh", $protocolDraft, true) ? "" : "hidden" ?> <?= $failedProtocol === "ssh" ? "open" : "" ?>>
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
                 <span>SSH</span>
@@ -303,7 +304,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
         </details>
         <details class="protocol-item" id="protocol-serial" data-saved="<?= $serial
             ? "1"
-            : "0" ?>" <?= $serial ? "" : "hidden" ?>>
+            : "0" ?>" <?= $serial || in_array("serial", $protocolDraft, true) ? "" : "hidden" ?> <?= $failedProtocol === "serial" ? "open" : "" ?>>
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
                 <span>Serial Communication</span>
@@ -331,7 +332,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
             ]
             as $key => $label
         ): ?>
-        <details class="protocol-item" id="protocol-<?= $key ?>" data-saved="0" hidden>
+        <details class="protocol-item" id="protocol-<?= $key ?>" data-saved="0" <?= in_array($key, $protocolDraft, true) ? "" : "hidden" ?>>
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
                 <span><?= $label ?></span>
