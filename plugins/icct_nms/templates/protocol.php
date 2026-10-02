@@ -3,6 +3,7 @@
  * Separate native POST forms for discovery, SNMP, SSH, serial assignments and diagnostics.
  */
 ?>
+<?php if (empty($wizard)): ?>
 <div class="titlebar">
     <h1><?= icct_nms_h($host["description"]) ?></h1>
     <a class="button" href="inventory.php">Done</a>
@@ -42,6 +43,7 @@
         <?php endforeach; ?>
     </ol>
 </nav>
+<?php endif; ?>
 <?php
 $protocolStates = [];
 foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
@@ -490,10 +492,12 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
     </section>
     <?php require __DIR__ . "/graphs.php"; ?>
     <?php require __DIR__ . "/data_queries.php"; ?>
+    <?php if (empty($wizard)): ?>
     <footer class="form-footer">
         <a class="button" id="protocol-previous" href="device.php?id=<?= $id ?>">Previous ←</a>
         <a class="button" id="protocol-next" href="#diagnostics">Next →</a>
     </footer>
+    <?php endif; ?>
 </div>
 <script type="application/json" id="serial-data">
     <?= json_encode(

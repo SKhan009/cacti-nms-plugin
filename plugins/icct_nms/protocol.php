@@ -41,6 +41,9 @@ try {
         icct_nms_redirect("inventory.php");
     }
     $id = icct_nms_id($_GET["id"] ?? 0);
+    if ($_SERVER["REQUEST_METHOD"] === "GET") {
+        icct_nms_redirect("device.php?id=" . $id . "&step=protocol");
+    }
     $host = icct_nms_device($id);
     icct_backend_require_management(3);
     if ($_SERVER["REQUEST_METHOD"] === "POST") {

@@ -13,10 +13,11 @@ Open http://localhost:8765/ or `index.html` directly. This folder contains stati
 - `css/inventory.css`: separate responsive stylesheet.
 - `images/`: supplied DRDO and Bharat Electronics SVG header logos.
 - `js/inventory.js`: table, navigation and form display behavior.
+- `js/wizard.js`: local wizard step navigation and unsaved-change handling.
 - `js/preview.js`: static-preview form handling and HTML navigation.
 - `inventory.csv`: saved inventory export from the VM.
 
-HTML pages contain no PHP or authentication tokens. Password input values are blank. Forms are preview-only and never write device settings; their submit buttons explain that saving requires the deployed Cacti plugin. Graph and account links open the VM. The production PHP plugin remains in `plugins/icct_nms`.
+HTML pages contain no PHP or authentication tokens. Password input values are blank. Forms are preview-only and never write device settings. Next and Previous retain edits in page memory, and Save accepts the preview draft with a message that live configuration is unchanged. Cancel and Done ask to save or discard unsaved edits. Graph and account links open the VM. The production PHP plugin remains in `plugins/icct_nms`.
 
 Serve this folder with:
 

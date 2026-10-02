@@ -1,5 +1,5 @@
 ID,"Device Name","Short Name",Segment,"Device Type",Status,"Manual Serial Number","Manual MAC Address",Hostname/IP,Rack,"Start Unit",Height,Uptime,"Polling Interval (sec)","Availability (%)"
-2,"Cacti RHEL 9 Local",CR9L,Computers,Server,Up,,,127.0.0.1,,,,"01d 11h 42m 07s",300,100.00000
+2,"Cacti RHEL 9 Local",CR9L,Computers,Server,Up,,,127.0.0.1,,,,"01d 14h 42m 07s",300,100.00000
 1,"Local Linux Machine",,Computers,,Up,,,localhost,,,,"Not reported",300,100.00000
 14,"NMS Core Switch (Simulated)",,Network,Switch,Up,SIM-CORE-001,02:00:00:00:ff:01,127.0.0.1,,,,"00d 00h 20m 34s",300,100.00000
 13,"NMS Final QA offline",,,,Up,,,127.0.0.1,,,,"00d 01h 46m 22s",300,100.00000

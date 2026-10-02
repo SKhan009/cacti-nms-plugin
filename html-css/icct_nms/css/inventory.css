@@ -2265,3 +2265,7 @@ body:has(#diagnostics:not([hidden])) .protocol-form {
 #message-text {white-space:pre-line;max-height:55vh;overflow:auto;}
 
 .data-query-table {min-width:980px;}
+
+/* Wizard drafts never expose hidden panels or controls. */
+#device-wizard [hidden] { display: none !important; }
+.wizard-pending { padding: 12px; background: #f4f4f4; }

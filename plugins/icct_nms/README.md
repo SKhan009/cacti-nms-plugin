@@ -91,3 +91,7 @@ Basic Information shows device fields only. Selecting a device template does not
 Serial connection selection appears in step 2 after adding Serial Communication. Selecting a saved TCP gateway automatically fills its gateway hostname/IP address and port. Physical controls and the gateway explanation follow the selected connection transport.
 
 Serial dropdowns start at None without a selected connection. Dependent fields and Save remain disabled until a saved connection is selected. Direct physical settings require an RS-232 or RS-485 selection; RS-485 excludes RTS/CTS. TCP gateway physical fields show None and remain disabled, while the stored connection parameters are retained. Edit forms load applicable saved settings from the selected connection.
+
+## Unsaved device wizard changes
+
+Add and Edit Device use one in-page draft across Basic Information, Protocol Config, Diagnostics, Graphs, and Data Query. Next, Previous, and step links do not submit settings. Save validates and writes pending changes. Cancel, Done, and other navigation prompt with Save, Discard, or Keep editing only when the draft differs from saved values. Closing or refreshing the browser uses its native unsaved-change warning; cancel that warning to return and save. Draft credentials stay in page memory, never browser storage. A failed save retains remaining edits and reports if earlier actions succeeded.

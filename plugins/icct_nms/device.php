@@ -9,6 +9,10 @@ require_once __DIR__ . "/includes/bootstrap.php";
 require_once __DIR__ . "/includes/inventory.php";
 require_once __DIR__ . "/includes/forms.php";
 require_once __DIR__ . "/includes/device_service.php";
+require_once __DIR__ . "/includes/graph_service.php";
+require_once __DIR__ . "/includes/data_query_service.php";
+require_once __DIR__ . "/includes/protocol_service.php";
+require_once __DIR__ . "/includes/serial_service.php";
 $error = "";
 $notice = "";
 try {
@@ -119,6 +123,8 @@ try {
             }
         }
     }
+    $notice = $_SESSION["icct_nms_notice"] ?? "";
+    unset($_SESSION["icct_nms_notice"]);
     $title = $readonly
         ? "Device Details"
         : ($id
@@ -127,7 +133,18 @@ try {
                 ? "Clone Device"
                 : "Add Device"));
     require __DIR__ . "/templates/header.php";
+    $wizard = !$readonly;
+    if ($wizard) {
+        $host = $old;
+        echo '<div id="device-wizard" data-device-id="' . (int)$id . '" data-initial-step="' . icct_nms_h($_GET['step'] ?? 'basic') . '">';
+    }
     require __DIR__ . "/templates/device.php";
+    if ($wizard) {
+        require __DIR__ . "/includes/wizard_view.php";
+        echo '<div id="wizard-panels" hidden>';
+        require __DIR__ . "/templates/protocol.php";
+        echo '</div><footer class="form-footer wizard-footer"><button type="button" class="button" id="wizard-previous">Previous ←</button><button type="button" class="button" id="wizard-next">Next →</button></footer></div>';
+    }
     require __DIR__ . "/templates/footer.php";
 } catch (Throwable $e) {
     icct_nms_failure($e);

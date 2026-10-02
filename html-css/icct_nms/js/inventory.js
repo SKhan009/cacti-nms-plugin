@@ -327,7 +327,7 @@ document.querySelectorAll(".delete-protocol").forEach((button) => {
       accept: "Remove",
     });
     if (!accepted) return;
-    if (item.dataset.saved !== "1") {
+    if (document.querySelector("#device-wizard") || item.dataset.saved !== "1") {
       item.hidden = true;
       return;
     }
@@ -496,7 +496,7 @@ if (serialData) {
 
 // Use the URL fragment to switch between protocol and diagnostic wizard steps.
 const protocolWorkspace = document.querySelector("#protocol-workspace");
-if (protocolWorkspace) {
+if (protocolWorkspace && !document.querySelector("#device-wizard")) {
   function showProtocolStep() {
     const diagnostics = location.hash === "#diagnostics";
     const graphs = location.hash === "#graphs";
@@ -1037,7 +1037,7 @@ if (protocolStatesNode) {
     label.addEventListener("click", (event) => event.stopPropagation());
     checkbox.addEventListener("change", async () => {
       const next = checkbox.checked;
-      if (section.dataset.saved !== "1") {
+      if (document.querySelector("#device-wizard") || section.dataset.saved !== "1") {
         fields.disabled = !next;
         section.classList.toggle("protocol-disabled", !next);
         // Unsaved panels may be enabled locally, but cannot create a persisted disabled assignment.

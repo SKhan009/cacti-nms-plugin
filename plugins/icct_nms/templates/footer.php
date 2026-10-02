@@ -21,5 +21,13 @@
         0,
         12,
     ) ?>" defer></script>
+<?php if (!empty($wizard)): ?>
+    <dialog id="unsaved-dialog" aria-labelledby="unsaved-title">
+        <div class="message-heading"><h2 id="unsaved-title">Unsaved changes</h2><button type="button" data-draft-choice="cancel" aria-label="Close unsaved changes">×</button></div>
+        <p>Save your changes before leaving this device?</p>
+        <div class="message-actions"><button type="button" class="button" data-draft-choice="cancel">Keep editing</button><button type="button" class="button" data-draft-choice="discard">Discard</button><button type="button" class="button primary" data-draft-choice="save">Save</button></div>
+    </dialog>
+    <script src="assets/js/wizard.js?v=<?= substr(hash_file('sha256', __DIR__.'/../assets/js/wizard.js'),0,12) ?>" defer></script>
+<?php endif; ?>
 </body>
 </html>

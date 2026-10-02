@@ -12,9 +12,9 @@
         <div class="title-actions">
             <a class="button" href="inventory.php">Cancel</a>
             <?php if (!$readonly): ?>
-            <button class="button primary"><?= !empty($cloneId)
+            <button class="button primary" type="button" data-wizard-save><?= !empty($cloneId)
                 ? "Create Clone"
-                : "Save &amp; Next" ?></button>
+                : "Save" ?></button>
             <?php endif; ?>
         </div>
     </div>
@@ -31,7 +31,7 @@
                 </span>
             </li>
             <li>
-                <a href="<?= $id ? "protocol.php?id=" . $id : "#" ?>">
+                <a href="<?= $id ? "protocol.php?id=" . $id : "#protocol" ?>">
                     Protocol Config
                     <small>2/7</small>
                 </a>
@@ -39,15 +39,15 @@
             <li>
                 <a href="<?= $id
                     ? "protocol.php?id=" . $id . "#diagnostics"
-                    : "#" ?>">
+                    : "#diagnostics" ?>">
                     Device Diagnostics
                     <small>3/7</small>
                 </a>
             </li>
             <li <?= $id ? "" : 'aria-disabled="true"' ?>><?php if (
     $id
-): ?><a href="protocol.php?id=<?= $id ?>#graphs">Graphs<small>4/7</small></a><?php else: ?><span>Graphs<small>4/7</small></span><?php endif; ?></li>
-            <li <?= $id ? "" : 'aria-disabled="true"' ?>><?php if ($id): ?><a href="protocol.php?id=<?= $id ?>#data-query">Data Query<small>5/7</small></a><?php else: ?><span>Data Query<small>5/7</small></span><?php endif; ?></li>
+): ?><a href="protocol.php?id=<?= $id ?>#graphs">Graphs<small>4/7</small></a><?php else: ?><a href="#graphs">Graphs<small>4/7</small></a><?php endif; ?></li>
+            <li <?= $id ? "" : 'aria-disabled="true"' ?>><?php if ($id): ?><a href="protocol.php?id=<?= $id ?>#data-query">Data Query<small>5/7</small></a><?php else: ?><a href="#data-query">Data Query<small>5/7</small></a><?php endif; ?></li>
             <?php foreach (
                 ["Port Config", "FCAPS"]
                 as $i => $label
@@ -229,7 +229,7 @@
             ) ?>"><?= icct_nms_h($values["notes"]) ?></textarea>
         </label>
     </fieldset>
-    <?php if (!$readonly): ?>
+    <?php if (!$readonly && empty($wizard)): ?>
     <footer class="form-footer">
         <!-- Basic Information is the first step; Next validates and saves before advancing. -->
         <button class="button previous" type="button" disabled aria-label="Previous step">Previous ←</button>
