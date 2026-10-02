@@ -1251,4 +1251,4 @@ document.querySelectorAll('[data-remove-data-query]').forEach(form => {
     } else HTMLFormElement.prototype.submit.call(form);
   });
 });
-document.querySelectorAll('[data-query-method]').forEach(input => input.addEventListener('change', () => input.form.requestSubmit()));
+// Re-index method changes are staged by wizard.js; selecting a method never submits or shows save feedback.
