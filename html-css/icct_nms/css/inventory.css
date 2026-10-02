@@ -1032,14 +1032,27 @@ dialog p {
   }
 }
 
+#protocol-workspace {
+  position: relative;
+}
 .protocol-picker {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  transform: translateX(-50%);
   width: 290px;
   max-width: 100%;
-  margin: -16px auto 20px;
-  position: relative;
-  z-index: 4;
+  max-height: max(140px, min(440px, calc(100dvh - 340px)));
+  margin: 0;
+  z-index: 20;
+}
+.protocol-picker:not([hidden]) {
+  display: flex;
+  flex-direction: column;
 }
 .protocol-picker #protocol-options {
+  min-height: 0;
+  overflow-y: auto;
   background: #f4f4f4;
   box-shadow: 0 2px 5px #0003;
   padding: 0 16px;
@@ -1059,6 +1072,7 @@ dialog p {
   background: #e8e8e8;
 }
 .protocol-picker > .button {
+  flex-shrink: 0;
   justify-content: center;
   text-align: center;
   width: 100%;
