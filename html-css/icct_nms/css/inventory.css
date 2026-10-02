@@ -1044,7 +1044,15 @@ dialog p {
   max-width: 100%;
   max-height: max(140px, min(440px, calc(100dvh - 340px)));
   margin: 0;
-  z-index: 20;
+  z-index: 101;
+}
+.protocol-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgb(0 0 0 / 8%);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
 }
 .protocol-picker:not([hidden]) {
   display: flex;

@@ -340,9 +340,37 @@ document.querySelectorAll(".delete-protocol").forEach((button) => {
 const picker = document.querySelector("#protocol-picker");
 if (picker) {
   const trigger = document.querySelector("#add-protocol");
+  const backdrop = document.createElement("div");
+  backdrop.className = "protocol-picker-backdrop";
+  backdrop.hidden = true;
+  backdrop.setAttribute("aria-hidden", "true");
+  document.body.append(backdrop);
+  trigger.setAttribute("aria-controls", picker.id);
+  picker.setAttribute("role", "dialog");
+  picker.setAttribute("aria-label", "Select protocols");
+  picker.setAttribute("aria-modal", "true");
+  const closePicker = () => {
+    picker.hidden = true;
+    backdrop.hidden = true;
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.focus();
+  };
   trigger.addEventListener("click", () => {
     picker.hidden = !picker.hidden;
+    backdrop.hidden = picker.hidden;
     trigger.setAttribute("aria-expanded", String(!picker.hidden));
+    if (!picker.hidden) picker.querySelector("input").focus();
+  });
+  backdrop.addEventListener("click", closePicker);
+  window.addEventListener("hashchange", () => { if (!picker.hidden) closePicker(); });
+  picker.addEventListener("keydown", event => {
+    if (event.key === "Escape") { event.preventDefault(); closePicker(); }
+    if (event.key === "Tab") {
+      const controls = [...picker.querySelectorAll("input:not(:disabled), button:not(:disabled)")];
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
   });
   const options = Array.from(picker.querySelectorAll("[data-protocol-target]"));
   const confirm = picker.querySelector("#confirm-protocols");
@@ -370,8 +398,7 @@ if (picker) {
         target.hidden = false;
         target.open = true;
       });
-    picker.hidden = true;
-    trigger.setAttribute("aria-expanded", "false");
+    closePicker();
   });
   updatePicker();
 }
