@@ -705,7 +705,11 @@ document
       templateSelect.selectedOptions[0]?.textContent || "None";
     const panel = document.createElement("div");
     panel.className = "template-search-dropdown";
-    panel.setAttribute("popover", "manual");
+    // Older RHEL browsers may not implement the Popover API or its CSS selector.
+    let usePopover = typeof panel.showPopover === "function" && typeof panel.hidePopover === "function";
+    let templatesOpen = false;
+    panel.hidden = true;
+    if (usePopover) panel.setAttribute("popover", "manual");
     const search = document.createElement("input");
     search.type = "search";
     search.placeholder = `Search ${pluralLabel.toLowerCase()}`;
@@ -725,8 +729,11 @@ document
     wrap.hidden = true;
     field.append(trigger);
     function closeTemplates(restoreFocus = false) {
-      if (!panel.matches(":popover-open")) return;
-      panel.hidePopover();
+      if (!templatesOpen) return;
+      if (usePopover) panel.hidePopover();
+      templatesOpen = false;
+      panel.classList.remove("is-open");
+      panel.hidden = true;
       trigger.setAttribute("aria-expanded", "false");
       if (restoreFocus) trigger.focus();
     }
@@ -756,7 +763,7 @@ document
     }
     trigger.addEventListener("click", (event) => {
       event.preventDefault();
-      if (panel.matches(":popover-open")) {
+      if (templatesOpen) {
         closeTemplates();
         return;
       }
@@ -772,7 +779,13 @@ document
       panel.style.left = `${Math.max(12, Math.min(rect.left, innerWidth - width - 12))}px`;
       panel.style.maxHeight = `${height}px`;
       panel.style.top = `${innerHeight - rect.bottom >= height + 8 ? rect.bottom + 4 : Math.max(8, rect.top - height - 4)}px`;
-      panel.showPopover();
+      panel.hidden = false;
+      panel.classList.add("is-open");
+      if (usePopover) {
+        try { panel.showPopover(); }
+        catch (_) { usePopover = false; panel.removeAttribute("popover"); }
+      }
+      templatesOpen = true;
       trigger.setAttribute("aria-expanded", "true");
       search.focus();
     });

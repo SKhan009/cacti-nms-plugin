@@ -1821,6 +1821,7 @@ body:has(#inventory-table) .table-scroll {
   transform: rotate(45deg);
 }
 .template-search-dropdown {
+  z-index: 200;
   position: fixed;
   inset: auto;
   margin: 0;
@@ -1831,7 +1832,7 @@ body:has(#inventory-table) .table-scroll {
   overflow: hidden;
   color: var(--text);
 }
-.template-search-dropdown:popover-open {
+.template-search-dropdown.is-open {
   display: flex;
   flex-direction: column;
 }
