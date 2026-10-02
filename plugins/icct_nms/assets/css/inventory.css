@@ -101,37 +101,14 @@ svg {
   height: 30px;
   border-right: 1px solid #dedede;
 }
-.brand-seal {
-  display: grid;
-  place-items: center;
-  border: 3px double #28628c;
-  border-radius: 50%;
-  height: 29px;
-  width: 29px;
-  color: #406b90;
-  font-size: 25px;
-  margin-right: 9px;
+.brand-logo {
+  display: block;
+  object-fit: contain;
+  flex-shrink: 0;
+  height: 34px;
 }
-.brand-mark {
-  font-size: 31px;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -6px;
-  color: #43acce;
-  line-height: 1;
-  padding-right: 6px;
-}
-.brand-name {
-  display: flex;
-  flex-direction: column;
-  font-size: 9px;
-  font-style: italic;
-  line-height: 1.15;
-  white-space: nowrap;
-}
-.brand-name strong {
-  font-size: 8px;
-}
+.brand-logo-drdo { width: 34px; margin-right: 9px; }
+.brand-logo-bel { width: 128px; }
 .station {
   display: flex;
   flex-direction: column;
@@ -512,9 +489,6 @@ h1 {
   .brand {
     padding: 0 4px;
   }
-  .brand-seal {
-    display: none;
-  }
   .system-metrics span {
     font-size: 10px;
     padding: 5px;
@@ -560,9 +534,6 @@ h1 {
   .profile .caret {
     margin-left: 6px;
   }
-  .brand-name {
-    display: none;
-  }
   .form-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -584,9 +555,10 @@ h1 {
   .topbar {
     gap: 12px;
   }
-  .brand {
-    display: none;
-  }
+  .brand { padding: 0 5px 0 0; gap: 4px; }
+  .brand-logo { height: 26px; }
+  .brand-logo-drdo { width: 26px; margin-right: 0; }
+  .brand-logo-bel { width: 98px; }
   .station {
     min-width: 0;
   }

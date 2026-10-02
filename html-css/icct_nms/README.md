@@ -11,6 +11,7 @@ Open http://localhost:8765/ or `index.html` directly. This folder contains stati
 - `device-<id>.html`: saved Basic Information for each exported device.
 - `protocol-<id>.html`: saved protocol, diagnostic and Graphs steps for each device.
 - `css/inventory.css`: separate responsive stylesheet.
+- `images/`: supplied DRDO and Bharat Electronics SVG header logos.
 - `js/inventory.js`: table, navigation and form display behavior.
 - `js/preview.js`: static-preview form handling and HTML navigation.
 - `inventory.csv`: saved inventory export from the VM.

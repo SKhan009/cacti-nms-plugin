@@ -30,12 +30,8 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
                 </nav>
             </div>
             <div class="brand">
-                <span class="brand-seal" aria-hidden="true">✺</span>
-                <span class="brand-mark">BE</span>
-                <span class="brand-name">
-                    <span lang="hi">भारत इलेक्ट्रॉनिक्स</span>
-                    <strong>BHARAT ELECTRONICS</strong>
-                </span>
+                <img class="brand-logo brand-logo-drdo" src="assets/images/drdo-logo.svg" alt="DRDO" width="34" height="34">
+                <img class="brand-logo brand-logo-bel" src="assets/images/bharat-electronics-logo.svg" alt="Bharat Electronics" width="128" height="34">
             </div>
             <div class="station">
                 <strong>ICCT NMS</strong>
