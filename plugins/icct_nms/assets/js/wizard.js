@@ -189,7 +189,11 @@
     else if(action?.startsWith('add_')) {
       const select=form.querySelector('select');
       const entry=document.createElement('p');entry.className='wizard-pending';entry.textContent=select.selectedOptions[0].textContent+' — Added to draft';
-      form.after(entry);
+      if(action==='add_graph_template') {
+        document.querySelector('.graph-accordion-list').append(entry);
+        document.querySelector('#graph-add-panel').hidden=true;
+        document.querySelector('.add-graph-button').setAttribute('aria-expanded','false');
+      } else form.after(entry);
       select.value='';select.dispatchEvent(new Event('change',{bubbles:true}));
     }
   },true);

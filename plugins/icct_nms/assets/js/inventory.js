@@ -1310,3 +1310,17 @@ document.querySelectorAll('.protocol-item form').forEach(form => form.addEventLi
     const input=document.createElement('input');input.type='hidden';input.name='draft_protocols[]';input.value=panel.id.replace('protocol-','');form.append(input);
   });
 }));
+
+// Graph template selection floats above the existing accordion list.
+const graphAddButton = document.querySelector('.add-graph-button');
+const graphAddPanel = document.querySelector('#graph-add-panel');
+if (graphAddButton && graphAddPanel) {
+  const closeGraphAdd = () => { graphAddPanel.hidden = true; graphAddButton.setAttribute('aria-expanded', 'false'); };
+  graphAddButton.addEventListener('click', () => {
+    graphAddPanel.hidden = !graphAddPanel.hidden;
+    graphAddButton.setAttribute('aria-expanded', String(!graphAddPanel.hidden));
+  });
+  document.addEventListener('click', event => { if (!event.target.closest('.graph-add-control, .template-search-dropdown')) closeGraphAdd(); });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape' && !graphAddPanel.hidden) { closeGraphAdd(); graphAddButton.focus(); } });
+  window.addEventListener('hashchange', closeGraphAdd);
+}

@@ -16,7 +16,7 @@ try {
     if ($templateId && !db_fetch_cell_prepared('SELECT id FROM host_template WHERE id=?', [$templateId])) throw new InvalidArgumentException('Device template not found.');
     $id = 0;
     $host = icct_nms_defaults();
-    $graphAssociations = db_fetch_assoc_prepared('SELECT gt.id,gt.name FROM host_template_graph htg JOIN graph_templates gt ON gt.id=htg.graph_template_id WHERE htg.host_template_id=? ORDER BY gt.name', [$templateId]);
+    $graphAssociations = db_fetch_assoc_prepared('SELECT gt.id,gt.name,ht.name AS device_template_name FROM host_template_graph htg JOIN graph_templates gt ON gt.id=htg.graph_template_id JOIN host_template ht ON ht.id=htg.host_template_id WHERE htg.host_template_id=? ORDER BY gt.name', [$templateId]);
     foreach ($graphAssociations as &$template) {
         $template['graphs'] = [];
         $template['details'] = [];

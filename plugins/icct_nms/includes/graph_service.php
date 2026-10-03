@@ -33,7 +33,7 @@ function icct_nms_graph_associations($id)
 {
     $allowed = icct_nms_device_graphs($id);
     $templates = db_fetch_assoc_prepared(
-        "SELECT gt.id,gt.name FROM host_graph hg JOIN graph_templates gt ON gt.id=hg.graph_template_id WHERE hg.host_id=? ORDER BY gt.name",
+        "SELECT gt.id,gt.name,COALESCE(ht.name,'') AS device_template_name FROM host_graph hg JOIN graph_templates gt ON gt.id=hg.graph_template_id JOIN host h ON h.id=hg.host_id LEFT JOIN host_template_graph htg ON htg.host_template_id=h.host_template_id AND htg.graph_template_id=gt.id LEFT JOIN host_template ht ON ht.id=htg.host_template_id WHERE hg.host_id=? ORDER BY gt.name",
         [$id],
     );
     $graphTemplateIds = array_column(db_fetch_assoc_prepared("SELECT id,graph_template_id FROM graph_local WHERE host_id=?", [$id]), "graph_template_id", "id");
