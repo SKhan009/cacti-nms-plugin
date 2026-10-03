@@ -15,6 +15,14 @@ function icct_nms_save_rack_preset($input) {
         $profiles=icct_nms_rack_presets();$id=$input['rack_profile_id'] ?? '';
         if(!is_string($id)||($id!==''&&!preg_match('/^[a-f0-9]{16}$/D',$id)))throw new InvalidArgumentException('Invalid rack configuration.');
         if($id!==''&&!isset($profiles[$id]))throw new InvalidArgumentException('This rack configuration no longer exists.');
+        if(($input['action'] ?? '')==='delete_rack_profile') {
+            if($id==='')throw new InvalidArgumentException('Choose a saved rack configuration.');
+            if(db_fetch_cell_prepared("SELECT n.id FROM plugin_icct_nms_rack_nodes n JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT('node_rack_profile_',n.id) WHERE m.meta_value=? LIMIT 1",[$id]))throw new InvalidArgumentException('This rack configuration is assigned to a node. Select another configuration on that node before deleting it.');
+            unset($profiles[$id]);
+            icct_backend_category_execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',['rack_profiles',json_encode($profiles,JSON_THROW_ON_ERROR)]);
+            icct_backend_category_execute('COMMIT');
+            return 'Rack configuration deleted.';
+        }
         $name=icct_backend_classification_text($input['rack_name'] ?? '',150);
         if($name==='')throw new InvalidArgumentException('Enter a rack name.');
         $count=icct_backend_topology_integer($input['rack_count'] ?? '',1,100,'Number of racks');

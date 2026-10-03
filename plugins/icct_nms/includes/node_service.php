@@ -5,7 +5,8 @@ function icct_nms_nodes() {
 }
 function icct_nms_save_node($input) {
     icct_backend_require_management(3);
-    $id=icct_nms_id($input['node_id'] ?? 0);
+    $rawId=$input['node_id'] ?? 0;
+    $id=icct_backend_topology_integer($rawId===''?0:$rawId,0,16777215,'Node ID');
     $lock='icct_backend_racks_'.substr(hash('sha256',(string)db_fetch_cell('SELECT DATABASE()')),0,32);
     if((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',[$lock])!==1)throw new RuntimeException('Rack configuration is busy. Retry shortly.');
     icct_backend_category_execute('START TRANSACTION');

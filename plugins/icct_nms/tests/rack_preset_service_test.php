@@ -3,7 +3,7 @@ require __DIR__.'/../includes/rack_preset_service.php';
 $profiles=[];$calls=[];$assignedNodes=[];$transactionCommands=[];
 function db_fetch_cell($sql){return 'test';}
 function icct_backend_require_management($realm){if($realm!==3)throw new Exception('Wrong realm');}
-function db_fetch_cell_prepared($sql,$args){global $profiles;if(str_contains($sql,'GET_LOCK')||str_contains($sql,'RELEASE_LOCK'))return 1;return $profiles?json_encode($profiles):null;}
+function db_fetch_cell_prepared($sql,$args){global $profiles,$assignedNodes;if(str_contains($sql,'SELECT n.id'))return $assignedNodes?5:0;if(str_contains($sql,'GET_LOCK')||str_contains($sql,'RELEASE_LOCK'))return 1;return $profiles?json_encode($profiles):null;}
 function icct_backend_classification_text($value,$limit){if(!is_string($value)||strlen($value)>$limit)throw new InvalidArgumentException('Invalid name');return trim($value);}
 function icct_backend_topology_integer($value,$min,$max,$label){if(!is_scalar($value)||!preg_match('/^[0-9]+$/D',(string)$value)||$value<$min||$value>$max)throw new InvalidArgumentException('Invalid integer');return (int)$value;}
 function icct_backend_category_execute($sql,$args=[]){global $profiles,$calls,$transactionCommands;if(!$args){$transactionCommands[]=$sql;return;}if($args[0]==='rack_profiles')$profiles=json_decode($args[1],true);else $calls[]=$args;}
@@ -26,3 +26,9 @@ if($calls[0][2]['node_kind']!=='vehicle'||$calls[1][2]['unit_count']!==48)throw 
 expectReject(array_replace($input,['rack_profile_id'=>$id,'unit_count'=>'10']));
 if(end($transactionCommands)!=='ROLLBACK')throw new Exception('Unsafe capacity update not rolled back');
 echo "Assigned node updates preserve kind and roll back unsafe capacity changes.\n";
+
+expectReject(['action'=>'delete_rack_profile','rack_profile_id'=>$id]);
+$assignedNodes=[];
+if(icct_nms_save_rack_preset(['action'=>'delete_rack_profile','rack_profile_id'=>$id])!=='Rack configuration deleted.'||isset($profiles[$id]))throw new Exception('Unused rack configuration not deleted');
+expectReject(['action'=>'delete_rack_profile','rack_profile_id'=>'']);
+echo "Rack deletion protects assigned nodes and removes unused configurations.\n";

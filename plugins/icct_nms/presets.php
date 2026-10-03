@@ -15,7 +15,7 @@ require_once __DIR__.'/includes/protocol_service.php';
 require_once __DIR__.'/includes/serial_service.php';
 require_once __DIR__.'/includes/protocol_preset_service.php';
 $presetTabs = ['rack-config'=>'Rack Config','node'=>'Node','protocols'=>'Protocols','site'=>'Site','segment'=>'Segment','device-type'=>'Device Type','network-connections'=>'Network Connections'];
-$actionTabs = ['save_rack_profile'=>'rack-config','save_node'=>'node','delete_node'=>'node','save_protocol_defaults'=>'protocols','save_site'=>'site','save_segment'=>'segment','delete_segment'=>'segment','save_type'=>'device-type','delete_type'=>'device-type','save_connection'=>'network-connections','delete_connection'=>'network-connections'];
+$actionTabs = ['save_rack_profile'=>'rack-config','delete_rack_profile'=>'rack-config','save_node'=>'node','delete_node'=>'node','save_protocol_defaults'=>'protocols','save_site'=>'site','save_segment'=>'segment','delete_segment'=>'segment','save_type'=>'device-type','delete_type'=>'device-type','save_connection'=>'network-connections','delete_connection'=>'network-connections'];
 $requestedTab = $_GET['tab'] ?? 'segment';
 $activePreset = $actionTabs[is_string($_POST['action'] ?? null) ? $_POST['action'] : ''] ?? (is_string($requestedTab) && isset($presetTabs[$requestedTab]) ? $requestedTab : 'segment');
 $typeEditing = false; $typeValues = []; $connectionEditing = false; $connectionValues = [];
@@ -30,7 +30,7 @@ try {
         $segmentName = is_string($_POST['segment_name'] ?? '') ? $_POST['segment_name'] : '';
         $editing = $activePreset === 'segment' && ($_POST['action'] ?? '') !== 'delete_segment';
         $typeEditing = $activePreset === 'device-type' && ($_POST['action'] ?? '') !== 'delete_type';
-        $rackEditing=$activePreset==='rack-config';$rackValues=$_POST;
+        $rackEditing=$activePreset==='rack-config' && ($_POST['action'] ?? '')!=='delete_rack_profile';$rackValues=$_POST;
         $nodeEditing=$activePreset==='node' && ($_POST['action'] ?? '')!=='delete_node'; $nodeValues=$_POST;
         $siteEditing=$activePreset==='site'; $siteValues=$_POST;
         $typeValues = $_POST;

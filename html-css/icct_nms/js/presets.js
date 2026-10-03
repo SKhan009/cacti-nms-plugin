@@ -140,7 +140,7 @@ document.querySelector('#site-search')?.addEventListener('input',event=>{
 const nodeEditor=document.querySelector('#node-editor');
 function openNodeEditor(node={}) {
   nodeEditor.reset();
-  nodeEditor.elements.node_id.value=node.id ?? '';
+  nodeEditor.elements.node_id.value=node.id ?? '0';
   nodeEditor.elements.node_name.value=node.name ?? '';
   nodeEditor.elements.site_id.value=node.site_id ?? '';
   nodeEditor.elements.rack_profile_id.value=node.rack_profile_id ?? '';updateNodeRackCount();
@@ -173,3 +173,10 @@ document.querySelector('#add-rack-config')?.addEventListener('click',()=>openRac
 document.querySelector('#cancel-rack-config')?.addEventListener('click',()=>{rackEditor.hidden=true;});
 document.querySelectorAll('[data-edit-rack-profile]').forEach(button=>button.addEventListener('click',()=>openRackEditor(JSON.parse(button.dataset.editRackProfile))));
 document.querySelector('#rack-profile-search')?.addEventListener('input',event=>{const query=event.target.value.toLowerCase().trim();document.querySelectorAll('[data-rack-profile-search]').forEach(row=>{row.hidden=!row.dataset.rackProfileSearch.includes(query);});});
+
+document.querySelectorAll('[data-delete-rack-profile]').forEach(form=>form.addEventListener('submit',async event=>{
+  event.preventDefault();
+  if(await icctShowMessage({title:'Delete rack configuration',text:`Delete “${form.dataset.rackName}”? Configurations assigned to nodes cannot be deleted.`,confirm:true,danger:true,accept:'Delete'})) {
+    if(form.dataset.staticPreview)icctToast({title:'Preview',text:'Delete rack configurations in the live application.'});else form.submit();
+  }
+}));

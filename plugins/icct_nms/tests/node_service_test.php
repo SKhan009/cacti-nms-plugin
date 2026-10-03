@@ -1,6 +1,7 @@
 <?php
 require __DIR__.'/../includes/node_service.php';
 $rows=[1=>['id'=>1,'name'=>'Original','site_id'=>1,'node_kind'=>'vehicle']]; $racks=0; $duplicate=false; $writes=[];
+function icct_backend_topology_integer($value,$min,$max,$label){if(!is_scalar($value)||!preg_match('/^[0-9]+$/D',(string)$value)||$value<$min||$value>$max)throw new InvalidArgumentException($label.' must be a whole number.');return (int)$value;}
 function icct_backend_require_management($realm){}
 function db_fetch_cell($sql){return str_contains($sql,'LAST_INSERT_ID')?2:'test';}
 function icct_nms_apply_node_rack_preset(...$args){}
@@ -16,6 +17,8 @@ if(icct_nms_save_node($valid)!=='Node updated.') throw new Exception('Update fai
 $update=$writes[count($writes)-2];
 if(str_contains($update[0],'node_kind') || str_contains($update[0],'DELETE')) throw new Exception('Unrelated topology data changed');
 if(icct_nms_save_node(array_replace($valid,['node_id'=>'0']))!=='Node added.') throw new Exception('Create failed');
+if(icct_nms_save_node(array_replace($valid,['node_id'=>'']))!=='Node added.')throw new Exception('Blank new-node ID rejected');
+rejectNode(array_replace($valid,['node_id'=>'bad']));
 rejectNode(array_replace($valid,['node_name'=>''])); rejectNode(array_replace($valid,['site_id'=>'999'])); rejectNode(array_replace($valid,['node_id'=>'99']));
 $duplicate=true; rejectNode($valid); $duplicate=false;
 $racks=1; rejectNode($valid); rejectNode(['action'=>'delete_node','node_id'=>'1']);

@@ -1,6 +1,6 @@
 <?php if ($management): ?>
 <form method="post" id="node-editor" class="site-editor" <?= $nodeEditing?'':'hidden' ?>>
-<?php icct_nms_token(); ?><input type="hidden" name="action" value="save_node"><input type="hidden" name="node_id" value="<?= icct_nms_h(is_scalar($nodeValues['node_id'] ?? '') ? ($nodeValues['node_id'] ?? '') : '') ?>">
+<?php icct_nms_token(); ?><input type="hidden" name="action" value="save_node"><input type="hidden" name="node_id" value="<?= icct_nms_h(is_scalar($nodeValues['node_id'] ?? '0') ? ($nodeValues['node_id'] ?? '0') : '') ?>">
 <div class="type-editor-heading"><h2 id="node-editor-title"><?= empty($nodeValues['node_id'])?'Add':'Edit' ?> Node</h2><div><button type="button" id="cancel-node" class="button">Cancel</button><button type="submit" class="button primary">Save</button></div></div>
 <div class="site-fields">
 <label class="field"><span class="field-label">Node Name *</span><input name="node_name" maxlength="150" required placeholder="Enter node name" value="<?= icct_nms_h(is_string($nodeValues['node_name'] ?? '') ? ($nodeValues['node_name'] ?? '') : '') ?>"></label>
