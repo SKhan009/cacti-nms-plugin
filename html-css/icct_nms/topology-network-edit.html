@@ -6,8 +6,8 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Topology Configuration · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
-        <link rel="stylesheet" href="css/inventory.css?v=53464e0f6905" />
-            <script type="text/javascript" nonce="f9-aqs5YSzzeEbNXvcRMGXoF">if (top != self) {top.location.href = self.location.href;}</script></head>
+        <link rel="stylesheet" href="css/inventory.css?v=c06a62fd0623" />
+            <script type="text/javascript" nonce="bqIpidUwT8Keuj7banxpnSpO">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -56,16 +56,18 @@
 <select id="network_site_id" name="site_id" ><option value="0" selected>None</option><option value="2" >Core</option><option value="4" >Demo — Bengaluru</option><option value="6" >Demo — Delhi</option><option value="5" >Demo — Mumbai</option><option value="1" >Edge</option><option value="3" >Topology Lab Location 01</option></select>
 </div><div class="field" ><label for="network_sched_type" >Schedule Type</label>
 <select id="network_sched_type" name="sched_type" ><option value="1" >Manual</option><option value="2" selected>Daily</option><option value="3" >Weekly</option><option value="4" >Monthly</option><option value="5" >Monthly on Day</option></select>
-</div><div class="field" ><label for="network_subnet_range" title="Comma-separated IPs, CIDR ranges, netmask ranges or wildcards.">Subnet Range *</label>
-<textarea id="network_subnet_range" name="subnet_range" rows="4" maxlength="1024" required>192.168.1.0/24</textarea>
-</div><div class="field" ><label for="network_total_ips" title="Calculated when the network is saved.">Total IP Addresses</label>
-<span id="network_total_ips" class="network-readonly">254</span>
-</div><div class="field" ><label for="network_dns_servers" title="Space-separated DNS IP addresses or names. Blank uses the collector’s DNS.">Alternate DNS Servers</label>
+</div><div class="field" ><label for="network_dns_servers" >Alternate DNS Servers <span class="field-info" tabindex="0" role="img" aria-label="Information about Alternate DNS Servers" data-tooltip="Space-separated DNS IP addresses or names. Blank uses the collector’s DNS."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span></label>
 <input id="network_dns_servers" name="dns_servers" type="text" value=""  maxlength="250" ></div><div class="field" ><label for="network_threads" >Discovery Threads</label>
 <select id="network_threads" name="threads" ><option value="1" >1 Threads</option><option value="2" >2 Threads</option><option value="3" >3 Threads</option><option value="4" >4 Threads</option><option value="5" >5 Threads</option><option value="6" >6 Threads</option><option value="7" >7 Threads</option><option value="8" >8 Threads</option><option value="9" >9 Threads</option><option value="10" selected>10 Threads</option><option value="20" >20 Threads</option><option value="50" >50 Threads</option></select>
 </div><div class="field" ><label for="network_run_limit" >Run Limit</label>
 <select id="network_run_limit" name="run_limit" ><option value="60" >1 Minute</option><option value="300" >5 Minutes</option><option value="600" >10 Minutes</option><option value="1200" selected>20 Minutes</option><option value="1800" >30 Minutes</option><option value="3600" >1 Hour</option><option value="7200" >2 Hours</option><option value="14400" >4 Hours</option><option value="28800" >8 Hours</option></select>
-</div><div class="field" ><label for="network_enabled" >Network Enabled</label>
+</div><div class="field" ><label for="network_total_ips" >Total IP Addresses <span class="field-info" tabindex="0" role="img" aria-label="Information about Total IP Addresses" data-tooltip="Calculated when the network is saved."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span></label>
+<span id="network_total_ips" class="network-readonly">254</span>
+</div></div><div class="network-subnets">
+<div class="field" ><label for="network_subnet_range" >Subnet Range * <span class="field-info" tabindex="0" role="img" aria-label="Information about Subnet Range *" data-tooltip="Comma-separated IPs, CIDR ranges, netmask ranges or wildcards. Example: 192.168.1.0/24."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span></label>
+<textarea id="network_subnet_range" name="subnet_range" rows="2" maxlength="1024" required>192.168.1.0/24</textarea>
+</div></div><div class="network-toggle-grid">
+<div class="field" ><label for="network_enabled" >Network Enabled</label>
 <label class="network-check"><input id="network_enabled" type="checkbox" name="enabled" value="1" checked> Enable</label>
 </div><div class="field" ><label for="network_enable_netbios" >Enable NetBIOS</label>
 <label class="network-check"><input id="network_enable_netbios" type="checkbox" name="enable_netbios" value="1" checked> Enable</label>
@@ -79,12 +81,12 @@
 <h3>Notification Settings</h3><div class="form-grid">
 <div class="field" ><label for="network_notification_enabled" >Notifications</label>
 <label class="network-check"><input id="network_notification_enabled" type="checkbox" name="notification_enabled" value="1" > Enable</label>
-</div><div class="field" data-network-notification><label for="network_notification_email" title="Separate recipients with commas or semicolons.">Notification Email</label>
-<input id="network_notification_email" name="notification_email" type="text" value=""  maxlength="250" ></div><div class="field" data-network-notification><label for="network_notification_fromname" title="Blank uses Cacti defaults.">Sender Name</label>
-<input id="network_notification_fromname" name="notification_fromname" type="text" value=""  maxlength="32" ></div><div class="field" data-network-notification><label for="network_notification_fromemail" title="Blank uses Cacti defaults.">Sender Email</label>
+</div><div class="field" data-network-notification><label for="network_notification_email" >Notification Email <span class="field-info" tabindex="0" role="img" aria-label="Information about Notification Email" data-tooltip="Separate recipients with commas or semicolons."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span></label>
+<input id="network_notification_email" name="notification_email" type="text" value=""  maxlength="250" ></div><div class="field" data-network-notification><label for="network_notification_fromname" >Sender Name <span class="field-info" tabindex="0" role="img" aria-label="Information about Sender Name" data-tooltip="Blank uses Cacti defaults."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span></label>
+<input id="network_notification_fromname" name="notification_fromname" type="text" value=""  maxlength="32" ></div><div class="field" data-network-notification><label for="network_notification_fromemail" >Sender Email <span class="field-info" tabindex="0" role="img" aria-label="Information about Sender Email" data-tooltip="Blank uses Cacti defaults."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span></label>
 <input id="network_notification_fromemail" name="notification_fromemail" type="text" value=""  maxlength="128" ></div></div>
 <h3 data-network-schedules="2,3,4,5">Discovery Timing</h3><div class="form-grid">
-<div class="field" data-network-schedules="2,3,4,5"><label for="network_start_at" title="Uses the Cacti server timezone.">Starting Date/Time *</label>
+<div class="field" data-network-schedules="2,3,4,5"><label for="network_start_at" >Starting Date/Time * <span class="field-info" tabindex="0" role="img" aria-label="Information about Starting Date/Time *" data-tooltip="Uses the Cacti server timezone."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span></label>
 <input id="network_start_at" name="start_at" type="text" value="0000-00-00 00:00:00" required maxlength="30" placeholder="YYYY-MM-DD HH:MM:SS"></div><div class="field" data-network-schedules="2,3"><label for="network_recur_every" >Rerun Every</label>
 <select id="network_recur_every" name="recur_every" ><option value="1" >1</option><option value="2" selected>2</option><option value="3" >3</option><option value="4" >4</option><option value="5" >5</option><option value="6" >6</option><option value="7" >7</option></select>
 </div><div class="field" data-network-schedules="3"><label for="network_day_of_week" >Days of Week</label>
@@ -107,21 +109,7 @@
 <input id="network_ping_port" name="ping_port" type="number" value="22" required min="0" max="65535" ></div><div class="field" data-network-ping="1,2,3,5"><label for="network_ping_timeout" >Ping Timeout (ms)</label>
 <input id="network_ping_timeout" name="ping_timeout" type="number" value="400" required min="0" max="99999" ></div><div class="field" data-network-ping="1,2,3,5"><label for="network_ping_retries" >Ping Retry Count</label>
 <input id="network_ping_retries" name="ping_retries" type="number" value="1" required min="0" max="99999" ></div></div>
-<h3>Discovery Status</h3><div class="form-grid"><div class="field" ><label for="network_total_ips" >Total Addresses</label>
-<span id="network_total_ips" class="network-readonly">254</span>
-</div><div class="field" ><label for="network_up_hosts" >Up Hosts</label>
-<span id="network_up_hosts" class="network-readonly">14</span>
-</div><div class="field" ><label for="network_snmp_hosts" >SNMP Hosts</label>
-<span id="network_snmp_hosts" class="network-readonly">0</span>
-</div><div class="field" ><label for="network_next_start" >Next Start</label>
-<span id="network_next_start" class="network-readonly">2026-10-03 23:36:00</span>
-</div><div class="field" ><label for="network_last_started" >Last Started</label>
-<span id="network_last_started" class="network-readonly">2026-10-02 19:27:47</span>
-</div><div class="field" ><label for="network_last_runtime" >Last Runtime (seconds)</label>
-<span id="network_last_runtime" class="network-readonly">70.37139582634</span>
-</div><div class="field" ><label for="network_last_status" >Last Result</label>
-<span id="network_last_status" class="network-readonly">—</span>
-</div></div><div class="type-editor-actions"><a class="button" href="topology-networks.html">Cancel</a><button class="button primary">Save</button></div>
+<div class="type-editor-actions"><a class="button" href="topology-networks.html">Cancel</a><button class="button primary">Save</button></div>
 </form>
 </section>
         </section>

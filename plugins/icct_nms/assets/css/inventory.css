@@ -2669,3 +2669,19 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 .connection-filters input,.connection-filters select { width:100%; min-height:48px; box-sizing:border-box; }
 .device-discovery-observations { display:flex; flex-wrap:wrap; gap:24px; margin:20px 0; padding:16px; border:1px solid #ddd; }
 @media(max-width:700px) { .topology-discovery-filters.connection-filters { grid-template-columns:1fr; } }
+
+/* Network settings follow the same field rhythm as the other preset editors. */
+.network-editor .titlebar{margin-bottom:24px;padding:0 0 16px}
+.network-editor .titlebar .type-editor-actions{margin:0}
+.network-editor .field{margin:0;min-width:0}
+.network-editor .field > label:first-child{display:flex;align-items:center;min-height:20px;margin:0 0 8px;font-size:12px;color:var(--muted)}
+.network-editor input:not([type=checkbox]),.network-editor select:not([multiple]),.network-editor .network-readonly{height:48px;box-sizing:border-box;width:100%}
+.network-editor .network-readonly{padding:14px 16px;background:#f4f4f4;border-bottom:1px solid #8d8d8d;font-size:14px}
+.network-editor .network-subnets{margin:24px 0}
+.network-editor .network-subnets textarea{height:96px;min-height:96px;width:100%;box-sizing:border-box}
+.network-editor .network-toggle-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 24px}
+.network-editor .network-check{margin:0;padding:0 16px;background:#f4f4f4;border-bottom:1px solid #8d8d8d;box-sizing:border-box}
+.network-editor h3{margin-top:32px}
+.network-editor > .type-editor-actions{margin-top:24px;padding-top:16px;border-top:1px solid #ddd}
+@media(max-width:900px){.network-editor .network-toggle-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.network-editor .network-toggle-grid{grid-template-columns:1fr}}
