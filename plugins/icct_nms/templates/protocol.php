@@ -5,6 +5,23 @@
 $presetMode = $presetMode ?? false;
 $protocolDraft = $protocolDraft ?? [];
 $failedProtocol = $failedProtocol ?? '';
+$protocolPresetHelp = static function (string $key, string $label) use ($presetMode): void {
+    if (!$presetMode) return;
+    $help = [
+        'cdp' => 'Preset collection, stale and refresh intervals. On the device, enable CDP and configure SNMP access; saved device settings stay independent.',
+        'lldp' => 'Preset collection, stale and refresh intervals. On the device, enable LLDP and configure SNMP access; saved device settings stay independent.',
+        'snmp' => 'Preset version, port, timeouts, retries and security options. When adding a device, enter its community or SNMPv3 credentials; changes apply only to that device.',
+        'ssh' => 'Preset port, authentication method, username and connection settings. When adding a device, confirm its username and enter its password or private key; changes apply only to that device.',
+        'serial' => 'Preset interface, line settings, polling and serial protocol. When adding a device, select its serial port and bus address; changes apply only to that device.',
+        'syslog' => 'Planned presets: severity, facility and match strings. Device setup will enable Syslog and identify its message source. Configuration is unavailable until integration is ready.',
+        'netflow' => 'Planned presets: version, collector, timeouts and sampling. Device setup will configure its flow exporter to send to the collector. Configuration is unavailable until integration is ready.',
+        'ntp' => 'Planned presets: server, version, timeout, polling and offset limit. Device setup will confirm its NTP server. Configuration is unavailable until integration is ready.',
+        'tacacs' => 'Planned presets: server, port, timeout, retries and authentication method. Device setup will require its shared secret and credentials. Configuration is unavailable until integration is ready.',
+    ];
+    ?>
+    <span class="field-info" tabindex="0" role="img" aria-label="Configuration help for <?= icct_nms_h($label) ?>" data-tooltip="<?= icct_nms_h($help[$key]) ?>"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+    <?php
+};
 ?>
 <?php if (empty($wizard) && !$presetMode): ?>
 <div class="titlebar">
@@ -108,7 +125,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
     : "0" ?>" <?= $isSaved || in_array($protocolKey, $protocolDraft, true) ? "" : "hidden" ?> <?= $failedProtocol === $protocolKey ? "open" : "" ?>>
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
-                <span><?= $protocolLabel ?></span>
+                <span><?= $protocolLabel ?> <?php $protocolPresetHelp($protocolKey, $protocolLabel); ?></span>
                 <button type="button" class="delete-protocol" aria-label="Remove <?= strtoupper(
                     $protocolKey,
                 ) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg></button>
@@ -162,7 +179,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
     || in_array('snmp', $protocolDraft, true) ? "open" : "hidden" ?>>
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
-                <span>SNMP (Simple Network Management Protocol)</span>
+                <span>SNMP (Simple Network Management Protocol) <?php $protocolPresetHelp('snmp', 'SNMP'); ?></span>
                 <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
                 </button>
             </summary>
@@ -184,7 +201,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
             : "0" ?>" <?= $ssh || in_array("ssh", $protocolDraft, true) ? "" : "hidden" ?> <?= $failedProtocol === "ssh" ? "open" : "" ?>>
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
-                <span>SSH</span>
+                <span>SSH <?php $protocolPresetHelp('ssh', 'SSH'); ?></span>
                 <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
                 </button>
             </summary>
@@ -299,7 +316,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
             : "0" ?>" <?= $serial || in_array("serial", $protocolDraft, true) ? "" : "hidden" ?> <?= $failedProtocol === "serial" ? "open" : "" ?>>
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
-                <span>Serial Communication</span>
+                <span>Serial Communication <?php $protocolPresetHelp('serial', 'Serial Communication'); ?></span>
                 <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
                 </button>
             </summary>
@@ -327,7 +344,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
         <details class="protocol-item" id="protocol-<?= $key ?>" data-saved="0" <?= in_array($key, $protocolDraft, true) ? "" : "hidden" ?>>
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
-                <span><?= $label ?></span>
+                <span><?= $label ?> <?php $protocolPresetHelp($key, $label); ?></span>
                 <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
                 </button>
             </summary>

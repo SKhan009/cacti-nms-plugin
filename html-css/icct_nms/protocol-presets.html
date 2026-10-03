@@ -7,7 +7,7 @@
         <title>Presets · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
         <link rel="stylesheet" href="css/inventory.css?v=291181019041" />
-    <script type="text/javascript" nonce="rzg4l-N_wxmQe1nnxUc1H46r">if (top != self) {top.location.href = self.location.href;}</script></head>
+    <script type="text/javascript" nonce="ICD9erx6_Ub5dCQtA7o_PUNl">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -45,7 +45,6 @@
 <nav class="presets-tabs" aria-label="Preset sections">
 <a href="sites.html" >Site</a><a href="presets.html?tab=rack-config" >Rack Config</a><a href="nodes.html" >Node</a><a href="presets.html" >Segment</a><a href="device-types.html" >Device Type</a><a href="network-connections.html" >Network Connections</a><a href="protocol-presets.html" aria-current="page">Protocols</a></nav>
 <section id="protocol-defaults" class="protocol-defaults">
-<p class="empty-state">Defaults are copied when you add a protocol to a device. Device changes and existing saved settings remain independent. Enter credentials, serial port and bus address on each device.</p>
 <form data-static-preview="true" method="post" id="toggle-protocol-form" hidden>
         <input type="hidden" name="action" value="toggle_protocol" />
     <input type="hidden" name="protocol" value="" />
@@ -105,7 +104,8 @@
                 <details class="protocol-item" id="protocol-cdp" data-saved="0"  >
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
-                <span>CDP (Cisco Discovery Protocol)</span>
+                <span>CDP (Cisco Discovery Protocol)     <span class="field-info" tabindex="0" role="img" aria-label="Configuration help for CDP (Cisco Discovery Protocol)" data-tooltip="Preset collection, stale and refresh intervals. On the device, enable CDP and configure SNMP access; saved device settings stay independent."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+    </span>
                 <button type="button" class="delete-protocol" aria-label="Remove CDP"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg></button>
             </summary>
             <div class="protocol-content">
@@ -120,7 +120,8 @@
                 <details class="protocol-item" id="protocol-lldp" data-saved="0"  >
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
-                <span>LLDP (Link Layer Discovery Protocol)</span>
+                <span>LLDP (Link Layer Discovery Protocol)     <span class="field-info" tabindex="0" role="img" aria-label="Configuration help for LLDP (Link Layer Discovery Protocol)" data-tooltip="Preset collection, stale and refresh intervals. On the device, enable LLDP and configure SNMP access; saved device settings stay independent."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+    </span>
                 <button type="button" class="delete-protocol" aria-label="Remove LLDP"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg></button>
             </summary>
             <div class="protocol-content">
@@ -135,7 +136,8 @@
                 <details class="protocol-item" id="protocol-snmp" data-saved="1" open>
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
-                <span>SNMP (Simple Network Management Protocol)</span>
+                <span>SNMP (Simple Network Management Protocol)     <span class="field-info" tabindex="0" role="img" aria-label="Configuration help for SNMP" data-tooltip="Preset version, port, timeouts, retries and security options. When adding a device, enter its community or SNMPv3 credentials; changes apply only to that device."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+    </span>
                 <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
                 </button>
             </summary>
@@ -172,7 +174,8 @@
         <details class="protocol-item" id="protocol-ssh" data-saved="0"  >
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
-                <span>SSH</span>
+                <span>SSH     <span class="field-info" tabindex="0" role="img" aria-label="Configuration help for SSH" data-tooltip="Preset port, authentication method, username and connection settings. When adding a device, confirm its username and enter its password or private key; changes apply only to that device."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+    </span>
                 <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
                 </button>
             </summary>
@@ -210,7 +213,8 @@
         <details class="protocol-item" id="protocol-serial" data-saved="0"  >
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
-                <span>Serial Communication</span>
+                <span>Serial Communication     <span class="field-info" tabindex="0" role="img" aria-label="Configuration help for Serial Communication" data-tooltip="Preset interface, line settings, polling and serial protocol. When adding a device, select its serial port and bus address; changes apply only to that device."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+    </span>
                 <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
                 </button>
             </summary>
@@ -252,7 +256,8 @@
                 <details class="protocol-item" id="protocol-syslog" data-saved="0" >
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
-                <span>Syslog</span>
+                <span>Syslog     <span class="field-info" tabindex="0" role="img" aria-label="Configuration help for Syslog" data-tooltip="Planned presets: severity, facility and match strings. Device setup will enable Syslog and identify its message source. Configuration is unavailable until integration is ready."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+    </span>
                 <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
                 </button>
             </summary>
@@ -274,7 +279,8 @@
                 <details class="protocol-item" id="protocol-netflow" data-saved="0" >
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
-                <span>Netflow</span>
+                <span>Netflow     <span class="field-info" tabindex="0" role="img" aria-label="Configuration help for Netflow" data-tooltip="Planned presets: version, collector, timeouts and sampling. Device setup will configure its flow exporter to send to the collector. Configuration is unavailable until integration is ready."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+    </span>
                 <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
                 </button>
             </summary>
@@ -307,7 +313,8 @@
                 <details class="protocol-item" id="protocol-ntp" data-saved="0" >
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
-                <span>NTP</span>
+                <span>NTP     <span class="field-info" tabindex="0" role="img" aria-label="Configuration help for NTP" data-tooltip="Planned presets: server, version, timeout, polling and offset limit. Device setup will confirm its NTP server. Configuration is unavailable until integration is ready."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+    </span>
                 <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
                 </button>
             </summary>
@@ -340,7 +347,8 @@
                 <details class="protocol-item" id="protocol-tacacs" data-saved="0" >
             <summary>
                 <span class="accordion-chevron" aria-hidden="true"></span>
-                <span>TACACS+</span>
+                <span>TACACS+     <span class="field-info" tabindex="0" role="img" aria-label="Configuration help for TACACS+" data-tooltip="Planned presets: server, port, timeout, retries and authentication method. Device setup will require its shared secret and credentials. Configuration is unavailable until integration is ready."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+    </span>
                 <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
                 </button>
             </summary>

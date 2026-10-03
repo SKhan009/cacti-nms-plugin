@@ -15,7 +15,6 @@ $host['snmp_community']=''; $host['description']='Protocol defaults';
 $discovery=[]; $ssh=$protocolPresets['ssh'] ?? []; $serial=[]; $connections=[];
 ?>
 <section id="protocol-defaults" class="protocol-defaults">
-<p class="empty-state">Defaults are copied when you add a protocol to a device. Device changes and existing saved settings remain independent. Enter credentials, serial port and bus address on each device.</p>
 <?php require __DIR__.'/protocol.php'; ?>
 </section>
 <?php $wizard=false; ?>
