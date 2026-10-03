@@ -65,7 +65,7 @@ function icct_mib_command($args)
         throw new RuntimeException('Cannot run snmptranslate. Install net-snmp-utils locally on RHEL and check the configured executable path. Offline installation can use matching RHEL media or an offline RPM repository.');
     }
     if (preg_match_all('/Cannot find module \(([^)]+)\)/', $err, $missing)) {
-        throw new RuntimeException('Missing MIB dependencies: ' . implode(', ', array_unique($missing[1])) . '. Upload these modules together with the main MIB, or have the administrator install them in /usr/share/snmp/mibs. Internet access is not required.');
+        throw new RuntimeException('Missing MIB dependencies: ' . implode(', ', array_unique($missing[1])) . '. Upload these modules to the MIB Repository. Saved modules and bundled dependencies are loaded from the plugin folder. Internet access is not required.');
     }
 	if (
 		$exit !== 0 ||
@@ -85,10 +85,41 @@ function icct_mib_name($value,$max=150){
     if(!is_string($value)||trim($value)===''||strlen($value)>$max||preg_match('/[\x00-\x1f<>]/',$value))throw new InvalidArgumentException('Enter a plain name of at most '.$max.' characters.');
     return trim($value);
 }
-function icct_mib_preview($upload,$typeId){
+/** Private runtime files stay in the plugin; only this directory is writable. */
+function icct_mib_private_directory(){
+    $root=__DIR__.'/../data/mibs';
+    if(!is_dir($root)||!is_writable($root))throw new RuntimeException('The plugin data/mibs directory must be writable by the web-server account.');
+    $dir=$root.'/review-'.bin2hex(random_bytes(16));
+    if(!mkdir($dir,0700))throw new RuntimeException('Cannot create private MIB parsing directory.');
+    return $dir;
+}
+/** Resolve only imported repository modules, newest saved version first. */
+function icct_mib_repository_dependencies($dir,$files){
+    $catalog=[];foreach(icct_mib_list() as $bundle)foreach($bundle['files'] as $i=>$file){
+        $module=$file['module']??'';
+        if(preg_match('/^[A-Za-z][A-Za-z0-9-]*$/D',$module)&&!isset($catalog[$module]))$catalog[$module]=[$bundle,$i];
+    }
+    $seen=array_fill_keys(array_keys($files),true);$queue=array_column($files,'content');$bytes=0;$used=[];
+    while($queue){
+        $content=array_shift($queue);
+        if(!preg_match('/\bIMPORTS\b(.*?);/s',preg_replace('/--[^\r\n]*/','',$content),$imports))continue;
+        preg_match_all('/\bFROM\s+([A-Za-z][A-Za-z0-9-]*)/',$imports[1],$matches);
+        foreach($matches[1] as $module){
+            if(isset($seen[$module]))continue;$seen[$module]=true;
+            if(!isset($catalog[$module]))continue;
+            [$bundle,$index]=$catalog[$module];$text=icct_mib_file($bundle,$index);$bytes+=strlen($text);
+            if(count($used)>=128||$bytes>8388608)throw new RuntimeException('Repository dependency limit exceeded.');
+            if(!preg_match('/\b'.preg_quote($module,'/').'\s+DEFINITIONS\s*::=\s*BEGIN\b/',$text))throw new RuntimeException('Stored MIB module header does not match.');
+            if(file_put_contents($dir.'/'.$module.'.txt',$text)!==strlen($text))throw new RuntimeException('Cannot write repository dependency.');
+            $used[]=$module;$queue[]=$text;
+        }
+    }
+    return $used;
+}
+function icct_mib_preview($upload,$typeId,$allowUnresolved=false){
     $types=icct_nms_device_types();if(!is_string($typeId)||!isset($types[$typeId]))throw new InvalidArgumentException('Select a device type.');
     $names=$upload['name']??[];if(!is_array($names)||!count($names)||count($names)>8)throw new InvalidArgumentException('Upload 1–8 MIB files including dependencies.');
-    $dir=sys_get_temp_dir().'/icct-mib-'.bin2hex(random_bytes(16));if(!mkdir($dir,0700))throw new RuntimeException('Cannot create private parsing directory.');
+    $dir=icct_mib_private_directory();
     $files=[];$symbols=[];$total=0;
     try{
         foreach($names as $i=>$name){
@@ -103,9 +134,15 @@ function icct_mib_preview($upload,$typeId){
             foreach($matches as $match)$symbols[$module.'::'.$match[1]]=$match[2];
         }
         if(count($symbols)>512)throw new InvalidArgumentException('Limit: 512 object definitions per upload. Split larger modules.');
-        $args=[read_config_option('path_snmptranslate')?:'snmptranslate','-M','+'.$dir,'-m',implode(':',array_keys($files))];
-        icct_mib_command(array_merge($args,['-Tz']));$records=[];$deadline=microtime(true)+60;
-        foreach($symbols as $symbol=>$kind){
+        $dependencies=icct_mib_repository_dependencies($dir,$files);$parseError='';
+        $args=[read_config_option('path_snmptranslate')?:'snmptranslate','-M',$dir.':'.__DIR__.'/../assets/mibs','-m',implode(':',array_keys($files))];
+        try{icct_mib_command(array_merge($args,['-Tz']));}
+        catch(RuntimeException $e){
+            if(!$allowUnresolved||!str_starts_with($e->getMessage(),'Missing MIB dependencies:'))throw $e;
+            $parseError=$e->getMessage();
+        }
+        $records=[];$deadline=microtime(true)+60;
+        foreach($parseError?[]:$symbols as $symbol=>$kind){
             if(microtime(true)>$deadline)throw new RuntimeException('MIB review exceeded its time limit. Upload fewer modules.');
             if($kind==='TEXTUAL-CONVENTION')continue;
             $definition=icct_mib_command(array_merge($args,['-Td','-On',$symbol]));
@@ -123,7 +160,7 @@ function icct_mib_preview($upload,$typeId){
             $counter=(bool)preg_match('/^Counter(?:32|64)\b/',$syntax[1]??'');$enum=str_contains($syntax[1]??'','{');
             $records[]=['symbol'=>$symbol,'kind'=>$kind,'base_oid'=>$base,'oid'=>$base?($table?$base:$base.'.0'):'','syntax'=>$syntax[1]??'','access'=>$access[1]??'','description'=>trim(preg_replace('/\s+/',' ',$description[1]??'')),'units'=>$units[1]??'','table'=>$table,'numeric'=>(bool)$numeric,'enum'=>$enum,'ds_type'=>$counter?2:1,'label'=>explode('::',$symbol)[1],'reason'=>!$numeric?'Metadata / nonnumeric object':($table?'Enter the device-specific instance index':($enum?'Numeric enumeration: review state mapping':'Readable numeric scalar'))];
         }
-        return ['id'=>bin2hex(random_bytes(16)),'type_id'=>$typeId,'type_name'=>$types[$typeId]['name'],'category_id'=>$types[$typeId]['category_id'],'files'=>array_values($files),'records'=>$records,'created'=>time(),'owner'=>icct_backend_current_user_id()];
+        return ['id'=>bin2hex(random_bytes(16)),'type_id'=>$typeId,'type_name'=>$types[$typeId]['name'],'category_id'=>$types[$typeId]['category_id'],'files'=>array_values($files),'records'=>$records,'parse_error'=>$parseError,'dependencies'=>$dependencies,'created'=>time(),'owner'=>icct_backend_current_user_id()];
     }finally{foreach(glob($dir.'/*')?:[] as $file)unlink($file);rmdir($dir);}
 }
 function icct_mib_list(){
@@ -134,6 +171,7 @@ function icct_mib_plan($preview,$input){
     $types=icct_nms_device_types();$type=$input['type_id']??'';
     if(!is_string($type)||!isset($types[$type]))throw new InvalidArgumentException('Select an existing device type.');
     $options=[];foreach(['data','graph','device'] as $key)$options[$key]=!empty($input['create_'.$key]);
+    if(!empty($preview['parse_error'])&&array_filter($options))throw new InvalidArgumentException('Resolve the missing dependencies before creating templates. Save the files only, upload the dependencies, then review again.');
     if($options['graph']&&!$options['data'])throw new InvalidArgumentException('Graph templates require data source templates.');
     $name=icct_mib_name($input['template_name']??'');$records=[];
     foreach($preview['records'] as $i=>$record){
@@ -201,7 +239,7 @@ function icct_mib_save($preview,$plan){
         try{
             $hostId=0;if($plan['options']['device']){$hostId=(int)sql_save(['id'=>0,'hash'=>get_hash_host_template(0),'name'=>$plan['name']],'host_template');if(!$hostId)throw new RuntimeException('Could not create device template.');}
             $rows=[];foreach($plan['records'] as $record){$pair=icct_mib_native_metric($record,$plan['options']);if($hostId&&$pair['graph_template_id'])icct_mib_write('INSERT INTO host_template_graph(host_template_id,graph_template_id) VALUES(?,?)',[$hostId,$pair['graph_template_id']]);$rows[]=array_merge($pair,['oid'=>$record['oid'],'name'=>$record['label']]);}
-            $bundle=['id'=>$id,'name'=>$plan['name'],'type_id'=>$plan['type_id'],'type_name'=>$plan['type_name'],'category_id'=>$plan['category_id'],'host_template_id'=>$hostId,'rows'=>$rows,'options'=>$plan['options'],'created_at'=>date('Y-m-d H:i:s'),'files'=>[],'records'=>$preview['records']];
+            $bundle=['id'=>$id,'name'=>$plan['name'],'type_id'=>$plan['type_id'],'type_name'=>$plan['type_name'],'category_id'=>$plan['category_id'],'host_template_id'=>$hostId,'rows'=>$rows,'options'=>$plan['options'],'created_at'=>date('Y-m-d H:i:s'),'files'=>[],'records'=>$preview['records'],'parse_error'=>$preview['parse_error']??'','dependencies'=>$preview['dependencies']??[]];
             foreach($preview['files'] as $i=>$file){$parts=str_split(base64_encode($file['content']),45000);foreach($parts as $j=>$part)icct_mib_write('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['mib_file_'.$id.'_'.$i.'_'.$j,$part]);unset($file['content']);$file['parts']=count($parts);$bundle['files'][]=$file;}
             // Chunk the metadata as well: large descriptions can exceed a TEXT column.
             $objectParts=str_split(base64_encode(json_encode($bundle['records'],JSON_THROW_ON_ERROR)),45000);foreach($objectParts as $j=>$part)icct_mib_write('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['mib_objects_'.$id.'_'.$j,$part]);unset($bundle['records']);$bundle['object_parts']=count($objectParts);$bundle['object_count']=count($preview['records']);

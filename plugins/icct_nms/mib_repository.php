@@ -17,7 +17,16 @@ try{
     if($_SERVER['REQUEST_METHOD']==='POST'){
         icct_nms_post();$action=$_POST['action']??'';
         if($action==='upload'){
-            $mode='upload';$draft=icct_mib_preview($_FILES['mibs']??[], $_POST['type_id']??'');
+            $mode='upload';$draft=icct_mib_preview($_FILES['mibs']??[], $_POST['type_id']??'',true);
+            $_SESSION['icct_mib_draft']=$draft;unset($_SESSION['icct_mib_plan'],$_SESSION['icct_mib_values']);icct_nms_redirect('mib_repository.php?review=1');
+        }elseif($action==='reparse'){
+            $bundle=null;foreach($bundles as $candidate)if($candidate['id']===($_POST['bundle_id']??''))$bundle=$candidate;
+            if(!$bundle)throw new InvalidArgumentException('MIB upload not found.');
+            $paths=[];$storedDir=icct_mib_private_directory();$upload=['name'=>[],'tmp_name'=>[],'error'=>[]];
+            try{
+                foreach($bundle['files'] as $i=>$file){$path=tempnam($storedDir,'stored-');if($path===false)throw new RuntimeException('Cannot prepare saved MIB.');$paths[]=$path;chmod($path,0600);$content=icct_mib_file($bundle,$i);if(file_put_contents($path,$content)!==strlen($content))throw new RuntimeException('Cannot prepare saved MIB.');$upload['name'][]=$file['name'];$upload['tmp_name'][]=$path;$upload['error'][]=UPLOAD_ERR_OK;}
+                $draft=icct_mib_preview($upload,$bundle['type_id'],true);
+            }finally{foreach($paths as $path)unlink($path);rmdir($storedDir);}
             $_SESSION['icct_mib_draft']=$draft;unset($_SESSION['icct_mib_plan'],$_SESSION['icct_mib_values']);icct_nms_redirect('mib_repository.php?review=1');
         }elseif($action==='discard'){unset($_SESSION['icct_mib_draft'],$_SESSION['icct_mib_plan'],$_SESSION['icct_mib_values']);icct_nms_redirect('mib_repository.php');
         }elseif(in_array($action,['review','confirm'],true)){

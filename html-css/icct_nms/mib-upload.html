@@ -7,7 +7,7 @@
         <title>MIB Repository · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
         <link rel="stylesheet" href="css/inventory.css?v=11fd9e9f541b" />
-            <script type="text/javascript" nonce="yJTB--R0HUlkWmTgsCc8Hmkp">if (top != self) {top.location.href = self.location.href;}</script></head>
+            <script type="text/javascript" nonce="ZqvyUenScYXNwybGAMy8Rgms">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -49,7 +49,13 @@
 <h2>Upload MIB files</h2><div class="protocol-grid cols-2">
 <label class="field"><span class="field-label">Device Type *</span><select name="type_id" required><option value="">Select device type</option><option value="88a9005e64ebd09c">Server</option><option value="de452ef13110f6ca">Core Switch</option><option value="20eb503a47b3ea9c">Switch</option><option value="f09b9e9a740f85aa">Generic device</option></select></label>
 <label class="field"><span class="field-label">MIB Files *</span><input type="file" name="mibs[]" accept=".mib,.my,.txt" multiple required></label></div>
-<p>Upload the main MIB and its dependencies together. Up to 8 files; 1 MiB per file and 4 MiB total. Parsing runs locally without contacting a device.</p>
+<p>Bundled dependencies and saved database modules are loaded from the plugin folder automatically. You can also upload the main MIB and its dependencies together. Up to 8 files; 1 MiB per file and 4 MiB total. Parsing runs locally without contacting a device.</p>
+<details class="mib-object"><summary><strong>Download sample MIB files</strong></summary><div class="mib-object-body"><p>Save each link as a .txt or .my file, then upload it here.</p><ul>
+<li><a href="mibs/IF-MIB.txt" download>IF-MIB</a> — interface counters and status.</li>
+<li><a href="mibs/IP-MIB.txt" download>IP-MIB</a> — IPv4 / IPv6 IP information.</li>
+<li><a href="mibs/BRIDGE-MIB.txt" download>BRIDGE-MIB</a> — bridge and learned MAC information.</li>
+<li><a href="mibs/CISCO-ENTITY-SENSOR-MIB.txt" download>CISCO-ENTITY-SENSOR-MIB</a> — Cisco sensor values. Bundled dependencies: <a href="mibs/ENTITY-MIB.txt" download>ENTITY-MIB</a>, <a href="mibs/CISCO-TC.txt" download>CISCO-TC</a> and <a href="mibs/CISCO-SMI.txt" download>CISCO-SMI</a>.</li>
+</ul><p>Other imports must also be available in the repository or the plugin’s bundled MIB folder. Downloading a vendor MIB does not mean your device supports every object in it.</p></div></details>
 <div class="type-editor-actions"><a class="button" href="mib-repository.html">Cancel</a><button class="button primary">Upload and Review</button></div></form>
         </section>
     </main>
