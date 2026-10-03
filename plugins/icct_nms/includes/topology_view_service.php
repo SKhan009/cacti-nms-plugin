@@ -10,16 +10,38 @@ function icct_nms_topology_data($mapData) {
     $devices=$mapData['unlocated'];foreach($mapData['sites'] as $site)$devices=array_merge($devices,$site['devices']);
     $inventory=[];foreach(icct_nms_inventory() as $host)$inventory[(int)$host['id']]=$host;
     foreach($devices as &$device){$device['fault_counts']=array_fill_keys(['Critical','Major','Minor','Warning','Information'],0);foreach(icct_nms_fault_observations($inventory[$device['id']]) as $fault)if(isset($device['fault_counts'][$fault['state']]))$device['fault_counts'][$fault['state']]++;$device['fault_count']=array_sum($device['fault_counts']);}unset($device);
-    $index=[];foreach($devices as $d)foreach([$d['name'],$d['address']] as $value)$index[strtolower($value)][]=$d['id'];
-    $links=[];$discoveryHosts=array_column(icct_backend_nd_hosts(),null,'id');
-    foreach(array_column($devices,'id') as $id){
-        $rows=db_fetch_assoc_prepared("SELECT data_json,protocol,status,succeeded_at,config_hash FROM plugin_icct_nms_discovery_snapshots WHERE host_id=? AND protocol IN ('cdp','lldp') AND status='success'",[$id]);
-        foreach($rows as $row)foreach((icct_nms_discovery_current($row,$discoveryHosts[$id]??null)?(json_decode($row['data_json'],true)['neighbors'] ?? []):[]) as $neighbor){
-            if(isset($neighbor['present']) && !$neighbor['present'])continue;
-            $candidates=[];foreach(array_merge([$neighbor['peer_label']??'', $neighbor['remote_name']??''],$neighbor['management_addresses']??[]) as $value)if(is_string($value))$candidates=array_merge($candidates,$index[strtolower($value)]??[]);
-            $candidates=array_values(array_unique(array_diff($candidates,[$id])));if(count($candidates)!==1)continue;
-            $pair=[$id,$candidates[0]];sort($pair);$links[implode('-',$pair)]=['source'=>$pair[0],'target'=>$pair[1],'protocol'=>$row['protocol']];
+    $types=icct_nms_device_types();
+    $index=[];$snapshots=[];$discoveryHosts=array_column(icct_backend_nd_hosts(),null,'id');
+    $addIdentity=static function($value,$id) use (&$index) {
+        if(is_string($value) && trim($value)!=='') $index[strtolower(trim($value))][]=$id;
+    };
+    foreach($devices as &$device){
+        $host=$inventory[$device['id']];
+        $device['network_asset']=icct_nms_type_icon_asset('device');
+        foreach($types as $type) if((int)$type['category_id']===(int)($host['category_id']??0) && $type['name']===($host['device_type']??'')){$device['network_asset']=icct_nms_type_asset($type,'network');break;}
+        foreach([$device['name'],$device['address'],$host['snmp_sysName']??''] as $value)$addIdentity($value,$device['id']);
+        $rows=db_fetch_assoc_prepared("SELECT data_json,protocol,status,succeeded_at,config_hash FROM plugin_icct_nms_discovery_snapshots WHERE host_id=? AND protocol IN ('cdp','lldp') AND status='success'",[$device['id']]);
+        foreach($rows as $row){
+            if(!icct_nms_discovery_current($row,$discoveryHosts[$device['id']]??null))continue;
+            $payload=json_decode($row['data_json'],true)??[];
+            // Index each device's own reported identity before resolving any neighbours.
+            foreach([$payload['name']??'',$payload['identity']??''] as $value)$addIdentity($value,$device['id']);
+            $snapshots[$device['id']][]=['protocol'=>$row['protocol'],'data'=>$payload];
         }
+    }unset($device);
+    $links=[];
+    foreach($snapshots as $id=>$rows)foreach($rows as $row)foreach($row['data']['neighbors']??[] as $neighbor){
+        if(isset($neighbor['present']) && !$neighbor['present'])continue;
+        // A unique chassis/device identity is stronger evidence than a shared IP address.
+        $candidates=array_values(array_unique(array_diff($index[strtolower(trim($neighbor['peer_key']??''))]??[],[$id])));
+        if(count($candidates)>1)continue;
+        if(!$candidates){
+            $candidates=[];
+            foreach(array_merge([$neighbor['peer_label']??'', $neighbor['remote_name']??''],$neighbor['management_addresses']??[]) as $value)if(is_string($value))$candidates=array_merge($candidates,$index[strtolower(trim($value))]??[]);
+            $candidates=array_values(array_unique(array_diff($candidates,[$id])));
+        }
+        if(count($candidates)!==1)continue;
+        $pair=[$id,$candidates[0]];sort($pair);$links[implode('-',$pair)]=['source'=>$id,'target'=>$candidates[0],'protocol'=>$row['protocol'],'label'=>strtoupper($row['protocol']).' · '.($neighbor['local_port']??'?').' / '.($neighbor['remote_port']??'?')];
     }
     $profiles=icct_nms_connections();$allowed=array_column($devices,null,'id');
     foreach(icct_nms_manual_links() as $key=>$link)if(isset($allowed[$link['source']],$allowed[$link['target']])){$pair=[$link['source'],$link['target']];sort($pair);$links[implode('-',$pair)]=['source'=>$link['source'],'target'=>$link['target'],'protocol'=>'manual','color'=>$profiles[$link['profile']]['color']??'#555','label'=>($profiles[$link['profile']]['name']??'Manual').' · '.($link['source_port']?:'?').' / '.($link['target_port']?:'?')];}

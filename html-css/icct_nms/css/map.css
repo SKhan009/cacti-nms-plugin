@@ -49,3 +49,6 @@
 .topology-device.shape-wide { width:170px; min-height:64px; }
 .topology-device.shape-tall { width:72px; min-height:104px; }
 @media(max-width:700px) { .topology-device.shape-square{width:66px;min-height:66px}.topology-device.shape-rectangle{width:90px;min-height:54px}.topology-device.shape-wide{width:130px;min-height:54px}.topology-device.shape-tall{width:60px;min-height:90px} }
+
+.topology-device-heading{display:flex;align-items:center;justify-content:center;gap:5px;max-width:100%}.topology-device-heading strong{min-width:0}
+.topology-device-icon{width:20px;height:20px;object-fit:contain;flex-shrink:0;pointer-events:none}

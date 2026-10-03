@@ -9,7 +9,7 @@
 function icct_nms_inventory()
 {
     $rows = db_fetch_assoc("SELECT h.id,h.description,h.hostname,h.status,h.disabled,h.availability,
-        h.snmp_sysUpTimeInstance,h.last_updated,h.site_id,h.poller_id,
+        h.snmp_sysName,h.snmp_sysUpTimeInstance,h.last_updated,h.site_id,h.poller_id,
         c.category_id,c.device_type,c.device_role,cat.name AS segment,
         m.serial_number AS manual_serial_number,m.mac_address,m.chassis_id,
         s.meta_value AS short_name,r.name AS rack_name,r.id AS rack_id,rd.start_unit,rd.unit_height,
