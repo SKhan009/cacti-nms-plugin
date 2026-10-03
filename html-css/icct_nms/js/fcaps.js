@@ -69,6 +69,33 @@
   document.querySelector('#protocol-workspace').addEventListener('change',()=>queueMicrotask(configurationSummary));
   new MutationObserver(configurationSummary).observe(document.querySelector('#protocol-workspace'),{subtree:true,attributes:true,attributeFilter:['hidden']});
   configurationSummary();
+  const backups=JSON.parse(document.querySelector('#configuration-backups').textContent);
+  document.querySelector('#fcaps-configuration').addEventListener('click',event=>{
+    const button=event.target.closest('.configuration-download');if(!button)return;
+    const backup=backups.find(item=>item.id===button.dataset.backupId);if(!backup)return;
+    const url=URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}));
+    const link=document.createElement('a');link.href=url;link.download='device-'+document.querySelector('#device-wizard').dataset.deviceId+'-settings-'+backup.id+'.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  });
+  document.querySelector('#configuration-backup').addEventListener('click',async event=>{
+    const button=event.currentTarget,result=document.querySelector('#configuration-backup-result');
+    if(basic.dataset.staticPreview){result.textContent='Backups are available in the live application.';return;}
+    button.disabled=true;result.textContent='Backing up saved settings…';
+    try {
+      const data=new FormData();data.set('host_id',document.querySelector('#device-wizard').dataset.deviceId);data.set('action','configuration_backup');
+      const token=basic.querySelector('[name="__csrf_magic"]');if(token)data.set(token.name,token.value);
+      const response=await fetch('wizard_save.php',{method:'POST',body:data});const body=await response.json();if(!response.ok||!body.ok)throw new Error(body.error||'Backup failed.');
+      backups.splice(0,backups.length,...body.backups);
+      const rows=document.querySelector('#configuration-history-rows');rows.replaceChildren();
+      for(const backup of backups){
+        const row=document.createElement('tr');
+        for(const value of [backup.time,backup.user||'User '+backup.user_id,backup.action]){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}
+        const cell=document.createElement('td'),download=document.createElement('button');download.type='button';download.className='button configuration-download';download.dataset.backupId=backup.id;download.textContent='Download Backup';cell.append(download);
+        const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent=Object.keys(backup.changes).length+' changed settings';details.append(summary);
+        for(const [field,change] of Object.entries(backup.changes)){const text=document.createElement('p');text.textContent=field+': '+(change.before??'Not set')+' → '+(change.after??'Not set');details.append(text);}cell.append(details);row.append(cell);rows.append(row);
+      }
+      result.textContent='Saved settings backup created. Unsaved drafts remain unchanged.';
+    }catch(error){result.textContent=error.message;}finally{button.disabled=false;}
+  });
   const tabs=[...panel.querySelectorAll('[role=tab]')];
   function activate(tab){configurationSummary();tabs.forEach(item=>{const selected=item===tab;item.setAttribute('aria-selected',String(selected));item.tabIndex=selected?0:-1;document.getElementById(item.getAttribute('aria-controls')).hidden=!selected;});}
   tabs.forEach((tab,index)=>{tab.addEventListener('click',()=>activate(tab));tab.addEventListener('keydown',event=>{let next;if(event.key==='ArrowRight')next=(index+1)%tabs.length;if(event.key==='ArrowLeft')next=(index+tabs.length-1)%tabs.length;if(event.key==='Home')next=0;if(event.key==='End')next=tabs.length-1;if(next!==undefined){event.preventDefault();activate(tabs[next]);tabs[next].focus();}});});

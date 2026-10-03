@@ -2,6 +2,7 @@
 /** Explicit wizard saves only; step navigation never calls this endpoint. */
 require __DIR__ . '/../../include/auth.php';
 require_once $config['base_path'] . '/include/global_form.php';
+require_once __DIR__.'/includes/configuration_history.php';
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/inventory.php';
 require_once __DIR__ . '/includes/forms.php';
@@ -24,7 +25,9 @@ try {
     } else {
         icct_backend_require_management(3);
         $host = icct_nms_device($id);
+        if(!icct_nms_meta('configuration_latest_'.$id))icct_nms_configuration_record($id,'Initial baseline');
         switch ($action) {
+            case 'configuration_backup': icct_nms_configuration_record($id,'Manual backup',true); break;
             case 'faults': icct_nms_save_faults($id,$_POST); break;
             case 'snmp': icct_nms_save_snmp($id, $host, $_POST); break;
             case 'ssh': icct_nms_save_ssh($id, $_POST); break;
@@ -47,7 +50,8 @@ try {
             default: throw new InvalidArgumentException('Unknown wizard save action.');
         }
     }
-    echo json_encode(['ok'=>true,'id'=>$id,'message'=>$message ?? 'Changes saved.'], JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
+    if($action!=='basic' && $action!=='configuration_backup')icct_nms_configuration_record($id,$action);
+    echo json_encode(['ok'=>true,'id'=>$id,'message'=>$message ?? 'Changes saved.', 'backups'=>$action==='configuration_backup'?icct_nms_configuration_history($id):null], JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
 } catch (Throwable $error) {
     http_response_code(400);
     echo json_encode(['ok'=>false,'error'=>$error->getMessage()], JSON_INVALID_UTF8_SUBSTITUTE);

@@ -5,6 +5,7 @@
 
 require __DIR__ . "/../../include/auth.php";
 require_once $config["base_path"] . "/include/global_form.php";
+require_once __DIR__.'/includes/configuration_history.php';
 require_once __DIR__ . "/includes/bootstrap.php";
 require_once __DIR__ . "/includes/inventory.php";
 require_once __DIR__ . "/includes/forms.php";

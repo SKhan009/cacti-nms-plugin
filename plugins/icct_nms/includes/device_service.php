@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__.'/device_type_service.php';
+require_once __DIR__.'/configuration_history.php';
 
 /**
  * Device and SNMP writes using Cacti field definitions and existing NMS services.
@@ -99,6 +100,7 @@ function icct_nms_save_device($id, $old, $input)
         }
         $placement = ['rack_id' => $rack, 'start_unit' => $start, 'unit_height' => $height];
     }
+    if($id && !icct_nms_meta('configuration_latest_'.$id))icct_nms_configuration_record($id,'Initial baseline');
     $saved = icct_backend_device_save($id, $values);
     try {
         $classification = $id
@@ -147,6 +149,7 @@ function icct_nms_save_device($id, $old, $input)
             $e
         );
     }
+    icct_nms_configuration_record($saved, $id ? 'Basic Information saved' : 'Device created');
     return $saved;
 }
 

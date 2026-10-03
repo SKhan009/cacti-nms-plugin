@@ -5,6 +5,7 @@
 
 require __DIR__ . "/../../include/auth.php";
 require_once $config["base_path"] . "/include/global_form.php";
+require_once __DIR__.'/includes/configuration_history.php';
 require_once __DIR__ . "/includes/bootstrap.php";
 require_once __DIR__ . "/includes/inventory.php";
 require_once __DIR__ . "/includes/forms.php";
@@ -49,6 +50,7 @@ try {
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
         icct_nms_post();
         try {
+        if(!icct_nms_meta('configuration_latest_'.$id))icct_nms_configuration_record($id,'Initial baseline');
             switch ($_POST["action"] ?? "") {
                 case "add_data_query":
                 case "change_data_query":
@@ -136,6 +138,7 @@ try {
                         "Unknown inventory action.",
                     );
             }
+            icct_nms_configuration_record($id,(string)($_POST['action'] ?? 'Protocol saved'));
             $deviceName = '“' . $host["description"] . '”';
             $settingNames = [
                 "snmp" => "SNMP",

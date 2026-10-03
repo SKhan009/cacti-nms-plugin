@@ -27,8 +27,22 @@
 <dl id="configuration-device-summary" class="configuration-summary"></dl>
 <h3>Selected protocols</h3>
 <div id="configuration-protocol-summary"></div>
-<p id="configuration-save-status"><?= $id ? 'Configuration backup and change history are not configured yet.' : 'Save this device to enable configuration backup and change history.' ?></p>
-<?php if (!$id): ?><p>Configuration backup and change history integrations are not implemented yet.</p><?php endif; ?>
+<h3>NMS settings backups and change history</h3>
+<p>Backups contain saved device settings, protocol parameters, graph associations and fault rules. Credentials are excluded. These are NMS settings snapshots, not configurations retrieved from the device.</p>
+<p><?= $id ? 'A snapshot is recorded automatically after settings are saved. You can also create a manual backup of saved settings.' : 'Backup and change history are enabled. Save this device to create its first snapshot.' ?></p>
+<button type="button" class="button primary" id="configuration-backup" <?= $id ? '' : 'disabled' ?>>Back Up Saved Settings</button>
+<p id="configuration-backup-result" role="status"></p>
+<?php $configurationHistory=icct_nms_configuration_history($id); ?>
+<div class="site-table-wrap"><table class="site-table"><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Changes / Backup</th></tr></thead><tbody id="configuration-history-rows">
+<?php foreach($configurationHistory as $event): ?>
+<tr><td><?= icct_nms_h($event['time']) ?></td><td><?= icct_nms_h($event['user'] ?: 'User '.$event['user_id']) ?></td><td><?= icct_nms_h($event['action']) ?></td><td>
+<button type="button" class="button configuration-download" data-backup-id="<?= icct_nms_h($event['id']) ?>">Download Backup</button>
+<details><summary><?= count($event['changes']) ?> changed settings</summary><table class="site-table"><thead><tr><th>Setting</th><th>Before</th><th>After</th></tr></thead><tbody><?php foreach($event['changes'] as $field=>$change): ?><tr><td><?= icct_nms_h($field) ?></td><td><?= icct_nms_h($change['before'] ?? 'Not set') ?></td><td><?= icct_nms_h($change['after'] ?? 'Not set') ?></td></tr><?php endforeach; ?></tbody></table></details>
+</td></tr>
+<?php endforeach; if(!$configurationHistory): ?><tr><td colspan="4"><?= $id ? 'No snapshots yet. Create a backup or save changed settings to start history.' : 'History appears after this device is saved.' ?></td></tr><?php endif; ?>
+</tbody></table></div>
+<p>Showing the latest 100 snapshots. Earlier snapshots remain stored. Changes to excluded credentials are not included in this history.</p>
+<script type="application/json" id="configuration-backups"><?= json_encode($configurationHistory,JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_INVALID_UTF8_SUBSTITUTE) ?></script>
 </section>
 <section id="fcaps-accounting" role="tabpanel" aria-labelledby="fcaps-tab-accounting" hidden><h3>Accounting</h3><p>Accounting policies and usage reports are not configured for this device yet.</p></section>
 <section id="fcaps-performance" role="tabpanel" aria-labelledby="fcaps-tab-performance" hidden><h3>Performance</h3><p>Selected graph templates provide performance measurements. View graph definitions in Graphs and interface status in Port Config.</p><ul><?php foreach($graphAssociations as $template): ?><li><?= icct_nms_h($template['name']) ?></li><?php endforeach; ?></ul></section>
