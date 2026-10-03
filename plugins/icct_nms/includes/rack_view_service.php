@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . "/node_membership_service.php";
 /** Both rack editing surfaces share these placement records and validation. */
 function icct_nms_rack_units($units,$capacity) {
     if (!is_array($units) || !$units || count($units)>100) throw new InvalidArgumentException('Select at least one rack unit.');
@@ -13,7 +14,7 @@ function icct_nms_rack_revision($id) {
     $peripheral=(string)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['rack_peripheral_'.$id]);
     return hash('sha256',json_encode([$row,$peripheral]));
 }
-function icct_nms_rack_place($id,$site,$rack,$units,$peripheral=false,$revision=null) {
+function icct_nms_rack_place($id,$site,$rack,$units,$peripheral=false,$revision=null,$unassignNode=false) {
     icct_backend_require_management(3); icct_backend_require_device_access($id);
     $lock='icct_backend_racks_'.substr(hash('sha256',(string)db_fetch_cell('SELECT DATABASE()')),0,32);
     if ((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',[$lock])!==1) throw new RuntimeException('Rack configuration is busy. Retry shortly.');
@@ -22,9 +23,12 @@ function icct_nms_rack_place($id,$site,$rack,$units,$peripheral=false,$revision=
         $host=db_fetch_row_prepared("SELECT site_id FROM host WHERE id=? AND deleted='' FOR UPDATE",[$id]);
         if (!$host || (int)$host['site_id']!==$site) throw new InvalidArgumentException('Device site changed. Reload the page.');
         if ($revision!==null && (!is_string($revision) || !hash_equals(icct_nms_rack_revision($id),$revision))) throw new InvalidArgumentException('Placement changed in another page. Reload before moving this device.');
+        $previousPlacement=db_fetch_row_prepared('SELECT rack_id FROM plugin_icct_nms_rack_devices WHERE host_id=?',[$id]);
+        $previousPeripheral=(int)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['rack_peripheral_'.$id]);
         if ($rack) {
             $record=db_fetch_row_prepared('SELECT r.*,n.site_id FROM plugin_icct_nms_racks r JOIN plugin_icct_nms_rack_nodes n ON n.id=r.node_id WHERE r.id=? FOR UPDATE',[$rack]);
             if (!$record || (int)$record['site_id']!==$site) throw new InvalidArgumentException('Select a rack at the device site.');
+            icct_nms_validate_device_node($id,(int)$record['node_id']);
             if (!$peripheral) {
                 [$start,$height]=icct_nms_rack_units($units,(int)$record['unit_count']);
                 icct_backend_topology_config_apply('place_device',$site,['rack_id'=>$rack,'host_id'=>$id,'start_unit'=>$start,'unit_height'=>$height]);
@@ -33,6 +37,8 @@ function icct_nms_rack_place($id,$site,$rack,$units,$peripheral=false,$revision=
         if (!$rack || $peripheral) icct_backend_category_execute('DELETE FROM plugin_icct_nms_rack_devices WHERE host_id=?',[$id]);
         if ($rack && $peripheral) icct_backend_category_execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',['rack_peripheral_'.$id,(string)$rack]);
         else icct_backend_category_execute('DELETE FROM plugin_icct_nms_meta WHERE meta_key=?',['rack_peripheral_'.$id]);
+        if ($rack) icct_backend_category_execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',['device_node_id_'.$id,(string)$record['node_id']]);
+        elseif ($previousPlacement || $previousPeripheral || $unassignNode) icct_backend_category_execute('DELETE FROM plugin_icct_nms_meta WHERE meta_key=?',['device_node_id_'.$id]);
         icct_backend_category_execute('COMMIT');
     } catch (Throwable $error) {icct_backend_category_execute('ROLLBACK');throw $error;}
     finally {db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]);}

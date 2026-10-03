@@ -10,9 +10,14 @@ function icct_backend_topology_integer($value,$min,$max,$label) { return (int)$v
 function icct_backend_require_device_access($id) { if (empty($GLOBALS['allowDevice'])) throw new RuntimeException('Device access denied.'); }
 try { icct_nms_assign_node_device(['device_id'=>10,'node_id'=>1]); throw new LogicException('Unauthorized assignment allowed'); }
 catch (RuntimeException $error) { if ($error->getMessage()!=='Device access denied.') throw $error; }
-$allowDevice=true; $fixtureSite=5; $fixtureRack=false; $writes=[];
+$allowDevice=true; $fixtureSite=5; $fixtureRack=false; $fixturePeripheral=false;$fixtureNode=0; $writes=[];
 function db_fetch_cell($query) { return 'fixture'; }
-function db_fetch_cell_prepared($query,$parameters) { return 1; }
+function db_fetch_cell_prepared($query,$parameters) {
+ if(str_contains($query,'meta_value FROM plugin_icct_nms_meta'))return $GLOBALS['fixturePeripheral']?9:0;
+ if(str_contains($query,'SELECT r.node_id'))return 0;
+ if(str_contains($query,'SELECT n.id'))return $GLOBALS['fixtureNode'];
+ return 1;
+}
 function db_fetch_row_prepared($query,$parameters) {
     if (str_contains($query,'FROM host')) return ['id'=>10,'site_id'=>5];
     if (str_contains($query,'rack_devices')) return $GLOBALS['fixtureRack'] ? ['node_id'=>1] : [];
@@ -21,8 +26,8 @@ function db_fetch_row_prepared($query,$parameters) {
 function icct_backend_category_execute($query,$parameters=[]) { $GLOBALS['writes'][]=[$query,$parameters]; }
 icct_nms_assign_node_device(['device_id'=>10,'node_id'=>1]);
 if ($writes[1][1]!==['device_node_id_10','1'] || $writes[2][0]!=='COMMIT') throw new RuntimeException('Device-specific membership was not saved.');
-foreach (['site','rack'] as $case) {
-    $writes=[]; $fixtureSite=$case==='site'?6:5; $fixtureRack=$case==='rack';
+foreach (['site','rack','peripheral','node'] as $case) {
+    $writes=[]; $fixtureSite=$case==='site'?6:5; $fixtureRack=$case==='rack';$fixturePeripheral=$case==='peripheral';$fixtureNode=$case==='node'?2:0;
     try { icct_nms_assign_node_device(['device_id'=>10,'node_id'=>1]); throw new LogicException('Invalid assignment accepted.'); }
     catch (InvalidArgumentException $expected) {}
     if (count($writes)!==2 || $writes[1][0]!=='ROLLBACK') throw new RuntimeException('Invalid assignment changed membership.');

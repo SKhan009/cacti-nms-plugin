@@ -84,6 +84,10 @@ function icct_nms_save_device($id, $old, $input)
         : icct_backend_topology_integer($rackSelection,0,2147483647,'Rack');
     $placement = null;
     $peripheral=$input['rack_position']==='peripheral';
+    if ($rack && $id) {
+        $targetNode=(int)db_fetch_cell_prepared('SELECT node_id FROM plugin_icct_nms_racks WHERE id=?',[$rack]);
+        icct_nms_validate_device_node($id,$targetNode);
+    }
     if ($rack && !$peripheral) {
         $r = db_fetch_row_prepared(
             'SELECT r.*,n.site_id FROM plugin_icct_nms_racks r JOIN plugin_icct_nms_rack_nodes n ON n.id=r.node_id WHERE r.id=?',

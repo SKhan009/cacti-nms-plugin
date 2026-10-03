@@ -7,7 +7,7 @@
         <title>Presets · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
         <link rel="stylesheet" href="css/inventory.css?v=13ff8a5e7820" />
-            <script type="text/javascript" nonce="OHIR9-NtzfJhj-ZMhL2BHRxo">if (top != self) {top.location.href = self.location.href;}</script></head>
+            <script type="text/javascript" nonce="x-_nOry8TrpXEpkcTZRxr-4o">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -54,10 +54,12 @@
 <label class="field"><span class="field-label">Rack Name</span><select name="rack_profile_id"><option value="">Select rack configuration</option><option value="ee637058f5f5e808" >Demo</option></select></label>
 <label class="field"><span class="field-label">Number of Racks</span><input name="rack_count_display" readonly placeholder="Select rack configuration"></label>
 </div>
-<script type="application/json" id="node-rack-profiles">{"ee637058f5f5e808":{"name":"Demo","rack_count":2,"unit_count":24}}</script>
+<script type="application/json" id="node-rack-profiles">{"ee637058f5f5e808":{"name":"Demo","rack_count":6,"unit_count":12}}</script>
 </form><section id="node-list" aria-label="Nodes"><label class="field site-search"><span class="field-label">Search nodes</span><input type="search" id="node-search" placeholder="Search by node name or site"></label>
 <div class="site-table-wrap"><table class="site-table"><thead><tr><th>Node Name</th><th>Site</th><th>Racks</th><th>Actions</th></tr></thead><tbody>
-<tr data-node-row data-node-search="node test demo — bengaluru"><td>Node Test</td><td>Demo — Bengaluru</td><td>2</td><td><div class="node-actions">
+<tr data-node-row data-node-search="demo racks topology lab location 01"><td>Demo racks</td><td>Topology Lab Location 01</td><td>6</td><td><div class="node-actions">
+<button type="button" class="icon-button" data-edit-node="{&quot;id&quot;:&quot;13&quot;,&quot;name&quot;:&quot;Demo racks&quot;,&quot;site_id&quot;:&quot;3&quot;,&quot;rack_profile_id&quot;:&quot;ee637058f5f5e808&quot;}" aria-label="Edit Demo racks"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16 12-12 4 4-12 12-5 1zM14 6l4 4"/></svg></button>
+<form data-static-preview="true" method="post" data-delete-node data-node-name="Demo racks"><input type="hidden" name="action" value="delete_node"><input type="hidden" name="node_id" value="13"><button type="submit" class="icon-button" aria-label="Delete Demo racks"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7"/></svg></button></form></div></td></tr><tr data-node-row data-node-search="node test demo — bengaluru"><td>Node Test</td><td>Demo — Bengaluru</td><td>6</td><td><div class="node-actions">
 <button type="button" class="icon-button" data-edit-node="{&quot;id&quot;:&quot;12&quot;,&quot;name&quot;:&quot;Node Test&quot;,&quot;site_id&quot;:&quot;4&quot;,&quot;rack_profile_id&quot;:&quot;ee637058f5f5e808&quot;}" aria-label="Edit Node Test"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16 12-12 4 4-12 12-5 1zM14 6l4 4"/></svg></button>
 <form data-static-preview="true" method="post" data-delete-node data-node-name="Node Test"><input type="hidden" name="action" value="delete_node"><input type="hidden" name="node_id" value="12"><button type="submit" class="icon-button" aria-label="Delete Node Test"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7"/></svg></button></form></div></td></tr></tbody></table></div><p id="node-empty" class="empty-state" hidden>No nodes found. Add a node to get started.</p></section>
 </div>

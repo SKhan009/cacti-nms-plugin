@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . "/node_membership_service.php";
 /** Node membership is explicit for unracked devices; rack placements determine membership. */
 function icct_nms_node_configuration_groups($nodes, $devices, $memberships, $rackNodes) {
     $groups=[];
@@ -25,7 +26,9 @@ function icct_nms_assign_node_device($input) {
         $device=db_fetch_row_prepared("SELECT id,site_id FROM host WHERE id=? AND deleted='' FOR UPDATE",[$deviceId]);
         if (!$device) throw new InvalidArgumentException('This device no longer exists.');
         $rack=db_fetch_row_prepared('SELECT r.node_id FROM plugin_icct_nms_rack_devices d JOIN plugin_icct_nms_racks r ON r.id=d.rack_id WHERE d.host_id=?',[$deviceId]);
-        if ($rack) throw new InvalidArgumentException('This device belongs to its rack’s node. Change its rack placement in Add/Edit Device.');
+        $peripheral=(int)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['rack_peripheral_'.$deviceId]);
+        if ($rack || $peripheral) throw new InvalidArgumentException('This device belongs to its rack’s node. Change its rack placement in Add/Edit Device.');
+        icct_nms_validate_device_node($deviceId,$nodeId);
         if ($nodeId) {
             $node=db_fetch_row_prepared('SELECT id,site_id FROM plugin_icct_nms_rack_nodes WHERE id=? FOR UPDATE',[$nodeId]);
             if (!$node || (int)$node['site_id']!==(int)$device['site_id']) throw new InvalidArgumentException('Select a node at the device’s site.');

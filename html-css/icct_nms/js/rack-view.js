@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const source=document.querySelector('#rackViewData');if(!source)return;
-  let data=JSON.parse(source.textContent),editing=false,busy=false,scale=1;
+  let data=JSON.parse(source.textContent),editing=false,busy=false,scale=1,rackOffset=0;
   const node=document.querySelector('#rackViewNode'),cabinets=document.querySelector('#rackCabinets'),pool=document.querySelector('#rackDevicePool'),message=document.querySelector('#rackViewMessage'),manual=document.querySelector('#rackManualPlacement');
   const deviceSelect=document.querySelector('#rackMoveDevice'),rackSelect=document.querySelector('#rackMoveRack'),startInput=document.querySelector('#rackMoveStart'),heightInput=document.querySelector('#rackMoveHeight');
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
@@ -13,6 +13,10 @@
   function droppable(target,rackId,unit,peripheral=false){target.addEventListener('dragover',event=>{if(editing&&!busy){event.preventDefault();target.classList.add('drag-over');}});target.addEventListener('dragleave',()=>target.classList.remove('drag-over'));target.addEventListener('drop',event=>{event.preventDefault();target.classList.remove('drag-over');const id=Number(event.dataTransfer.getData('text/plain'));if(editing&&nodeDevices().some(d=>d.id===id))save(id,rackId,unit,Number(heightInput.value),peripheral);});}
   function render(){
     const selected=currentNode(),racks=data.racks.filter(r=>String(r.node_id)===node.value),devices=nodeDevices();
+    rackOffset=Math.min(rackOffset,Math.max(0,Math.floor((racks.length-1)/3)*3));
+    const previous=document.querySelector('#rackPrevious'),next=document.querySelector('#rackNext');
+    previous.hidden=next.hidden=racks.length<=3;previous.disabled=rackOffset===0;next.disabled=rackOffset+3>=racks.length;
+    document.querySelector('#rackPageStatus').textContent=racks.length>3?'Racks '+(rackOffset+1)+'–'+Math.min(rackOffset+3,racks.length)+' of '+racks.length:'';
     cabinets.replaceChildren();pool.hidden=!editing;manual.hidden=!editing;document.querySelector('#rackViewEdit').hidden=!data.management;
     document.querySelector('#rackViewEdit').setAttribute('aria-pressed',String(editing));
     const oldDevice=deviceSelect.value;deviceSelect.replaceChildren(new Option('Select device',''));devices.forEach(d=>deviceSelect.add(new Option(d.name,String(d.id))));if(devices.some(d=>String(d.id)===oldDevice))deviceSelect.value=oldDevice;
@@ -20,9 +24,9 @@
     const list=document.querySelector('#rackDeviceList');list.replaceChildren();devices.forEach(d=>list.append(card(d)));droppableOncePool();
     if(!selected){cabinets.append(el('p','','Add a node and rack configuration in Presets to get started.'));return;}
     if(!racks.length)cabinets.append(el('p','','This node has no racks. Select its rack configuration in Presets.'));
-    racks.forEach(rack=>{
+    racks.slice(rackOffset,rackOffset+3).forEach(rack=>{
       const shell=el('section','rack-cabinet'),heading=el('header','');heading.append(el('h3','',rack.name),el('small','',selected.name+' · Rack '+rack.rack_number+' · '+rack.unit_count+' U'));shell.append(heading);
-      const frame=el('div','rack-frame'),slots=el('div','rack-slots');slots.style.gridTemplateRows='repeat('+rack.unit_count+',var(--rack-unit-size))';
+      const frame=el('div','rack-frame'),slots=el('div','rack-slots');slots.style.gridTemplateRows='repeat('+rack.unit_count+',minmax(0,1fr))';
       const occupied=new Set(rack.blocked.map(Number));devices.filter(d=>d.rack_id===Number(rack.id)&&!d.peripheral).forEach(d=>{for(let u=d.start;u<d.start+d.height;u++)occupied.add(u);});
       for(let u=1;u<=Number(rack.unit_count);u++){const slot=el('div','rack-slot'+(occupied.has(u)?' occupied':''));slot.style.gridRow=String(u);slot.append(el('span','rack-unit-label',u+'U'));slot.title=occupied.has(u)?u+'U — In use':u+'U — Available';droppable(slot,Number(rack.id),u);slots.append(slot);}
       devices.filter(d=>d.rack_id===Number(rack.id)&&!d.peripheral).forEach(d=>{const n=card(d);n.style.gridRow=d.start+' / span '+d.height;droppable(n,Number(rack.id),d.start);slots.append(n);});
@@ -39,12 +43,16 @@
     busy=true;message.textContent='Saving placement…';
     try{const response=await fetch('rack_placement.php',{method:'POST',credentials:'same-origin',body});const result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||'Placement was not saved.');data=result.data;populateNodes();render();message.textContent='Placement saved. Add/Edit Device uses this same placement.';}catch(error){message.textContent=error.message;try{await refresh();}catch(refreshError){message.textContent+=' '+refreshError.message;}}finally{busy=false;}
   }
-  node.addEventListener('change',()=>{message.textContent='';render();});
+  node.addEventListener('change',()=>{rackOffset=0;message.textContent='';render();});
   document.querySelector('#rackViewEdit').addEventListener('click',()=>{editing=!editing;render();message.textContent=editing?'Drag devices to consecutive rack units or a peripheral slot. Changes save when dropped.':'';});
   deviceSelect.addEventListener('change',()=>{const d=data.devices.find(d=>String(d.id)===deviceSelect.value);if(d)heightInput.value=d.height||1;});
   document.querySelector('#rackMoveSave').addEventListener('click',()=>save(Number(deviceSelect.value),Number(rackSelect.value),Number(startInput.value),Number(heightInput.value)));
-  document.querySelector('#rackViewZoomIn').addEventListener('click',()=>{scale=Math.min(2,scale+.1);cabinets.style.setProperty('--rack-unit-size',Math.round(28*scale)+'px');});
-  document.querySelector('#rackViewZoomOut').addEventListener('click',()=>{scale=Math.max(.6,scale-.1);cabinets.style.setProperty('--rack-unit-size',Math.round(28*scale)+'px');});
+  function zoom(){cabinets.style.setProperty('--rack-scale',scale);}
+  document.querySelector('#rackPrevious').addEventListener('click',()=>{rackOffset=Math.max(0,rackOffset-3);render();});
+  document.querySelector('#rackNext').addEventListener('click',()=>{rackOffset+=3;render();});
+  document.querySelector('#rackViewZoomIn').addEventListener('click',()=>{scale=Math.min(2,scale+.1);zoom();});
+  document.querySelector('#rackViewZoomOut').addEventListener('click',()=>{scale=Math.max(.6,scale-.1);zoom();});
+  document.querySelector('#rackViewFit').addEventListener('click',()=>{scale=1;zoom();document.querySelector('#icct-panel-rack').scrollTop=0;});
   document.querySelector('#rackViewFullscreen').addEventListener('click',()=>{if(document.fullscreenElement)document.exitFullscreen();else document.querySelector('.icct-map-panel').requestFullscreen().catch(()=>message.textContent='Fullscreen is unavailable.');});
   populateNodes();render();setInterval(()=>{if(!editing&&!busy&&!document.querySelector('#icct-panel-rack').hidden)refresh().catch(error=>message.textContent=error.message);},30000);
 })();
