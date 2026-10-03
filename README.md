@@ -14,3 +14,5 @@ See [the plugin documentation](plugins/icct_nms/README.md) for configuration, co
 The plugin includes Inventory, device configuration, protocol enable/disable controls, diagnostics, graph template associations, and data queries. It uses its own tables and Cacti’s native device and graph APIs.
 
 The current plugin source and separate [HTML/CSS previews](html-css/icct_nms/README.md) are maintained here. The [rack view](html-css/icct_nms/rack-view.html) recreates the supplied design with sample devices. Packages, local QA files, and superseded plugins are excluded.
+
+Inventory’s eye action opens a dedicated read-only device view with Device Details, Graphs, Interfaces/Ports and FCAPS. Header diagnostic icons use the device’s saved selections and open the shared diagnostic dialog without queuing a job until Run Diagnostic is selected. The final menu reuses native re-index, edit, clone and enable/disable/delete flows with CSRF and permission checks. Credentials remain hidden; absent metadata is shown as unreported rather than inferred.

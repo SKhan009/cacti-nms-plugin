@@ -142,7 +142,7 @@ try {
         $host = $old;
         echo '<div id="device-wizard" data-device-id="' . (int)$id . '" data-initial-step="' . icct_nms_h($_GET['step'] ?? 'basic') . '">';
     }
-    require __DIR__ . "/templates/device.php";
+    require __DIR__ . ($readonly ? "/templates/device_view.php" : "/templates/device.php");
     if ($wizard) {
         require __DIR__ . "/includes/wizard_view.php";
         echo '<script type="application/json" id="protocol-default-values">'.json_encode(icct_nms_protocol_presets(),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR).'</script>';

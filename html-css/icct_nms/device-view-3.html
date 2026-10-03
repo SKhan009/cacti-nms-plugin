@@ -1,0 +1,91 @@
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Device Details · ICCT NMS</title>
+        <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
+        <link rel="stylesheet" href="css/inventory.css?v=06099eb8037f" />
+            <script type="text/javascript" nonce="7eDwojVB9wiRplB4-r1kcr4d">if (top != self) {top.location.href = self.location.href;}</script></head>
+    <body class="icct-inventory">
+        <header class="topbar">
+            <div class="header-menu">
+                <button class="icon-button" type="button" aria-label="Navigation menu" aria-expanded="false">☰</button>
+                <nav class="header-menu-panel" aria-label="Main navigation">
+                    <a href="dashboard.html">Dashboard</a>
+                    <a href="index.html">Inventory</a>
+                    <a href="rack-view.html">Rack View</a>
+                    <a href="node-configuration.html">Node Configuration</a>
+                    <a href="topology-configuration.html">Topology Configuration</a>
+                    <a href="mib-repository.html">MIB Repository</a>
+                    <a href="presets.html#segment">Presets</a>
+                </nav>
+            </div>
+            <div class="brand">
+                <img class="brand-logo brand-logo-drdo" src="images/drdo-logo.svg" alt="DRDO" width="34" height="34">
+                <img class="brand-logo brand-logo-bel" src="images/bharat-electronics-logo.svg" alt="Bharat Electronics" width="128" height="34">
+            </div>
+            <div class="station">
+                <strong>ICCT NMS</strong>
+                <span>Main Poller</span>
+            </div>
+            <div class="system-metrics"><span>Poller: 300 sec</span></div>
+            <a class="cacti-backend-button" href="http://127.0.0.1:8080/cacti/index.php">Cacti Backend</a>
+            <a class="profile" href="http://127.0.0.1:8080/cacti/auth_profile.php">
+                <span class="user-avatar" aria-hidden="true">◉</span>
+                <span>
+                    <strong>admin</strong>
+                    <small>Administrator</small>
+                </span>
+            </a>
+        </header>
+        <main class="workspace">
+            <section class="device-panel">
+                                <div class="device-view">
+<header class="device-view-header">
+ <a class="device-back" href="index.html" aria-label="Back to inventory">←</a>
+ <div class="device-view-identity"><h1><span class="device-status-dot online" aria-label="Up"></span>NMS Simulated Router</h1><span>127.0.0.1</span></div>
+ <dl class="device-view-metrics"><div><dt>Packet Loss</dt><dd>—</dd></div><div><dt>Response Time</dt><dd>0.00 ms</dd></div><div><dt>System Uptime</dt><dd>01d 00h 00m 00s</dd></div></dl>
+ <div class="device-view-actions" aria-label="Device diagnostics and actions">
+  <details class="row-menu device-view-menu"><summary class="device-tool" aria-label="More device actions">⋮</summary><div class="row-menu-panel">
+ <button type="button" disabled title="Alarm suppression unavailable.">Alarm Suppression</button>
+ <form data-static-preview="true" method="post" action="protocol-3.html"><input type="hidden" name="action" value="reindex"><button type="submit">Re-Index Device</button></form>
+ <a href="device-3.html">Modify Device</a>
+ <a href="clone-3.html" data-clone-device data-device-name="NMS Simulated Router">Clone Device</a>
+ <form data-static-preview="true" method="post" action="http://127.0.0.1:8080/cacti/host.php" ><input type="hidden" name="action" value="actions"><input type="hidden" name="drp_action" value="3"><input type="hidden" name="chk_3" value="on"><button type="submit">Disable Device</button></form><form data-static-preview="true" method="post" action="http://127.0.0.1:8080/cacti/host.php" class="danger-action"><input type="hidden" name="action" value="actions"><input type="hidden" name="drp_action" value="1"><input type="hidden" name="chk_3" value="on"><button type="submit">Delete Device</button></form> </div></details> </div>
+</header>
+<nav class="device-view-tabs" aria-label="Device view sections"><a href="#view-details" data-device-view-tab="details">Device Details</a><a href="#view-graphs" data-device-view-tab="graphs">Graphs</a><a href="#view-ports" data-device-view-tab="ports">Interfaces/Ports</a><a href="#view-fcaps" data-device-view-tab="fcaps">FCAPS</a></nav>
+<section id="view-details" data-device-view-panel="details">
+<dl class="device-detail-grid">
+<div><dt>Short Name</dt><dd>NSR</dd></div><div><dt>Segment</dt><dd>Network</dd></div><div><dt>Device Type/Model</dt><dd>—</dd></div><div><dt>Serial Number</dt><dd>—</dd></div><div><dt>MAC Address</dt><dd>02:00:00:00:00:03</dd></div><div><dt>Polling Interval (Sec)</dt><dd>300</dd></div><div><dt>Rack Placement</dt><dd>U1–U1 (Demo 1)</dd></div><div><dt>Firmware Version</dt><dd>—</dd></div><div><dt>Configured Protocols</dt><dd>SNMP, LLDP</dd></div><div><dt>Discovery Protocol</dt><dd>LLDP</dd></div><div><dt>Default SNMP Version</dt><dd>SNMP v2c</dd></div><div><dt>Last Maintenance Date</dt><dd>—</dd></div></dl>
+<section class="device-view-section"><h2>Device Login Credentials</h2><dl class="device-detail-grid"><div><dt>Username</dt><dd>—</dd></div><div><dt>Password / Private Key</dt><dd>Hidden</dd></div></dl></section><section class="device-view-section"><h2>Device Image</h2><p>No image saved for this device type.</p></section>
+<section class="device-view-section"><h2>Notes</h2><p>SNMPSim lab router on VM loopback</p></section></section>
+<section id="view-graphs" data-device-view-panel="graphs" hidden><h2>Graphs</h2><div class="device-view-graphs"><figure><figcaption>NMS Simulated Router - CPU Usage</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=19"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=19&amp;rra_id=0" alt="NMS Simulated Router - CPU Usage"></a></figure><figure><figcaption>NMS Simulated Router - NMS Full Graph Options Verification</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=35"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=35&amp;rra_id=0" alt="NMS Simulated Router - NMS Full Graph Options Verification"></a></figure><figure><figcaption>NMS Simulated Router - NMS Router CPU - Custom Operator Graph</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=34"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=34&amp;rra_id=0" alt="NMS Simulated Router - NMS Router CPU - Custom Operator Graph"></a></figure><figure><figcaption>NMS Simulated Router - Polling Time</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=17"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=17&amp;rra_id=0" alt="NMS Simulated Router - Polling Time"></a></figure><figure><figcaption>NMS Simulated Router - Uptime</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=18"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=18&amp;rra_id=0" alt="NMS Simulated Router - Uptime"></a></figure></div></section>
+<section id="view-ports" data-device-view-panel="ports" hidden><h2>Interfaces/Ports</h2><p>Port status from the latest collector observation.</p><div class="site-table-wrap"><table class="site-table"><thead><tr><th>Port / Interface</th><th>ifIndex</th><th>Status</th><th>Description</th></tr></thead><tbody><tr><td>Gi0/0</td><td>1</td><td>In use</td><td>GigabitEthernet0/0</td></tr><tr><td>Gi0/1</td><td>2</td><td>In use</td><td>GigabitEthernet0/1</td></tr><tr><td>NMS-Lab-Uplink</td><td>9001</td><td>In use</td><td>NMS-Lab-Uplink</td></tr></tbody></table></div></section>
+<section id="view-fcaps" data-device-view-panel="fcaps" hidden><h2>FCAPS</h2><p>Saved fault rules and current device observations.</p><div class="site-table-wrap"><table class="site-table"><thead><tr><th>Rule</th><th>Severity</th><th>Minimum</th><th>Maximum</th><th>Enabled</th></tr></thead><tbody><tr><td colspan="5">No fault rules configured.</td></tr></tbody></table></div></section>
+</div>
+        </section>
+    </main>
+    <dialog id="message-dialog" aria-labelledby="message-title" aria-describedby="message-text">
+        <div class="message-heading">
+            <h2 id="message-title"></h2>
+            <button type="button" id="message-close" aria-label="Close message">×</button>
+        </div>
+        <p id="message-text"></p>
+        <div class="message-actions">
+            <button class="button" type="button" id="message-cancel">Cancel</button>
+            <button class="button primary" type="button" id="message-confirm">OK</button>
+        </div>
+    </dialog>
+    <dialog id="shared-diagnostic-dialog" aria-labelledby="shared-diagnostic-title">
+        <div class="message-heading"><h2 id="shared-diagnostic-title">Device Diagnostics</h2><button type="button" data-shared-diagnostic-close aria-label="Close diagnostics">×</button></div>
+        <form data-static-preview="true" id="shared-diagnostic-form"><input type="hidden" name="host_id"><input type="hidden" name="action" value="queue"><div class="field"><label for="shared-diagnostic-tool">Diagnostic method</label><select id="shared-diagnostic-tool" name="tool"></select></div><div class="protocol-actions"><button class="button primary" type="submit">Run Diagnostic</button></div></form>
+        <p id="shared-diagnostic-status" role="status" aria-live="polite"></p><pre id="shared-diagnostic-output" hidden></pre>
+        <div class="message-actions"><button class="button" type="button" data-shared-diagnostic-close>Close</button></div>
+    </dialog>
+    <script src="js/diagnostic-popup.js?v=f34e2afb2dfc" defer></script>
+    <script src="js/inventory.js?v=9a406038336b" defer></script>
+<script src="js/preview.js" defer></script>
+</body>
+</html>

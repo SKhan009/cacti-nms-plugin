@@ -1412,3 +1412,16 @@ if (protocolDefaultData) {
     section.querySelector('[name=serial_interface]:checked')?.dispatchEvent(new Event('change',{bubbles:true}));
   });
 }
+
+// Read-only device tabs never submit configuration or start diagnostics.
+(() => {
+  const tabs = [...document.querySelectorAll('[data-device-view-tab]')];
+  if (!tabs.length) return;
+  const render = () => {
+    const requested = location.hash.replace('#view-', '');
+    const active = tabs.some(tab => tab.dataset.deviceViewTab === requested) ? requested : 'details';
+    tabs.forEach(tab => { const selected = tab.dataset.deviceViewTab === active; tab.classList.toggle('current', selected); if(selected)tab.setAttribute('aria-current','page');else tab.removeAttribute('aria-current'); });
+    document.querySelectorAll('[data-device-view-panel]').forEach(panel => { panel.hidden = panel.dataset.deviceViewPanel !== active; });
+  };
+  window.addEventListener('hashchange', render); render();
+})();
