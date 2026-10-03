@@ -2,6 +2,8 @@
 require __DIR__.'/../includes/protocol_service.php';
 require __DIR__.'/../includes/services/discovery.php';
 $assignment=[];$preset=[];
+$enabledProtocols=["snmp"=>true,"lldp"=>true,"cdp"=>true];
+function icct_backend_protocol_enabled($id,$protocol){return $GLOBALS["enabledProtocols"][$protocol]??false;}
 function db_fetch_row_prepared($sql,$args){return $GLOBALS['assignment'];}
 function read_config_option($key){return 300;}
 function icct_backend_current_user_id(){return 1;}
@@ -26,4 +28,14 @@ $assignment=[];$preset=[];
 icct_nms_save_discovery(2,$timings+['discovery_policy'=>1,'discovery_methods_present'=>1]);
 icct_nms_save_discovery(2,$timings+['discovery_protocol'=>'lldp']);checkMethods(['lldp']);
 if(!$assignment['collection_enabled'])throw new RuntimeException('First neighbour protocol did not enable collection');
+$assignment=[];$preset=[];
+icct_nms_save_discovery(2,$timings+['discovery_policy'=>1,'discovery_methods_present'=>1,'methods'=>['arp','fdb'],'collection_enabled'=>1]);
+checkMethods(['arp','fdb']);
+$enabledProtocols=['snmp'=>true,'lldp'=>false,'cdp'=>false];
+if(icct_backend_nd_host_methods($assignment)!==['arp','fdb'])throw new RuntimeException('SNMP observations incorrectly depend on LLDP/CDP');
+$enabledProtocols['snmp']=false;
+if(icct_backend_nd_host_methods($assignment)!==[])throw new RuntimeException('Observations collected while SNMP disabled');
+$enabledProtocols['snmp']=true;
+icct_nms_save_discovery(2,$timings+['discovery_policy'=>1,'discovery_methods_present'=>1,'methods'=>['fdb'],'collection_enabled'=>1]);
+if(icct_backend_nd_host_methods($assignment)!==['fdb'])throw new RuntimeException('Cleared IP neighbour selection remains active');
 echo "Device protocol selections, shared observations and disabled collection persistence passed.\n";
