@@ -13,15 +13,16 @@ function db_fetch_assoc_prepared($sql,$args){global $queries;$queries[]=[$sql,$a
 function captureRecords(){global $id,$display;ob_start();include __DIR__.'/../templates/device_records.php';return ob_get_clean();}
 $html=captureRecords();
 assert(str_contains($html,'OFFSET 50')===false); // SQL must not leak into presentation.
-assert(str_contains($html,'Configuration snapshot'));
+assert(!str_contains($html,'Configuration snapshot'));
+foreach($queries as [$sql,$args]){if(str_contains($sql,'meta_key')){assert(str_contains($sql,"JSON_LENGTH"));assert(str_contains($sql,"Initial baseline"));}}
 assert(str_contains($html,'&lt;script&gt;'));
 assert(str_contains($html,'&lt;img'));
 assert(str_contains($html,'Page 3 of 3'));
 foreach($queries as [$sql,$args]){
  if(str_contains($sql,'diagnostic_jobs'))assert($args===[2,7]);
- if(str_contains($sql,'meta_value'))assert(str_contains($sql,'OFFSET 50'));
+ if(str_starts_with($sql,'SELECT meta_value'))assert(str_contains($sql,'OFFSET 50'));
  if(str_contains($sql,'result_json'))assert(str_contains($sql,'OFFSET 25'));
 }
 $diagnosticAccess=false;$queries=[];$html=captureRecords();assert(!str_contains($html,'View result'));foreach($queries as [$sql,$args])assert(!str_contains($sql,'diagnostic_jobs'));
 $management=false;$queries=[];$html=captureRecords();assert(str_contains($html,'permission'));assert(!$queries);
-echo "PASS: Records permissions, owner/device scope, escaped output, snapshots and independent pagination\n";
+echo "PASS: Records permissions, owner/device scope, escaped output, change-only history and independent pagination\n";

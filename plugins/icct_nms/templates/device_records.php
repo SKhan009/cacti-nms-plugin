@@ -22,21 +22,22 @@ $recordPager = static function($key, $page, $total) use ($id) {
 <p>Device management permission is required to read configuration and diagnostic records.</p>
 <?php else:
     $prefix = 'configuration_history_'.(int)$id.'_';
-    $totalChanges = (int)db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_icct_nms_meta WHERE LEFT(meta_key,?)=?',[strlen($prefix),$prefix]);
+    $changeFilter="LEFT(meta_key,?)=? AND CASE WHEN JSON_VALID(meta_value) THEN JSON_LENGTH(JSON_EXTRACT(meta_value,'$.changes'))>0 AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(meta_value,'$.action')),'')<>'Initial baseline' ELSE 0 END";
+    $totalChanges = (int)db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_icct_nms_meta WHERE '.$changeFilter,[strlen($prefix),$prefix]);
     $changesPage = min($recordPage('changes_page'), max(1,(int)ceil($totalChanges/25)));
-    $changeRows = db_fetch_assoc_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE LEFT(meta_key,?)=? ORDER BY meta_key DESC LIMIT 25 OFFSET '.(($changesPage-1)*25),[strlen($prefix),$prefix]);
+    $changeRows = db_fetch_assoc_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE '.$changeFilter.' ORDER BY meta_key DESC LIMIT 25 OFFSET '.(($changesPage-1)*25),[strlen($prefix),$prefix]);
 ?>
 <h3>Configuration changes</h3>
-<p>Recorded changes and configuration snapshots, newest first. Passwords and private keys are excluded. Changes before history recording began are unavailable.</p>
+<p>Recorded configuration changes, newest first. Passwords and private keys are excluded. Changes before history recording began are unavailable.</p>
 <div class="device-record-list">
 <?php foreach ($changeRows as $row): $event=json_decode($row['meta_value'],true); if(!is_array($event)) continue; $changes=$event['changes'] ?? []; ?>
 <details class="device-record-item" name="configuration-records">
 <summary><span><small>Time</small><?= $display($event['time'] ?? '') ?></span><span><small>User</small><?= $display($event['user'] ?? '') ?></span><span><small>Action</small><?= $display($event['action'] ?? '') ?></span><span><small>Changes</small><?= count($changes) ?> changed settings</span></summary>
 <div class="device-record-body"><h4>Changed settings</h4>
 <?php if($changes): ?><div class="site-table-wrap"><table class="site-table"><thead><tr><th>Setting</th><th>Before</th><th>After</th></tr></thead><tbody><?php foreach ($changes as $field=>$change): ?><tr><td><?= $display($field) ?></td><td><?= $display($change['before'] ?? '') ?></td><td><?= $display($change['after'] ?? '') ?></td></tr><?php endforeach; ?></tbody></table></div><?php else: ?><p>No settings changed in this snapshot.</p><?php endif; ?>
-<details class="device-record-snapshot"><summary>Configuration snapshot</summary><div class="site-table-wrap"><table class="site-table"><thead><tr><th>Setting</th><th>Saved value</th></tr></thead><tbody><?php foreach(($event['snapshot'] ?? []) as $field=>$value): ?><tr><td><?= $display($field) ?></td><td><?= $display($value) ?></td></tr><?php endforeach; ?></tbody></table></div></details>
+
 </div></details>
-<?php endforeach; if(!$changeRows): ?><p class="device-record-empty">No configuration records saved for this device.</p><?php endif; ?>
+<?php endforeach; if(!$changeRows): ?><p class="device-record-empty">No configuration changes recorded for this device.</p><?php endif; ?>
 </div>
 <?php $recordPager('changes_page',$changesPage,$totalChanges); ?>
 <h3>Diagnostic readings</h3>
