@@ -11,7 +11,7 @@ Open http://localhost:8765/ or `index.html` directly. This folder contains stati
 - `device-<id>.html`: saved Basic Information for each exported device.
 - `protocol-<id>.html`: saved protocol, diagnostic and Graphs steps for each device.
 - `css/inventory.css`: separate responsive stylesheet.
-- `images/`: supplied DRDO and Bharat Electronics SVG header logos.
+- `images/`: supplied DRDO and Bharat Electronics SVG header logos, plus local device-type topology SVGs in `images/device-types/`.
 - `js/inventory.js`: table, navigation and form display behavior.
 - `js/wizard.js`: local wizard step navigation and unsaved-change handling.
 - `js/preview.js`: static-preview form handling and HTML navigation.
@@ -24,3 +24,5 @@ Serve this folder with:
 ```sh
 python3 -m http.server 8765 --bind 127.0.0.1 --directory html-css/icct_nms
 ```
+
+`device-types.html` previews the Presets Device Type table and inline editor. Native image uploads are saved under the plugin’s `assets/images/device-types/uploads/`; the static preview does not upload files or change saved profiles.

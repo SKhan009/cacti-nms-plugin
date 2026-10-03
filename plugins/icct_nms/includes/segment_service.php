@@ -7,8 +7,9 @@ function icct_nms_save_segment($input)
     if (($input['action'] ?? '') === 'delete_segment') {
         $references = (int)db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_icct_nms_device_classification WHERE category_id=?', [$id]);
         $references += (int)db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_icct_nms_snmprec_imports WHERE category_id=?', [$id]);
+        if (function_exists('icct_nms_device_types')) foreach (icct_nms_device_types() as $type) if ((int)$type['category_id'] === $id) $references++;
         if (!$id) throw new InvalidArgumentException('Choose a saved segment.');
-        if ($references) throw new InvalidArgumentException('This segment is in use. Reassign its devices and imported templates before deleting it.');
+        if ($references) throw new InvalidArgumentException('This segment is in use. Reassign its devices, device types and imported templates before deleting it.');
         icct_backend_category_execute('DELETE FROM plugin_icct_nms_categories WHERE id=?', [$id]);
         return 'Segment deleted.';
     }

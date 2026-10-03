@@ -1,0 +1,114 @@
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Presets · ICCT NMS</title>
+        <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
+        <link rel="stylesheet" href="css/inventory.css?v=8a9b4f961d24" />
+    <script type="text/javascript" nonce="AIK-w-z836ohnk4CZfw5piA4">if (top != self) {top.location.href = self.location.href;}</script></head>
+    <body class="icct-inventory">
+        <header class="topbar">
+            <div class="header-menu">
+                <button class="icon-button" type="button" aria-label="Navigation menu" aria-expanded="false">☰</button>
+                <nav class="header-menu-panel" aria-label="Main navigation">
+                    <a href="http://127.0.0.1:8080/cacti/index.php">Dashboard</a>
+                    <a href="index.html">Inventory</a>
+                    <a href="rack-view.html">Rack View</a>
+                    <a href="presets.html#segment">Presets</a>
+                </nav>
+            </div>
+            <div class="brand">
+                <img class="brand-logo brand-logo-drdo" src="images/drdo-logo.svg" alt="DRDO" width="34" height="34">
+                <img class="brand-logo brand-logo-bel" src="images/bharat-electronics-logo.svg" alt="Bharat Electronics" width="128" height="34">
+            </div>
+            <div class="station">
+                <strong>ICCT NMS</strong>
+                <span>Main Poller</span>
+            </div>
+            <div class="system-metrics"><span>Poller: 300 sec</span></div>
+            <a class="profile" href="http://127.0.0.1:8080/cacti/auth_profile.php">
+                <span class="user-avatar" aria-hidden="true">◉</span>
+                <span>
+                    <strong>admin</strong>
+                    <small>Administrator</small>
+                </span>
+            </a>
+        </header>
+        <main class="workspace">
+            <section class="device-panel">
+                                <div class="presets-heading">
+    <div><nav class="presets-breadcrumb" aria-label="Breadcrumb"><a href="http://127.0.0.1:8080/cacti/index.php">Dashboard</a> / <a href="presets.html">Presets</a> / <span>Device Type</span></nav><h1>Presets</h1></div>
+    <button class="button primary" type="button" id="add-device-type">Add</button></div>
+<div class="presets-content">
+<nav class="presets-tabs" aria-label="Preset sections">
+<button type="button" disabled>Node</button><button type="button" disabled>Site</button><a href="presets.html#segment" >Segment</a><a href="device-types.html" aria-current="page">Device Type</a><button type="button" disabled>Network Connections</button><button type="button" disabled>Protocols</button></nav>
+<form data-static-preview="true" method="post" enctype="multipart/form-data" class="device-type-editor" id="device-type-editor" hidden>
+<input type="hidden" name="action" value="save_type"><input type="hidden" name="type_id" value="">
+<h2 id="type-editor-title">Add Device Type</h2>
+<div class="form-grid">
+<label class="field"><span class="field-label">Device Type Name *</span><input name="type_name" maxlength="150" required value=""></label>
+<label class="field"><span class="field-label">Segment</span><select name="category_id"><option value="0">None</option><option value="7" >Computers</option><option value="10" >Fire Prevention</option><option value="1" >General</option><option value="6" >LOS</option><option value="4" >Network</option><option value="8" >Power</option><option value="3" >Security</option><option value="11" >Sensors &amp; Instrumentation</option><option value="9" >Timing</option><option value="2" >Voice / Video</option></select></label>
+<label class="field"><span class="field-label">No. of Ports *</span><input name="physical_ports" type="number" min="0" max="65535" required value="0"></label>
+<label class="field"><span class="field-label">Topology Icon</span><select name="icon" id="device-type-icon"><option value="switch" >Switch</option><option value="router" >Router</option><option value="server" >Server</option><option value="workstation" >PC / desktop</option><option value="laptop" >Laptop</option><option value="phone" >Phone</option><option value="ipphone" >Desk phone</option><option value="ups" >UPS / battery</option><option value="sensor" >Sensor</option><option value="printer" >Printer</option><option value="camera" >Camera</option><option value="wireless" >Wireless AP</option><option value="firewall" >Firewall</option><option value="satellite" >Satellite / VSAT</option><option value="device" selected>Generic device</option></select><img id="device-type-icon-preview" src="images/device-types/device.svg" width="32" height="32" alt="Selected topology icon"></label>
+<label class="field"><span class="field-label">Device Type Image</span><input type="file" name="device_image" accept="image/png,image/jpeg,image/webp"><small>PNG, JPEG or WebP. Maximum 2 MB; resized to 512 pixels.</small></label>
+<label class="enable-field"><input type="checkbox" name="remove_image" value="1" >Remove saved image</label>
+<label class="field"><span class="field-label">Network Topology Visibility</span><select name="display_network"><option value="none" >None</option><option value="icon" selected>Icon</option><option value="image" >Image</option></select></label><label class="field"><span class="field-label">Rack View Visibility</span><select name="display_rack"><option value="none" >None</option><option value="icon" selected>Icon</option><option value="image" >Image</option></select></label><label class="field"><span class="field-label">Map View Visibility</span><select name="display_map"><option value="none" >None</option><option value="icon" selected>Icon</option><option value="image" >Image</option></select></label></div><div class="type-editor-actions"><button type="button" class="button" id="cancel-device-type">Cancel</button><button type="submit" class="button primary">Save</button></div>
+</form>
+<div class="device-types-list">
+<table class="device-types-table"><thead><tr><th><a href="device-types.html?per_page=10&amp;sort=desc" aria-label="Sort device types descending">Device Type Name &amp; Segment <span aria-hidden="true">↑</span></a></th><th>Icon</th><th>No. of Ports</th><th>Device Type Image</th><th>Actions</th></tr></thead><tbody>
+<tr><td>Generic device<small>None</small></td>
+<td><img class="type-icon" src="images/device-types/device.svg" alt="Generic device"></td>
+<td>Not set</td>
+<td><span class="type-no-image">None</span></td>
+<td><div class="type-actions">
+<button type="button" class="icon-button primary" data-edit-type="{&quot;type_id&quot;:&quot;f09b9e9a740f85aa&quot;,&quot;name&quot;:&quot;Generic device&quot;,&quot;category_id&quot;:0,&quot;icon&quot;:&quot;device&quot;,&quot;physical_ports&quot;:null,&quot;image&quot;:&quot;&quot;,&quot;display_modes&quot;:{&quot;network&quot;:&quot;icon&quot;,&quot;rack&quot;:&quot;icon&quot;,&quot;map&quot;:&quot;icon&quot;}}" aria-label="Edit Generic device"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16 12-12 4 4-12 12-5 1zM14 6l4 4"/></svg></button>
+<form data-static-preview="true" method="post" data-delete-type data-type-name="Generic device"><input type="hidden" name="action" value="delete_type"><input type="hidden" name="type_id" value="f09b9e9a740f85aa"><button class="icon-button primary" aria-label="Delete Generic device"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7"/></svg></button></form>
+</div></td></tr>
+<tr><td>Server<small>Computers</small></td>
+<td><img class="type-icon" src="images/device-types/server.svg" alt="Server"></td>
+<td>Not set</td>
+<td><span class="type-no-image">None</span></td>
+<td><div class="type-actions">
+<button type="button" class="icon-button primary" data-edit-type="{&quot;type_id&quot;:&quot;88a9005e64ebd09c&quot;,&quot;name&quot;:&quot;Server&quot;,&quot;category_id&quot;:7,&quot;icon&quot;:&quot;server&quot;,&quot;physical_ports&quot;:null,&quot;image&quot;:&quot;&quot;,&quot;display_modes&quot;:{&quot;network&quot;:&quot;icon&quot;,&quot;rack&quot;:&quot;icon&quot;,&quot;map&quot;:&quot;icon&quot;}}" aria-label="Edit Server"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16 12-12 4 4-12 12-5 1zM14 6l4 4"/></svg></button>
+<form data-static-preview="true" method="post" data-delete-type data-type-name="Server"><input type="hidden" name="action" value="delete_type"><input type="hidden" name="type_id" value="88a9005e64ebd09c"><button class="icon-button primary" aria-label="Delete Server"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7"/></svg></button></form>
+</div></td></tr>
+<tr><td>Switch<small>None</small></td>
+<td><img class="type-icon" src="images/device-types/switch.svg" alt="Switch"></td>
+<td>Not set</td>
+<td><span class="type-no-image">None</span></td>
+<td><div class="type-actions">
+<button type="button" class="icon-button primary" data-edit-type="{&quot;type_id&quot;:&quot;de452ef13110f6ca&quot;,&quot;name&quot;:&quot;Switch&quot;,&quot;category_id&quot;:0,&quot;icon&quot;:&quot;switch&quot;,&quot;physical_ports&quot;:null,&quot;image&quot;:&quot;&quot;,&quot;display_modes&quot;:{&quot;network&quot;:&quot;icon&quot;,&quot;rack&quot;:&quot;icon&quot;,&quot;map&quot;:&quot;icon&quot;}}" aria-label="Edit Switch"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16 12-12 4 4-12 12-5 1zM14 6l4 4"/></svg></button>
+<form data-static-preview="true" method="post" data-delete-type data-type-name="Switch"><input type="hidden" name="action" value="delete_type"><input type="hidden" name="type_id" value="de452ef13110f6ca"><button class="icon-button primary" aria-label="Delete Switch"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7"/></svg></button></form>
+</div></td></tr>
+<tr><td>Switch<small>Network</small></td>
+<td><img class="type-icon" src="images/device-types/switch.svg" alt="Switch"></td>
+<td>Not set</td>
+<td><span class="type-no-image">None</span></td>
+<td><div class="type-actions">
+<button type="button" class="icon-button primary" data-edit-type="{&quot;type_id&quot;:&quot;20eb503a47b3ea9c&quot;,&quot;name&quot;:&quot;Switch&quot;,&quot;category_id&quot;:4,&quot;icon&quot;:&quot;switch&quot;,&quot;physical_ports&quot;:null,&quot;image&quot;:&quot;&quot;,&quot;display_modes&quot;:{&quot;network&quot;:&quot;icon&quot;,&quot;rack&quot;:&quot;icon&quot;,&quot;map&quot;:&quot;icon&quot;}}" aria-label="Edit Switch"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16 12-12 4 4-12 12-5 1zM14 6l4 4"/></svg></button>
+<form data-static-preview="true" method="post" data-delete-type data-type-name="Switch"><input type="hidden" name="action" value="delete_type"><input type="hidden" name="type_id" value="20eb503a47b3ea9c"><button class="icon-button primary" aria-label="Delete Switch"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7"/></svg></button></form>
+</div></td></tr>
+</tbody></table>
+<footer class="type-pagination"><form data-static-preview="true" method="get"><input type="hidden" name="tab" value="device-type"><input type="hidden" name="sort" value="asc"><label>Items per page: <select name="per_page" aria-label="Items per page"><option selected>10</option><option >25</option><option >50</option></select></label><button type="submit">Apply</button></form><span>1–4 of 4 items</span><span class="type-page-count">1 of 1 pages</span><a href="device-types.html?per_page=10&amp;sort=asc&amp;page=1" aria-label="Previous page" aria-disabled="true" tabindex="-1">‹</a><a href="device-types.html?per_page=10&amp;sort=asc&amp;page=1" aria-label="Next page" aria-disabled="true" tabindex="-1">›</a></footer>
+</div>
+</div>
+        </section>
+    </main>
+    <dialog id="message-dialog" aria-labelledby="message-title" aria-describedby="message-text">
+        <div class="message-heading">
+            <h2 id="message-title"></h2>
+            <button type="button" id="message-close" aria-label="Close message">×</button>
+        </div>
+        <p id="message-text"></p>
+        <div class="message-actions">
+            <button class="button" type="button" id="message-cancel">Cancel</button>
+            <button class="button primary" type="button" id="message-confirm">OK</button>
+        </div>
+    </dialog>
+    <script src="js/inventory.js?v=e956b3891032" defer></script>
+    <script src="js/presets.js?v=f1bcf463eeb9" defer></script>
+<script src="js/preview.js" defer></script>
+</body>
+</html>
