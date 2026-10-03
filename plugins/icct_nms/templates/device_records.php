@@ -28,11 +28,16 @@ $recordPager = static function($key, $page, $total) use ($id) {
 ?>
 <h3>Configuration changes</h3>
 <p>Recorded changes and configuration snapshots, newest first. Passwords and private keys are excluded. Changes before history recording began are unavailable.</p>
-<div class="site-table-wrap"><table class="site-table"><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Changed settings</th></tr></thead><tbody>
+<div class="device-record-list">
 <?php foreach ($changeRows as $row): $event=json_decode($row['meta_value'],true); if(!is_array($event)) continue; $changes=$event['changes'] ?? []; ?>
-<tr><td><?= $display($event['time'] ?? '') ?></td><td><?= $display($event['user'] ?? '') ?></td><td><?= $display($event['action'] ?? '') ?></td><td><details><summary><?= count($changes) ?> changed settings</summary><table class="site-table"><thead><tr><th>Setting</th><th>Before</th><th>After</th></tr></thead><tbody><?php foreach ($changes as $field=>$change): ?><tr><td><?= $display($field) ?></td><td><?= $display($change['before'] ?? '') ?></td><td><?= $display($change['after'] ?? '') ?></td></tr><?php endforeach; ?></tbody></table></details><details><summary>Configuration snapshot</summary><table class="site-table"><thead><tr><th>Setting</th><th>Saved value</th></tr></thead><tbody><?php foreach(($event['snapshot'] ?? []) as $field=>$value): ?><tr><td><?= $display($field) ?></td><td><?= $display($value) ?></td></tr><?php endforeach; ?></tbody></table></details></td></tr>
-<?php endforeach; if(!$changeRows): ?><tr><td colspan="4">No configuration records saved for this device.</td></tr><?php endif; ?>
-</tbody></table></div>
+<details class="device-record-item" name="configuration-records">
+<summary><span><small>Time</small><?= $display($event['time'] ?? '') ?></span><span><small>User</small><?= $display($event['user'] ?? '') ?></span><span><small>Action</small><?= $display($event['action'] ?? '') ?></span><span><small>Changes</small><?= count($changes) ?> changed settings</span></summary>
+<div class="device-record-body"><h4>Changed settings</h4>
+<?php if($changes): ?><div class="site-table-wrap"><table class="site-table"><thead><tr><th>Setting</th><th>Before</th><th>After</th></tr></thead><tbody><?php foreach ($changes as $field=>$change): ?><tr><td><?= $display($field) ?></td><td><?= $display($change['before'] ?? '') ?></td><td><?= $display($change['after'] ?? '') ?></td></tr><?php endforeach; ?></tbody></table></div><?php else: ?><p>No settings changed in this snapshot.</p><?php endif; ?>
+<details class="device-record-snapshot"><summary>Configuration snapshot</summary><div class="site-table-wrap"><table class="site-table"><thead><tr><th>Setting</th><th>Saved value</th></tr></thead><tbody><?php foreach(($event['snapshot'] ?? []) as $field=>$value): ?><tr><td><?= $display($field) ?></td><td><?= $display($value) ?></td></tr><?php endforeach; ?></tbody></table></div></details>
+</div></details>
+<?php endforeach; if(!$changeRows): ?><p class="device-record-empty">No configuration records saved for this device.</p><?php endif; ?>
+</div>
 <?php $recordPager('changes_page',$changesPage,$totalChanges); ?>
 <h3>Diagnostic readings</h3>
 <p>Your saved diagnostic runs for this device. Historical results describe the configuration at the time of the run.</p>
@@ -49,10 +54,12 @@ $recordPager = static function($key, $page, $total) use ($id) {
     $runs=db_fetch_assoc_prepared('SELECT id,tool,status,requested_at,started_at,finished_at,result_json FROM plugin_icct_nms_diagnostic_jobs WHERE host_id=? AND user_id=? ORDER BY id DESC LIMIT 25 OFFSET '.(($runsPage-1)*25),[$id,$owner]);
     $labels=icct_backend_diag_labels();
 ?>
-<div class="site-table-wrap"><table class="site-table"><thead><tr><th>Requested</th><th>Method</th><th>Status</th><th>Finished</th><th>Reading</th></tr></thead><tbody>
+<div class="device-record-list">
 <?php foreach($runs as $run): $result=json_decode($run['result_json'] ?? '',true); ?>
-<tr><td><?= $display($run['requested_at']) ?></td><td><?= $display($labels[$run['tool']] ?? $run['tool']) ?></td><td><?= $display($run['status']) ?></td><td><?= $display($run['finished_at']) ?></td><td><?php if(is_array($result) && isset($result['output'])): ?><details><summary>View result #<?= (int)$run['id'] ?></summary><pre class="device-record-output"><?= icct_nms_h((string)$result['output']) ?></pre></details><?php else: ?>No saved output.<?php endif; ?></td></tr>
-<?php endforeach; if(!$runs): ?><tr><td colspan="5">No diagnostic runs saved for this device.</td></tr><?php endif; ?>
-</tbody></table></div>
+<details class="device-record-item" name="diagnostic-records">
+<summary><span><small>Requested</small><?= $display($run['requested_at']) ?></span><span><small>Method</small><?= $display($labels[$run['tool']] ?? $run['tool']) ?></span><span><small>Status</small><?= $display($run['status']) ?></span><span><small>Finished</small><?= $display($run['finished_at']) ?></span></summary>
+<div class="device-record-body"><h4>Result #<?= (int)$run['id'] ?></h4><?php if(is_array($result) && isset($result['output'])): ?><pre class="device-record-output"><?= icct_nms_h((string)$result['output']) ?></pre><?php else: ?><p>No saved output.</p><?php endif; ?></div></details>
+<?php endforeach; if(!$runs): ?><p class="device-record-empty">No diagnostic runs saved for this device.</p><?php endif; ?>
+</div>
 <?php $recordPager('diagnostics_page',$runsPage,$totalRuns); endif; endif; ?>
 </section>
