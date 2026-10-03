@@ -34,6 +34,9 @@
 <?php if (!empty($presetsPage)): ?>
     <script src="assets/js/presets.js?v=<?= substr(hash_file('sha256',__DIR__.'/../assets/js/presets.js'),0,12) ?>" defer></script>
 <?php endif; ?>
+<?php if (!empty($nodeConfigurationPage)): ?>
+    <script src="assets/js/node-configuration.js?v=<?= substr(hash_file('sha256',__DIR__.'/../assets/js/node-configuration.js'),0,12) ?>" defer></script>
+<?php endif; ?>
 <?php if (!empty($mapPage)): ?>
     <script src="assets/vendor/leaflet/leaflet.js" defer></script>
     <script src="assets/js/rack-view.js?v=<?= substr(hash_file('sha256',__DIR__.'/../assets/js/rack-view.js'),0,12) ?>" defer></script>

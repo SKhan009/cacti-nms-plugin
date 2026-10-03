@@ -19,7 +19,7 @@ function db_fetch_cell_prepared($query,$parameters) {
  return 1;
 }
 function db_fetch_row_prepared($query,$parameters) {
-    if (str_contains($query,'FROM host')) return ['id'=>10,'site_id'=>5];
+    if (str_contains($query,'FROM host')) return ['id'=>$parameters[0],'site_id'=>$GLOBALS['hostSites'][$parameters[0]] ?? 5];
     if (str_contains($query,'rack_devices')) return $GLOBALS['fixtureRack'] ? ['node_id'=>1] : [];
     return ['id'=>1,'site_id'=>$GLOBALS['fixtureSite']];
 }
@@ -33,3 +33,15 @@ foreach (['site','rack','peripheral','node'] as $case) {
     if (count($writes)!==2 || $writes[1][0]!=='ROLLBACK') throw new RuntimeException('Invalid assignment changed membership.');
 }
 echo "Node grouping, device access, per-device save and site/rack validation passed.\n";
+
+$fixtureSite=5;$fixtureRack=false;$fixturePeripheral=false;$fixtureNode=0;$writes=[];
+icct_nms_assign_node_devices(['device_ids'=>[10,11],'node_id'=>1]);
+$inserts=array_values(array_filter($writes,fn($write)=>str_contains($write[0],'INSERT INTO')));
+if(count($inserts)!==2||$inserts[0][1]!==['device_node_id_10','1']||$inserts[1][1]!==['device_node_id_11','1']||end($writes)[0]!=='COMMIT')throw new LogicException('Bulk membership save failed');
+$writes=[];$hostSites=[11=>6];
+try {icct_nms_assign_node_devices(['device_ids'=>[10,11],'node_id'=>1]);throw new LogicException('Mixed-site bulk accepted');}catch(InvalidArgumentException $expected){}
+if(end($writes)[0]!=='ROLLBACK'||in_array('COMMIT',array_column($writes,0),true))throw new LogicException('Bulk failure was committed');
+$writes=[];
+try {icct_nms_assign_node_devices(['device_ids'=>[10,10],'node_id'=>1]);throw new LogicException('Duplicate bulk accepted');}catch(InvalidArgumentException $expected){}
+if($writes)throw new LogicException('Duplicate bulk changed membership');
+echo "Bulk assignments, duplicate rejection and mixed-site rollback passed.\n";
