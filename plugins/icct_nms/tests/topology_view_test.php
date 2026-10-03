@@ -30,7 +30,9 @@ if($diagram['devices'][0]['fault_count']!==2)throw new LogicException('Fault cou
 echo "Topology neighbour resolution and actual fault counts passed.\n";
 
 function icct_backend_nd_hosts(){return array_map(fn($id)=>["id"=>$id,"enabled"=>1,"collection_enabled"=>1,"stale_seconds"=>900],[1,2,3]);}
-function icct_backend_nd_host_methods($host){return ["lldp"];}
+function icct_backend_nd_host_methods($host,$active=true){return ["lldp"];}
+function icct_backend_nd_method_labels(){return ["lldp"=>"LLDP neighbours"];}
+function icct_backend_diag_selected_labels($id){return $id===1?["ping"=>"Ping ICMP"]:[];}
 function icct_backend_nd_hash($host){return "test";}
 
 $manual=["manual-link"=>["source"=>1,"target"=>3,"profile"=>array_key_first(icct_nms_connections()),"source_port"=>"Gi1","target_port"=>"Gi2"]];
@@ -55,3 +57,6 @@ echo "Network type icons, reported identities, port labels and stale/ambiguous i
 if($diagram['core_id']!==1||$diagram['devices'][1]['short_name']!=='PEER SW')throw new LogicException('Core or saved short name not supplied');
 if(icct_backend_short_name_generate('Core Switch','Core Switch',1)!=='CORE SW'||icct_backend_short_name_generate('Example','Switch',2)!=='SW-2')throw new LogicException('Type short code generation failed');
 echo "Short code labels, manual short names and fixed central switch passed.\n";
+
+if($diagram["devices"][0]["diagnostics"]!==["ping"=>"Ping ICMP"]||$diagram["devices"][1]["diagnostics"]!==[])throw new LogicException("Topology diagnostics ignored per-device selection");
+echo "Per-device diagnostics synchronized with topology actions.\n";

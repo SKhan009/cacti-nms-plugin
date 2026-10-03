@@ -24,6 +24,8 @@ function icct_nms_topology_data($mapData) {
     };
     foreach($devices as &$device){
         $host=$inventory[$device['id']];
+        $device['diagnostics']=is_realm_allowed(3)?icct_backend_diag_selected_labels($device['id']):[];
+        $device['discovery']=icct_nms_device_discovery_summary($device['id'],$discoveryHosts[$device['id']]??null);
         $device['short_name']=trim((string)($host['short_name']??'')) ?: icct_backend_short_name_generate($device['name'],$host['device_type']??'',(int)$device['id']);
         $device['network_asset']=icct_nms_type_icon_asset('device');
         foreach($types as $type) if((int)$type['category_id']===(int)($host['category_id']??0) && $type['name']===($host['device_type']??'')){$device['network_asset']=icct_nms_type_asset($type,'network');break;}

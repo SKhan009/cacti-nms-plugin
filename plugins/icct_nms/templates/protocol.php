@@ -467,7 +467,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
                                     "traceroute_tcp" => "TCP",
                                     "mtr_icmp" => "MTR ICMP",
                                     "mtr_tcp" => "MTR TCP",
-                                    "arp" => "ARP",
+                                    "arp" => "ARP (collector cache)",
                                     "iperf3" => "iPerf (Sec)",
                                     "pathchar" => "Pathchar (Sec)",
                                     "netperf" => "Netperf (Sec)",
@@ -508,6 +508,11 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
             </div>
             <div class="protocol-actions"><button class="button primary">Save</button></div>
         </form>
+        <?php require_once __DIR__.'/../includes/topology_configuration_service.php';$diagnosticDiscovery=icct_nms_device_discovery_summary($id); ?>
+        <h3>Topology discovery</h3><p>These results use the saved Protocol Config selection. <a href="#protocol">Configure discovery protocols</a> · <a href="topology.php">View topology</a></p>
+        <div class="table-wrap"><table class="site-table"><thead><tr><th>Method</th><th>Collected information</th><th>Status</th><th>Current observations</th><th>Last collected</th></tr></thead><tbody>
+        <?php foreach($diagnosticDiscovery as $observation): ?><tr><td><?= icct_nms_h($observation['label']) ?></td><td><?= icct_nms_h($observation['evidence']) ?></td><td><span class="device-status <?= ($observation['status']==='Current'?'online':($observation['status']==='Failed'?'offline':icct_nms_status_class($observation['status']))) ?>"><?= icct_nms_h($observation['status']) ?></span></td><td><?= $observation['count']===null?'—':(int)$observation['count'] ?></td><td><?= icct_nms_h($observation['last_check']?:'—') ?></td></tr><?php endforeach; ?>
+        <?php if(!$diagnosticDiscovery): ?><tr><td colspan="5">No topology discovery methods selected.</td></tr><?php endif; ?></tbody></table></div>
     </section>
     <?php require __DIR__ . "/graphs.php"; ?>
     <?php require __DIR__ . "/data_queries.php"; ?>

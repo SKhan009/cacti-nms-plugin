@@ -53,6 +53,7 @@ try {
     );
     $lastTools = 0;
     $lastSerial = 0;
+    $lastQueueCheck = 0;
     while (
         (int) db_fetch_cell_prepared(
             "SELECT status FROM plugin_config WHERE directory=?",
@@ -71,12 +72,12 @@ try {
             $lastTools = time();
         }
         $heartbeat();
-        if (
-            db_fetch_cell_prepared(
-                "SELECT id FROM plugin_icct_nms_diagnostic_jobs WHERE poller_id=? AND status IN ('queued','running') LIMIT 1",
-                [$collector],
-            )
-        ) {
+        $queueWake=icct_backend_diag_redis_wake($collector);
+        if(microtime(true)-$lastQueueCheck>=1){
+            $lastQueueCheck=microtime(true);
+            $queueWake=$queueWake || db_fetch_cell_prepared("SELECT id FROM plugin_icct_nms_diagnostic_jobs WHERE poller_id=? AND status IN ('queued','running') LIMIT 1",[$collector]);
+        }
+        if($queueWake){
             icct_backend_diag_run_command(
                 [PHP_BINARY, "-q", __DIR__ . "/diagnostic_worker.php"],
                 75,

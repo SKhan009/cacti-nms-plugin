@@ -48,3 +48,22 @@ function icct_nms_topology_discovery_rows($devices){
     }
     return $rows;
 }
+
+/** Use the same selected methods, hashes and freshness rules as topology links. */
+function icct_nms_device_discovery_summary($id,$host=null){
+    if($host===null){$hosts=array_column(icct_backend_nd_hosts(true),null,'id');$host=$hosts[$id]??null;}
+    if(!$host)return [];
+    $active=($host['disabled']??'')===''&&!empty($host['enabled'])&&!empty($host['collection_enabled']);
+    $selected=icct_backend_nd_host_methods($host);$configured=icct_backend_nd_host_methods($host,false);
+    $snapshots=array_column(db_fetch_assoc_prepared('SELECT protocol,status,succeeded_at,config_hash,data_json FROM plugin_icct_nms_discovery_snapshots WHERE host_id=?',[$id]),null,'protocol');
+    $rows=[];
+    foreach($configured as $method){
+        $snapshot=$snapshots[$method]??null;$enabled=$active&&in_array($method,$selected,true);
+        $current=$enabled&&$snapshot&&icct_nms_discovery_current($snapshot,$host);
+        $status=!$enabled?'Disabled':(!$snapshot?'Not collected':($current?'Current':($snapshot['status']==='failed'?'Failed':'Stale')));
+        $data=$current?(json_decode($snapshot['data_json'],true)??[]):[];
+        $items=array_filter(array_merge($data['neighbors']??[],$data['endpoints']??[]),fn($item)=>!isset($item['present'])||$item['present']);
+        $rows[]=['method'=>$method,'label'=>icct_backend_nd_method_labels()[$method], 'status'=>$status,'count'=>$current?count($items):null,'last_check'=>$snapshot['succeeded_at']??'', 'evidence'=>in_array($method,['lldp','cdp'],true)?'Layer 2 neighbour adjacency':($method==='arp'?'IPv4 / IPv6 neighbour observation':'Learned MAC observation')];
+    }
+    return $rows;
+}

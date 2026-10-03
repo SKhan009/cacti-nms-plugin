@@ -54,3 +54,5 @@
 .topology-device-icon{width:20px;height:20px;object-fit:contain;flex-shrink:0;pointer-events:none}
 
 .topology-device-heading{flex-direction:column;width:100%;gap:4px}.topology-device-icon{display:block;margin:0 auto}.editing .topology-device.fixed-core{cursor:default}
+
+.topology-device-dialog{width:min(760px,calc(100vw - 48px));max-height:85vh;padding:24px;border:1px solid #d6d6d6;overflow:auto}.topology-device-dialog::backdrop{background:rgba(0,0,0,.3)}.topology-device-dialog .message-actions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}.topology-device-dialog form{margin-top:20px}

@@ -4,6 +4,7 @@ require __DIR__.'/../includes/map_service.php';
 function icct_backend_require_device_access($id){if($id===9)throw new RuntimeException('Your Cacti account cannot access this device.');}
 function icct_backend_device_status_name($row){return 'Up';}
 function icct_nms_device_types(){return [];}
+function icct_nms_device_shape($category,$type,$types){return 'rectangle';}
 function icct_nms_device_graphs($id){return [];}
 function icct_backend_parameter_is_fresh($time){return false;}
 function icct_backend_config_connection_status($id){return null;}
@@ -52,3 +53,8 @@ if(icct_nms_map_measurement($host)['packet_loss']!==null)throw new Exception('Ot
 $mapTestJob['poller_id']=1;
 if(icct_nms_map_measurement(array_replace($host,['disabled'=>'on']))['packet_loss']!==null)throw new Exception('Disabled device diagnostic used');
 echo "PASS: private measured ping summary, stale/configuration/collector/disabled rejection\n";
+
+function is_realm_allowed($realm){return true;}
+function icct_backend_diag_selected_labels($id){return $id===7?["ping"=>"Ping ICMP"]:[];}
+if($data["sites"][0]["devices"][0]["diagnostics"]!==["ping"=>"Ping ICMP"])throw new Exception("Map diagnostic selection mismatch");
+echo "PASS: map diagnostics use saved per-device selections\n";

@@ -217,6 +217,15 @@ function icct_backend_diag_available_labels()
     );
 }
 
+/** One saved per-device selection for Inventory, Diagnostics and topology actions. */
+function icct_backend_diag_selected_labels($host_id)
+{
+    icct_backend_require_device_access($host_id);
+    $row=db_fetch_row_prepared("SELECT h.disabled,p.tools FROM host h JOIN plugin_icct_nms_diagnostic_devices d ON d.host_id=h.id JOIN plugin_icct_nms_diagnostic_profiles p ON p.id=d.profile_id WHERE h.id=? AND h.deleted=''",[(int)$host_id]);
+    if(!$row||$row['disabled']!=='')return [];
+    return array_intersect_key(icct_backend_diag_available_labels(),array_flip(icct_backend_diag_tools($row['tools'])));
+}
+
 /** Reused Inventory service: diag command. */
 function icct_backend_diag_command($row, $tool)
 {

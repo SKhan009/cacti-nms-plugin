@@ -39,3 +39,16 @@ $enabledProtocols['snmp']=true;
 icct_nms_save_discovery(2,$timings+['discovery_policy'=>1,'discovery_methods_present'=>1,'methods'=>['fdb'],'collection_enabled'=>1]);
 if(icct_backend_nd_host_methods($assignment)!==['fdb'])throw new RuntimeException('Cleared IP neighbour selection remains active');
 echo "Device protocol selections, shared observations and disabled collection persistence passed.\n";
+
+require __DIR__.'/../includes/topology_configuration_service.php';
+function db_fetch_assoc_prepared($sql,$args){return $GLOBALS['summarySnapshots']??[];}
+$assignment+=['host_id'=>2,'disabled'=>''];
+$assignment['enabled']=1;$assignment['collection_enabled']=1;$assignment['stale_seconds']=900;
+$summarySnapshots=[['protocol'=>'fdb','status'=>'success','config_hash'=>icct_backend_nd_hash($assignment),'succeeded_at'=>date('Y-m-d H:i:s'),'data_json'=>json_encode(['endpoints'=>[['mac'=>'00:11:22:33:44:55'],['present'=>false]]])],['protocol'=>'arp','status'=>'success','config_hash'=>icct_backend_nd_hash($assignment),'succeeded_at'=>date('Y-m-d H:i:s'),'data_json'=>json_encode(['endpoints'=>[['ip'=>'2001:db8::1']]])]];
+$summary=icct_nms_device_discovery_summary(2,$assignment);
+if(count($summary)!==1||$summary[0]['method']!=='fdb'||$summary[0]['count']!==1||$summary[0]['status']!=='Current')throw new RuntimeException('Diagnostic discovery summary includes unselected/absent observations');
+$summarySnapshots[0]['config_hash']='old';
+if(icct_nms_device_discovery_summary(2,$assignment)[0]['count']!==null)throw new RuntimeException('Old topology configuration shown as current');
+$enabledProtocols['snmp']=false;
+if(icct_nms_device_discovery_summary(2,$assignment)[0]['status']!=='Disabled')throw new RuntimeException('Disabled SNMP reported as active discovery');
+echo "Diagnostic/topology summaries share selected protocols, disabled state, hashes and current evidence.\n";

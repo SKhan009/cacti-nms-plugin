@@ -189,24 +189,10 @@
                                 $d["description"],
                             ) ?>">⋮</summary>
                             <div class="row-menu-panel">
-                                <?php foreach (
-                                    [
-                                        "ping" => "Ping",
-                                        "arp" => "ARP",
-                                        "traceroute" => "Trace Route",
-                                    ]
-                                    as $tool => $label
-                                ): ?>
-                                <a href="diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= $tool ?>#diagnostic-run" <?= in_array(
-    $tool,
-    ["ping", "traceroute", "arp"],
-    true,
-)
-    ? "data-instant-diagnostic"
-    : "" ?> data-host-id="<?= $id ?>" data-tool="<?= $tool ?>" data-device-name="<?= icct_nms_h(
-    $d["description"],
-) ?>"><?= $label ?></a>
+                                <?php $deviceDiagnostics=icct_backend_diag_selected_labels($id);foreach($deviceDiagnostics as $tool=>$label): ?>
+                                <a href="diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h($tool) ?>#diagnostic-run" <?= in_array($tool,['ping','traceroute','arp'],true)?'data-instant-diagnostic':'' ?> data-host-id="<?= $id ?>" data-tool="<?= icct_nms_h($tool) ?>" data-device-name="<?= icct_nms_h($d['description']) ?>"><?= icct_nms_h($label) ?></a>
                                 <?php endforeach; ?>
+                                <?php if(!$deviceDiagnostics): ?><span>No diagnostics selected</span><?php endif; ?>
                                 <?php $launch = icct_nms_meta(
                                     "icct_cross_launch_" . $id,
                                 ); ?>

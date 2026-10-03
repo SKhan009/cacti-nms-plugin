@@ -494,7 +494,7 @@
                     <div class="diagnostic-methods">
                                                                         <label data-tooltip="Show the assigned collector’s cached IP-to-MAC neighbours." class="check-row ">
                             <input type="checkbox" name="diagnostic_tools[]" value="arp" checked />
-                            ARP                        </label>
+                            ARP (collector cache)                        </label>
                                             </div>
 
                 </div>
@@ -534,6 +534,9 @@
             </div>
             <div class="protocol-actions"><button class="button primary">Save</button></div>
         </form>
+                <h3>Topology discovery</h3><p>These results use the saved Protocol Config selection. <a href="#protocol">Configure discovery protocols</a> · <a href="dashboard.html">View topology</a></p>
+        <div class="table-wrap"><table class="site-table"><thead><tr><th>Method</th><th>Collected information</th><th>Status</th><th>Current observations</th><th>Last collected</th></tr></thead><tbody>
+                <tr><td colspan="5">No topology discovery methods selected.</td></tr></tbody></table></div>
     </section>
     <section id="device-graphs" class="graphs-page" hidden>
     <div class="graph-add-control">

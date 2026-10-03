@@ -121,6 +121,9 @@
                 cell.append(label, value); grid.appendChild(cell);
             });
             body.appendChild(grid);
+            var diagnosticActions=document.createElement('div');diagnosticActions.className='message-actions';
+            Object.entries(device.diagnostics||{}).forEach(function(entry){var action=document.createElement('a');action.className='button';action.textContent=entry[1];action.href='http://127.0.0.1:8080/cacti/plugins/icct_nms/diagnostics.php?host_id='+encodeURIComponent(device.id)+'&tool='+encodeURIComponent(entry[0]);diagnosticActions.appendChild(action);});
+            body.appendChild(diagnosticActions);
             var alarm = document.createElement('div'); alarm.className = 'icct-map-device-alarm';
             var alarmLabel = document.createElement('strong'); alarmLabel.textContent = 'Recent alarm';
             var alarmText = document.createElement('p');

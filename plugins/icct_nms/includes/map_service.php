@@ -71,6 +71,7 @@ function icct_nms_map_data() {
         if ($device['serial']==='') $device['serial']=(string)db_fetch_cell_prepared("SELECT observed_value FROM plugin_icct_nms_device_inventory WHERE host_id=? AND inventory_key='serial_number' AND status IN ('ok','changed') AND last_success>=DATE_SUB(NOW(),INTERVAL 10 MINUTE)",[$id]);
         foreach ($types as $type) if ((int)$type['category_id']===(int)$row['category_id'] && $type['name']===$row['device_type']) { $device['image']=icct_nms_type_asset($type,'map'); break; }
         $device+=icct_nms_map_metrics(icct_nms_map_readings($id));
+        $device['diagnostics']=is_realm_allowed(3)?icct_backend_diag_selected_labels($id):[];
         $device['diagnostic_measurement']=icct_nms_map_measurement($row); $device['packet_loss']=$device['diagnostic_measurement']['packet_loss'];
         $rules=icct_nms_fault_rules($id); $rank=['Information'=>1,'Minor'=>2,'Warning'=>3,'Major'=>4,'Critical'=>5]; $highest=0;
         foreach (icct_nms_fault_observations($row) as $fault) if (($rank[$fault['state']] ?? 0)>$highest) {

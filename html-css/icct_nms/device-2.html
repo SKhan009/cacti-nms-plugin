@@ -494,7 +494,7 @@
                     <div class="diagnostic-methods">
                                                                         <label data-tooltip="Show the assigned collector’s cached IP-to-MAC neighbours." class="check-row ">
                             <input type="checkbox" name="diagnostic_tools[]" value="arp" checked />
-                            ARP                        </label>
+                            ARP (collector cache)                        </label>
                                             </div>
 
                 </div>
@@ -534,6 +534,9 @@
             </div>
             <div class="protocol-actions"><button class="button primary">Save</button></div>
         </form>
+                <h3>Topology discovery</h3><p>These results use the saved Protocol Config selection. <a href="#protocol">Configure discovery protocols</a> · <a href="dashboard.html">View topology</a></p>
+        <div class="table-wrap"><table class="site-table"><thead><tr><th>Method</th><th>Collected information</th><th>Status</th><th>Current observations</th><th>Last collected</th></tr></thead><tbody>
+        <tr><td>LLDP neighbours</td><td>Layer 2 neighbour adjacency</td><td><span class="device-status online">Current</span></td><td>0</td><td>2026-10-03 08:50:06</td></tr><tr><td>IP neighbours (IPv4 / IPv6)</td><td>IPv4 / IPv6 neighbour observation</td><td><span class="device-status online">Current</span></td><td>0</td><td>2026-10-03 08:50:06</td></tr><tr><td>MAC/FDB table</td><td>Learned MAC observation</td><td><span class="device-status online">Current</span></td><td>0</td><td>2026-10-03 08:50:06</td></tr>        </tbody></table></div>
     </section>
     <section id="device-graphs" class="graphs-page" hidden>
     <div class="graph-add-control">
@@ -1557,7 +1560,7 @@
 <p>Only discovered interfaces are shown. The preset count is expected capacity; it does not assign interface names or link status.</p>
 <div class="port-search field"><label for="ports-search">Search ports</label><input type="search" id="ports-search" placeholder="Search by port, status or description" autocomplete="off" aria-controls="port-rows"></div>
 <div class="site-table-wrap"><table class="site-table"><thead><tr><th>Port / Interface</th><th>ifIndex</th><th>Type</th><th>Status</th><th>Description</th></tr></thead><tbody id="port-rows"></tbody></table></div>
-<script type="application/json" id="port-observations">{"ports":[{"index":1,"name":"lo","description":"lo","alias":"","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"},{"index":2,"name":"enp0s8","description":"enp0s8","alias":"","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"}],"fresh":true,"collected":1790995504,"source":"SNMP IF-MIB \/ IF-X-MIB","message":"Port status from the latest collector observation."}</script>
+<script type="application/json" id="port-observations">{"ports":[{"index":1,"name":"lo","description":"lo","alias":"","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"},{"index":2,"name":"enp0s8","description":"enp0s8","alias":"","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"}],"fresh":true,"collected":1790997603,"source":"SNMP IF-MIB \/ IF-X-MIB","message":"Port status from the latest collector observation."}</script>
 </section>
 <section id="device-fcaps" class="device-fcaps" hidden>
 <div class="fcaps-tabs" role="tablist" aria-label="FCAPS">

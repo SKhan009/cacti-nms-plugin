@@ -1,6 +1,8 @@
 <?php
 /** ICCT-owned diagnostics queue services, derived from the existing ICCT NMS implementation. */
 
+require_once __DIR__.'/diagnostics_redis.php';
+
 /** Reused Inventory service: diag authorize job. */
 function icct_backend_diag_authorize_job($job)
 {
@@ -15,14 +17,11 @@ function icct_backend_diag_authorize_job($job)
             'Request owner no longer has permission to run this diagnostic.'
         );
     }
-    $session = $_SESSION ?? [];
-    try {
-        $_SESSION = ['sess_user_id' => $user];
-        if (!api_user_realm_auth('diagnostics.php')) {
-            throw new RuntimeException('ICCT NMS diagnostic page access has been revoked.');
-        }
-    } finally {
-        $_SESSION = $session;
+    // CLI listeners do not load the web filename map. Check the registered plugin realm
+    // for the explicit owner, avoiding stale session caches in a long-running process.
+    $realm=(int)db_fetch_cell_prepared("SELECT id FROM plugin_realms WHERE plugin=? AND FIND_IN_SET(?,file)",['icct_nms','diagnostics.php']);
+    if(!$realm || !is_realm_allowed($realm+100,$user)){
+        throw new RuntimeException('ICCT NMS diagnostic page access has been revoked.');
     }
 }
 
@@ -78,12 +77,14 @@ function icct_backend_diag_execution_context($job, $collector)
 function icct_backend_diag_job($id)
 {
     $job = db_fetch_row_prepared(
-        'SELECT * FROM plugin_icct_nms_diagnostic_jobs WHERE id=? AND user_id=?',
+        'SELECT id,host_id,user_id,poller_id,tool,config_hash,status,requested_at,started_at,finished_at FROM plugin_icct_nms_diagnostic_jobs WHERE id=? AND user_id=?',
         [(int) $id, icct_backend_current_user_id()]
     );
     if (!$job) {
         throw new RuntimeException('Diagnostic request is unavailable for this account.');
     }
+    $cached=icct_backend_diag_redis_result($job);
+    $job['result_json']=$cached ?? (string)db_fetch_cell_prepared('SELECT result_json FROM plugin_icct_nms_diagnostic_jobs WHERE id=? AND user_id=?',[(int)$id,icct_backend_current_user_id()]);
     icct_backend_require_device_access((int) $job['host_id']);
     if (
         ($job['status'] === 'queued' && strtotime($job['requested_at']) < time() - 15) ||
@@ -145,6 +146,7 @@ function icct_backend_diag_poll()
                 "UPDATE plugin_icct_nms_diagnostic_jobs SET status='running',started_at=NOW() WHERE id=? AND status='queued'",
                 [$job['id']]
             );
+            icct_backend_diag_redis_publish($job['id']);
             $result = icct_backend_diag_execute($row, $job['tool']);
             icct_backend_diag_execution_context($job, $collector);
             $status =
@@ -169,6 +171,7 @@ function icct_backend_diag_poll()
                 $job['id']
             ]
         );
+        icct_backend_diag_redis_publish($job['id']);
     } finally {
         db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)', [$lock]);
     }
@@ -210,6 +213,8 @@ function icct_backend_diag_run($host_id, $tool)
         throw new RuntimeException('Diagnostic runner is busy. Retry shortly.');
     }
     try {
+        $pending=db_fetch_row_prepared("SELECT id FROM plugin_icct_nms_diagnostic_jobs WHERE user_id=? AND host_id=? AND tool=? AND ((status='queued' AND requested_at > DATE_SUB(NOW(),INTERVAL 15 SECOND)) OR (status='running' AND started_at > DATE_SUB(NOW(),INTERVAL 2 MINUTE))) ORDER BY id DESC LIMIT 1",[$user,(int)$host_id,(string)$tool]);
+        if($pending)return (int)$pending['id'];
         if (
             (int) db_fetch_cell_prepared(
                 "SELECT COUNT(*) FROM plugin_icct_nms_diagnostic_jobs WHERE user_id=? AND ((status='queued' AND requested_at > DATE_SUB(NOW(), INTERVAL 15 SECOND)) OR (status='running' AND started_at > DATE_SUB(NOW(), INTERVAL 2 MINUTE)))",
@@ -251,7 +256,10 @@ function icct_backend_diag_run($host_id, $tool)
                 icct_backend_diag_signature($row)
             ]
         );
-        return (int) db_fetch_cell('SELECT LAST_INSERT_ID()');
+        $id=(int)db_fetch_cell('SELECT LAST_INSERT_ID()');
+        icct_backend_diag_redis_publish($id);
+        icct_backend_diag_redis_enqueue((int)$row['poller_id'],$id);
+        return $id;
     } finally {
         db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)', [$lock]);
     }

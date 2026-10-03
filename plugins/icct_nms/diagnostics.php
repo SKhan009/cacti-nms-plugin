@@ -30,6 +30,21 @@ if (
 
     exit();
 }
+if (($_GET['action']??'')==='status' || ($_POST['action']??'')==='queue') {
+    header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
+    try {
+        icct_nms_backend();icct_backend_require_management(3);
+        $id=icct_nms_id($_GET['host_id']??($_POST['host_id']??0));icct_backend_require_device_access($id);
+        if(($_POST['action']??'')==='queue'){
+            icct_nms_post();$jobId=icct_backend_diag_run($id,(string)($_POST['tool']??''));
+        } else {$jobId=icct_nms_id($_GET['job_id']??0);}
+        $job=icct_backend_diag_job($jobId);
+        if((int)$job['host_id']!==$id)throw new RuntimeException('The result belongs to another device.');
+        $result=$job['result_json']!==''?json_decode($job['result_json'],true):null;
+        echo json_encode(['ok'=>true,'job_id'=>(int)$job['id'],'status'=>$job['status'],'output'=>$result['output']??''],JSON_INVALID_UTF8_SUBSTITUTE|JSON_THROW_ON_ERROR);
+    } catch(Throwable $exception){http_response_code(400);echo json_encode(['ok'=>false,'error'=>$exception->getMessage()],JSON_INVALID_UTF8_SUBSTITUTE);}
+    exit;
+}
 $error = "";
 $notice = "";
 $result = null;
@@ -39,9 +54,10 @@ try {
     $id = icct_nms_id($_GET["host_id"] ?? 0);
     $host = icct_nms_device($id);
     icct_backend_require_management(3);
-    $tool = (string) ($_POST["tool"] ?? ($_GET["tool"] ?? "ping"));
-    if (!isset(icct_backend_diag_available_labels()[$tool])) {
-        throw new InvalidArgumentException("Unsupported diagnostic tool.");
+    $diagnosticLabels=icct_backend_diag_selected_labels($id);
+    $tool = (string) ($_POST["tool"] ?? ($_GET["tool"] ?? array_key_first($diagnosticLabels) ?? ""));
+    if ($tool!=="" && !isset($diagnosticLabels[$tool])) {
+        throw new InvalidArgumentException("This diagnostic is not selected for the device. Select it in Device Diagnostics first.");
     }
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
         icct_nms_post();
