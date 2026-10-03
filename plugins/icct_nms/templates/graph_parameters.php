@@ -11,11 +11,11 @@ icct_nms_input("Y-Axis Maximum", "graph_".$detail["graph_id"]."_upper_limit", $g
 </div>
 <h3>Graph Items</h3>
 <div class="graph-items-wrap"><table class="graph-associations graph-items">
-    <colgroup><col style="width:7%"><col style="width:3%"><col style="width:25%"><col style="width:9%"><col style="width:8%"><col style="width:6%"><col style="width:7%"><col style="width:7%"><col style="width:10%"><col style="width:5%"><col style="width:5%"><col style="width:8%"></colgroup>
-    <thead><tr><th>Graph Item</th><th>#</th><th>Data Source</th><th>Graph Item Type</th><th>CF Type</th><th>Minimum</th><th>Maximum</th><th>GPrint</th><th>CDEF</th><th>VDEF</th><th>Alpha %</th><th>Item Color</th></tr></thead>
+    <colgroup><col style="width:7%"><col style="width:28%"><col style="width:9%"><col style="width:8%"><col style="width:6%"><col style="width:7%"><col style="width:7%"><col style="width:10%"><col style="width:5%"><col style="width:5%"><col style="width:8%"></colgroup>
+    <thead><tr><th>Graph Item</th><th>Data Source</th><th>Graph Item Type</th><th>CF Type</th><th>Minimum</th><th>Maximum</th><th>GPrint</th><th>CDEF</th><th>VDEF</th><th>Alpha %</th><th>Item Color</th></tr></thead>
     <tbody>
     <?php foreach ($graphItems as $item): ?>
-        <tr><td data-label="Graph Item">Item # <?= (int)$item["sequence"] ?></td><td data-label="#"><?= (int)$item["sequence"] ?></td>
+        <tr><td data-label="Graph Item">Item # <?= (int)$item["sequence"] ?></td>
         <td data-label="Data Source"><?= icct_nms_h(($item["data_template_name"] ?? "").($item["data_source_name"] ? " (".$item["data_source_name"]."): " : "").$item["text_format"].($item["hard_return"] === "on" ? " <HR>" : "")) ?></td>
         <td data-label="Graph Item Type"><?= icct_nms_h($graph_item_types[$item["graph_type_id"]] ?? $item["graph_type_id"]) ?></td>
         <td data-label="CF Type"><?= icct_nms_h($consolidation_functions[$item["consolidation_function_id"]] ?? $item["consolidation_function_id"]) ?></td>
@@ -28,6 +28,6 @@ icct_nms_input("Y-Axis Maximum", "graph_".$detail["graph_id"]."_upper_limit", $g
         <td data-label="Alpha %"><?= $item["color_hex"] ? (int)round(hexdec($item["alpha"] ?: "FF") / 255 * 100)."%" : "" ?></td>
         <td data-label="Item Color"><?php if (preg_match('/^[0-9a-fA-F]{6}$/D', (string)($item["color_hex"] ?? ""))): ?><span class="graph-item-color" style="background-color:#<?= icct_nms_h($item["color_hex"]) ?>" aria-hidden="true"></span><?= icct_nms_h($item["color_hex"]) ?><?php endif; ?></td></tr>
     <?php endforeach; ?>
-    <?php if (!$graphItems): ?><tr><td colspan="12">No graph items configured.</td></tr><?php endif; ?>
+    <?php if (!$graphItems): ?><tr><td colspan="11">No graph items configured.</td></tr><?php endif; ?>
     </tbody>
 </table></div>
