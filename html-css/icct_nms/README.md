@@ -30,3 +30,5 @@ python3 -m http.server 8765 --bind 127.0.0.1 --directory html-css/icct_nms
 `network-connections.html` previews the Network Connections cards, style editor and live line preview. Save/delete actions in static previews do not change Cacti.
 
 Device Type Add/Edit has a six-column local SVG icon picker and a 500 KB upload limit. Add/Edit Device previews load appearance details from the selected saved type profile.
+
+`sites.html` previews the Site preset list and Add/Edit form using exported native Cacti site data. Preview saves do not write to Cacti.

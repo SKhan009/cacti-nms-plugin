@@ -127,3 +127,22 @@ document.querySelectorAll('[data-delete-connection]').forEach(form=>form.addEven
     else form.submit();
   }
 }));
+
+const siteEditor=document.querySelector('#site-editor');
+function openSiteEditor(site={}) {
+  siteEditor.reset();
+  siteEditor.elements.site_id.value=site.id ?? '';
+  for(const field of siteEditor.querySelectorAll('input:not([type=hidden]),select,textarea')) field.value=site[field.name] ?? (field.name==='zoom'?'12':'');
+  document.querySelector('#site-editor-title').textContent=site.id?'Edit Site':'Add Site';
+  siteEditor.hidden=false; document.querySelector('#site-list').hidden=true;
+  siteEditor.elements.name.focus();
+}
+document.querySelector('#add-site')?.addEventListener('click',()=>openSiteEditor());
+document.querySelectorAll('[data-edit-site]').forEach(button=>button.addEventListener('click',()=>openSiteEditor(JSON.parse(button.dataset.editSite))));
+document.querySelector('#cancel-site')?.addEventListener('click',()=>{siteEditor.hidden=true; document.querySelector('#site-list').hidden=false;});
+if(siteEditor && !siteEditor.hidden) document.querySelector('#site-list').hidden=true;
+document.querySelector('#site-search')?.addEventListener('input',event=>{
+  let count=0; const search=event.target.value.toLocaleLowerCase().trim();
+  document.querySelectorAll('[data-site-row]').forEach(row=>{row.hidden=!row.dataset.siteSearch.includes(search); if(!row.hidden) count++;});
+  document.querySelector('#site-empty').hidden=count>0;
+});
