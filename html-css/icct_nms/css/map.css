@@ -60,3 +60,15 @@
 /* Keep wide switch cards slim while retaining the centered icon and short code. */
 .topology-device.shape-wide .topology-device-heading{flex-direction:row;gap:4px}
 .topology-device.shape-wide .topology-device-icon{margin:0}
+
+/* Reference card order: short name, centered device artwork, alarm count. */
+.topology-device-heading{gap:1px}
+.topology-device-icon{width:14px;height:14px}
+.topology-device-icon[hidden]{display:none}
+.topology-device.has-device-image:not(.shape-wide){height:76px}
+.topology-device.has-device-image.shape-tall{height:92px}
+.topology-device.has-device-image .topology-device-icon{width:calc(100% - 4px);height:36px;object-fit:contain}
+.topology-device.has-device-image.shape-tall .topology-device-icon{height:50px}
+.topology-device.has-device-image.shape-wide .topology-device-icon{width:36px;height:20px}
+.topology-device.shape-wide .topology-device-heading{gap:5px}
+.topology-alarm{border-color:#333}
