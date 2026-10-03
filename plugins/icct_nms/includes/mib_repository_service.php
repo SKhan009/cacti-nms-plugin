@@ -165,7 +165,19 @@ function icct_mib_preview($upload,$typeId,$allowUnresolved=false){
 }
 function icct_mib_list(){
     $rows=db_fetch_assoc("SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key LIKE 'mib_repository_%' ORDER BY updated_at DESC");
-    return array_values(array_filter(array_map(fn($r)=>json_decode($r['meta_value'],true),$rows?:[]),'is_array'));
+    $bundles=array_values(array_filter(array_map(fn($r)=>json_decode($r['meta_value'],true),$rows?:[]),'is_array'));
+    foreach($bundles as &$bundle)if(isset($bundle['row_parts'])){
+        $encoded='';for($i=0;$i<$bundle['row_parts'];$i++)$encoded.=(string)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['mib_rows_'.$bundle['id'].'_'.$i]);
+        $bundle['rows']=json_decode(base64_decode($encoded,true),true,32,JSON_THROW_ON_ERROR);
+    }unset($bundle);return $bundles;
+}
+/** Pack large reviews into one POST field to avoid PHP max_input_vars truncation. */
+function icct_mib_review_input($input){
+    if(!isset($input['review_payload']))return $input;
+    if(!is_string($input['review_payload'])||strlen($input['review_payload'])>2097152)throw new InvalidArgumentException('Review payload is too large.');
+    $values=json_decode($input['review_payload'],true,32,JSON_THROW_ON_ERROR);
+    if(!is_array($values)||!is_array($values['selected']??null)||!is_array($values['records']??null)||count($values['records'])>512)throw new InvalidArgumentException('Invalid review payload.');
+    return array_replace($input,['selected'=>$values['selected'],'records'=>$values['records']]);
 }
 function icct_mib_plan($preview,$input){
     $types=icct_nms_device_types();$type=$input['type_id']??'';
@@ -178,16 +190,34 @@ function icct_mib_plan($preview,$input){
         if(empty($input['selected'][$i]))continue;
         if(!$record['numeric'])throw new InvalidArgumentException('Only readable numeric objects can create polling templates.');
         $r=$input['records'][$i]??[];$oid=ltrim(trim($r['oid']??''),'.');
-        if(!preg_match('/^'.preg_quote($record['base_oid'],'/').'\.(?:0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*))*$/D',$oid)||strlen($oid)>255||(!$record['table']&&$oid!==$record['base_oid'].'.0'))throw new InvalidArgumentException($record['symbol'].': enter a valid full instance OID. Scalars end in .0; table columns need their instance index.');
+        $index=trim($r['instance_index']??'');
+        if($record['table']&&$index!==''){
+            if(!preg_match('/^(?:0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*))*$/D',$index))throw new InvalidArgumentException($record['symbol'].': enter a numeric instance index, such as 1 or 1001.2.');
+            $indexed=$record['base_oid'].'.'.$index;
+            if($oid!==''&&$oid!==$record['base_oid']&&$oid!==$indexed)throw new InvalidArgumentException($record['symbol'].': full OID and instance index disagree.');
+            $oid=$indexed;
+        }
+        if(!$record['table']&&$oid==='')$oid=$record['base_oid'].'.0';
+        if(!preg_match('/^'.preg_quote($record['base_oid'],'/').'\.(?:0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*))*$/D',$oid)||strlen($oid)>255||(!$record['table']&&$oid!==$record['base_oid'].'.0'))throw new InvalidArgumentException($record['symbol'].': enter a valid full instance OID. Supply the actual table index in Instance Index, or append it to the full OID. Find it using the device SNMP walk; the MIB cannot determine it.');
         $record['oid']=$oid;$record['label']=icct_mib_name($r['label']??'');
         $record['data_name']=icct_mib_name($r['data_name']??'',190);$record['graph_name']=icct_mib_name($r['graph_name']??'',190);
         $record['units']=trim($r['units']??'');if(strlen($record['units'])>20)throw new InvalidArgumentException('Units must be at most 20 characters.');
         $record['ds_type']=(int)($r['ds_type']??0);if(!in_array($record['ds_type'],[1,2,3,4],true))throw new InvalidArgumentException('Choose a data source type.');
         foreach(['min','max'] as $limit){$v=trim($r[$limit]??'U');if($v!==''&&$v!=='U'&&(!is_numeric($v)||!is_finite((float)$v)))throw new InvalidArgumentException('Use a number or U for RRD bounds.');$record[$limit]=$v===''?'U':$v;}
         if($record['min']!=='U'&&$record['max']!=='U'&&(float)$record['min']>(float)$record['max'])throw new InvalidArgumentException('Minimum cannot exceed maximum.');
+        $record['graph_type']=(int)($r['graph_type']??4);$record['cf']=(int)($r['cf']??1);
+        if(!in_array($record['graph_type'],[4,5,6,7],true)||!in_array($record['cf'],[1,2,3,4],true))throw new InvalidArgumentException('Choose a valid graph item and consolidation function.');
+        $record['color']=strtoupper(trim($r['color']??'00CF00'));
+        if(!preg_match('/^[A-F0-9]{6}$/D',$record['color']))throw new InvalidArgumentException('Graph color must be six hexadecimal digits.');
+        $record['legend']=icct_mib_name($r['legend']??$record['label'],150);
+        $record['statistics']=isset($r['statistics'])?($r['statistics']==='1'):true;
+        foreach(['threshold_low','threshold_high'] as $key){
+            $v=trim($r[$key]??'');if($v!==''&&(!is_numeric($v)||!is_finite((float)$v)))throw new InvalidArgumentException($record['symbol'].': threshold lines must be finite numbers or blank.');$record[$key]=$v;
+        }
+        if($record['threshold_low']!==''&&$record['threshold_high']!==''&&(float)$record['threshold_low']>(float)$record['threshold_high'])throw new InvalidArgumentException('Lower threshold cannot exceed upper threshold.');
         $records[]=$record;
     }
-    if(count($records)>64)throw new InvalidArgumentException('Select at most 64 metrics per creation.');
+    if(count($records)>512)throw new InvalidArgumentException('Select at most 512 metrics per creation.');
     if(($options['data']||$options['graph'])&&!$records)throw new InvalidArgumentException('Select at least one numeric metric.');
     if(count(array_unique(array_column($records,'oid')))!==count($records))throw new InvalidArgumentException('Each instance OID must be unique.');
     return ['name'=>$name,'type_id'=>$type,'type_name'=>$types[$type]['name'],'category_id'=>$types[$type]['category_id'],'options'=>$options,'records'=>$records];
@@ -218,6 +248,20 @@ function icct_mib_native_metric($record,$options){
     icct_mib_write('UPDATE graph_templates_graph SET title=?,vertical_label=? WHERE graph_template_id=? AND local_graph_id=0',['|host_description| - '.$record['label'],$record['units'],$pair['graph_template_id']]);
     icct_mib_write('UPDATE graph_templates_item SET task_item_id=? WHERE graph_template_id=? AND local_graph_id=0',[$rrd,$pair['graph_template_id']]);
     icct_mib_write("UPDATE graph_template_input SET name=? WHERE graph_template_id=? AND column_name='task_item_id'",['Data Source ['.$record['label'].']',$pair['graph_template_id']]);
+    $graphId=$pair['graph_template_id'];
+    $colorId=(int)db_fetch_cell_prepared('SELECT id FROM colors WHERE hex=?',[$record['color']]);
+    if(!$colorId){$colorId=(int)sql_save(['id'=>0,'hex'=>$record['color']],'colors');if(!$colorId)throw new RuntimeException('Cannot save graph color.');}
+    icct_mib_write('UPDATE graph_templates_item SET graph_type_id=?,consolidation_function_id=?,color_id=?,text_format=? WHERE graph_template_id=? AND local_graph_id=0 AND graph_type_id IN (4,5,6,7)',[$record['graph_type'],$record['cf'],$colorId,$record['legend'],$graphId]);
+    if(!$record['statistics']){
+        icct_mib_write('DELETE d FROM graph_template_input_defs d JOIN graph_templates_item i ON i.id=d.graph_template_item_id WHERE i.graph_template_id=? AND i.local_graph_id=0 AND i.graph_type_id=9',[$graphId]);
+        icct_mib_write('DELETE FROM graph_templates_item WHERE graph_template_id=? AND local_graph_id=0 AND graph_type_id=9',[$graphId]);
+    }
+    $sequence=(int)db_fetch_cell_prepared('SELECT MAX(sequence) FROM graph_templates_item WHERE graph_template_id=?',[$graphId]);
+    foreach(['threshold_low'=>'Lower threshold','threshold_high'=>'Upper threshold'] as $key=>$label){
+        if($record[$key]==='')continue;
+        $red=(int)db_fetch_cell("SELECT id FROM colors WHERE hex='FF0000'")?:$colorId;
+        icct_mib_write('INSERT INTO graph_templates_item (hash,graph_template_id,graph_type_id,color_id,alpha,text_format,value,sequence) VALUES (?,?,?,?,?,?,?,?)',[bin2hex(random_bytes(16)),$graphId,2,$red,'FF',$label,$record[$key],++$sequence]);
+    }
     if(!(int)db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates_item WHERE graph_template_id=? AND task_item_id=?',[$pair['graph_template_id'],$rrd]))throw new RuntimeException('Graph template has no linked data source.');
     return $pair;
 }
@@ -243,8 +287,12 @@ function icct_mib_save($preview,$plan){
             foreach($preview['files'] as $i=>$file){$parts=str_split(base64_encode($file['content']),45000);foreach($parts as $j=>$part)icct_mib_write('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['mib_file_'.$id.'_'.$i.'_'.$j,$part]);unset($file['content']);$file['parts']=count($parts);$bundle['files'][]=$file;}
             // Chunk the metadata as well: large descriptions can exceed a TEXT column.
             $objectParts=str_split(base64_encode(json_encode($bundle['records'],JSON_THROW_ON_ERROR)),45000);foreach($objectParts as $j=>$part)icct_mib_write('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['mib_objects_'.$id.'_'.$j,$part]);unset($bundle['records']);$bundle['object_parts']=count($objectParts);$bundle['object_count']=count($preview['records']);
-            icct_mib_write('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['mib_repository_'.$id,json_encode($bundle,JSON_THROW_ON_ERROR)]);
-            if($hostId)icct_mib_write('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['mib_bundle_'.$hostId,json_encode($bundle,JSON_THROW_ON_ERROR)]);
+            $storedBundle=$bundle;
+            $rowParts=str_split(base64_encode(json_encode($bundle['rows'],JSON_THROW_ON_ERROR)),45000);
+            foreach($rowParts as $j=>$part)icct_mib_write('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['mib_rows_'.$id.'_'.$j,$part]);
+            unset($storedBundle['rows']);$storedBundle['row_parts']=count($rowParts);
+            icct_mib_write('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['mib_repository_'.$id,json_encode($storedBundle,JSON_THROW_ON_ERROR)]);
+            if($hostId)icct_mib_write('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['mib_bundle_'.$hostId,json_encode($storedBundle,JSON_THROW_ON_ERROR)]);
             if(!db_execute('COMMIT'))throw new RuntimeException('Could not commit templates.');
         }catch(Throwable $e){db_execute('ROLLBACK');throw $e;}
     }finally{db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]);}

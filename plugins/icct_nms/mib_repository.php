@@ -33,7 +33,7 @@ try{
             $mode=$action==='confirm'?'confirm':'review';$preview=$draft;
             if(!$draft||!hash_equals($draft['id'],(string)($_POST['draft_id']??'')))throw new InvalidArgumentException('Upload review is no longer available. Upload again.');
             if($action==='review'){
-                $reviewValues=$_POST;$_SESSION['icct_mib_values']=$_POST;$plan=icct_mib_plan($draft,$_POST);$_SESSION['icct_mib_plan']=$plan;icct_nms_redirect('mib_repository.php?confirm=1');
+                unset($_SESSION['icct_mib_plan']);if(($_POST['review_complete']??'')!=='1')throw new InvalidArgumentException('The review form was truncated. Enable JavaScript and retry so all selected OIDs are included.');$reviewValues=icct_mib_review_input($_POST);$_SESSION['icct_mib_values']=$reviewValues;$plan=icct_mib_plan($draft,$reviewValues);$_SESSION['icct_mib_plan']=$plan;icct_nms_redirect('mib_repository.php?confirm=1');
             }else{
                 $plan=$_SESSION['icct_mib_plan']??null;if(!$plan||($_POST['confirmed']??'')!=='1')throw new InvalidArgumentException('Review and confirm the creation options first.');
                 icct_mib_save($draft,$plan);unset($_SESSION['icct_mib_draft'],$_SESSION['icct_mib_plan'],$_SESSION['icct_mib_values']);icct_nms_redirect('mib_repository.php?saved=1');

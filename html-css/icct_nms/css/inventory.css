@@ -2703,3 +2703,8 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 #shared-diagnostic-output{white-space:pre-wrap;overflow-wrap:anywhere;padding:16px;background:#f4f4f4;max-height:45vh;overflow:auto}
 
 #shared-diagnostic-form{margin-top:20px}
+
+.mib-selection{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:16px 0}.mib-selection label{display:flex;align-items:center;gap:8px}.mib-selection input{width:18px;height:18px;accent-color:#0f62fe}.mib-selection [data-mib-selected-count]{color:#666;font-size:14px}.mib-editor [data-mib-pagination]{margin:0;width:100%;box-sizing:border-box}.mib-object[hidden]{display:none}.mib-object-body h3{margin:24px 0 16px}.mib-editor .site-table small{display:block;margin-top:8px;color:#666}
+
+@media(max-width:760px){.mib-editor .protocol-grid.cols-3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.mib-editor .protocol-grid.cols-2,.mib-editor .protocol-grid.cols-3{grid-template-columns:minmax(0,1fr)}}

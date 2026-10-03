@@ -23,6 +23,13 @@ function icct_backend_device_activate_imported_templates($device_id, $host_templ
         ),
         true
     );
+    if (is_array($bundle) && isset($bundle['row_parts'])) {
+        $encoded = '';
+        for ($i = 0; $i < $bundle['row_parts']; $i++) {
+            $encoded .= (string) db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?', ['mib_rows_' . $bundle['id'] . '_' . $i]);
+        }
+        $bundle['rows'] = json_decode(base64_decode($encoded, true), true, 32, JSON_THROW_ON_ERROR);
+    }
     if (is_array($bundle)) {
         $known = array_column($templates, 'graph_template_id');
         foreach ($bundle['rows'] as $row) {
