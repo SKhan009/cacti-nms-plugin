@@ -5,7 +5,7 @@ define('IN_CACTI_INSTALL',true);require '/var/www/html/cacti/include/cli_check.p
 require_once __DIR__.'/../includes/bootstrap.php';icct_nms_backend();require_once __DIR__.'/../includes/device_type_service.php';require_once __DIR__.'/../includes/mib_repository_service.php';
 $_SESSION=['sess_user_id'=>1];
 function check($ok,$message){if(!$ok)throw new RuntimeException($message);echo "PASS: $message\n";}
-foreach(['host_template','host_template_graph','data_template','data_template_data','data_template_rrd','data_input_data','graph_templates','graph_templates_graph','graph_templates_item','graph_template_input','graph_template_input_defs','plugin_icct_nms_meta','settings','colors'] as $table){
+foreach(['data_local','graph_local','host_template','host_template_graph','data_template','data_template_data','data_template_rrd','data_input_data','graph_templates','graph_templates_graph','graph_templates_item','graph_template_input','graph_template_input_defs','plugin_icct_nms_meta','settings','colors'] as $table){
  if(!db_execute("CREATE TEMPORARY TABLE qa_mib_copy LIKE `$table`"))throw new RuntimeException('Isolation failed');db_execute("INSERT INTO qa_mib_copy SELECT * FROM `$table`");db_execute("CREATE TEMPORARY TABLE `$table` LIKE qa_mib_copy");db_execute("INSERT INTO `$table` SELECT * FROM qa_mib_copy");db_execute('DROP TEMPORARY TABLE qa_mib_copy');
 }
 $types=icct_nms_device_types();$type=array_key_first($types);$path=__DIR__.'/../assets/mibs/IF-MIB.txt';
@@ -20,6 +20,28 @@ $hosts=(int)db_fetch_cell('SELECT COUNT(*) FROM host');$data=(int)db_fetch_cell(
 $metricKey=array_key_first($records);$input['records'][$metricKey]+= ['graph_type'=>5,'cf'=>3,'color'=>'00CF00','legend'=>'Interface count','statistics'=>'0','threshold_low'=>'0','threshold_high'=>'80'];
 $plan=icct_mib_plan($preview,$input);$bundle=icct_mib_save($preview,$plan);
 $graphId=$bundle['rows'][0]['graph_template_id'];
+check(icct_mib_bounds('INTEGER (-8..9)')===['min'=>'-8','max'=>'9'],'Declared MIB numeric bounds populate automatically');
+check(icct_mib_bounds('Counter64')===['min'=>'0','max'=>'U'],'Counters use nonnegative rates without inventing an RRD maximum');
+check(icct_mib_bounds('INTEGER {up(1),down(2)}')===['min'=>'U','max'=>'U'],'Enumeration values do not invent numeric bounds');
+$qaHost=2;$dataId=9000001;$localGraph=9000001;
+check(is_device_allowed($qaHost,1)&&icct_backend_protocol_enabled($qaHost,'snmp'),'Fixture device is authorized and SNMP enabled');
+$tid=$bundle['rows'][0]['data_template_id'];
+db_execute_prepared('INSERT INTO data_local (id,host_id,data_template_id) VALUES(?,?,?)',[$dataId,$qaHost,$tid]);
+$native=db_fetch_row_prepared('SELECT * FROM data_template_data WHERE data_template_id=? AND local_data_id=0',[$tid]);$oldInput=$native['id'];unset($native['id']);$native['local_data_id']=$dataId;$newInput=sql_save($native,'data_template_data');
+foreach(db_fetch_assoc_prepared('SELECT * FROM data_input_data WHERE data_template_data_id=?',[$oldInput]) as $field){$field['data_template_data_id']=$newInput;sql_save($field,'data_input_data',['data_template_data_id','data_input_field_id']);}
+$rrdRow=db_fetch_row_prepared('SELECT * FROM data_template_rrd WHERE data_template_id=? AND local_data_id=0',[$tid]);unset($rrdRow['id']);$rrdRow['local_data_id']=$dataId;$localRrd=sql_save($rrdRow,'data_template_rrd');
+db_execute_prepared('INSERT INTO graph_local (id,host_id,graph_template_id) VALUES(?,?,?)',[$localGraph,$qaHost,$graphId]);
+$gg=db_fetch_row_prepared('SELECT * FROM graph_templates_graph WHERE graph_template_id=? AND local_graph_id=0',[$graphId]);unset($gg['id']);$gg['local_graph_id']=$localGraph;sql_save($gg,'graph_templates_graph');
+foreach(db_fetch_assoc_prepared('SELECT * FROM graph_templates_item WHERE graph_template_id=? AND local_graph_id=0',[$graphId]) as $item){unset($item['id']);$item['local_graph_id']=$localGraph;if($item['task_item_id'])$item['task_item_id']=$localRrd;sql_save($item,'graph_templates_item');}
+$fetched=icct_mib_device_inputs($preview,$qaHost)[$metricKey][0]??[];
+check(($fetched['oid']??'')===$plan['records'][0]['oid']&&(int)($fetched['graph_type']??0)===5&&(int)($fetched['cf']??0)===3,'Device instance OID and native graph item settings fetched together');
+check(($fetched['statistics']??'')==='0'&&($fetched['threshold_high']??'')=='80'&&($fetched['threshold_low']??'')=='0','Native graph statistics and threshold lines remain synchronized');
+db_execute_prepared('DELETE FROM data_input_data WHERE data_template_data_id=?',[$newInput]);
+foreach(['data_template_data','data_template_rrd'] as $table)db_execute_prepared('DELETE FROM '.$table.' WHERE local_data_id=?',[$dataId]);
+foreach(['graph_templates_graph','graph_templates_item'] as $table)db_execute_prepared('DELETE FROM '.$table.' WHERE local_graph_id=?',[$localGraph]);
+db_execute_prepared('DELETE FROM data_local WHERE id=?',[$dataId]);db_execute_prepared('DELETE FROM graph_local WHERE id=?',[$localGraph]);
+try{icct_mib_device_inputs($preview,0);throw new LogicException('Invalid host accepted');}catch(InvalidArgumentException $e){check(true,'Invalid device cannot supply MIB inputs');}
+
 check((int)db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates_item WHERE graph_template_id=? AND graph_type_id=5 AND consolidation_function_id=3 AND text_format=?',[$graphId,'Interface count'])===1,'Reviewed graph item, legend and consolidation function saved');
 check((int)db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates_item WHERE graph_template_id=? AND graph_type_id=2 AND value IN (?,?)',[$graphId,'0','80'])===2,'Upper and lower thresholds create native HRULE items, including zero');
 check((int)db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates_item WHERE graph_template_id=? AND graph_type_id=9',[$graphId])===0,'Optional statistics removed');

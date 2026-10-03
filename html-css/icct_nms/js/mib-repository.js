@@ -16,6 +16,10 @@ function filterObjects(){objectPage=1;matches=objects.filter(object=>object.text
 if(pager){pager.querySelector('[data-mib-size]').addEventListener('change',()=>{objectPage=1;renderObjects();});pager.querySelector('[data-mib-page]').addEventListener('change',e=>{objectPage=Number(e.target.value);renderObjects();});pager.querySelector('[data-mib-prev]').addEventListener('click',()=>{objectPage--;renderObjects();});pager.querySelector('[data-mib-next]').addEventListener('click',()=>{objectPage++;renderObjects();});}
 objectSearch?.addEventListener('input',filterObjects);filterObjects();
 if(review){
+ review.querySelectorAll('[data-mib-instance]').forEach(select=>select.addEventListener('change',()=>{
+  if(!select.value)return;const values=JSON.parse(select.value);
+  for(const [key,value] of Object.entries(values)){const input=review.querySelector(`[name="records[${select.dataset.record}][${key}]"]`);if(input){input.value=value;input.setCustomValidity('');}}
+ }));
  const eligible=objects.filter(object=>!object.querySelector('summary input').disabled),all=review.querySelector('[data-mib-select-all]');
  function selection(){const count=eligible.filter(object=>object.querySelector('summary input').checked).length;all.checked=count>0&&count===eligible.length;all.indeterminate=count>0&&count<eligible.length;all.disabled=eligible.length===0;review.querySelector('[data-mib-selected-count]').textContent=`${count} of ${eligible.length} numeric objects selected`;}
  function toggle(object){const checked=object.querySelector('summary input').checked;object.querySelectorAll('.mib-object-body input,.mib-object-body select').forEach(input=>input.disabled=!checked);}
@@ -32,7 +36,7 @@ if(review){
  function reveal(object,input){objectSearch.value='';matches=objects;const limit=pager.querySelector('[data-mib-size]').value;objectPage=limit==='all'?1:Math.floor(objects.indexOf(object)/Number(limit))+1;renderObjects();object.open=true;input.reportValidity();input.focus();}
  review.addEventListener('submit',event=>{
   if(event.submitter?.value==='discard'){objects.forEach(object=>object.querySelectorAll('input,select').forEach(input=>input.disabled=true));return;}
-  for(const object of eligible){
+  if(event.submitter?.value!=='fetch_inputs')for(const object of eligible){
    if(!object.querySelector('summary input').checked)continue;
    const oid=object.querySelector('[data-base-oid]'),index=object.querySelector('[data-mib-index]');
    oid.value=oid.value.trim().replace(/^\./,'');
@@ -40,7 +44,7 @@ if(review){
     event.preventDefault();oid.setCustomValidity('Enter the actual device instance index or a full instance OID.');reveal(object,oid);return;
    }
   }
-  for(const input of review.querySelectorAll('input,select')){
+  if(event.submitter?.value!=='fetch_inputs')for(const input of review.querySelectorAll('input,select')){
    if(input.disabled||input.checkValidity())continue;
    event.preventDefault();const object=input.closest('[data-mib-object]');if(object)reveal(object,input);else{input.reportValidity();input.focus();}return;
   }

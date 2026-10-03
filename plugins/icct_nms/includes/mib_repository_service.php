@@ -116,6 +116,55 @@ function icct_mib_repository_dependencies($dir,$files){
     }
     return $used;
 }
+/** Bounds declared by the MIB, not thresholds inferred from descriptions. */
+function icct_mib_bounds($syntax){
+    if(preg_match('/\((-?\d+)\s*\.\.\s*(-?\d+)\)/',$syntax,$m))return ['min'=>$m[1],'max'=>$m[2]];
+    if(preg_match('/^(?:Counter32|Counter64|Unsigned32|Gauge32|TimeTicks)\b/',$syntax))return ['min'=>'0','max'=>'U'];
+    return ['min'=>'U','max'=>'U'];
+}
+/** Read native device inputs and graph settings; never guess an instance index. */
+function icct_mib_device_inputs($preview,$hostId){
+    icct_backend_require_management(3);$hostId=icct_backend_device_require($hostId);
+    if(!is_device_allowed($hostId,icct_backend_current_user_id()))throw new InvalidArgumentException('Device access denied.');
+    $host=db_fetch_row_prepared("SELECT * FROM host WHERE id=? AND deleted=''",[$hostId]);
+    if(!$host||$host['disabled']!==''||(int)$host['snmp_version']<1||!icct_backend_protocol_enabled($hostId,'snmp'))throw new InvalidArgumentException('Choose an enabled device with SNMP selected in Protocol Config.');
+    $inputs=db_fetch_assoc_prepared("SELECT DISTINCT dl.id AS local_data_id,dl.data_template_id,dtd.id AS input_id,did.value AS oid,dt.name AS data_name,r.data_source_name,r.data_source_type_id AS ds_type,r.rrd_minimum AS min,r.rrd_maximum AS max,r.id AS rrd_id
+        FROM data_local dl JOIN data_template_data dtd ON dtd.local_data_id=dl.id
+        JOIN data_template dt ON dt.id=dl.data_template_id
+        JOIN data_input_data did ON did.data_template_data_id=dtd.id
+        JOIN data_input_fields f ON f.id=did.data_input_field_id AND f.data_name='oid'
+        JOIN data_template_rrd r ON r.local_data_id=dl.id WHERE dl.host_id=? ORDER BY dl.id",[$hostId]);
+    // Indexed data queries keep their resolved OIDs in the device poller cache.
+    $indexed=db_fetch_assoc_prepared("SELECT DISTINCT dl.id AS local_data_id,dl.data_template_id,dtd.id AS input_id,pi.oid,dt.name AS data_name,r.data_source_name,r.data_source_type_id AS ds_type,r.rrd_minimum AS min,r.rrd_maximum AS max,r.id AS rrd_id
+        FROM poller_item pi JOIN data_local dl ON dl.id=pi.local_data_id
+        JOIN data_template_data dtd ON dtd.local_data_id=dl.id JOIN data_template dt ON dt.id=dl.data_template_id
+        JOIN data_template_rrd r ON r.local_data_id=dl.id AND r.data_source_name=pi.rrd_name
+        WHERE dl.host_id=? AND pi.action=0 ORDER BY dl.id",[$hostId]);
+    $inputs=array_merge($inputs?:[],$indexed?:[]);
+    $result=[];$seen=[];
+    foreach($preview['records'] as $i=>$record){
+        if(!$record['numeric'])continue;
+        foreach($inputs as $input){
+            $oid=ltrim(trim($input['oid']),'.');$prefix=$record['base_oid'].'.';
+            if(!str_starts_with($oid,$prefix)||!preg_match('/^\d+(?:\.\d+)*$/D',substr($oid,strlen($prefix))))continue;
+            if(!$record['table']&&$oid!==$prefix.'0')continue;
+            $graph=db_fetch_row_prepared("SELECT gt.name AS graph_name,gg.vertical_label AS units,i.graph_type_id AS graph_type,i.consolidation_function_id AS cf,c.hex AS color,i.text_format AS legend,i.graph_template_id,i.local_graph_id
+                FROM graph_templates_item i JOIN graph_local gl ON gl.id=i.local_graph_id
+                JOIN graph_templates gt ON gt.id=i.graph_template_id JOIN graph_templates_graph gg ON gg.local_graph_id=gl.id
+                LEFT JOIN colors c ON c.id=i.color_id WHERE gl.host_id=? AND i.task_item_id=? AND i.graph_type_id IN (4,5,6,7) ORDER BY i.sequence LIMIT 1",[$hostId,$input['rrd_id']]);
+            if(isset($seen[$i][$oid]))continue;$seen[$i][$oid]=true;
+            $values=array_intersect_key($input,array_flip(['ds_type','min','max']));$values['oid']=$oid;$values['instance_index']=$record['table']?substr($oid,strlen($prefix)):'';
+            if($graph){
+                foreach(['units','graph_type','cf','color','legend'] as $key)$values[$key]=$graph[$key];
+                $values['statistics']=db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates_item WHERE local_graph_id=? AND graph_type_id=9',[$graph['local_graph_id']])?'1':'0';
+                $lines=db_fetch_assoc_prepared('SELECT text_format,value FROM graph_templates_item WHERE local_graph_id=? AND graph_type_id=2 ORDER BY sequence',[$graph['local_graph_id']]);
+                foreach($lines as $line){if($line['text_format']==='Lower threshold')$values['threshold_low']=$line['value'];if($line['text_format']==='Upper threshold')$values['threshold_high']=$line['value'];}
+            }
+            $result[$i][]=$values;
+        }
+    }
+    return $result;
+}
 function icct_mib_preview($upload,$typeId,$allowUnresolved=false){
     $types=icct_nms_device_types();if(!is_string($typeId)||!isset($types[$typeId]))throw new InvalidArgumentException('Select a device type.');
     $names=$upload['name']??[];if(!is_array($names)||!count($names)||count($names)>8)throw new InvalidArgumentException('Upload 1–8 MIB files including dependencies.');
@@ -158,7 +207,7 @@ function icct_mib_preview($upload,$typeId,$allowUnresolved=false){
             }
             $numeric=$kind==='OBJECT-TYPE' && in_array($access[1]??'',['read-only','read-write','read-create']) && preg_match('/^(Integer32|INTEGER|Unsigned32|Gauge32|Counter32|Counter64|TimeTicks)\b/',$syntax[1]??'');
             $counter=(bool)preg_match('/^Counter(?:32|64)\b/',$syntax[1]??'');$enum=str_contains($syntax[1]??'','{');
-            $records[]=['symbol'=>$symbol,'kind'=>$kind,'base_oid'=>$base,'oid'=>$base?($table?$base:$base.'.0'):'','syntax'=>$syntax[1]??'','access'=>$access[1]??'','description'=>trim(preg_replace('/\s+/',' ',$description[1]??'')),'units'=>$units[1]??'','table'=>$table,'numeric'=>(bool)$numeric,'enum'=>$enum,'ds_type'=>$counter?2:1,'label'=>explode('::',$symbol)[1],'reason'=>!$numeric?'Metadata / nonnumeric object':($table?'Enter the device-specific instance index':($enum?'Numeric enumeration: review state mapping':'Readable numeric scalar'))];
+            $records[]=['symbol'=>$symbol,'kind'=>$kind,'base_oid'=>$base,'oid'=>$base?($table?$base:$base.'.0'):'','syntax'=>$syntax[1]??'','access'=>$access[1]??'','description'=>trim(preg_replace('/\s+/',' ',$description[1]??'')),'units'=>$units[1]??'','table'=>$table,'numeric'=>(bool)$numeric,'enum'=>$enum,'ds_type'=>$counter?2:1,'label'=>explode('::',$symbol)[1],'min'=>icct_mib_bounds($syntax[1]??'')['min'],'max'=>icct_mib_bounds($syntax[1]??'')['max'],'reason'=>!$numeric?'Metadata / nonnumeric object':($table?'Enter the device-specific instance index':($enum?'Numeric enumeration: review state mapping':'Readable numeric scalar'))];
         }
         return ['id'=>bin2hex(random_bytes(16)),'type_id'=>$typeId,'type_name'=>$types[$typeId]['name'],'category_id'=>$types[$typeId]['category_id'],'files'=>array_values($files),'records'=>$records,'parse_error'=>$parseError,'dependencies'=>$dependencies,'created'=>time(),'owner'=>icct_backend_current_user_id()];
     }finally{foreach(glob($dir.'/*')?:[] as $file)unlink($file);rmdir($dir);}
