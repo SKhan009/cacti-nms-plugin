@@ -143,6 +143,7 @@ function openNodeEditor(node={}) {
   nodeEditor.elements.node_id.value=node.id ?? '';
   nodeEditor.elements.node_name.value=node.name ?? '';
   nodeEditor.elements.site_id.value=node.site_id ?? '';
+  nodeEditor.elements.rack_profile_id.value=node.rack_profile_id ?? '';updateNodeRackCount();
   document.querySelector('#node-editor-title').textContent=node.id?'Edit Node':'Add Node';
   nodeEditor.hidden=false;
   nodeEditor.elements.node_name.focus();
@@ -163,3 +164,12 @@ document.querySelector('#node-search')?.addEventListener('input',event=>{
   document.querySelectorAll('[data-node-row]').forEach(row=>{row.hidden=!row.dataset.nodeSearch.includes(query);if(!row.hidden)count++;});
   document.querySelector('#node-empty').hidden=count>0;
 });
+
+function updateNodeRackCount(){if(!nodeEditor)return;const profiles=JSON.parse(document.querySelector('#node-rack-profiles').textContent);nodeEditor.elements.rack_count_display.value=profiles[nodeEditor.elements.rack_profile_id.value]?.rack_count ?? '';}
+nodeEditor?.elements.rack_profile_id.addEventListener('change',updateNodeRackCount);if(nodeEditor)updateNodeRackCount();
+const rackEditor=document.querySelector('#rack-editor');
+function openRackEditor(profile={}){rackEditor.reset();for(const name of ['rack_profile_id','rack_name','rack_count','unit_count'])rackEditor.elements[name].value=profile[name] ?? '';document.querySelector('#rack-editor-title').textContent=profile.rack_profile_id?'Edit Rack Configuration':'Add Rack Configuration';rackEditor.hidden=false;rackEditor.elements.rack_name.focus();}
+document.querySelector('#add-rack-config')?.addEventListener('click',()=>openRackEditor());
+document.querySelector('#cancel-rack-config')?.addEventListener('click',()=>{rackEditor.hidden=true;});
+document.querySelectorAll('[data-edit-rack-profile]').forEach(button=>button.addEventListener('click',()=>openRackEditor(JSON.parse(button.dataset.editRackProfile))));
+document.querySelector('#rack-profile-search')?.addEventListener('input',event=>{const query=event.target.value.toLowerCase().trim();document.querySelectorAll('[data-rack-profile-search]').forEach(row=>{row.hidden=!row.dataset.rackProfileSearch.includes(query);});});
