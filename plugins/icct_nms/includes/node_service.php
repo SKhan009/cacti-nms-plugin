@@ -14,8 +14,10 @@ function icct_nms_save_node($input) {
         $old=$id ? db_fetch_row_prepared('SELECT * FROM plugin_icct_nms_rack_nodes WHERE id=? FOR UPDATE',[$id]) : [];
         if ($id && !$old) throw new InvalidArgumentException('This node no longer exists. Reload the page.');
         $racks=$id ? (int)db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_icct_nms_racks WHERE node_id=?',[$id]) : 0;
+        $members=$id ? (int)db_fetch_cell_prepared("SELECT COUNT(*) FROM plugin_icct_nms_meta m JOIN host h ON m.meta_key=CONCAT('device_node_id_',h.id) WHERE m.meta_value=? AND h.deleted=''",[(string)$id]) : 0;
         if (($input['action'] ?? '')==='delete_node') {
             if (!$id) throw new InvalidArgumentException('Choose a saved node.');
+            if ($members) throw new InvalidArgumentException('Unassign devices from this node before deleting it.');
             if ($racks) throw new InvalidArgumentException('This node contains racks. Remove or reassign its racks before deleting it.');
             icct_backend_category_execute('DELETE FROM plugin_icct_nms_rack_nodes WHERE id=?',[$id]);
             $message='Node deleted.';
@@ -24,6 +26,7 @@ function icct_nms_save_node($input) {
             if ($name==='') throw new InvalidArgumentException('Enter a node name.');
             $site=icct_nms_id($input['site_id'] ?? 0);
             if (!$site || !db_fetch_cell_prepared('SELECT id FROM sites WHERE id=?',[$site])) throw new InvalidArgumentException('Select an existing Cacti site.');
+            if ($members && (int)$old['site_id']!==$site) throw new InvalidArgumentException('Unassign devices before changing this node’s site.');
             if ($racks && (int)$old['site_id']!==$site) throw new InvalidArgumentException('This node contains racks. Reassign its racks before changing the site.');
             if (db_fetch_cell_prepared('SELECT id FROM plugin_icct_nms_rack_nodes WHERE site_id=? AND LOWER(name)=LOWER(?) AND id<>? LIMIT 1',[$site,$name,$id])) throw new InvalidArgumentException('A node with this name already exists at the selected site.');
             if ($id) icct_backend_category_execute('UPDATE plugin_icct_nms_rack_nodes SET name=?,site_id=?,updated_by=?,updated_at=NOW() WHERE id=?',[$name,$site,icct_backend_current_user_id(),$id]);

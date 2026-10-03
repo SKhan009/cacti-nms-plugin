@@ -31,6 +31,7 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
                 <nav class="header-menu-panel" aria-label="Main navigation">
                     <a href="topology.php">Dashboard</a>
                     <a href="inventory.php">Inventory</a>
+                    <a href="node_configuration.php">Node Configuration</a>
                     <a href="presets.php#segment">Presets</a>
                 </nav>
             </div>

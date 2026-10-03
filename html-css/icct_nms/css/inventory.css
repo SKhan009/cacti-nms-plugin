@@ -2605,3 +2605,5 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 .fault-rule .field:has([data-email]),.fault-rule .field:has([data-audio]) { order:1; }
 .fault-rule .fault-guidance,.fault-rule .fault-recipients { order:2; }
 .fault-rule > button { order:3; justify-self:start; }
+
+.node-assignment-form{padding:20px 12px;background:white;border-bottom:1px solid #ddd}.node-assignment-form .form-grid{grid-template-columns:2fr 2fr 1fr;align-items:end}.node-device-group{padding:18px 12px}.node-device-group h2{font-size:18px}.node-device-group h2 small{font-weight:400;font-size:13px;color:#666;margin-left:10px}@media(max-width:700px){.node-assignment-form .form-grid{grid-template-columns:1fr}}
