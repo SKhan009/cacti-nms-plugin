@@ -5,8 +5,8 @@
   if (!wizard) return;
   const basic = document.querySelector('#device-form');
   const panels = document.querySelector('#wizard-panels');
-  const steps = ['basic','protocol','diagnostics','graphs','data-query'];
-  const nav = [...basic.querySelectorAll('.steps li')].slice(0,5);
+  const steps = ['basic','protocol','diagnostics','graphs','data-query','ports'];
+  const nav = [...basic.querySelectorAll('.steps li')].slice(0,6);
   const dialog = document.querySelector('#unsaved-dialog');
   const previous = document.querySelector('#wizard-previous');
   const next = document.querySelector('#wizard-next');
@@ -33,9 +33,10 @@
     document.querySelector('#diagnostics').hidden = step !== 'diagnostics';
     document.querySelector('#device-graphs').hidden = step !== 'graphs';
     document.querySelector('#device-data-queries').hidden = step !== 'data-query';
+    document.querySelector('#device-ports').hidden = step !== 'ports';
     nav.forEach((item,i)=>{item.classList.toggle('current',i===index);item.removeAttribute('aria-disabled'); if(i===index)item.setAttribute('aria-current','step');else item.removeAttribute('aria-current');});
     previous.disabled = index === 0;
-    next.textContent = index === 4 ? 'Done →' : 'Next →';
+    next.textContent = index === 5 ? 'Done →' : 'Next →';
   }
   nav.forEach((item,i)=>{
     const a = item.querySelector('a') || document.createElement('a');
@@ -45,7 +46,7 @@
   previous.addEventListener('click',()=>{location.hash=steps[Math.max(0,steps.indexOf(currentStep())-1)];});
   next.addEventListener('click',()=>{
     const index=steps.indexOf(currentStep());
-    if(index===4) { leave('index.html'); return; }
+    if(index===5) { leave('index.html'); return; }
     // Navigation keeps incomplete drafts; validation occurs only on explicit Save.
     location.hash=steps[index+1];
   });

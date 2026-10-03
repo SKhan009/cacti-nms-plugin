@@ -48,14 +48,15 @@
     $id
 ): ?><a href="protocol.php?id=<?= $id ?>#graphs">Graphs<small>4/7</small></a><?php else: ?><a href="#graphs">Graphs<small>4/7</small></a><?php endif; ?></li>
             <li <?= $id ? "" : 'aria-disabled="true"' ?>><?php if ($id): ?><a href="protocol.php?id=<?= $id ?>#data-query">Data Query<small>5/7</small></a><?php else: ?><a href="#data-query">Data Query<small>5/7</small></a><?php endif; ?></li>
+            <li><a href="#ports">Port Config<small>6/7</small></a></li>
             <?php foreach (
-                ["Port Config", "FCAPS"]
+                ["FCAPS"]
                 as $i => $label
             ): ?>
             <li aria-disabled="true">
                 <span>
                     <?= $label ?>
-                    <small><?= $i + 6 ?>/7</small>
+                    <small><?= $i + 7 ?>/7</small>
                 </span>
             </li>
             <?php endforeach; ?>
@@ -124,7 +125,7 @@
             foreach ($typeProfiles as $profile) if ((int)$profile['category_id']===(int)$values['category_id']) $typeChoices[$profile['name']]=$profile['name'];
             icct_nms_select('Device Type','device_type',$typeChoices,$values['device_type']);
             ?>
-            <script type="application/json" id="device-type-profiles"><?= json_encode(array_map(static function($p) { return ['name'=>$p['name'],'category_id'=>$p['category_id']]; },array_values($typeProfiles)),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?></script>
+            <script type="application/json" id="device-type-profiles"><?= json_encode(array_map(static function($p) { return ['name'=>$p['name'],'category_id'=>$p['category_id'],'physical_ports'=>$p['physical_ports']]; },array_values($typeProfiles)),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?></script>
             <?php
             icct_nms_core_select(
                 "Device Site Location",

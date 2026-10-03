@@ -2568,3 +2568,7 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 .pending-protocol-options input { width:auto; min-height:0; }
 .node-actions { display:flex; align-items:center; gap:12px; }
 .node-actions form { margin:0; }
+.device-ports { padding:24px 16px; background:#fff; }
+.device-ports p { color:#666; line-height:1.5; }
+#port-summary { color:#222; font-weight:600; }
+.port-pagination { display:flex; justify-content:flex-end; align-items:center; gap:16px; margin-top:16px; }

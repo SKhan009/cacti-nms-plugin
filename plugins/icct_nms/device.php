@@ -145,6 +145,7 @@ try {
         echo '<script type="application/json" id="protocol-default-values">'.json_encode(icct_nms_protocol_presets(),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR).'</script>';
         echo '<div id="wizard-panels" hidden>';
         require __DIR__ . "/templates/protocol.php";
+        require __DIR__.'/templates/ports.php';
         echo '</div><footer class="form-footer wizard-footer"><button type="button" class="button" id="wizard-previous">Previous ←</button><button type="button" class="button" id="wizard-next">Next →</button></footer></div>';
     }
     require __DIR__ . "/templates/footer.php";
