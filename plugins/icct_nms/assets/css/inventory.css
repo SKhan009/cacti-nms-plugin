@@ -2482,7 +2482,6 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 .connection-fields { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:16px; }
 .connection-fields .field { min-width:0; }
 .connection-fields input[type=color] { width:100%; min-height:40px; padding:4px; }
-#connection-editor-preview { margin-top:16px; }
 @media(max-width:700px) { .connection-fields { grid-template-columns:1fr; } }
 /* Full add/edit device type workspace and six-column local icon picker. */
 .device-type-editor { background:#fff; padding:20px; margin:12px 0 20px; min-height:0; }

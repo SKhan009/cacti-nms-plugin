@@ -11,7 +11,7 @@
 <button type="button" data-connection-value="<?= $choice ?>"><?= icct_nms_connection_preview(['name'=>ucwords(str_replace('-',' ',$choice)),'color'=>'#333333','line_style'=>$field==='line_style'?$choice:'solid','symbol'=>$field==='symbol'?$choice:'none']) ?><span><?= icct_nms_h(ucwords(str_replace('-',' ',$choice))) ?></span></button>
 <?php endforeach; ?></div></details></div>
 <?php endforeach; ?>
-</div><div id="connection-editor-preview"><?= icct_nms_connection_preview(['name'=>'Connection','color'=>$connectionValues['color'] ?? '#00bfae','line_style'=>$connectionValues['line_style'] ?? 'dotted','symbol'=>$connectionValues['symbol'] ?? 'circle']) ?></div>
+</div>
 <div class="type-editor-actions"><button type="button" class="button" id="cancel-connection">Cancel</button><button type="submit" class="button primary">Save</button></div>
 </form>
 <?php endif; ?>

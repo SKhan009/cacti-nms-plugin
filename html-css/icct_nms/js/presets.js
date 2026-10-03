@@ -77,9 +77,6 @@ const connectionEditor = document.querySelector('#connection-editor');
 function updateConnectionPreview() {
   if (!connectionEditor) return;
   const fields=connectionEditor.elements;
-  const svg=document.querySelector('#connection-editor-preview svg');
-  svg.parentElement.hidden=!(fields.color.value && fields.line_style.value && fields.symbol.value);
-  svg.style.color=fields.color.value;
   document.querySelector('#connection-color-label').textContent=fields.color.value || 'Select color';
   document.querySelector('.connection-color-control').classList.toggle('unselected',!fields.color.value);
   if(fields.color.value) document.querySelector('#connection-color-picker').value=fields.color.value;
@@ -91,13 +88,7 @@ function updateConnectionPreview() {
     else label.textContent=picker.dataset.connectionChoice==='line_style'?'Select line style':'Select endpoint symbol';
     picker.querySelectorAll('[data-connection-value]').forEach(option=>option.setAttribute('aria-pressed',String(option===selected)));
   });
-  const styles={'solid':'','dashed':'9 5','dotted':'2 5','dash-dot':'10 4 2 4','fine-dotted':'1 3','short-dashed':'4 4'};
-  svg.replaceChildren();
-  const node=(tag,attributes)=>{ const el=document.createElementNS('http://www.w3.org/2000/svg',tag); for(const [key,value] of Object.entries(attributes)) el.setAttribute(key,value); svg.append(el); };
-  node('path',{d:'M8 8h104',fill:'none',stroke:'currentColor','stroke-width':'1.5','stroke-dasharray':styles[fields.line_style.value]});
-  if(fields.symbol.value==='circle') for(const x of [8,112]) node('circle',{cx:x,cy:8,r:4,fill:'currentColor'});
-  if(fields.symbol.value==='square') node('path',{d:'M4 4h8v8H4zM108 4h8v8h-8z',fill:'currentColor'});
-  if(fields.symbol.value==='arrow') node('path',{d:'m12 5-4 3 4 3M108 5l4 3-4 3',fill:'none',stroke:'currentColor','stroke-width':'1.5'});
+
 }
 function openConnectionEditor(profile={}) {
   connectionEditor.reset();
