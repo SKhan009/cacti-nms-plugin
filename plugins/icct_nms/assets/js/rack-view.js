@@ -17,6 +17,8 @@
     const previous=document.querySelector('#rackPrevious'),next=document.querySelector('#rackNext');
     previous.hidden=next.hidden=racks.length<=3;previous.disabled=rackOffset===0;next.disabled=rackOffset+3>=racks.length;
     document.querySelector('#rackPageStatus').textContent=racks.length>3?'Racks '+(rackOffset+1)+'–'+Math.min(rackOffset+3,racks.length)+' of '+racks.length:'';
+    const nodeHome=document.querySelector('#rackNodeToolbar'),nodeField=document.querySelector('#rackNodeField'),nodeContainer=editing?document.querySelector('#rackPoolNode'):nodeHome;
+    if(nodeField.parentElement!==nodeContainer)nodeContainer.append(nodeField);nodeHome.hidden=editing;
     cabinets.replaceChildren();pool.hidden=!editing;actions.hidden=!editing;saveButton.disabled=busy||!changes.size;node.disabled=busy;document.querySelector('#rackViewEdit').hidden=!data.management;
     document.querySelector('#rackViewEdit').setAttribute('aria-pressed',String(editing));
     const list=document.querySelector('#rackDeviceList');list.replaceChildren();devices.forEach(d=>list.append(card(d)));droppableOncePool();
