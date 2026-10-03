@@ -148,3 +148,9 @@ Node Configuration is available in both ICCT navigation menus. It groups permitt
 Add/Edit Device keeps only Rack Name and Placement in the Rack. Reusable rack presets appear at the selected site even before they are instantiated. Selecting a preset limits placement choices to its units-per-rack count. On save, the preset is instantiated at that site under a node named after the preset; existing matching node racks are reused. Capacity and occupied-unit checks remain authoritative.
 
 Map View now draws only the locally served India state boundaries on white. The overview includes island territories, limits zoom-out to the full India view, and restricts panning to India bounds. GeoServer country/ocean raster overlays are omitted from this view; the authenticated WMS relay remains available for compatibility.
+
+### Rack placement
+
+Dashboard Rack View displays numbered rack cabinets from node/rack presets. Select a node and use the pencil control to drag devices into consecutive units, peripheral slots, or the device list to unassign them. Unassigned devices at the node site remain available in the list. A manual placement form provides an alternative to dragging.
+
+Add/Edit Device uses Rack Name, Rack Number and a multi-unit picker. Occupied units are disabled; a device must occupy consecutive units. Both surfaces share a locked, transactional placement service with native management/device permissions, capacity and overlap checks, and stale-move detection. Numbered placements use the existing rack_devices table; peripheral placement uses plugin-owned metadata. Placement edits enter the device configuration history.

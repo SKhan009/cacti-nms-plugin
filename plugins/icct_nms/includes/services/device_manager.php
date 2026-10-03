@@ -202,12 +202,6 @@ function icct_backend_device_save($device_id, $input)
     ) {
         throw new InvalidArgumentException('Select an existing Cacti site.');
     }
-    $current_site = icct_backend_single_topology_site();
-    if ($current_site && $site_id !== $current_site) {
-        throw new InvalidArgumentException(
-            'This topology currently uses one location. Select its site for this device.'
-        );
-    }
     if (
         $template_id !== 0 &&
         !(int) db_fetch_cell_prepared('SELECT COUNT(*) FROM host_template WHERE id = ?', [

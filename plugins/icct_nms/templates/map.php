@@ -22,10 +22,7 @@
 <?php foreach (['topology','rack','image'] as $view): ?>
 <div class="icct-view-panel icct-device-view" id="icct-panel-<?= $view ?>" role="tabpanel" aria-labelledby="icct-view-<?= $view ?>" hidden>
 <?php if ($view==='rack'): ?>
-<table><thead><tr><th>Device</th><th>Site</th><th>Rack</th><th>Placement</th></tr></thead><tbody>
-<?php foreach ($viewDevices as $device): if (empty($device['rack_id'])) continue; ?><tr><td><a href="device.php?id=<?= (int)$device['id'] ?>"><?= icct_nms_h($device['description']) ?></a></td><td><?= icct_nms_h($device['site_name']) ?></td><td><?= icct_nms_h($device['rack_name']) ?></td><td>U<?= (int)$device['start_unit'] ?> · <?= (int)$device['unit_height'] ?> U</td></tr><?php endforeach; ?>
-</tbody></table>
-<?php if (!array_filter($viewDevices,fn($device)=>!empty($device['rack_id']))): ?><p>No devices are assigned to a rack. Set rack placement in Add/Edit Device.</p><?php endif; ?>
+<?php require __DIR__.'/rack_view.php'; ?>
 <?php else: ?><div class="icct-device-cards">
 <?php foreach ($viewDevices as $device): $asset=''; foreach ($viewTypes as $type) if ((int)$type['category_id']===(int)$device['category_id'] && $type['name']===$device['device_type']) { $asset=icct_nms_type_asset($type,$view==='image'?'map':'network'); break; } ?>
 <a class="icct-device-card" href="device.php?id=<?= (int)$device['id'] ?>"><?php if ($asset): ?><img src="<?= icct_nms_h($asset) ?>" alt=""><?php endif; ?><strong><?= icct_nms_h($device['description']) ?></strong><span><?= icct_nms_h($device['site_name'] ?: 'Unassigned site') ?></span><span><?= icct_nms_h($device['status_label']) ?></span></a>

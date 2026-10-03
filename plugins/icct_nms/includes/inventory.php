@@ -12,14 +12,15 @@ function icct_nms_inventory()
         h.snmp_sysUpTimeInstance,h.last_updated,h.site_id,h.poller_id,
         c.category_id,c.device_type,c.device_role,cat.name AS segment,
         m.serial_number AS manual_serial_number,m.mac_address,m.chassis_id,
-        s.meta_value AS short_name,r.name AS rack_name,rd.rack_id,rd.start_unit,rd.unit_height,
+        s.meta_value AS short_name,r.name AS rack_name,r.id AS rack_id,rd.start_unit,rd.unit_height,
         sites.name AS site_name
         FROM host h LEFT JOIN plugin_icct_nms_device_classification c ON c.host_id=h.id
         LEFT JOIN plugin_icct_nms_categories cat ON cat.id=c.category_id
         LEFT JOIN plugin_icct_nms_device_metadata m ON m.host_id=h.id
         LEFT JOIN plugin_icct_nms_meta s ON s.meta_key=CONCAT('device_short_name_',h.id)
         LEFT JOIN plugin_icct_nms_rack_devices rd ON rd.host_id=h.id
-        LEFT JOIN plugin_icct_nms_racks r ON r.id=rd.rack_id
+        LEFT JOIN plugin_icct_nms_meta peripheral ON peripheral.meta_key=CONCAT('rack_peripheral_',h.id)
+        LEFT JOIN plugin_icct_nms_racks r ON r.id=COALESCE(rd.rack_id,CAST(peripheral.meta_value AS UNSIGNED))
         LEFT JOIN sites ON sites.id=h.site_id WHERE h.deleted='' ORDER BY h.description,h.id");
     if (!is_array($rows)) {
         throw new RuntimeException('Could not read saved inventory.');

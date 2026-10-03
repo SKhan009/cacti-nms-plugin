@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__.'/device_type_service.php';
 require_once __DIR__.'/rack_preset_service.php';
+require_once __DIR__.'/rack_view_service.php';
 require_once __DIR__.'/configuration_history.php';
 
 /**
@@ -72,12 +73,18 @@ function icct_nms_save_device($id, $old, $input)
     ) {
         throw new InvalidArgumentException('Cross Launch URL must use HTTP or HTTPS.');
     }
+    if (array_key_exists('rack_units',$input)) {
+        if (!empty($input['rack_peripheral'])) $input['rack_position']='peripheral';
+        elseif ($input['rack_units']) { [$start,$height]=icct_nms_rack_units($input['rack_units'],100); $input['rack_position']=$start.':'.$height; }
+        else $input['rack_position']='';
+    }
     $rackSelection=$input['rack_id'];
     $rack = is_string($rackSelection) && str_starts_with($rackSelection,'preset:')
         ? icct_nms_resolve_preset_rack($rackSelection,(int)$values['site_id'],$input['rack_position'])
         : icct_backend_topology_integer($rackSelection,0,2147483647,'Rack');
     $placement = null;
-    if ($rack) {
+    $peripheral=$input['rack_position']==='peripheral';
+    if ($rack && !$peripheral) {
         $r = db_fetch_row_prepared(
             'SELECT r.*,n.site_id FROM plugin_icct_nms_racks r JOIN plugin_icct_nms_rack_nodes n ON n.id=r.node_id WHERE r.id=?',
             [$rack]
@@ -126,23 +133,8 @@ function icct_nms_save_device($id, $old, $input)
             'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
             ['icct_cross_launch_' . $saved, $url]
         );
-        $oldrack = $id
-            ? db_fetch_row_prepared('SELECT rack_id FROM plugin_icct_nms_rack_devices WHERE host_id=?', [
-                $id
-            ])
-            : [];
-        if ($placement) {
-            icct_backend_topology_config_write(
-                'place_device',
-                (int) $values['site_id'],
-                $placement + ['host_id' => $saved]
-            );
-        } elseif ($oldrack) {
-            icct_backend_topology_config_write('unplace_device', (int) $old['site_id'], [
-                'rack_id' => $oldrack['rack_id'],
-                'host_id' => $saved
-            ]);
-        }
+        $units=$placement ? range($placement['start_unit'],$placement['start_unit']+$placement['unit_height']-1) : [];
+        icct_nms_rack_place($saved,(int)$values['site_id'],$rack,$units,$peripheral);
     } catch (Throwable $e) {
         throw new RuntimeException(
             'Device ' .

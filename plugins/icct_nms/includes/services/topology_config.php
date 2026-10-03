@@ -36,7 +36,7 @@ function icct_backend_topology_config_apply($action, $site_id, $input)
         if ($id) {
             if (
                 (int) db_fetch_cell_prepared(
-                    'SELECT COUNT(*) FROM plugin_icct_nms_rack_devices d INNER JOIN plugin_icct_nms_racks r ON r.id = d.rack_id WHERE r.node_id = ? AND r.rack_number > ?',
+                    "SELECT COUNT(*) FROM plugin_icct_nms_racks r WHERE r.node_id = ? AND r.rack_number > ? AND (EXISTS(SELECT 1 FROM plugin_icct_nms_rack_devices d WHERE d.rack_id=r.id) OR EXISTS(SELECT 1 FROM plugin_icct_nms_meta m WHERE m.meta_key LIKE 'rack_peripheral_%' AND m.meta_value=CAST(r.id AS CHAR)))",
                     [$id, $count]
                 )
             ) {

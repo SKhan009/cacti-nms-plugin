@@ -51,10 +51,14 @@ function icct_nms_apply_node_rack_preset($id,$site,$name,$input,$kind='node') {
 }
 
 /** Catalogue choices include reusable presets not yet instantiated at a device site. */
-function icct_nms_device_rack_choices() {
+function icct_nms_device_rack_choices($excludeDevice=0) {
     $rows=db_fetch_assoc("SELECT r.*,n.site_id,n.name AS node_name,m.meta_value AS profile_id FROM plugin_icct_nms_racks r JOIN plugin_icct_nms_rack_nodes n ON n.id=r.node_id LEFT JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT('node_rack_profile_',n.id) ORDER BY r.name,n.name,r.id");
+    foreach ($rows as &$row) {
+        $row['occupied']=[];
+        foreach (db_fetch_assoc_prepared('SELECT start_unit,unit_height FROM plugin_icct_nms_rack_devices WHERE rack_id=? AND host_id<>?',[(int)$row['id'],(int)$excludeDevice]) as $placement) for ($u=(int)$placement['start_unit'];$u<(int)$placement['start_unit']+(int)$placement['unit_height'];$u++) $row['occupied'][]=$u;
+    } unset($row);
     foreach (icct_nms_rack_presets() as $key=>$profile) for ($number=1;$number<=(int)$profile['rack_count'];$number++) {
-        $rows[]=['id'=>'preset:'.$key.':'.$number,'name'=>$profile['name'].((int)$profile['rack_count']>1?' '.$number:''),'unit_count'=>(int)$profile['unit_count'],'site_id'=>0,'node_name'=>'','profile_id'=>$key];
+        $rows[]=['id'=>'preset:'.$key.':'.$number,'name'=>$profile['name'].((int)$profile['rack_count']>1?' '.$number:''),'unit_count'=>(int)$profile['unit_count'],'rack_number'=>$number,'node_id'=>0,'occupied'=>[],'site_id'=>0,'node_name'=>'','profile_id'=>$key];
     }
     return $rows;
 }
@@ -70,11 +74,13 @@ function icct_nms_resolve_preset_rack($selection,$site,$position) {
     try {
         $profile=icct_nms_rack_presets()[$key] ?? null;
         if (!$profile || $number>(int)$profile['rack_count']) throw new InvalidArgumentException('This rack preset changed. Reload the page.');
+        if ($position!=='peripheral') {
         $parts=explode(':',(string)$position);
         if (count($parts)!==2) throw new InvalidArgumentException('Select rack placement.');
         $start=icct_backend_topology_integer($parts[0],1,100,'Rack unit');
         $height=icct_backend_topology_integer($parts[1],1,100,'Rack height');
         if ($start+$height-1>(int)$profile['unit_count']) throw new InvalidArgumentException('Placement exceeds rack capacity.');
+        }
         $node=db_fetch_row_prepared("SELECT n.* FROM plugin_icct_nms_rack_nodes n JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT('node_rack_profile_',n.id) WHERE n.site_id=? AND m.meta_value=? ORDER BY n.id LIMIT 1",[$site,$key]);
         if (!$node) {
             $name=mb_substr($profile['name'],0,120).' racks';

@@ -123,31 +123,19 @@
                 $values["site_id"],
             );
             $racks = [0 => "Unassigned"];
-            $rackData = icct_nms_device_rack_choices();
+            $rackData = icct_nms_device_rack_choices($id);
             foreach ($rackData as $r) {
                 $racks[$r["id"]] = $r["name"].($r["node_name"] ? " — ".$r["node_name"] : "");
             }
-            icct_nms_select("Rack Name", "rack_id", $racks, $values["rack_id"]);
-            $positions = ["" => "Unassigned"];
-            for ($u = 1; $u <= 100; $u++) {
-                $positions[$u . ":1"] = $u . "U";
-            }
-            if (
-                $values["rack_position"] &&
-                !isset($positions[$values["rack_position"]])
-            ) {
-                $positions[$values["rack_position"]] =
-                    $rack["start_unit"] .
-                    "U–" .
-                    ($rack["start_unit"] + $rack["unit_height"] - 1) .
-                    "U";
-            }
-            icct_nms_select(
-                "Placement in the Rack",
-                "rack_position",
-                $positions,
-                $values["rack_position"],
-            );
+            icct_nms_select("Rack Name", "rack_group", [""=>"Select rack"], "");
+            icct_nms_select("Rack Number", "rack_id", $racks, $values["rack_id"]);
+            ?>
+            <label class="field rack-unit-field"><span class="field-label">Placement in the Rack</span>
+            <details id="rack-unit-picker"><summary>Select units</summary><div class="rack-unit-options"></div></details>
+            <input type="hidden" name="rack_position" value="<?= icct_nms_h($values['rack_position']) ?>">
+            <input type="hidden" name="rack_units[]" value="" disabled id="rack-empty-units">
+            </label>
+            <?php
             icct_nms_input(
                 "MAC Address",
                 "mac_address",

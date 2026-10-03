@@ -18,6 +18,7 @@ function icct_nms_configuration_snapshot($id) {
     foreach(['snmp','ssh','serial','cdp','lldp'] as $protocol)$out['protocol_enabled.'.$protocol]=icct_backend_protocol_enabled($id,$protocol)?'1':'0';
     $out['graphs.template_ids']=json_encode(array_column(icct_nms_graph_associations($id),'id'));
     $out['fault.rules']=json_encode(icct_nms_fault_rules($id),JSON_THROW_ON_ERROR);
+    $out['rack.peripheral_rack_id']=(string)icct_nms_meta('rack_peripheral_'.$id);
     $out['identity.short_name']=icct_nms_meta('device_short_name_'.$id);
     ksort($out);return $out;
 }

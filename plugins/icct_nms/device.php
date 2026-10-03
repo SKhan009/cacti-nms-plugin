@@ -58,10 +58,11 @@ try {
     }
     $values["category_id"] = $classification["category_id"] ?? 0;
     $values["device_type"] = $classification["device_type"] ?? "";
-    $values["rack_id"] = $rack["rack_id"] ?? 0;
+    $peripheralRack=$id ? (int)icct_nms_meta('rack_peripheral_'.$id) : 0;
+    $values["rack_id"] = $rack["rack_id"] ?? $peripheralRack;
     $values["rack_position"] = $rack
         ? $rack["start_unit"] . ":" . $rack["unit_height"]
-        : "";
+        : ($peripheralRack ? "peripheral" : "");
     $values["cross_launch_url"] = $id
         ? icct_nms_meta("icct_cross_launch_" . $id)
         : "";

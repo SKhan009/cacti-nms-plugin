@@ -257,32 +257,36 @@ if (notes && notesCount) {
 // Server-side validation remains authoritative for capacity and occupied units.
 const rackData = document.querySelector("#rack-data");
 if (rackData) {
-  const racks = JSON.parse(rackData.textContent),
-    site = document.querySelector('[name="site_id"]'),
-    rack = document.querySelector('[name="rack_id"]'),
-    position = document.querySelector('[name="rack_position"]');
+  const racks=JSON.parse(rackData.textContent), site=document.querySelector('[name="site_id"]'), rack=document.querySelector('[name="rack_id"]'), group=document.querySelector('[name="rack_group"]'), position=document.querySelector('[name="rack_position"]'), picker=document.querySelector('#rack-unit-picker');
+  let initial=true;
+  const groupKey=r=>r.node_id?'node:'+r.node_id:'profile:'+r.profile_id;
   function updateRacks() {
-    const selected=rack.value;
+    const selected=rack.value, saved=racks.filter(r=>String(r.site_id)===site.value), profiles=new Set(saved.map(r=>r.profile_id));
+    const choices=saved.concat(site.value && site.value!=='0'?racks.filter(r=>Number(r.site_id)===0&&!profiles.has(r.profile_id)):[]);
+    const oldGroup=initial?groupKey(racks.find(r=>String(r.id)===selected)||{}):group.value;
+    group.replaceChildren(new Option('Select rack',''));
+    const seen=new Set(); choices.forEach(r=>{const key=groupKey(r);if(!seen.has(key)){seen.add(key);group.add(new Option(r.name.replace(/ \d+$/,'')+(r.node_name?' — '+r.node_name:''),key));}});
+    group.value=seen.has(oldGroup)?oldGroup:'';
     rack.replaceChildren(new Option('Unassigned','0'));
-    const saved=racks.filter(record=>String(record.site_id)===site.value);
-    const profiles=new Set(saved.map(record=>record.profile_id));
-    const choices=saved.concat(site.value && site.value!=='0' ? racks.filter(record=>Number(record.site_id)===0 && !profiles.has(record.profile_id)) : []);
-    choices.forEach(record=>rack.add(new Option(record.name+(record.node_name?' — '+record.node_name:''),String(record.id))));
-    rack.value=[...rack.options].some(option=>option.value===selected)?selected:'0';
-    updateUnits();
+    choices.filter(r=>groupKey(r)===group.value).forEach(r=>rack.add(new Option('Rack '+r.rack_number,String(r.id))));
+    rack.value=[...rack.options].some(o=>o.value===selected)?selected:'0';
+    if(!initial && rack.value==='0')position.value='';
+    updateUnits();initial=false;
   }
   function updateUnits() {
-    const record=racks.find(item=>String(item.id)===rack.value),selected=position.value;
-    position.replaceChildren(new Option('Unassigned',''));
-    if(record)for(let unit=1;unit<=Number(record.unit_count);unit++)position.add(new Option(unit+'U',unit+':1'));
-    // Preserve saved multi-unit placements when they remain inside the selected rack.
+    const record=racks.find(r=>String(r.id)===rack.value), options=picker.querySelector('.rack-unit-options'), selected=position.value;
+    options.replaceChildren();
     const [start,height]=selected.split(':').map(Number);
-    if(record&&start>0&&height>1&&start+height-1<=Number(record.unit_count))position.add(new Option(start+'U–'+(start+height-1)+'U',selected));
-    position.value=[...position.options].some(option=>option.value===selected)?selected:'';
+    if(record){
+      const make=(text,value,peripheral=false)=>{const label=document.createElement('label'), input=document.createElement('input');input.type='checkbox';input.name=peripheral?'rack_peripheral':'rack_units[]';input.value=value;input.setAttribute('aria-label',text);input.checked=peripheral?selected==='peripheral':start>0&&Number(value)>=start&&Number(value)<start+height;input.disabled=!peripheral&&(record.occupied||[]).includes(Number(value));label.classList.toggle('occupied',input.disabled);label.append(input,document.createTextNode(text));options.append(label);input.addEventListener('change',()=>{if(peripheral&&input.checked)options.querySelectorAll('[name="rack_units[]"]').forEach(i=>i.checked=false);if(!peripheral&&input.checked)options.querySelector('[name="rack_peripheral"]').checked=false;sync();});};
+      for(let unit=1;unit<=Number(record.unit_count);unit++)make(unit+'U'+((record.occupied||[]).includes(unit)?' — In use':''),String(unit));
+      make('Peripheral slot','1',true);
+    }
+    sync();
   }
-  site.addEventListener("change", updateRacks);
-  rack.addEventListener("change",()=>{position.value='';updateUnits();});
-  updateRacks();
+  function sync(){const units=[...picker.querySelectorAll('[name="rack_units[]"]:checked')].map(i=>Number(i.value)), peripheral=picker.querySelector('[name="rack_peripheral"]:checked');position.value=peripheral?'peripheral':units.length?Math.min(...units)+':'+units.length:'';picker.querySelector('summary').textContent=peripheral?'Peripheral slot':units.length?units.map(u=>u+'U').join(', '):'Select units';}
+  document.addEventListener('click',event=>{if(!picker.contains(event.target))picker.open=false;});
+  site.addEventListener('change',updateRacks);group.addEventListener('change',()=>{rack.value='0';position.value='';updateRacks();});rack.addEventListener('change',()=>{position.value='';updateUnits();});updateRacks();
 }
 // SNMP version radios retain native numeric values and switch only relevant fields.
 const versions = document.querySelectorAll('[name="snmp_version"]');

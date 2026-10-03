@@ -6,6 +6,7 @@ require_once __DIR__.'/includes/inventory.php';
 require_once __DIR__.'/includes/device_type_service.php';
 require_once __DIR__.'/includes/graph_service.php';
 require_once __DIR__.'/includes/map_service.php';
+require_once __DIR__.'/includes/rack_view_service.php';
 try {
     icct_nms_backend();
     if (isset($_GET['map_tile'])) { icct_nms_map_tile(); exit; }
