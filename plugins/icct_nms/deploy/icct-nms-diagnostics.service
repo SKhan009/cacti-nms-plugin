@@ -1,0 +1,16 @@
+[Unit]
+Description=ICCT NMS diagnostic collector
+After=network-online.target mariadb.service redis.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=apache
+Group=apache
+WorkingDirectory=/var/www/html/cacti
+ExecStart=/usr/bin/php -q /var/www/html/cacti/plugins/icct_nms/diagnostic_listener.php
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
