@@ -1384,6 +1384,24 @@ if (applicationHeader) {
   else window.addEventListener('resize', reserveHeaderSpace);
 }
 
+// Dismiss Syslog option menus without collapsing their protocol section.
+const pendingProtocolMenus = [...document.querySelectorAll('.pending-protocol-options')];
+pendingProtocolMenus.forEach(menu => {
+  menu.querySelector('summary').addEventListener('click', () => {
+    if (!menu.open) pendingProtocolMenus.forEach(other => { if (other !== menu) other.open = false; });
+  });
+  menu.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && menu.open) {
+      event.preventDefault();
+      menu.open = false;
+      menu.querySelector('summary').focus();
+    }
+  });
+});
+document.addEventListener('click', event => {
+  pendingProtocolMenus.forEach(menu => { if (!menu.contains(event.target)) menu.open = false; });
+});
+
 // Presets hold reusable settings; credentials and endpoints are always entered on each device.
 const protocolDefaultEditor = document.querySelector('#protocol-defaults');
 if (protocolDefaultEditor) {
