@@ -27,7 +27,7 @@ function updateTypeIcon() {
   document.querySelector('#icon-picker-value').textContent = option?.dataset.iconLabel ?? 'Select Icon';
   if(option) iconPreview.src=option.dataset.iconAsset; else iconPreview.removeAttribute('src');
   iconGrid.querySelectorAll('[data-icon]').forEach(button=>button.setAttribute('aria-selected',String(button===option)));
-  typeSaveButton.disabled = !typeEditor.elements.type_name.value.trim() || !option || !typeEditor.elements.physical_ports.validity.valid || ['network','rack','map'].some(view=>!typeEditor.elements[`display_${view}`].value);
+  typeSaveButton.disabled = !typeEditor.elements.type_name.value.trim() || !typeEditor.elements.physical_ports.validity.valid;
 }
 function closeIconPicker() { if(iconGrid) { iconGrid.hidden=true;iconToggle.setAttribute('aria-expanded','false'); } }
 function openTypeEditor(type = {}) {

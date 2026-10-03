@@ -10,10 +10,17 @@ $input=['action'=>'save_type','type_id'=>$id,'type_name'=>$profile['name'],'cate
 foreach(['network','rack','map'] as $view)$input['display_'.$view]=$profile['display_modes'][$view];
 db_execute('START TRANSACTION');try{
  foreach(array_keys(icct_nms_type_shapes()) as $shape){
-  icct_nms_save_device_type($input+['shape'=>$shape]);
+  icct_nms_save_device_type($input+['shape'=>$shape],null,false);
   $map=icct_nms_map_data();$network=icct_nms_topology_data($map);$rack=icct_nms_rack_view_data();$mapped=$map['unlocated'];foreach($map['sites'] as $site)$mapped=array_merge($mapped,$site['devices']);
   foreach(['map'=>$mapped,'topology'=>$network['devices'],'rack'=>$rack['devices']] as $view=>$rows){$rows=array_column($rows,null,'id');if(($rows[$host['id']]['shape']??null)!==$shape)throw new RuntimeException('Shape mismatch in '.$view);}
   echo $shape." persisted and matched in map, topology and rack data.\n";
  }
+ $renamed='QA Type '.bin2hex(random_bytes(4));
+ icct_nms_save_device_type(array_replace($input,['type_name'=>$renamed,'physical_ports'=>0]),null,false);
+ $saved=db_fetch_row_prepared('SELECT category_id,device_type FROM plugin_icct_nms_device_classification WHERE host_id=?',[$host['id']]);
+ if($saved['device_type']!==$renamed || icct_nms_device_types()[$id]['physical_ports']!==0)throw new RuntimeException('Assigned device rename or zero ports failed');
+ if(icct_nms_resolve_device_type($saved['category_id'],$renamed)!==$renamed)throw new RuntimeException('Renamed classification cannot resolve');
+ $inventory=array_column(icct_nms_inventory(),null,'id');if($inventory[$host['id']]['device_type']!==$renamed)throw new RuntimeException('Inventory did not synchronize rename');
+ echo "Assigned rename synchronized with classification and inventory; zero ports saved.\n";
 }finally{db_execute('ROLLBACK');}
 echo "Shape synchronization passed; all test writes rolled back.\n";
