@@ -74,7 +74,7 @@
 .topology-alarm{border-color:#333}
 
 /* Device summary matches the topology reference card. */
-.topology-device-dialog{width:min(660px,calc(100vw - 40px));padding:0;background:#fff;border:1px solid #ccc}
+.topology-device-dialog{width:min(660px,calc(100vw - 40px));padding:0;background:#f4f4f4;border:1px solid #ccc}
 .topology-summary-heading{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #ccc}
 .topology-summary-heading>div{flex:1}.topology-summary-heading h2{margin:0 0 8px;font-size:20px;font-weight:500}.topology-summary-heading p{margin:0;color:#666}
 .topology-summary-heading img{width:90px;height:48px;object-fit:contain}.topology-summary-heading img[hidden]{display:none}.topology-summary-heading form{margin:0}
@@ -88,4 +88,4 @@
 .topology-device-dialog .topology-capacity,
 .topology-device-dialog .topology-summary,
 .topology-device-dialog .topology-summary-alarms,
-.topology-device-dialog .topology-summary-links{background:#fff;color:#222}
+.topology-device-dialog .topology-summary-links{background:#f4f4f4;color:#222}
