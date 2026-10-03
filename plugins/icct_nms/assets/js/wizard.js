@@ -93,7 +93,7 @@
     wizard.querySelectorAll('.inline-feedback.error').forEach(node=>node.remove());
     wizard.querySelectorAll('[aria-invalid]').forEach(node=>node.removeAttribute('aria-invalid'));
     const changed=dirtyForms().filter(f => f===basic || !f.closest('.protocol-item')?.hidden);
-    for(const form of forms){const panel=form.closest('.protocol-item');if(panel && !panel.hidden && protocolInitial.get(panel.id)?.hidden && !changed.includes(form))changed.push(form);}
+    for(const form of forms){const panel=form.closest('.protocol-item');if(panel && !panel.hidden && (!id || protocolInitial.get(panel.id)?.hidden) && !changed.includes(form))changed.push(form);}
     if(!id && !changed.includes(basic))changed.unshift(basic);
     const active=changed.filter(f=> f===basic || !f.closest('.protocol-item') || f.closest('.protocol-item').querySelector('.protocol-enable input')?.checked);
     if(active.some(f=>!valid(f)))return false;

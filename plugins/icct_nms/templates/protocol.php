@@ -2,10 +2,11 @@
 /**
  * Separate native POST forms for discovery, SNMP, SSH, serial assignments and diagnostics.
  */
+$presetMode = $presetMode ?? false;
 $protocolDraft = $protocolDraft ?? [];
 $failedProtocol = $failedProtocol ?? '';
 ?>
-<?php if (empty($wizard)): ?>
+<?php if (empty($wizard) && !$presetMode): ?>
 <div class="titlebar">
     <h1><?= icct_nms_h($host["description"]) ?></h1>
     <a class="button" href="inventory.php">Done</a>
@@ -52,10 +53,10 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
     $protocolStates[$key] = icct_backend_protocol_enabled($id, $key);
 }
 ?>
-<script type="application/json" id="protocol-states"><?= json_encode(
+<?php if (!$presetMode): ?><script type="application/json" id="protocol-states"><?= json_encode(
     $protocolStates,
     JSON_HEX_TAG | JSON_HEX_AMP,
-) ?></script>
+) ?></script><?php endif; ?>
 <form method="post" id="toggle-protocol-form" hidden>
     <?php icct_nms_token(); ?>
     <input type="hidden" name="action" value="toggle_protocol" />
@@ -124,7 +125,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
             <div class="protocol-content">
                 <form method="post">
                     <?php icct_nms_token(); ?>
-                    <input type="hidden" name="action" value="discovery" />
+                    <input type="hidden" name="action" value="<?= $presetMode ? 'save_protocol_defaults' : 'discovery' ?>" /><?php if ($presetMode): ?><input type="hidden" name="preset_protocol" value="<?= $protocolKey ?>" /><?php endif; ?>
                     <input type="hidden" name="discovery_protocol" value="<?= $protocolKey ?>" />
                     <div class="protocol-grid cols-4">
                         <?php
@@ -148,7 +149,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
                             icct_nms_input(
                                 $label,
                                 $key,
-                                $discovery[$key] ?? "",
+                                ($presetMode ? ($protocolPresets[$protocolKey][$key] ?? null) : ($discovery[$key] ?? null)) ?? "",
                                 "number",
                                 'required min="'.(['interval_seconds'=>300,'stale_seconds'=>600,'refresh_seconds'=>10][$key]).'" max="'.(['interval_seconds'=>86400,'stale_seconds'=>604800,'refresh_seconds'=>300][$key]).'"',
                             );
@@ -181,7 +182,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
                     $values = $host;
                     $readonly = false;
                     ?>
-                    <input type="hidden" name="action" value="snmp" />
+                    <input type="hidden" name="action" value="<?= $presetMode ? 'save_protocol_defaults' : 'snmp' ?>" /><?php if ($presetMode): ?><input type="hidden" name="preset_protocol" value="<?= 'snmp' ?>" /><?php endif; ?>
                     <?php require __DIR__ . "/snmp.php"; ?>
                     <div class="protocol-actions"><button class="button primary">Save</button></div>
                 </form>
@@ -199,7 +200,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
             <div class="protocol-content">
                 <form method="post" enctype="multipart/form-data">
                     <?php icct_nms_token(); ?>
-                    <input type="hidden" name="action" value="ssh" />
+                    <input type="hidden" name="action" value="<?= $presetMode ? 'save_protocol_defaults' : 'ssh' ?>" /><?php if ($presetMode): ?><input type="hidden" name="preset_protocol" value="<?= 'ssh' ?>" /><?php endif; ?>
                     <div class="protocol-grid cols-5">
                         <?php
                         icct_nms_input(
@@ -314,7 +315,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
             <div class="protocol-content">
                 <form method="post">
                     <?php icct_nms_token(); ?>
-                    <input type="hidden" name="action" value="serial" />
+                    <input type="hidden" name="action" value="<?= $presetMode ? 'save_protocol_defaults' : 'serial' ?>" /><?php if ($presetMode): ?><input type="hidden" name="preset_protocol" value="<?= 'serial' ?>" /><?php endif; ?>
                     <input type="hidden" name="assignment_revision" value="<?= (int) ($serial[
                         "revision"
                     ] ?? 0) ?>" />
@@ -345,6 +346,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
         </details>
         <?php endforeach; ?>
     </div>
+    <?php if (!$presetMode): ?>
     <section id="diagnostics" class="diagnostics-page">
         <h2>Device Diagnostics</h2>
         <form method="post">
@@ -493,7 +495,8 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
     </section>
     <?php require __DIR__ . "/graphs.php"; ?>
     <?php require __DIR__ . "/data_queries.php"; ?>
-    <?php if (empty($wizard)): ?>
+    <?php endif; ?>
+    <?php if (empty($wizard) && !$presetMode): ?>
     <footer class="form-footer">
         <a class="button" id="protocol-previous" href="device.php?id=<?= $id ?>">Previous ←</a>
         <a class="button" id="protocol-next" href="#diagnostics">Next →</a>

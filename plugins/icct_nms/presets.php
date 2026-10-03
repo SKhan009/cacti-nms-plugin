@@ -5,8 +5,15 @@ require_once __DIR__ . '/includes/segment_service.php';
 require_once __DIR__ . '/includes/device_type_service.php';
 require_once __DIR__.'/includes/connection_service.php';
 require_once __DIR__.'/includes/site_service.php';
-$presetTabs = ['site'=>'Site','segment'=>'Segment','device-type'=>'Device Type','network-connections'=>'Network Connections'];
-$actionTabs = ['save_site'=>'site','save_segment'=>'segment','delete_segment'=>'segment','save_type'=>'device-type','delete_type'=>'device-type','save_connection'=>'network-connections','delete_connection'=>'network-connections'];
+require_once $config['base_path'].'/include/global_form.php';
+require_once __DIR__.'/includes/forms.php';
+require_once __DIR__.'/includes/inventory.php';
+require_once __DIR__.'/includes/device_service.php';
+require_once __DIR__.'/includes/protocol_service.php';
+require_once __DIR__.'/includes/serial_service.php';
+require_once __DIR__.'/includes/protocol_preset_service.php';
+$presetTabs = ['protocols'=>'Protocols','site'=>'Site','segment'=>'Segment','device-type'=>'Device Type','network-connections'=>'Network Connections'];
+$actionTabs = ['save_protocol_defaults'=>'protocols','save_site'=>'site','save_segment'=>'segment','delete_segment'=>'segment','save_type'=>'device-type','delete_type'=>'device-type','save_connection'=>'network-connections','delete_connection'=>'network-connections'];
 $requestedTab = $_GET['tab'] ?? 'segment';
 $activePreset = $actionTabs[is_string($_POST['action'] ?? null) ? $_POST['action'] : ''] ?? (is_string($requestedTab) && isset($presetTabs[$requestedTab]) ? $requestedTab : 'segment');
 $typeEditing = false; $typeValues = []; $connectionEditing = false; $connectionValues = [];
@@ -27,7 +34,8 @@ try {
         try {
             icct_nms_post();
             if (!in_array($_POST['action'] ?? '', array_keys($actionTabs),true)) throw new InvalidArgumentException('Choose a valid preset action.');
-            if ($activePreset === 'site') $message=icct_nms_save_site($_POST);
+            if ($activePreset === 'protocols') $message=icct_nms_save_protocol_preset($_POST);
+            elseif ($activePreset === 'site') $message=icct_nms_save_site($_POST);
             elseif ($activePreset === 'device-type') $message = icct_nms_save_device_type($_POST, $_FILES['device_image'] ?? null);
             elseif ($activePreset === 'network-connections') $message = icct_nms_save_connection($_POST);
             else $message = icct_nms_save_segment($_POST);

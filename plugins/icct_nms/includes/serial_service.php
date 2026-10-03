@@ -96,18 +96,6 @@ function icct_nms_save_serial($id, $input)
             $input,
             $connection["transport"] === "direct",
         );
-        // A device form must never silently change another device's physical bus settings.
-        if (
-            $settings != $connection["settings"] &&
-            db_fetch_cell_prepared(
-                "SELECT COUNT(*) FROM plugin_icct_nms_serial_devices WHERE connection_id=? AND host_id<>?",
-                [$connection["id"], $id],
-            )
-        ) {
-            throw new InvalidArgumentException(
-                "Connection is shared. Keep its saved connection settings.",
-            );
-        }
         $interval = icct_backend_config_integer(
             $input["serial_interval"] ?? "",
             1,
@@ -121,16 +109,11 @@ function icct_nms_save_serial($id, $input)
         );
         // Access, collector ownership, bus address and assignment revision are checked before writes.
         icct_backend_serial_assign_locked($id, $input);
-        if ($settings != $connection["settings"]) {
-            icct_backend_category_execute(
-                "UPDATE plugin_icct_nms_serial_connections SET settings_json=?,revision=revision+1,updated_by=?,updated_at=NOW() WHERE id=?",
-                [
-                    json_encode($settings, JSON_THROW_ON_ERROR),
-                    icct_backend_current_user_id(),
-                    $connection["id"],
-                ],
-            );
-        }
+        // Save a private snapshot; never change the shared collector connection.
+        icct_backend_category_execute(
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            ['serial_settings_'.$id,json_encode(['connection_id'=>(int)$connection['id'],'settings'=>$settings],JSON_THROW_ON_ERROR)]
+        );
         if ($assignment) {
             icct_backend_category_execute(
                 "UPDATE plugin_icct_nms_config_devices SET interval_seconds=?,revision=revision+1,updated_by=?,updated_at=NOW() WHERE host_id=?",

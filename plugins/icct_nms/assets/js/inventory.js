@@ -437,7 +437,7 @@ if (auth) {
 }
 // Serial sections retain real endpoint/profile settings; physical controls apply only to direct ports.
 const serialData = document.querySelector("#serial-data");
-if (serialData) {
+if (serialData && !document.querySelector("#protocol-defaults")) {
   const connections = JSON.parse(serialData.textContent);
   const selector = document.querySelector('[name="connection_id"]');
   const scope = document.querySelector(".serial-communication");
@@ -527,13 +527,17 @@ if (serialData) {
       setValue("serial_gateway_port", parts?.[2] || "");
     }
   };
+  const savedSerialDraft = scope.closest('.protocol-item').dataset.saved==='1'
+    ? [...scope.querySelectorAll('input:not([type=hidden]), select')].map(field=>({field,value:field.value,checked:field.checked})) : [];
   selector.addEventListener("change", updateSerial);
   updateSerial();
+  savedSerialDraft.forEach(({field,value,checked})=>{field.value=value;if(field.type==='radio')field.checked=checked;});
+  if (savedSerialDraft.length) {updateSerialProtocol();updateSerialInterface();}
 }
 
 // Use the URL fragment to switch between protocol and diagnostic wizard steps.
 const protocolWorkspace = document.querySelector("#protocol-workspace");
-if (protocolWorkspace && !document.querySelector("#device-wizard")) {
+if (protocolWorkspace && !document.querySelector("#device-wizard") && !document.querySelector("#protocol-defaults")) {
   function showProtocolStep() {
     const diagnostics = location.hash === "#diagnostics";
     const graphs = location.hash === "#graphs";
@@ -1360,4 +1364,47 @@ if (applicationHeader) {
   reserveHeaderSpace();
   if (typeof ResizeObserver === 'function') new ResizeObserver(reserveHeaderSpace).observe(applicationHeader);
   else window.addEventListener('resize', reserveHeaderSpace);
+}
+
+// Presets hold reusable settings; credentials and endpoints are always entered on each device.
+const protocolDefaultEditor = document.querySelector('#protocol-defaults');
+if (protocolDefaultEditor) {
+  protocolDefaultEditor.querySelectorAll('input[type=password], input[type=file], [name=connection_id], [name=device_address]').forEach(field => {
+    field.disabled=true;
+    field.closest('.field, .ssh-private-key, .upload-zone')?.setAttribute('hidden','');
+  });
+  protocolDefaultEditor.querySelector('.ssh-private-key')?.setAttribute('hidden','');
+}
+const protocolDefaultData = document.querySelector('#protocol-default-values');
+if (protocolDefaultData) {
+  const defaults=JSON.parse(protocolDefaultData.textContent);
+  const copied=new Set();
+  const newDevice=document.querySelector('#device-wizard')?.dataset.deviceId==='0';
+  const copyDefaults = protocol => {
+    const section=document.getElementById('protocol-'+protocol);
+    if (!section || (section.dataset.saved==='1' && !newDevice) || copied.has(protocol) || !defaults[protocol]) return;
+    const form=section.querySelector('form');
+    for (const [name,value] of Object.entries(defaults[protocol])) {
+      const controls=[...form.elements].filter(field=>field.name===name);
+      controls.forEach(field=>{
+        if (field.type==='radio') field.checked=String(field.value)===String(value);
+        else if (field.type==='checkbox') field.checked=String(value)==='1';
+        else field.value=String(value);
+      });
+    }
+    copied.add(protocol);
+    form.querySelector('[name=snmp_version]:checked')?.dispatchEvent(new Event('change',{bubbles:true}));
+    form.querySelector('[name=auth_method]')?.dispatchEvent(new Event('change',{bubbles:true}));
+  };
+  if (newDevice) copyDefaults('snmp');
+  document.querySelector('#confirm-protocols')?.addEventListener('click',()=>{
+    document.querySelectorAll('[data-protocol-target]:checked').forEach(option=>copyDefaults(option.dataset.protocolTarget));
+  });
+  // Port selection loads collector settings first, then applies defaults to an unsaved serial draft.
+  document.querySelector('[name=connection_id]')?.addEventListener('change',()=>{
+    const section=document.getElementById('protocol-serial');
+    if ((section?.dataset.saved==='1' && !newDevice) || section?.hidden) return;
+    copied.delete('serial'); copyDefaults('serial');
+    section.querySelector('[name=serial_interface]:checked')?.dispatchEvent(new Event('change',{bubbles:true}));
+  });
 }

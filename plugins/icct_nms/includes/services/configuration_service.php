@@ -41,6 +41,7 @@ function icct_backend_serial_assign_locked($host_id, array $input)
         throw new RuntimeException('Device connection changed. Reload before saving.');
     }
     if (!$connection_id) {
+        icct_backend_category_execute('DELETE FROM plugin_icct_nms_meta WHERE meta_key=?',['serial_settings_'.(int)$host_id]);
         icct_backend_category_execute(
             'DELETE FROM plugin_icct_nms_serial_devices WHERE host_id=?',
             [$host_id]
@@ -75,10 +76,22 @@ function icct_backend_serial_assign_locked($host_id, array $input)
 function icct_backend_serial_assignment($host_id)
 {
     icct_backend_require_device_access($host_id);
-    return db_fetch_row_prepared(
+    $assignment=db_fetch_row_prepared(
         'SELECT d.*,c.name AS connection_name,c.poller_id,c.transport,c.endpoint,c.enabled,c.settings_json FROM plugin_icct_nms_serial_devices d JOIN plugin_icct_nms_serial_connections c ON c.id=d.connection_id WHERE d.host_id=?',
-        [(int) $host_id]
+        [(int)$host_id]
     );
+    if ($assignment) $assignment['settings_json']=json_encode(icct_backend_serial_device_settings($host_id,$assignment['connection_id'],json_decode($assignment['settings_json'],true,32,JSON_THROW_ON_ERROR)),JSON_THROW_ON_ERROR);
+    return $assignment;
+}
+/** A device's private settings apply only to the connection they were saved against. */
+function icct_backend_serial_device_settings($host_id,$connection_id,$fallback)
+{
+    $json=db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['serial_settings_'.(int)$host_id]);
+    if (!$json) return $fallback;
+    $snapshot=json_decode($json,true,32,JSON_THROW_ON_ERROR);
+    if ((int)($snapshot['connection_id'] ?? 0)!==(int)$connection_id) return $fallback;
+    if (!is_array($snapshot['settings'] ?? null)) throw new RuntimeException('Invalid device serial settings.');
+    return $snapshot['settings'];
 }
 
 /** Reused Inventory service: serial connection get. */

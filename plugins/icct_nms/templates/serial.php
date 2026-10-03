@@ -7,6 +7,13 @@ $serialInterval = icct_nms_meta("serial_interval_".$id) ?: db_fetch_cell_prepare
     "SELECT interval_seconds FROM plugin_icct_nms_config_devices WHERE host_id=?",
     [$id],
 );
+if (!empty($presetMode)) {
+    $serialPreset=$protocolPresets['serial'] ?? [];
+    $serialValues=[];
+    foreach (['serial_interface'=>'interface','serial_protocol'=>'protocol','serial_retries'=>'retries','baud_rate'=>'baud_rate','data_bits'=>'data_bits','stop_bits'=>'stop_bits','parity'=>'parity','flow_control'=>'flow_control'] as $field=>$setting) if (isset($serialPreset[$field])) $serialValues[$setting]=$serialPreset[$field];
+    if (isset($serialPreset['response_timeout'])) $serialValues['timeout_ms']=(float)$serialPreset['response_timeout']*1000;
+    $serialInterval=$serialPreset['serial_interval'] ?? 60;
+}
 ?>
 <section class="serial-communication">
     <h3 class="serial-physical-heading">1. Physical Interface</h3>
@@ -39,7 +46,7 @@ $value
             "connection_id",
             $ports,
             $serial["connection_id"] ?? "",
-            "required",
+            (!empty($presetMode) ? "disabled" : "required"),
         );
         icct_nms_select(
             "Baud Rate *",
@@ -181,7 +188,7 @@ $value
             "device_address",
             $serial["device_address"] ?? "",
             "number",
-            'required min="1" max="247"',
+            !empty($presetMode) ? 'disabled' : 'required min="1" max="247"',
         ); ?>
     </div>
     <input type="hidden" name="connection_revision" value="" />

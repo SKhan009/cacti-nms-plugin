@@ -6,8 +6,8 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Clone Device · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
-        <link rel="stylesheet" href="css/inventory.css?v=d15cfa3f30fe" />
-    <script type="text/javascript" nonce="owRHK9255iL96fBc5xH5HBM3">if (top != self) {top.location.href = self.location.href;}</script></head>
+        <link rel="stylesheet" href="css/inventory.css?v=9f610b93fbbb" />
+    <script type="text/javascript" nonce="_HSWGaPuksSmxKQNbamfnQsV">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -110,8 +110,7 @@
 
 <script type="application/json" id="identity-endpoint">
     ""</script>
-<div id="wizard-panels" hidden><script type="application/json" id="protocol-states">{"cdp":true,"lldp":true,"snmp":true,"ssh":true,"serial":true}</script>
-<form data-static-preview="true" method="post" id="toggle-protocol-form" hidden>
+<script type="application/json" id="protocol-default-values">{"snmp":{"snmp_version":"2","snmp_port":161,"snmp_timeout":500,"max_oids":"10","availability_method":"2","ping_method":"2","ping_timeout":400,"ping_retries":1,"snmp_username":"","snmp_auth_protocol":"MD5","snmp_priv_protocol":"DES","snmp_context":"","snmp_security_level":"authPriv"}}</script><div id="wizard-panels" hidden><script type="application/json" id="protocol-states">{"cdp":true,"lldp":true,"snmp":true,"ssh":true,"serial":true}</script><form data-static-preview="true" method="post" id="toggle-protocol-form" hidden>
         <input type="hidden" name="action" value="toggle_protocol" />
     <input type="hidden" name="protocol" value="" />
     <input type="hidden" name="enabled" value="" />
@@ -175,8 +174,7 @@
             </summary>
             <div class="protocol-content">
                 <form data-static-preview="true" method="post">
-                                        <input type="hidden" name="action" value="discovery" />
-                    <input type="hidden" name="discovery_protocol" value="cdp" />
+                                        <input type="hidden" name="action" value="discovery" />                    <input type="hidden" name="discovery_protocol" value="cdp" />
                     <div class="protocol-grid cols-4">
                         <label class="field"><span class="field-label">Collection Mode</span><span class="select-wrap"><select name="mode" disabled><option value="snmp" selected>SNMP</option></select></span></label><label class="field"><span class="field-label">Collection Interval (Sec)</span><input type="number" name="interval_seconds" value="" required min="300" max="86400"></label><label class="field"><span class="field-label">Stale (Seconds)</span><input type="number" name="stale_seconds" value="" required min="600" max="604800"></label><label class="field"><span class="field-label">Display Refresh (Seconds)</span><input type="number" name="refresh_seconds" value="" required min="10" max="300"></label>                    </div>
                     <div class="protocol-actions"><button class="button primary">Save</button></div>
@@ -191,8 +189,7 @@
             </summary>
             <div class="protocol-content">
                 <form data-static-preview="true" method="post">
-                                        <input type="hidden" name="action" value="discovery" />
-                    <input type="hidden" name="discovery_protocol" value="lldp" />
+                                        <input type="hidden" name="action" value="discovery" />                    <input type="hidden" name="discovery_protocol" value="lldp" />
                     <div class="protocol-grid cols-4">
                         <label class="field"><span class="field-label">Collection Mode</span><span class="select-wrap"><select name="mode" disabled><option value="snmp" selected>SNMP</option></select></span></label><label class="field"><span class="field-label">Collection Interval (Sec)</span><input type="number" name="interval_seconds" value="" required min="300" max="86400"></label><label class="field"><span class="field-label">Stale (Seconds)</span><input type="number" name="stale_seconds" value="" required min="600" max="604800"></label><label class="field"><span class="field-label">Display Refresh (Seconds)</span><input type="number" name="refresh_seconds" value="" required min="10" max="300"></label>                    </div>
                     <div class="protocol-actions"><button class="button primary">Save</button></div>
@@ -208,8 +205,7 @@
             </summary>
             <div class="protocol-content">
                 <form data-static-preview="true" method="post">
-                                        <input type="hidden" name="action" value="snmp" />
-                    <fieldset class="radio-group">
+                                        <input type="hidden" name="action" value="snmp" />                    <fieldset class="radio-group">
     <legend>Select SNMP Version</legend>
         <label><input type="radio" name="snmp_version" value="1"  required />SNMP V1</label>
         <label><input type="radio" name="snmp_version" value="2" checked required />SNMP V2</label>
@@ -246,8 +242,7 @@
             </summary>
             <div class="protocol-content">
                 <form data-static-preview="true" method="post" enctype="multipart/form-data">
-                                        <input type="hidden" name="action" value="ssh" />
-                    <div class="protocol-grid cols-5">
+                                        <input type="hidden" name="action" value="ssh" />                    <div class="protocol-grid cols-5">
                         <label class="field"><span class="field-label">Port Number</span><input type="number" name="port" value="" required min="1" max="65535"></label><label class="field"><span class="field-label">Timeout (Sec)</span><input type="number" name="connect_timeout" value="" required min="1" max="120"></label><label class="field"><span class="field-label">Authentication Method</span><span class="select-wrap"><select name="auth_method" ><option value="password" selected>Username &amp; Password</option><option value="key">Private Key</option></select></span></label><label class="field"><span class="field-label">Username</span><input type="text" name="username" value="" required></label><label class="field"><span class="field-label">Password</span><input type="password" name="secret" value="" autocomplete="new-password" placeholder="Blank retains saved credential"></label>                    </div>
                     <div class="protocol-grid cols-3 ssh-common-settings">
                         <label class="field"><span class="field-label">Command Timeout (Sec)</span><input type="number" name="command_timeout" value="" required min="1" max="300"></label><label class="field"><span class="field-label">Retries</span><input type="number" name="retries" value="" required min="0" max="2"></label><label class="field"><span class="field-label">Keepalive (Sec)</span><input type="number" name="keepalive" value="" required min="0" max="300"></label>                    </div>
@@ -285,8 +280,7 @@
             </summary>
             <div class="protocol-content">
                 <form data-static-preview="true" method="post">
-                                        <input type="hidden" name="action" value="serial" />
-                    <input type="hidden" name="assignment_revision" value="0" />
+                                        <input type="hidden" name="action" value="serial" />                    <input type="hidden" name="assignment_revision" value="0" />
                     <section class="serial-communication">
     <h3 class="serial-physical-heading">1. Physical Interface</h3>
     <fieldset class="radio-group serial-physical">
@@ -364,7 +358,7 @@
             </div>
         </details>
             </div>
-    <section id="diagnostics" class="diagnostics-page">
+        <section id="diagnostics" class="diagnostics-page">
         <h2>Device Diagnostics</h2>
         <form data-static-preview="true" method="post">
                         <input type="hidden" name="action" value="diagnostics" />
@@ -484,7 +478,7 @@
         <tbody><tr><td colspan="4" class="empty-state">No associated data queries.</td></tr></tbody>
     </table></div>
 </section>
-    </div>
+        </div>
 <script type="application/json" id="serial-data">
     [{"id":"10","name":"Serial Demo - Local RTU TCP","poller_id":"1","transport":"rtu_tcp","endpoint":"[127.0.0.1]:15020","endpoint_key":"aa86d96698a66ef3178eea60e6d3c62d8382391f74c47d8b7318ab415ac7165f","profile_id":"3","profile_revision":"1","settings_json":"{\u0022protocol\u0022:\u0022modbus_rtu\u0022,\u0022baud_rate\u0022:9600,\u0022data_bits\u0022:8,\u0022parity\u0022:\u0022even\u0022,\u0022stop_bits\u0022:1,\u0022flow_control\u0022:\u0022none\u0022,\u0022timeout_ms\u0022:1000,\u0022retries\u0022:1}","revision":"1","enabled":"1","updated_by":"1","updated_at":"2026-09-21 18:41:32","settings":{"protocol":"modbus_rtu","baud_rate":9600,"data_bits":8,"parity":"even","stop_bits":1,"flow_control":"none","timeout_ms":1000,"retries":1}}]</script>
 </div><footer class="form-footer wizard-footer"><button type="button" class="button" id="wizard-previous">Previous ←</button><button type="button" class="button" id="wizard-next">Next →</button></footer></div>        </section>
@@ -500,13 +494,13 @@
             <button class="button primary" type="button" id="message-confirm">OK</button>
         </div>
     </dialog>
-    <script src="js/inventory.js?v=d30981a9a8a4" defer></script>
+    <script src="js/inventory.js?v=ae5c7a00bd57" defer></script>
     <dialog id="unsaved-dialog" aria-labelledby="unsaved-title">
         <div class="message-heading"><h2 id="unsaved-title">Unsaved changes</h2><button type="button" data-draft-choice="cancel" aria-label="Close unsaved changes">×</button></div>
         <p>Save your changes before leaving this device?</p>
         <div class="message-actions"><button type="button" class="button" data-draft-choice="cancel">Keep editing</button><button type="button" class="button" data-draft-choice="discard">Discard</button><button type="button" class="button primary" data-draft-choice="save">Save</button></div>
     </dialog>
-    <script src="js/wizard.js?v=059b59484693" defer></script>
+    <script src="js/wizard.js?v=25c85878a247" defer></script>
 <script src="js/preview.js" defer></script>
 </body>
 </html>

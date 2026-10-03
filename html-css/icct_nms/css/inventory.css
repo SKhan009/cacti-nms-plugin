@@ -2554,3 +2554,8 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 /* Preset editor surfaces stay white; editable controls use the shared grey fill. */
 .segment-editor .field input,.device-type-editor .field input:not([type=checkbox]):not([type=file]),.device-type-editor .field select,.connection-editor .field input:not([type=hidden]),.connection-choice summary,.connection-color-control { background:#f4f4f4; }
 .connection-color-control { padding:0 12px; box-sizing:border-box; border-bottom:1px solid #aaa; }
+
+.protocol-defaults .add-protocol,.protocol-defaults .delete-protocol { display:none; }
+.protocol-defaults input[type=password],.protocol-defaults .ssh-private-key { display:none; }
+.protocol-defaults .protocol-form { padding:0; }
+.protocol-defaults .field:has(input[type=password]) { display:none; }

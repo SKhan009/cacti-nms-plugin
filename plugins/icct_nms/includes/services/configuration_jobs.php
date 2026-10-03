@@ -87,6 +87,7 @@ function icct_backend_config_target($host_id, $authorize = true)
             32,
             JSON_THROW_ON_ERROR,
         );
+        $serial['settings']=icct_backend_serial_device_settings($host_id,$serial['id'],$serial['settings']);
     } elseif (!(int) $host["snmp_version"]) {
         throw new RuntimeException("Native SNMP access is disabled.");
     }

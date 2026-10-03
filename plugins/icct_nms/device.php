@@ -13,6 +13,7 @@ require_once __DIR__ . "/includes/graph_service.php";
 require_once __DIR__ . "/includes/data_query_service.php";
 require_once __DIR__ . "/includes/protocol_service.php";
 require_once __DIR__ . "/includes/serial_service.php";
+require_once __DIR__ . "/includes/protocol_preset_service.php";
 $error = "";
 $notice = "";
 try {
@@ -141,6 +142,7 @@ try {
     require __DIR__ . "/templates/device.php";
     if ($wizard) {
         require __DIR__ . "/includes/wizard_view.php";
+        echo '<script type="application/json" id="protocol-default-values">'.json_encode(icct_nms_protocol_presets(),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR).'</script>';
         echo '<div id="wizard-panels" hidden>';
         require __DIR__ . "/templates/protocol.php";
         echo '</div><footer class="form-footer wizard-footer"><button type="button" class="button" id="wizard-previous">Previous ←</button><button type="button" class="button" id="wizard-next">Next →</button></footer></div>';

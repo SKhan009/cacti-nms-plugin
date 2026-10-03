@@ -32,3 +32,5 @@ python3 -m http.server 8765 --bind 127.0.0.1 --directory html-css/icct_nms
 Device Type Add/Edit has a six-column local SVG icon picker and a 500 KB upload limit. Add/Edit Device previews load appearance details from the selected saved type profile.
 
 `sites.html` previews the Site preset list and Add/Edit form using exported native Cacti site data. Preview saves do not write to Cacti.
+
+`protocol-presets.html` previews the Protocols preset tab. Supported defaults (CDP, LLDP, SNMP, SSH and Serial) are copied into new protocol drafts. Saving a device preserves its own settings; changing defaults never updates existing device assignments. Credentials, serial endpoints and bus addresses are configured per device. Device serial settings use a private snapshot consumed by the collector; shared serial connection settings remain unchanged.
