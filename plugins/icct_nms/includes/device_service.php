@@ -148,6 +148,23 @@ function icct_nms_save_device($id, $old, $input)
     return $saved;
 }
 
+/** Native ranges shared by validation and SNMP/availability controls. */
+function icct_nms_native_ranges()
+{
+    return [
+        'snmp_port' => [1, 65535],
+        // Cacti host.snmp_timeout is an unsigned MEDIUMINT.
+        'snmp_timeout' => [1, 16777215],
+        'ping_timeout' => [1, 2147483647],
+        'ping_retries' => [0, 2147483647]
+    ];
+}
+function icct_nms_native_range_attributes($field)
+{
+    [$min,$max] = icct_nms_native_ranges()[$field];
+    return 'required min="'.$min.'" max="'.$max.'"';
+}
+
 /**
  * Merge only submitted controls into native values, retaining blank credential replacements.
  */
@@ -171,12 +188,7 @@ function icct_nms_native_values($old, $input, $fields)
         $values[$field] = icct_backend_core_field_value($field, $fields_host_edit[$field], $input[$field]);
     }
     foreach (
-        [
-            'snmp_port' => [1, 65535],
-            'snmp_timeout' => [1, 2147483647],
-            'ping_timeout' => [1, 2147483647],
-            'ping_retries' => [0, 2147483647]
-        ]
+        icct_nms_native_ranges()
         as $key => $range
     ) {
         if (!array_key_exists($key, $values)) {

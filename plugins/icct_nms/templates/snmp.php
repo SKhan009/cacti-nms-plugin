@@ -24,14 +24,14 @@
         'snmp_port',
         $values['snmp_port'],
         'number',
-        'required min="1" max="65535"'
+        icct_nms_native_range_attributes('snmp_port')
     );
     icct_nms_input(
         'SNMP Timeout (ms)',
         'snmp_timeout',
         $values['snmp_timeout'],
         'number',
-        'required min="1"'
+        icct_nms_native_range_attributes('snmp_timeout')
     );
     icct_nms_core_select('Maximum OIDs Per Get Request', 'max_oids', $values['max_oids']);
     ?>
@@ -50,14 +50,14 @@
         'ping_timeout',
         $values['ping_timeout'],
         'number',
-        'required min="1"'
+        icct_nms_native_range_attributes('ping_timeout')
     );
     icct_nms_input(
         'Ping Retry Count',
         'ping_retries',
         $values['ping_retries'],
         'number',
-        'required min="0"'
+        icct_nms_native_range_attributes('ping_retries')
     );
     ?>
 </div>

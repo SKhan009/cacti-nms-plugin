@@ -960,7 +960,7 @@ if (document.body) {
       const caption = label.textContent.trim();
       const unit = /\(ms\)/i.test(caption) ? " ms" : /\(sec(?:onds)?\)/i.test(caption) ? " sec" : "";
       if (min !== null || max !== null) {
-        const range = min !== null && max !== null ? `Range: ${min}–${max}${unit}.` : min !== null ? `Min: ${min}${unit}; maximum not configured.` : `Max: ${max}${unit}.`;
+        const range = min !== null && max !== null ? `Range: ${min}–${max}${unit}.` : min !== null ? `Minimum: ${min}${unit}.` : `Max: ${max}${unit}.`;
         help = `${help} ${range}`.trim();
       }
     }

@@ -7,7 +7,7 @@
         <title>Clone Device · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
         <link rel="stylesheet" href="css/inventory.css?v=036919584a7a" />
-    <script type="text/javascript" nonce="T_mx1eQodmdDWmqWRO02UowD">if (top != self) {top.location.href = self.location.href;}</script></head>
+    <script type="text/javascript" nonce="sDrRDPO574t6xvm_mp8Zf2-a">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -216,10 +216,10 @@
     </fieldset>
 <div class="snmp-community">
 <div class="protocol-grid cols-4">
-    <label class="field"><span class="field-label">SNMP Community String</span><input type="password" name="snmp_community" value="" autocomplete="new-password"></label><label class="field"><span class="field-label">SNMP Port</span><input type="number" name="snmp_port" value="161" required min="1" max="65535"></label><label class="field"><span class="field-label">SNMP Timeout (ms)</span><input type="number" name="snmp_timeout" value="500" required min="1"></label><label class="field"><span class="field-label">Maximum OIDs Per Get Request</span><span class="select-wrap"><select name="max_oids" ><option value="1">1 OID</option><option value="2">2 OID&apos;s</option><option value="3">3 OID&apos;s</option><option value="4">4 OID&apos;s</option><option value="5">5 OID&apos;s</option><option value="10" selected>10 OID&apos;s</option><option value="15">15 OID&apos;s</option><option value="20">20 OID&apos;s</option><option value="25">25 OID&apos;s</option><option value="30">30 OID&apos;s</option><option value="35">35 OID&apos;s</option><option value="40">40 OID&apos;s</option><option value="45">45 OID&apos;s</option><option value="50">50 OID&apos;s</option><option value="55">55 OID&apos;s</option><option value="60">60 OID&apos;s</option></select></span></label></div>
+    <label class="field"><span class="field-label">SNMP Community String</span><input type="password" name="snmp_community" value="" autocomplete="new-password"></label><label class="field"><span class="field-label">SNMP Port</span><input type="number" name="snmp_port" value="161" required min="1" max="65535"></label><label class="field"><span class="field-label">SNMP Timeout (ms)</span><input type="number" name="snmp_timeout" value="500" required min="1" max="16777215"></label><label class="field"><span class="field-label">Maximum OIDs Per Get Request</span><span class="select-wrap"><select name="max_oids" ><option value="1">1 OID</option><option value="2">2 OID&apos;s</option><option value="3">3 OID&apos;s</option><option value="4">4 OID&apos;s</option><option value="5">5 OID&apos;s</option><option value="10" selected>10 OID&apos;s</option><option value="15">15 OID&apos;s</option><option value="20">20 OID&apos;s</option><option value="25">25 OID&apos;s</option><option value="30">30 OID&apos;s</option><option value="35">35 OID&apos;s</option><option value="40">40 OID&apos;s</option><option value="45">45 OID&apos;s</option><option value="50">50 OID&apos;s</option><option value="55">55 OID&apos;s</option><option value="60">60 OID&apos;s</option></select></span></label></div>
 <hr />
 <div class="protocol-grid cols-4">
-    <label class="field"><span class="field-label">Downed Device Detection</span><span class="select-wrap"><select name="availability_method" ><option value="0">None</option><option value="1">Ping and SNMP Uptime</option><option value="4">Ping or SNMP Uptime</option><option value="2" selected>SNMP Uptime</option><option value="5">SNMP Desc</option><option value="6">SNMP getNext</option><option value="3">Ping</option></select></span></label><label class="field"><span class="field-label">Ping Method</span><span class="select-wrap"><select name="ping_method" ><option value="1">ICMP Ping</option><option value="3">TCP Ping</option><option value="5">TCP Ping Closed</option><option value="2" selected>UDP Ping</option></select></span></label><label class="field"><span class="field-label">Ping Timeout (ms)</span><input type="number" name="ping_timeout" value="400" required min="1"></label><label class="field"><span class="field-label">Ping Retry Count</span><input type="number" name="ping_retries" value="1" required min="0"></label></div>
+    <label class="field"><span class="field-label">Downed Device Detection</span><span class="select-wrap"><select name="availability_method" ><option value="0">None</option><option value="1">Ping and SNMP Uptime</option><option value="4">Ping or SNMP Uptime</option><option value="2" selected>SNMP Uptime</option><option value="5">SNMP Desc</option><option value="6">SNMP getNext</option><option value="3">Ping</option></select></span></label><label class="field"><span class="field-label">Ping Method</span><span class="select-wrap"><select name="ping_method" ><option value="1">ICMP Ping</option><option value="3">TCP Ping</option><option value="5">TCP Ping Closed</option><option value="2" selected>UDP Ping</option></select></span></label><label class="field"><span class="field-label">Ping Timeout (ms)</span><input type="number" name="ping_timeout" value="400" required min="1" max="2147483647"></label><label class="field"><span class="field-label">Ping Retry Count</span><input type="number" name="ping_retries" value="1" required min="0" max="2147483647"></label></div>
 </div>
 <div class="snmp-v3-fields">
     <fieldset class="radio-group">
@@ -499,7 +499,7 @@
             <button class="button primary" type="button" id="message-confirm">OK</button>
         </div>
     </dialog>
-    <script src="js/inventory.js?v=e956b3891032" defer></script>
+    <script src="js/inventory.js?v=a0182a5fe209" defer></script>
     <dialog id="unsaved-dialog" aria-labelledby="unsaved-title">
         <div class="message-heading"><h2 id="unsaved-title">Unsaved changes</h2><button type="button" data-draft-choice="cancel" aria-label="Close unsaved changes">×</button></div>
         <p>Save your changes before leaving this device?</p>
