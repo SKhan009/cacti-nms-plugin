@@ -6,8 +6,8 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Device Details · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
-        <link rel="stylesheet" href="css/inventory.css?v=717fe0e9a581" />
-            <script type="text/javascript" nonce="nGTUnohLPrAuZEgTfX_OfyY0">if (top != self) {top.location.href = self.location.href;}</script></head>
+        <link rel="stylesheet" href="css/inventory.css?v=50dc80e0f3e0" />
+            <script type="text/javascript" nonce="N9A5iGsCpl-klstps5SdWkvy">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -137,13 +137,13 @@
 <p>Your saved diagnostic runs for this device. Historical results describe the configuration at the time of the run.</p>
 <div class="device-record-list">
 <details class="device-record-item" name="diagnostic-records">
-<summary><span><small>Requested</small>2026-10-03 09:17:50</span><span><small>Method</small>ARP</span><span><small>Status</small>complete</span><span><small>Finished</small>2026-10-03 09:17:51</span></summary>
+<summary><span><small>Requested</small>2026-10-03 09:17:50</span><span><small>Method</small>ARP</span><span><small>Status</small><span class="device-status online">Complete</span></span><span><small>Finished</small>2026-10-03 09:17:51</span></summary>
 <div class="device-record-body"><h4>Result #83</h4><pre class="device-record-output">$ &apos;/usr/sbin/ip&apos; &apos;neigh&apos; &apos;show&apos;
 10.0.2.2 dev enp0s8 lladdr 52:54:00:12:35:00 REACHABLE
 fe80::2 dev enp0s8 lladdr 52:54:00:12:35:00 router STALE
 fd17:625c:f037:2::2 dev enp0s8 lladdr 52:54:00:12:35:00 router STALE</pre></div></details>
 <details class="device-record-item" name="diagnostic-records">
-<summary><span><small>Requested</small>2026-10-03 09:15:24</span><span><small>Method</small>Ping ICMP</span><span><small>Status</small>complete</span><span><small>Finished</small>2026-10-03 09:15:27</span></summary>
+<summary><span><small>Requested</small>2026-10-03 09:15:24</span><span><small>Method</small>Ping ICMP</span><span><small>Status</small><span class="device-status online">Complete</span></span><span><small>Finished</small>2026-10-03 09:15:27</span></summary>
 <div class="device-record-body"><h4>Result #82</h4><pre class="device-record-output">$ &apos;/usr/bin/ping&apos; &apos;-n&apos; &apos;-c&apos; &apos;4&apos; &apos;-W&apos; &apos;2&apos; &apos;-w&apos; &apos;14&apos; &apos;127.0.0.1&apos;
 PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
 64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.566 ms
@@ -155,13 +155,13 @@ PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
 4 packets transmitted, 4 received, 0% packet loss, time 3004ms
 rtt min/avg/max/mdev = 0.115/0.315/0.566/0.161 ms</pre></div></details>
 <details class="device-record-item" name="diagnostic-records">
-<summary><span><small>Requested</small>2026-10-03 08:58:35</span><span><small>Method</small>MTR ICMP</span><span><small>Status</small>complete</span><span><small>Finished</small>2026-10-03 08:58:45</span></summary>
+<summary><span><small>Requested</small>2026-10-03 08:58:35</span><span><small>Method</small>MTR ICMP</span><span><small>Status</small><span class="device-status online">Complete</span></span><span><small>Finished</small>2026-10-03 08:58:45</span></summary>
 <div class="device-record-body"><h4>Result #81</h4><pre class="device-record-output">$ &apos;/usr/sbin/mtr&apos; &apos;--report&apos; &apos;--no-dns&apos; &apos;--report-cycles&apos; &apos;4&apos; &apos;--max-ttl&apos; &apos;5&apos; &apos;--interval&apos; &apos;1&apos; &apos;127.0.0.1&apos;
 Start: 2026-10-03T08:58:36+0530
 HOST: cacti-rhel9.local           Loss%   Snt   Last   Avg  Best  Wrst StDev
   1.|-- 127.0.0.1                  0.0%     4    0.1   0.2   0.1   0.3   0.1</pre></div></details>
 <details class="device-record-item" name="diagnostic-records">
-<summary><span><small>Requested</small>2026-10-03 08:57:45</span><span><small>Method</small>Pathchar</span><span><small>Status</small>complete</span><span><small>Finished</small>2026-10-03 08:57:54</span></summary>
+<summary><span><small>Requested</small>2026-10-03 08:57:45</span><span><small>Method</small>Pathchar</span><span><small>Status</small><span class="device-status online">Complete</span></span><span><small>Finished</small>2026-10-03 08:57:54</span></summary>
 <div class="device-record-body"><h4>Result #80</h4><pre class="device-record-output">$ &apos;/usr/local/sbin/pchar&apos; &apos;-n&apos; &apos;-H&apos; &apos;5&apos; &apos;-R&apos; &apos;3&apos; &apos;-I&apos; &apos;128&apos; &apos;127.0.0.1&apos;
 pchar to 127.0.0.1 (127.0.0.1) using UDP/IPv4
 Using raw socket input
@@ -184,7 +184,7 @@ Packet size increments from 32 to 1500 by 128
     Start time:        Sat Oct  3 08:57:45 2026
     End time:          Sat Oct  3 08:57:54 2026</pre></div></details>
 <details class="device-record-item" name="diagnostic-records">
-<summary><span><small>Requested</small>2026-10-03 08:56:43</span><span><small>Method</small>iPerf3</span><span><small>Status</small>complete</span><span><small>Finished</small>2026-10-03 08:56:46</span></summary>
+<summary><span><small>Requested</small>2026-10-03 08:56:43</span><span><small>Method</small>iPerf3</span><span><small>Status</small><span class="device-status online">Complete</span></span><span><small>Finished</small>2026-10-03 08:56:46</span></summary>
 <div class="device-record-body"><h4>Result #79</h4><pre class="device-record-output">$ &apos;/usr/bin/iperf3&apos; &apos;-c&apos; &apos;127.0.0.1&apos; &apos;-p&apos; &apos;35417&apos; &apos;-t&apos; &apos;3&apos; &apos;-J&apos;
 Collector local-address self-test — this is not network-link bandwidth.
 Temporary local server stopped after the test.
@@ -362,7 +362,7 @@ Receiver throughput: 111,281.98 Mbit/s
 	}
 }</pre></div></details>
 <details class="device-record-item" name="diagnostic-records">
-<summary><span><small>Requested</small>2026-10-03 08:46:17</span><span><small>Method</small>Ping ICMP</span><span><small>Status</small>complete</span><span><small>Finished</small>2026-10-03 08:46:21</span></summary>
+<summary><span><small>Requested</small>2026-10-03 08:46:17</span><span><small>Method</small>Ping ICMP</span><span><small>Status</small><span class="device-status online">Complete</span></span><span><small>Finished</small>2026-10-03 08:46:21</span></summary>
 <div class="device-record-body"><h4>Result #78</h4><pre class="device-record-output">$ &apos;/usr/bin/ping&apos; &apos;-n&apos; &apos;-c&apos; &apos;4&apos; &apos;-W&apos; &apos;2&apos; &apos;-w&apos; &apos;14&apos; &apos;127.0.0.1&apos;
 PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
 64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.111 ms
@@ -374,12 +374,12 @@ PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
 4 packets transmitted, 4 received, 0% packet loss, time 3000ms
 rtt min/avg/max/mdev = 0.111/0.269/0.418/0.114 ms</pre></div></details>
 <details class="device-record-item" name="diagnostic-records">
-<summary><span><small>Requested</small>2026-10-03 08:43:55</span><span><small>Method</small>Traceroute TCP</span><span><small>Status</small>complete</span><span><small>Finished</small>2026-10-03 08:43:56</span></summary>
+<summary><span><small>Requested</small>2026-10-03 08:43:55</span><span><small>Method</small>Traceroute TCP</span><span><small>Status</small><span class="device-status online">Complete</span></span><span><small>Finished</small>2026-10-03 08:43:56</span></summary>
 <div class="device-record-body"><h4>Result #77</h4><pre class="device-record-output">$ &apos;/usr/bin/traceroute&apos; &apos;-n&apos; &apos;-q&apos; &apos;1&apos; &apos;-m&apos; &apos;5&apos; &apos;-w&apos; &apos;2&apos; &apos;-T&apos; &apos;-p&apos; &apos;443&apos; &apos;127.0.0.1&apos;
 traceroute to 127.0.0.1 (127.0.0.1), 5 hops max, 60 byte packets
  1  127.0.0.1  0.099 ms</pre></div></details>
 <details class="device-record-item" name="diagnostic-records">
-<summary><span><small>Requested</small>2026-10-03 08:41:57</span><span><small>Method</small>iPerf3</span><span><small>Status</small>complete</span><span><small>Finished</small>2026-10-03 08:42:01</span></summary>
+<summary><span><small>Requested</small>2026-10-03 08:41:57</span><span><small>Method</small>iPerf3</span><span><small>Status</small><span class="device-status online">Complete</span></span><span><small>Finished</small>2026-10-03 08:42:01</span></summary>
 <div class="device-record-body"><h4>Result #76</h4><pre class="device-record-output">$ &apos;/usr/bin/iperf3&apos; &apos;-c&apos; &apos;127.0.0.1&apos; &apos;-p&apos; &apos;34487&apos; &apos;-t&apos; &apos;3&apos; &apos;-J&apos;
 Collector local-address self-test — this is not network-link bandwidth.
 Temporary local server stopped after the test.
@@ -557,7 +557,7 @@ Receiver throughput: 93,267.99 Mbit/s
 	}
 }</pre></div></details>
 <details class="device-record-item" name="diagnostic-records">
-<summary><span><small>Requested</small>2026-10-03 08:40:37</span><span><small>Method</small>Ping ICMP</span><span><small>Status</small>complete</span><span><small>Finished</small>2026-10-03 08:40:41</span></summary>
+<summary><span><small>Requested</small>2026-10-03 08:40:37</span><span><small>Method</small>Ping ICMP</span><span><small>Status</small><span class="device-status online">Complete</span></span><span><small>Finished</small>2026-10-03 08:40:41</span></summary>
 <div class="device-record-body"><h4>Result #75</h4><pre class="device-record-output">$ &apos;/usr/bin/ping&apos; &apos;-n&apos; &apos;-c&apos; &apos;4&apos; &apos;-W&apos; &apos;2&apos; &apos;-w&apos; &apos;14&apos; &apos;127.0.0.1&apos;
 PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
 64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.927 ms
@@ -569,7 +569,7 @@ PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
 4 packets transmitted, 4 received, 0% packet loss, time 3023ms
 rtt min/avg/max/mdev = 0.161/0.410/0.927/0.304 ms</pre></div></details>
 <details class="device-record-item" name="diagnostic-records">
-<summary><span><small>Requested</small>2026-09-22 03:49:19</span><span><small>Method</small>Ping ICMP</span><span><small>Status</small>complete</span><span><small>Finished</small>2026-09-22 03:49:23</span></summary>
+<summary><span><small>Requested</small>2026-09-22 03:49:19</span><span><small>Method</small>Ping ICMP</span><span><small>Status</small><span class="device-status online">Complete</span></span><span><small>Finished</small>2026-09-22 03:49:23</span></summary>
 <div class="device-record-body"><h4>Result #74</h4><pre class="device-record-output">$ &apos;/usr/bin/ping&apos; &apos;-n&apos; &apos;-c&apos; &apos;4&apos; &apos;-W&apos; &apos;2&apos; &apos;-w&apos; &apos;14&apos; &apos;127.0.0.1&apos;
 PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
 64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.770 ms
@@ -581,7 +581,7 @@ PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
 4 packets transmitted, 4 received, 0% packet loss, time 3013ms
 rtt min/avg/max/mdev = 0.294/0.420/0.770/0.202 ms</pre></div></details>
 <details class="device-record-item" name="diagnostic-records">
-<summary><span><small>Requested</small>2026-09-22 02:46:20</span><span><small>Method</small>Ping ICMP</span><span><small>Status</small>complete</span><span><small>Finished</small>2026-09-22 02:46:24</span></summary>
+<summary><span><small>Requested</small>2026-09-22 02:46:20</span><span><small>Method</small>Ping ICMP</span><span><small>Status</small><span class="device-status online">Complete</span></span><span><small>Finished</small>2026-09-22 02:46:24</span></summary>
 <div class="device-record-body"><h4>Result #73</h4><pre class="device-record-output">$ &apos;/usr/bin/ping&apos; &apos;-n&apos; &apos;-c&apos; &apos;4&apos; &apos;-W&apos; &apos;2&apos; &apos;-w&apos; &apos;14&apos; &apos;127.0.0.1&apos;
 PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
 64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.664 ms

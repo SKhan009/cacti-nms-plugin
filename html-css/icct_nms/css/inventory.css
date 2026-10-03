@@ -2750,3 +2750,5 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 
 /* Snapshot content always occupies the complete expanded record. */
 #view-records .device-record-body,#view-records .device-record-snapshot,#view-records .device-record-snapshot>.site-table-wrap{display:block;width:100%;max-width:none;min-width:0;box-sizing:border-box}#view-records .device-record-snapshot .site-table{width:100%;max-width:none}#view-records .device-record-snapshot .site-table th:first-child{width:38%}#view-records .device-record-body .device-record-output{width:100%;box-sizing:border-box}
+
+#view-records .device-record-item .device-status{display:inline-block;padding:4px 10px;border-radius:12px;font-size:12px;line-height:1.3}

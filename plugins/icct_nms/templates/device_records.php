@@ -58,7 +58,7 @@ $recordPager = static function($key, $page, $total) use ($id) {
 <div class="device-record-list">
 <?php foreach($runs as $run): $result=json_decode($run['result_json'] ?? '',true); ?>
 <details class="device-record-item" name="diagnostic-records">
-<summary><span><small>Requested</small><?= $display($run['requested_at']) ?></span><span><small>Method</small><?= $display($labels[$run['tool']] ?? $run['tool']) ?></span><span><small>Status</small><?= $display($run['status']) ?></span><span><small>Finished</small><?= $display($run['finished_at']) ?></span></summary>
+<summary><span><small>Requested</small><?= $display($run['requested_at']) ?></span><span><small>Method</small><?= $display($labels[$run['tool']] ?? $run['tool']) ?></span><span><small>Status</small><span class="device-status <?= ['complete'=>'online','running'=>'in-use','queued'=>'other','failed'=>'offline','error'=>'offline','expired'=>'other','cancelled'=>'disabled'][$run['status']] ?? 'disabled' ?>"><?= $display(ucfirst($run['status'])) ?></span></span><span><small>Finished</small><?= $display($run['finished_at']) ?></span></summary>
 <div class="device-record-body"><h4>Result #<?= (int)$run['id'] ?></h4><?php if(is_array($result) && isset($result['output'])): ?><pre class="device-record-output"><?= icct_nms_h((string)$result['output']) ?></pre><?php else: ?><p>No saved output.</p><?php endif; ?></div></details>
 <?php endforeach; if(!$runs): ?><p class="device-record-empty">No diagnostic runs saved for this device.</p><?php endif; ?>
 </div>
