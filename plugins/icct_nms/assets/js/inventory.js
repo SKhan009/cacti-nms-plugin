@@ -1455,6 +1455,7 @@ document.addEventListener("click", event => { const link=event.target.closest(".
     if(!Number.isFinite(start)||!Number.isFinite(end)||start>=end||start<0){status.textContent='Choose a valid start and end time; From must be earlier than To.';return false;}
     range={start,end};
     graphs.forEach(g=>{
+      if(g.dataset.realtime==='true')return;
       const image=g.querySelector('.device-graph-image img');const url=new URL(image.src,location.href);
       url.searchParams.set('graph_start',start);url.searchParams.set('graph_end',end);url.searchParams.set('_refresh',Date.now());
       if(field('thumbnails').checked){url.searchParams.set('graph_width','250');url.searchParams.set('graph_height','80');url.searchParams.set('graph_nolegend','true');}
@@ -1473,50 +1474,52 @@ document.addEventListener("click", event => { const link=event.target.closest(".
   field('prev').addEventListener('click',()=>{page--;render();});field('next').addEventListener('click',()=>{page++;render();});
   field('save').addEventListener('click',()=>{if(!applyRange())return;try{localStorage.setItem(key,JSON.stringify(Object.fromEntries(names.map(n=>[n,n==='thumbnails'?field(n).checked:field(n).value]))));status.textContent='Filters saved in this browser for this device.';}catch{status.textContent='This browser cannot save filters.';}});
   field('clear').addEventListener('click',()=>{field('search').value='';field('columns').value='2';field('limit').value='10';field('thumbnails').checked=false;field('preset').value='86400';try{localStorage.removeItem(key);}catch{}page=1;setPreset();applyRange();render();});
+  document.addEventListener('icct-realtime-stopped',applyRange);
   render();applyRange();
 })();
 
-// Real-time graphs use Cacti's authenticated JSON endpoint within this page.
+// Run selected graphs in place through Cacti's authenticated real-time endpoint.
 (function(){
 'use strict';
-if(!document.querySelector('[data-graph-popup]'))return;
-const dialog=document.createElement('dialog');dialog.className='device-graph-dialog';
-const heading=document.createElement('div');heading.className='message-heading';
-const title=document.createElement('h2');title.id='device-graph-dialog-title';dialog.setAttribute('aria-labelledby',title.id);
-const close=document.createElement('button');close.type='button';close.textContent='×';close.setAttribute('aria-label','Close graph tool');heading.append(title,close);
-const controls=document.createElement('div');controls.className='device-graph-filter-row';
+const grid=document.querySelector('#device-view-graphs'),filters=document.querySelector('.device-graph-controls');
+if(!grid||!document.querySelector('[data-graph-popup]'))return;
+const controls=document.createElement('div');controls.className='device-realtime-controls';controls.hidden=true;
 const windowSelect=document.createElement('select');windowSelect.setAttribute('aria-label','Real-time window');
 for(const [value,label] of [[60,'1 minute'],[300,'5 minutes'],[900,'15 minutes'],[1800,'30 minutes'],[3600,'1 hour']])windowSelect.append(new Option(label,value));
 const interval=document.createElement('select');interval.setAttribute('aria-label','Real-time refresh interval');
-const status=document.createElement('p');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
-const image=document.createElement('img');image.className='device-realtime-image';image.alt='Real-time graph';image.hidden=true;
-const footer=document.createElement('div');footer.className='message-actions';const done=document.createElement('button');done.type='button';done.className='button';done.textContent='Close';footer.append(done);controls.append(windowSelect,interval);dialog.append(heading,controls,status,image,footer);document.body.append(dialog);
-let focus=null,endpoint=null,timer=null,request=null,version=0;
-function stop(){clearTimeout(timer);request?.abort();request=null;version++;}
-async function refresh(){
- stop();const v=version;if(!dialog.open||!endpoint)return;
- request=new AbortController();status.textContent='Collecting real-time data…';
- const body=new URLSearchParams({action:'init',local_graph_id:endpoint.searchParams.get('local_graph_id'),graph_start:String(-Number(windowSelect.value)),ds_step:interval.value,size:'100',graph_nolegend:'false'});
+const minimum=Math.max(1,...[...document.querySelectorAll('[data-graph-popup]')].map(e=>Number(e.dataset.realtimeStep)||10));
+for(const seconds of [...new Set([minimum,10,20,30,60].filter(n=>n>=minimum))].sort((a,b)=>a-b))interval.append(new Option(seconds+' seconds',seconds));
+const stopButton=document.createElement('button');stopButton.type='button';stopButton.className='button';stopButton.textContent='Stop';
+for(const [text,select] of [['Window',windowSelect],['Refresh',interval]]){const label=document.createElement('label');label.append(document.createTextNode(text+' '),select);controls.append(label);}
+controls.append(stopButton);filters.after(controls);
+const active=new Map();
+function cancel(state){clearTimeout(state.timer);state.request?.abort();state.version++;}
+function stop(figure){const state=active.get(figure);if(!state)return;cancel(state);active.delete(figure);delete figure.dataset.realtime;state.image.src=state.original;state.button.setAttribute('aria-pressed','false');state.button.setAttribute('aria-label','Real-time graph');state.button.dataset.tooltip='Real-time graph';state.status.remove();controls.hidden=!active.size;filters.hidden=!!active.size;document.dispatchEvent(new Event('icct-realtime-stopped'));}
+function stopAll(){[...active.keys()].forEach(stop);}
+async function refresh(state){
+ cancel(state);const v=state.version;if(!active.has(state.figure))return;
+ state.request=new AbortController();state.status.textContent='Collecting real-time data…';
+ const body=new URLSearchParams({action:'init',local_graph_id:state.endpoint.searchParams.get('local_graph_id'),graph_start:String(-Number(windowSelect.value)),ds_step:interval.value,size:'100',graph_nolegend:document.querySelector('#device-graph-thumbnails')?.checked?'true':'false'});
  const token=document.querySelector('#shared-diagnostic-form input[name=__csrf_magic]');if(token)body.set('__csrf_magic',token.value);
  try{
-  const response=await fetch(endpoint,{method:'POST',body,credentials:'same-origin',cache:'no-store',signal:request.signal});
-  if(!response.ok)throw Error('Real-time graph unavailable. Check graph permissions and the real-time collector.');
-  const data=await response.json();if(v!==version||!dialog.open)return;
-  if(!data.data||!['png','svg+xml'].includes(data.image_format))throw Error('No real-time image returned. Check the real-time cache directory and collector.');
-  image.src='data:image/'+data.image_format+';base64,'+data.data;image.hidden=false;
-  status.textContent='Updated '+new Date().toLocaleTimeString()+'. Refreshes every '+interval.value+' seconds.';
-  timer=setTimeout(refresh,Number(interval.value)*1000);
- }catch(error){if(v!==version||error.name==='AbortError')return;status.textContent=error.message==='Unexpected end of JSON input'?'Real-time response unavailable. Sign in again or check the collector.':error.message;}
+  const response=await fetch(state.endpoint,{method:'POST',body,credentials:'same-origin',cache:'no-store',signal:state.request.signal});
+  if(!response.ok)throw Error('Real-time graph unavailable. Check graph permissions and the collector.');
+  const data=await response.json();if(v!==state.version||!active.has(state.figure))return;
+  if(!data.data||!['png','svg+xml'].includes(data.image_format))throw Error('No real-time image returned. Check the real-time cache and collector.');
+  state.image.src='data:image/'+data.image_format+';base64,'+data.data;
+  state.status.textContent='Real-time · Updated '+new Date().toLocaleTimeString()+' · Every '+interval.value+' seconds';
+  state.timer=setTimeout(()=>refresh(state),Number(interval.value)*1000);
+ }catch(error){if(v!==state.version||error.name==='AbortError')return;state.status.textContent=error instanceof SyntaxError?'Real-time response unavailable. Sign in again or check the collector.':error.message;}
 }
-for(const button of [close,done])button.addEventListener('click',()=>dialog.close());
-dialog.addEventListener('close',()=>{stop();image.removeAttribute('src');focus?.focus();});
-for(const select of [windowSelect,interval])select.addEventListener('change',refresh);
+stopButton.addEventListener('click',stopAll);
+for(const select of [windowSelect,interval])select.addEventListener('change',()=>active.forEach(refresh));
 document.addEventListener('click',event=>{
- const link=event.target.closest('button[data-graph-popup]');if(!link)return;
- const url=new URL(link.dataset.graphUrl,location.href);if(url.origin!==location.origin)return;
- event.preventDefault();focus=link;endpoint=url;title.textContent='Real-time — '+link.closest('figure').querySelector('figcaption').textContent;image.alt=title.textContent;
- const minimum=Math.max(1,Number(link.dataset.realtimeStep)||10);interval.replaceChildren();for(const seconds of [...new Set([minimum,10,20,30,60].filter(n=>n>=minimum))].sort((a,b)=>a-b))interval.append(new Option(seconds+' seconds',seconds));
- image.hidden=true;dialog.showModal();refresh();
+ const button=event.target.closest('button[data-graph-popup]');
+ if(!button){if(event.target.closest('[data-device-view-tab],#device-graph-prev,#device-graph-next'))stopAll();return;}
+ const endpoint=new URL(button.dataset.graphUrl,location.href);if(endpoint.origin!==location.origin)return;
+ event.preventDefault();const figure=button.closest('figure');if(active.has(figure)){stop(figure);return;}
+ const image=figure.querySelector('.device-graph-image img'),status=document.createElement('p');status.className='device-realtime-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');figure.append(status);
+ const state={figure,image,button,status,endpoint,original:image.src,version:0,timer:null,request:null};active.set(figure,state);figure.dataset.realtime='true';button.setAttribute('aria-pressed','true');button.setAttribute('aria-label','Stop real-time graph');button.dataset.tooltip='Stop real-time graph';controls.hidden=false;filters.hidden=true;refresh(state);
 });
-window.addEventListener('pagehide',stop);
+window.addEventListener('pagehide',()=>active.forEach(cancel));
 })();
