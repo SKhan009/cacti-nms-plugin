@@ -4,12 +4,12 @@
 <section class="icct-map-panel">
 <div class="icct-map-toolbar">
 <div class="icct-view-tabs" role="tablist" aria-label="Dashboard views">
-<?php foreach (['topology'=>'Topology','rack'=>'Rack View','image'=>'Image View','map'=>'Map View'] as $key=>$label): ?><button type="button" role="tab" id="icct-view-<?= $key ?>" aria-controls="icct-panel-<?= $key ?>" aria-selected="<?= $key==='map'?'true':'false' ?>" tabindex="<?= $key==='map'?'0':'-1' ?>" data-view="<?= $key ?>"><?= $label ?></button><?php endforeach; ?>
+<?php foreach (['topology'=>'Topology','rack'=>'Rack View','image'=>'Image View','map'=>'Map View'] as $key=>$label): ?><button type="button" role="tab" id="icct-view-<?= $key ?>" aria-controls="icct-panel-<?= $key ?>" aria-selected="<?= $key==='topology'?'true':'false' ?>" tabindex="<?= $key==='topology'?'0':'-1' ?>" data-view="<?= $key ?>"><?= $label ?></button><?php endforeach; ?>
 </div>
 <div class="icct-map-counts" aria-label="Device status totals"><span>Total: <?= $mapData['counts']['total'] ?></span><span class="online">Online: <?= $mapData['counts']['online'] ?></span><span class="offline">Offline: <?= $mapData['counts']['offline'] ?></span><span class="other">Other: <?= $mapData['counts']['other'] ?></span></div>
 </div>
-<p id="icctMapStatus" role="status"></p>
-<div class="icct-view-panel" id="icct-panel-map" role="tabpanel" aria-labelledby="icct-view-map">
+<p id="icctMapStatus" role="status" hidden></p>
+<div class="icct-view-panel" id="icct-panel-map" role="tabpanel" aria-labelledby="icct-view-map" hidden>
 <div id="icctSiteMap" aria-label="Map of Cacti sites"></div>
 <div class="icct-map-controls" aria-label="Map controls">
 <button id="icctMapZoomIn" type="button" aria-label="Zoom in" title="Zoom in">+</button>
@@ -20,7 +20,7 @@
 </div>
 <?php $viewDevices=icct_nms_inventory(); $viewTypes=icct_nms_device_types(); ?>
 <?php foreach (['topology','rack','image'] as $view): ?>
-<div class="icct-view-panel icct-device-view" id="icct-panel-<?= $view ?>" role="tabpanel" aria-labelledby="icct-view-<?= $view ?>" hidden>
+<div class="icct-view-panel icct-device-view" id="icct-panel-<?= $view ?>" role="tabpanel" aria-labelledby="icct-view-<?= $view ?>" <?= $view==='topology'?'':'hidden' ?>>
 <?php if ($view==='rack'): ?>
 <?php require __DIR__.'/rack_view.php'; ?>
 <?php elseif ($view==='topology'): require __DIR__.'/topology_view.php'; ?>
@@ -30,7 +30,7 @@
 <?php endforeach; ?></div><?php endif; ?>
 </div>
 <?php endforeach; ?>
-<details class="icct-map-credits"><summary title="Map credits" aria-label="Map credits">ⓘ</summary><span>Leaflet. State boundaries: geoBoundaries / DataMeet (CC BY 2.5 IN).</span></details>
+<details class="icct-map-credits" hidden><summary title="Map credits" aria-label="Map credits">ⓘ</summary><span>Leaflet. State boundaries: geoBoundaries / DataMeet (CC BY 2.5 IN).</span></details>
 </section>
 <script type="application/json" id="icctMapData"><?= json_encode($mapData+['states'=>'assets/maps/india-states.json','tiles'=>null],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
 </section>
