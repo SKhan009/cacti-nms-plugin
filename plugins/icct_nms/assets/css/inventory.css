@@ -2739,3 +2739,6 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 
 /* Device history keeps saved readings contained within the shared lists. */
 #view-records h3{margin:28px 0 12px}#view-records details summary{cursor:pointer;color:#0f62fe}#view-records td{vertical-align:top;overflow-wrap:anywhere}.device-record-output{white-space:pre-wrap;overflow-wrap:anywhere;max-height:360px;overflow:auto;background:#f4f4f4;padding:16px;max-width:640px}#view-records .site-table-wrap{overflow-x:auto}
+
+/* Native Cacti graph actions beside each graph image. */
+.device-graph-body{display:flex;align-items:flex-start;gap:8px}.device-graph-image{flex:1;min-width:0}.device-graph-tools{display:flex;flex-direction:column;flex:none;gap:4px;width:24px;padding-top:2px}.device-graph-tools a{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:2px}.device-graph-tools a:hover,.device-graph-tools a:focus-visible{background:#e8f0ff;outline:1px solid #0f62fe}.device-view-graphs .device-graph-tools img{width:16px;height:16px;border:0}
