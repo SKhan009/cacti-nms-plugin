@@ -901,49 +901,75 @@ if (document.body) {
     notes: "Optional notes describing this device.",
     enabled:
       "Enable polling for this device, or disable it while retaining its saved configuration.",
-    mode: "Protocol used to collect discovery information.",
-    interval_seconds:
-      "Seconds between discovery collections. Must be a multiple of the poller interval.",
-    stale_seconds:
-      "Seconds before previously collected discovery information is considered stale.",
-    refresh_seconds:
-      "Seconds between refreshes of displayed discovery information.",
-    connection_id: "Select a saved serial endpoint on this device’s collector.",
-    baud_rate: "Transmission speed of a direct serial port in bits per second.",
-    data_bits: "Modbus RTU uses 8 data bits.",
-    parity: "Parity used by the serial device.",
-    stop_bits: "Stop bits used by the serial device.",
-    flow_control:
-      "RS-485 requires None and automatic adapter direction control.",
-    response_timeout: "Maximum response wait in seconds, from 0.1 to 10.",
-    serial_retries: "Read retries, from 0 to 3.",
-    serial_interval: "Seconds between serial collection attempts.",
-    device_address: "Modbus unit address, from 1 to 247.",
-    snmp_auth_protocol: "Authentication algorithm used for SNMP V3.",
-    snmp_username: "Username used for SNMP V3 authentication.",
-    snmp_password: "Leave blank to retain the saved authentication password.",
-    snmp_password_confirm: "Repeat the replacement authentication password.",
-    snmp_priv_protocol: "Encryption algorithm used for SNMP V3 privacy.",
-    snmp_priv_passphrase: "Leave blank to retain the saved privacy passphrase.",
-    snmp_priv_confirm: "Repeat the replacement privacy passphrase.",
-    snmp_context: "SNMP V3 context for the requested management information.",
-    snmp_community: "Community string used for SNMP V1 or V2 authentication.",
-    snmp_port: "UDP port used to contact the SNMP agent.",
-    snmp_timeout: "Maximum time in milliseconds to wait for an SNMP response.",
-    max_oids: "Maximum number of OIDs requested in one SNMP request.",
-    availability_method:
-      "Method used to determine whether the device is reachable.",
-    ping_method: "Network probe used for device reachability checks.",
-    ping_timeout: "Maximum time in milliseconds to wait for a probe response.",
-    ping_retries: "Number of retries when a reachability probe fails.",
+    mode: "Collect neighbours using SNMP.",
+    interval_seconds: "Use a multiple of the poller interval.",
+    stale_seconds: "At least twice the collection interval.",
+    refresh_seconds: "Refresh displayed discovery data.",
+    snmp_version: "Choose the version supported by the device.",
+    snmp_security_level: "V3: no security, authentication only, or authentication and encryption.",
+    connection_id: "Choose a saved endpoint on this collector.",
+    serial_interface: "Direct ports: RS-232 or RS-485. TCP gateways manage this setting.",
+    serial_protocol: "RTU or ASCII; TCP gateways support RTU only.",
+    baud_rate: "Direct-port speed: 300–230400 baud; match the device.",
+    data_bits: "RTU: 8 bits. ASCII: 7–8 bits.",
+    parity: "Match the device: no parity, Even, Odd, Mark or Space.",
+    stop_bits: "1–2 stop bits; match the device.",
+    flow_control: "RS-485: None. RS-232: None or RTS/CTS.",
+    response_timeout: "Wait for the serial response.",
+    serial_retries: "Retry failed serial reads.",
+    serial_interval: "Time between serial polls.",
+    device_address: "Modbus unit address.",
+    serial_gateway_address: "Address from the selected TCP gateway; read-only.",
+    serial_gateway_port: "Gateway port: 1–65535; read-only.",
+    port: "SSH server port.",
+    connect_timeout: "Wait for the SSH connection.",
+    command_timeout: "Wait for an SSH command.",
+    retries: "Retry failed SSH connections.",
+    keepalive: "SSH keepalive interval; 0 disables it.",
+    auth_method: "Use a password or private key.",
+    username: "SSH account on the device.",
+    secret: "Blank keeps the saved password.",
+    passphrase: "Private-key passphrase; blank keeps the saved value.",
+    snmp_auth_protocol: "SNMP V3 authentication algorithm.",
+    snmp_username: "SNMP V3 account name.",
+    snmp_password: "At least 8 characters when authentication is enabled; blank keeps saved value.",
+    snmp_password_confirm: "Repeat the new authentication password.",
+    snmp_priv_protocol: "SNMP V3 encryption algorithm.",
+    snmp_priv_passphrase: "At least 8 characters when privacy is enabled; blank keeps saved value.",
+    snmp_priv_confirm: "Repeat the new privacy passphrase.",
+    snmp_context: "SNMP V3 context; leave blank for the default.",
+    snmp_community: "Match the device’s SNMP V1/V2 community.",
+    snmp_port: "SNMP UDP port.",
+    snmp_timeout: "Wait for an SNMP response.",
+    max_oids: "OIDs per SNMP request; choose a listed value.",
+    availability_method: "How device reachability is checked.",
+    ping_method: "Probe used for reachability checks.",
+    ping_timeout: "Wait for a reachability response.",
+    ping_retries: "Retry failed reachability probes.",
+    ping_count: "Packets per ping test.",
+    trace_hops: "Maximum traceroute hops.",
+    bandwidth_seconds: "Bandwidth-test duration.",
   };
-  document.querySelectorAll(".field-label").forEach((label) => {
+  document.querySelectorAll(".field-label, .radio-group legend").forEach((label) => {
     const field = label
-      .closest(".field, .enable-field")
+      .closest(".field, .enable-field, .radio-group")
       ?.querySelector("input, select, textarea");
-    const help = fieldHelp[field?.name];
-    if (!help) return;
-    if (!field.hasAttribute("aria-label") && field.type !== "checkbox")
+    let help = fieldHelp[field?.name] || "";
+    if (field?.type === "number" && !field.readOnly) {
+      const min = field.getAttribute("min"), max = field.getAttribute("max");
+      const caption = label.textContent.trim();
+      const unit = /\(ms\)/i.test(caption) ? " ms" : /\(sec(?:onds)?\)/i.test(caption) ? " sec" : "";
+      if (min !== null || max !== null) {
+        const range = min !== null && max !== null ? `Range: ${min}–${max}${unit}.` : min !== null ? `Min: ${min}${unit}; maximum not configured.` : `Max: ${max}${unit}.`;
+        help = `${help} ${range}`.trim();
+      }
+    }
+    if (field?.name === "max_oids") {
+      const values = Array.from(field.options).map(option=>Number(option.value)).filter(value=>Number.isFinite(value) && value>0);
+      if (values.length) help += ` Range: ${Math.min(...values)}–${Math.max(...values)}.`;
+    }
+    if (!help || label.querySelector(".field-info")) return;
+    if (!field.hasAttribute("aria-label") && !["checkbox", "radio"].includes(field.type))
       field.setAttribute("aria-label", label.textContent.trim());
     const icon = document.createElement("span");
     icon.className = "field-info";

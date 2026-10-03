@@ -150,7 +150,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
                                 $key,
                                 $discovery[$key] ?? "",
                                 "number",
-                                'required min="1"',
+                                'required min="'.(['interval_seconds'=>300,'stale_seconds'=>600,'refresh_seconds'=>10][$key]).'" max="'.(['interval_seconds'=>86400,'stale_seconds'=>604800,'refresh_seconds'=>300][$key]).'"',
                             );
                         }
                         ?>
