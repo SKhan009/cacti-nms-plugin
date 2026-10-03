@@ -6,8 +6,10 @@ require_once __DIR__.'/includes/device_type_service.php';
 require_once __DIR__.'/includes/mib_repository_service.php';
 require_once __DIR__.'/includes/forms.php';
 $error='';$notice='';$mode='list';$preview=null;$plan=null;$reviewValues=[];$deviceInputs=[];$sourceDevices=[];
+// Initialization failures must stop before the shared header calls backend services.
+try { icct_nms_backend(); } catch (Throwable $e) { icct_nms_failure($e); }
 try{
-    icct_nms_backend();$management=is_realm_allowed(3);$types=icct_nms_device_types();$bundles=icct_mib_list();
+    $management=is_realm_allowed(3);$types=icct_nms_device_types();$bundles=icct_mib_list();
     if(isset($_GET['download'])){
         $bundle=null;foreach($bundles as $candidate)if($candidate['id']===($_GET['download']??''))$bundle=$candidate;
         if(!$bundle)throw new InvalidArgumentException('MIB upload not found.');$index=icct_nms_id($_GET['file']??0);$content=icct_mib_file($bundle,$index);
@@ -54,7 +56,7 @@ try{
         $inspection=null;foreach($bundles as $candidate)if($candidate['id']===$_GET['inspect'])$inspection=$candidate;
         if(!$inspection)throw new InvalidArgumentException('MIB upload not found.');$objects=icct_mib_objects($inspection);$mode='inspect';
     }elseif(isset($_GET['saved']))$notice='MIB files and selected templates saved.';
+    if($mode==='review'){ $sourceDevices=icct_nms_inventory();$deviceInputs=$deviceInputs?:($_SESSION['icct_mib_inputs']??[]); }
 }catch(Throwable $e){$error=$e->getMessage();}
-if($mode==='review'){ $sourceDevices=icct_nms_inventory();$deviceInputs=$deviceInputs?:($_SESSION['icct_mib_inputs']??[]); }
 $title='MIB Repository';$mibRepositoryPage=true;
 require __DIR__.'/templates/header.php';require __DIR__.'/templates/mib_repository.php';require __DIR__.'/templates/footer.php';
