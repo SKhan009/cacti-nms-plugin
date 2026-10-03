@@ -7,7 +7,7 @@
         <title>Presets · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
         <link rel="stylesheet" href="css/inventory.css?v=b9a32d0a786f" />
-    <script type="text/javascript" nonce="DtXJOjFVDco0wVn71bcTWx7b">if (top != self) {top.location.href = self.location.href;}</script></head>
+    <script type="text/javascript" nonce="eRrtNQTy8ppbQgAE74VlYzdR">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -55,8 +55,8 @@
 <label class="field"><span class="field-label">No. of Ports *</span><input name="physical_ports" type="number" min="0" max="65535" placeholder="Enter (e.g., 1 or 96)" required value=""></label>
 </div>
 <section class="type-image-upload"><h3>Device Type Image</h3><p>Maximum file size: 500 KB. Supported formats: .jpg, .png, .webp.</p><label class="button primary type-upload-button">Upload <span aria-hidden="true">+</span><input type="file" name="device_image" accept="image/png,image/jpeg,image/webp" aria-label="Upload device type image"></label><span id="type-upload-name"></span><img id="type-upload-preview" alt="Device type image preview" hidden><label class="enable-field" id="type-remove-image"><input type="checkbox" name="remove_image" value="1" >Remove saved image</label></section>
-<section class="type-visibility" aria-label="Topology visibility"><h3>Topology Visibility</h3><div class="form-grid">
-<label class="field"><span class="field-label">Network Topology Visibility</span><select name="display_network"><option value="none" >None</option><option value="icon" selected>Icon</option><option value="image" >Image</option></select></label><label class="field"><span class="field-label">Rack View Visibility</span><select name="display_rack"><option value="none" >None</option><option value="icon" selected>Icon</option><option value="image" >Image</option></select></label><label class="field"><span class="field-label">Map View Visibility</span><select name="display_map"><option value="none" >None</option><option value="icon" selected>Icon</option><option value="image" >Image</option></select></label></div></section>
+<section class="type-visibility" aria-label="Topology visibility"><h3>Visibility</h3><div class="form-grid">
+<label class="field"><span class="field-label">Network Topology</span><select name="display_network" required><option value="">Select display type</option><option value="none" >None</option><option value="icon" >Icon</option><option value="image" >Image</option></select></label><label class="field"><span class="field-label">Rack View</span><select name="display_rack" required><option value="">Select display type</option><option value="none" >None</option><option value="icon" >Icon</option><option value="image" >Image</option></select></label><label class="field"><span class="field-label">Map View</span><select name="display_map" required><option value="">Select display type</option><option value="none" >None</option><option value="icon" >Icon</option><option value="image" >Image</option></select></label></div></section>
 <div class="type-editor-actions"><button type="button" class="button" id="cancel-device-type">Cancel</button><button type="submit" class="button primary" id="save-device-type">Add</button></div>
 </form>
 <div class="device-types-list">
@@ -111,7 +111,7 @@
         </div>
     </dialog>
     <script src="js/inventory.js?v=d30981a9a8a4" defer></script>
-    <script src="js/presets.js?v=1e1499b98dde" defer></script>
+    <script src="js/presets.js?v=484a56e36e57" defer></script>
 <script src="js/preview.js" defer></script>
 </body>
 </html>

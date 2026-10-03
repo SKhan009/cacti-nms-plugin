@@ -27,13 +27,13 @@ function updateTypeIcon() {
   document.querySelector('#icon-picker-value').textContent = option?.dataset.iconLabel ?? 'Select Icon';
   if(option) iconPreview.src=option.dataset.iconAsset; else iconPreview.removeAttribute('src');
   iconGrid.querySelectorAll('[data-icon]').forEach(button=>button.setAttribute('aria-selected',String(button===option)));
-  typeSaveButton.disabled = !typeEditor.elements.type_name.value.trim() || !option || !typeEditor.elements.physical_ports.validity.valid;
+  typeSaveButton.disabled = !typeEditor.elements.type_name.value.trim() || !option || !typeEditor.elements.physical_ports.validity.valid || ['network','rack','map'].some(view=>!typeEditor.elements[`display_${view}`].value);
 }
 function closeIconPicker() { if(iconGrid) { iconGrid.hidden=true;iconToggle.setAttribute('aria-expanded','false'); } }
 function openTypeEditor(type = {}) {
   typeEditor.reset();
   const fields = {type_id:type.type_id ?? '',type_name:type.name ?? '',category_id:type.category_id ?? 0,physical_ports:type.physical_ports ?? '',icon:type.icon ?? ''};
-  for (const view of ['network','rack','map']) fields[`display_${view}`] = type.display_modes?.[view] ?? 'icon';
+  for (const view of ['network','rack','map']) fields[`display_${view}`] = type.display_modes?.[view] ?? (type.type_id?'icon':'');
   for (const [name,value] of Object.entries(fields)) typeEditor.elements[name].value = value;
   document.querySelector('#type-editor-title').textContent = type.type_id ? 'Edit Device Type' : 'Add Device Type';
   typeSaveButton.textContent = type.type_id ? 'Save' : 'Add';

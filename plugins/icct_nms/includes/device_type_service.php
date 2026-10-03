@@ -84,7 +84,7 @@ function icct_nms_save_device_type($input,$file=null) {
             $savedImage=$image ?: (empty($input['remove_image']) ? ($old['image'] ?? '') : '');
             $modes=[];
             foreach (['network','rack','map'] as $view) {
-                $mode=$input['display_'.$view] ?? 'icon';
+                $mode=$input['display_'.$view] ?? '';
                 if (!in_array($mode,['none','icon','image'],true)) throw new InvalidArgumentException('Choose None, Icon or Image for each topology view.');
                 if ($mode==='image' && !$savedImage) throw new InvalidArgumentException('Upload a device image before choosing Image visibility.');
                 $modes[$view]=$mode;
