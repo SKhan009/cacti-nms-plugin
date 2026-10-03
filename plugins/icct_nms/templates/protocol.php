@@ -194,6 +194,14 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
                     <?php require __DIR__ . "/snmp.php"; ?>
                     <div class="protocol-actions"><button class="button primary">Save</button></div>
                 </form>
+                <?php if(!$presetMode): ?><form method="post" id="snmp-discovery-policy">
+                    <?php icct_nms_token(); ?><input type="hidden" name="action" value="discovery"><input type="hidden" name="discovery_policy" value="1">
+                    <h3>Network Discovery</h3><div class="protocol-grid cols-3">
+                    <?php foreach(['interval_seconds'=>'Collection Interval (Sec)','stale_seconds'=>'Stale (Seconds)','refresh_seconds'=>'Display Refresh (Seconds)'] as $key=>$label) icct_nms_input($label,$key,$discovery[$key]??(['interval_seconds'=>300,'stale_seconds'=>900,'refresh_seconds'=>30][$key]),'number','required min="'.(['interval_seconds'=>300,'stale_seconds'=>600,'refresh_seconds'=>10][$key]).'" max="'.(['interval_seconds'=>86400,'stale_seconds'=>604800,'refresh_seconds'=>300][$key]).'"'); ?>
+                    </div><?php require __DIR__.'/discovery_observations.php'; ?>
+                    <div class="protocol-actions"><button class="button primary">Save</button></div>
+                </form><?php endif; ?>
+
             </div>
         </details>
         <details class="protocol-item" id="protocol-ssh" data-saved="<?= $ssh

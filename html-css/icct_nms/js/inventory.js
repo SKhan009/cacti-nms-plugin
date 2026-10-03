@@ -1426,6 +1426,15 @@ if (protocolDefaultEditor) {
   });
   protocolDefaultEditor.querySelector('.ssh-private-key')?.setAttribute('hidden','');
 }
+// Discovery timings belong to the device and are shared by its protocol forms.
+const discoveryTimingNames = new Set(['interval_seconds','stale_seconds','refresh_seconds']);
+document.querySelector('#device-wizard')?.addEventListener('input', event => {
+  const field=event.target;
+  if (!discoveryTimingNames.has(field.name) || field.form?.elements.action?.value!=='discovery') return;
+  document.querySelectorAll('#protocol-workspace form').forEach(form => {
+    if (form.elements.action?.value==='discovery' && form!==field.form && form.elements[field.name]) form.elements[field.name].value=field.value;
+  });
+});
 const protocolDefaultData = document.querySelector('#protocol-default-values');
 if (protocolDefaultData) {
   const defaults=JSON.parse(protocolDefaultData.textContent);
@@ -1441,6 +1450,7 @@ if (protocolDefaultData) {
         if (field.type==='radio') field.checked=String(field.value)===String(value);
         else if (field.type==='checkbox') field.checked=String(value)==='1';
         else field.value=String(value);
+        if(form.elements.action?.value==='discovery' && discoveryTimingNames.has(name)) field.dispatchEvent(new Event('input',{bubbles:true}));
       });
     }
     copied.add(protocol);

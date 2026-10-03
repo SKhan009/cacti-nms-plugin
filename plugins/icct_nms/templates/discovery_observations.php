@@ -1,0 +1,5 @@
+<input type="hidden" name="discovery_methods_present" value="1">
+<fieldset class="device-discovery-observations"><legend>SNMP Network Discovery</legend>
+<?php foreach(['arp'=>'IP neighbours (IPv4 / IPv6)','fdb'=>'MAC/FDB table'] as $method=>$label): ?><label class="check-row"><input type="checkbox" name="methods[]" value="<?= $method ?>" <?= in_array($method,$savedMethods,true)?'checked':'' ?>> <?= $label ?> <span class="field-info" tabindex="0" role="img" aria-label="Information about <?= icct_nms_h($label) ?>" data-tooltip="<?= $method==='arp'?'Collect IP neighbour observations using this device’s saved SNMP credentials. These are not confirmed direct connections.':'Collect learned MAC addresses using this device’s saved SNMP credentials. A learned MAC is not a confirmed direct connection.' ?>">ⓘ</span></label><?php endforeach; ?>
+<label class="check-row"><input type="checkbox" name="collection_enabled" value="1" <?= !$discovery || !empty($discovery['collection_enabled'])?'checked':'' ?>> Enable collection</label>
+</fieldset>

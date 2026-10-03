@@ -15,13 +15,8 @@ try{
                 if($action==='save_network')icct_nms_network_save($_POST);else icct_nms_network_run($_POST['network_id']??'');
             }elseif($action==='save_link')icct_nms_connection_save($_POST);
             elseif($action==='delete_link')icct_nms_connection_delete($_POST['link_id']??'');
-            elseif(in_array($action,['save_discovery','discover_now'],true)){
-                icct_backend_require_management(3);
-                $id=icct_nms_id($_POST['host_id']??'');icct_backend_require_device_access($id);$device=icct_nms_device($id);
-                if($action==='save_discovery')icct_nms_save_discovery($id,$_POST);
-                else icct_backend_nd_test_queue($id,$device['site_id']);
-            }else throw new InvalidArgumentException('Unknown action.');
-            $_SESSION['icct_nms_notice']=$action==='run_network'?'Network discovery requested for the assigned collector.':($action==='discover_now'?'Discovery queued for the assigned collector. Refresh after the next poll cycle.':'Topology configuration saved.');
+            else throw new InvalidArgumentException('Unknown action.');
+            $_SESSION['icct_nms_notice']=$action==='run_network'?'Network discovery requested for the assigned collector.':'Topology configuration saved.';
             icct_nms_redirect('topology_configuration.php?tab='.$tab);
         }catch(Throwable $failure){$error=$failure->getMessage();}
     }

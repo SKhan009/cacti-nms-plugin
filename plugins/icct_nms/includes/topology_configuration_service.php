@@ -35,7 +35,11 @@ function icct_nms_discovery_current($snapshot,$host){
 function icct_nms_topology_discovery_rows($devices){
     $rows=[];$hosts=array_column(icct_backend_nd_hosts(),null,'id');
     foreach($devices as $device){
+        $host=$hosts[$device['id']]??null;
+        if(!$host || empty($host['enabled']) || empty($host['collection_enabled'])) continue;
+        $selectedMethods=icct_backend_nd_host_methods($host);
         foreach(db_fetch_assoc_prepared('SELECT protocol,status,succeeded_at,attempted_at,config_hash,data_json,error FROM plugin_icct_nms_discovery_snapshots WHERE host_id=? AND protocol IN (?,?,?,?)',[$device['id'],'lldp','cdp','arp','fdb']) as $snapshot){
+            if(!in_array($snapshot['protocol'],$selectedMethods,true)) continue;
             $data=json_decode($snapshot['data_json'],true)??[];
             $items=array_merge($data['neighbors']??[],$data['endpoints']??[]);
             $fresh=icct_nms_discovery_current($snapshot,$hosts[$device['id']]??null);

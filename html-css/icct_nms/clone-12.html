@@ -6,8 +6,8 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Clone Device · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
-        <link rel="stylesheet" href="css/inventory.css?v=676b6b0463d6" />
-            <script type="text/javascript" nonce="kn-mfnGzl59tXpSzXllxyVhM">if (top != self) {top.location.href = self.location.href;}</script></head>
+        <link rel="stylesheet" href="css/inventory.css?v=75427fde3e2f" />
+            <script type="text/javascript" nonce="R8DQJLsMS_hA_I6xpmL9IWYy">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -229,6 +229,15 @@
     <label class="field"><span class="field-label">SNMP Auth Protocol (V3)</span><span class="select-wrap"><select name="snmp_auth_protocol" ><option value="[None]">[None]</option><option value="MD5" selected>MD5</option><option value="SHA">SHA</option><option value="SHA224">SHA-224</option><option value="SHA256">SHA-256</option><option value="SHA384">SHA-384</option><option value="SHA512">SHA-512</option></select></span></label><label class="field"><span class="field-label">SNMP Username (V3)</span><input type="text" name="snmp_username" value="" ></label><label class="field"><span class="field-label">SNMP Password (V3)</span><input type="password" name="snmp_password" value="" autocomplete="new-password" placeholder="Leave blank to retain saved credential"></label><label class="field"><span class="field-label">Re-enter SNMP Password (V3)</span><input type="password" name="snmp_password_confirm" value="" autocomplete="new-password"></label><label class="field"><span class="field-label">SNMP Privacy Protocol (V3)</span><span class="select-wrap"><select name="snmp_priv_protocol" ><option value="[None]">[None]</option><option value="DES" selected>DES</option><option value="AES">AES</option><option value="AES128">AES-128</option><option value="AES192">AES-192</option><option value="AES192C">AES-192-C</option><option value="AES256">AES-256</option><option value="AES256C">AES-256-C</option></select></span></label><label class="field"><span class="field-label">SNMP Privacy Passphrase (V3)</span><input type="password" name="snmp_priv_passphrase" value="" autocomplete="new-password" placeholder="Leave blank to retain saved credential"></label><label class="field"><span class="field-label">Re-enter SNMP Privacy Passphrase (V3)</span><input type="password" name="snmp_priv_confirm" value="" autocomplete="new-password"></label><label class="field"><span class="field-label">SNMP Context (V3)</span><input type="text" name="snmp_context" value="" ></label></div>
 
 </div>
+                    <div class="protocol-actions"><button class="button primary">Save</button></div>
+                </form>
+                <form data-static-preview="true" method="post" id="snmp-discovery-policy">
+                    <input type="hidden" name="action" value="discovery"><input type="hidden" name="discovery_policy" value="1">
+                    <h3>Network Discovery</h3><div class="protocol-grid cols-3">
+                    <label class="field"><span class="field-label">Collection Interval (Sec)</span><input type="number" name="interval_seconds" value="300" required min="300" max="86400"></label><label class="field"><span class="field-label">Stale (Seconds)</span><input type="number" name="stale_seconds" value="900" required min="600" max="604800"></label><label class="field"><span class="field-label">Display Refresh (Seconds)</span><input type="number" name="refresh_seconds" value="30" required min="10" max="300"></label>                    </div><input type="hidden" name="discovery_methods_present" value="1">
+<fieldset class="device-discovery-observations"><legend>SNMP Network Discovery</legend>
+<label class="check-row"><input type="checkbox" name="methods[]" value="arp" > IP neighbours (IPv4 / IPv6) <span class="field-info" tabindex="0" role="img" aria-label="Information about IP neighbours (IPv4 / IPv6)" data-tooltip="Collect IP neighbour observations using this device’s saved SNMP credentials. These are not confirmed direct connections.">ⓘ</span></label><label class="check-row"><input type="checkbox" name="methods[]" value="fdb" > MAC/FDB table <span class="field-info" tabindex="0" role="img" aria-label="Information about MAC/FDB table" data-tooltip="Collect learned MAC addresses using this device’s saved SNMP credentials. A learned MAC is not a confirmed direct connection.">ⓘ</span></label><label class="check-row"><input type="checkbox" name="collection_enabled" value="1" checked> Enable collection</label>
+</fieldset>
                     <div class="protocol-actions"><button class="button primary">Save</button></div>
                 </form>
             </div>
@@ -625,7 +634,7 @@
             <button class="button primary" type="button" id="message-confirm">OK</button>
         </div>
     </dialog>
-    <script src="js/inventory.js?v=8c351bc67515" defer></script>
+    <script src="js/inventory.js?v=0b94d5b140bf" defer></script>
     <dialog id="unsaved-dialog" aria-labelledby="unsaved-title">
         <div class="message-heading"><h2 id="unsaved-title">Unsaved changes</h2><button type="button" data-draft-choice="cancel" aria-label="Close unsaved changes">×</button></div>
         <p>Save your changes before leaving this device?</p>

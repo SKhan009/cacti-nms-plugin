@@ -19,15 +19,21 @@ function icct_nms_discovery_assignment($id)
  */
 function icct_nms_save_discovery($id, $input)
 {
-    // Visible CDP/LLDP timing controls leave capability detection in the backend.
-    if (isset($input["discovery_protocol"])) {
-        if (!in_array($input["discovery_protocol"], ["cdp", "lldp"], true)) {
-            throw new InvalidArgumentException(
-                "Unsupported discovery protocol.",
-            );
+    // Each protocol form edits its own selection; shared observation controls preserve the other protocols.
+    if (isset($input['discovery_protocol']) || !empty($input['discovery_policy'])) {
+        $previous=icct_nms_discovery_assignment($id);
+        $methods=$previous ? icct_backend_nd_host_methods($previous,false) : [];
+        $hadMethods=(bool)$methods;
+        if(isset($input['discovery_protocol'])) {
+            if(!in_array($input['discovery_protocol'],['cdp','lldp'],true)) throw new InvalidArgumentException('Unsupported discovery protocol.');
+            $methods[]=$input['discovery_protocol'];
         }
-        $input["methods"] = array_keys(icct_backend_nd_method_labels());
-        $input["collection_enabled"] = 1;
+        if(!empty($input['discovery_methods_present'])) {
+            $observations=$input['methods'] ?? [];
+            if(!is_array($observations) || array_diff($observations,['arp','fdb'])) throw new InvalidArgumentException('Choose supported SNMP observation methods.');
+            $methods=array_merge(array_diff($methods,['arp','fdb']),$observations);
+        } else $input['collection_enabled']=$hadMethods ? (int)$previous['collection_enabled'] : 1;
+        $input['methods']=array_values(array_unique($methods));
     }
     $methods = $input["methods"] ?? [];
     if (!$methods) {

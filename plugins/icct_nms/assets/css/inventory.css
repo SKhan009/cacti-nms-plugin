@@ -2664,3 +2664,10 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 .rack-device .device-shape-symbol.shape-wide { width:22px; height:10px; }
 .rack-device .device-shape-symbol.shape-tall { width:10px; height:18px; }
 .icct-map-device-name .device-shape-symbol { margin-right:8px; }
+
+.topology-discovery-filters.connection-filters { grid-template-columns:minmax(0,2fr) minmax(240px,1fr); align-items:end; margin:20px 0 24px; gap:24px; }
+.connection-filters .field { margin:0; }
+.connection-filters .field label { display:block; min-height:20px; margin-bottom:8px; }
+.connection-filters input,.connection-filters select { width:100%; min-height:48px; box-sizing:border-box; }
+.device-discovery-observations { display:flex; flex-wrap:wrap; gap:24px; margin:20px 0; padding:16px; border:1px solid #ddd; }
+@media(max-width:700px) { .topology-discovery-filters.connection-filters { grid-template-columns:1fr; } }

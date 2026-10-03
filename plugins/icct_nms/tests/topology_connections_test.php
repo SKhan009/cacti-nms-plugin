@@ -24,3 +24,12 @@ if(!icct_nms_discovery_current($snapshot,$host))throw new LogicException('Curren
 foreach([['status'=>'queued'],['protocol'=>'cdp'],['config_hash'=>'old-config'],['succeeded_at'=>date('Y-m-d H:i:s',time()-1000)]] as $bad)if(icct_nms_discovery_current(array_replace($snapshot,$bad),$host))throw new LogicException('Invalid discovery treated as current');
 if(icct_nms_discovery_current($snapshot,array_replace($host,['collection_enabled'=>0])))throw new LogicException('Disabled collection remains current');
 echo "Discovery freshness, enabled methods, configuration signature and disabled collection checks passed.\n";
+
+function icct_backend_nd_hosts(){return [$GLOBALS['host']+['id'=>1]];}
+function db_fetch_assoc_prepared($sql,$args){return [array_replace($GLOBALS['snapshot'],['data_json'=>json_encode(['neighbors'=>[['remote_name'=>'Selected LLDP peer']]])]),array_replace($GLOBALS['snapshot'],['protocol'=>'cdp','data_json'=>json_encode(['neighbors'=>[['remote_name'=>'Unselected CDP peer']]])])];}
+$devices=[['id'=>1,'description'=>'Reporter']];
+$rows=icct_nms_topology_discovery_rows($devices);
+if(count($rows)!==1 || $rows[0]['protocol']!=='LLDP')throw new LogicException('Unselected method leaked into results');
+$host['collection_enabled']=0;
+if(icct_nms_topology_discovery_rows($devices))throw new LogicException('Disabled collection leaked into results');
+echo "Connection results follow selected methods and collection state.\n";

@@ -1,7 +1,4 @@
 (()=>{'use strict';
-const device=document.querySelector('#discoveryDevice'),settings=document.querySelector('#topologyDiscoverySettings');
-if(device&&settings){const data=JSON.parse(settings.textContent);device.addEventListener('change',()=>{const saved=data[device.value];document.querySelector('#selectedDiscoverNow').disabled=!saved?.collection_enabled;if(!saved)return;['interval_seconds','stale_seconds','refresh_seconds'].forEach(key=>document.getElementById(key).value=saved[key]);document.querySelectorAll('[name="methods[]"]').forEach(input=>input.checked=saved.methods.includes(input.value));document.querySelector('[name="collection_enabled"]').checked=saved.collection_enabled;});}
-
 document.querySelectorAll('.connection-device-select').forEach(select=>{
  const picker=document.createElement('div');picker.className='connection-picker';
  const toggle=document.createElement('button');toggle.type='button';toggle.className='connection-picker-toggle';toggle.setAttribute('aria-expanded','false');const label=select.id==='source'?'Source Device':(select.id==='target'?'Target Device':'Discovery Device');toggle.setAttribute('aria-label',label);
