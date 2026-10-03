@@ -2410,3 +2410,5 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 #protocol-workspace,
 .protocol-item,
 .protocol-content { background: #fff; }
+
+.graph-origin-footnote { margin: 12px 0; color: var(--muted); font-size: 12px; line-height: 1.5; }

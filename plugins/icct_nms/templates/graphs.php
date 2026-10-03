@@ -22,13 +22,15 @@
     </div>
     </div>
     <div class="graph-accordion-list">
-        <?php foreach ($graphAssociations as $index => $template): ?>
+        <?php $hasEditedSystemTemplate = false; foreach ($graphAssociations as $index => $template):
+            $origin = icct_nms_graph_origin((int)$template["id"]);
+            $hasEditedSystemTemplate = $hasEditedSystemTemplate || $origin["edited"]; ?>
         <details class="graph-association">
             <summary>
                 <span class="graph-association-name"><?= icct_nms_h($template["name"]) ?></span>
                 <span class="graph-badges">
                     <?php if (!empty($template["device_template_name"])): ?><span class="graph-badge"><?= icct_nms_h($template["device_template_name"]) ?></span><?php endif; ?>
-                    <span class="graph-badge">System Defined</span>
+                    <span class="graph-badge"><?= icct_nms_h($origin["label"]) ?><?php if ($origin["edited"]): ?> · Edited<sup aria-label="See edited template footnote">*</sup><?php endif; ?></span>
                 </span>
                 <form method="post" data-remove-graph-template data-template-name="<?= icct_nms_h($template["name"]) ?>">
                     <?php icct_nms_token(); ?><input type="hidden" name="action" value="remove_graph_template"/><input type="hidden" name="graph_template_id" value="<?= (int)$template["id"] ?>"/>
@@ -46,4 +48,5 @@
         <?php endforeach; ?>
         <?php if (!$graphAssociations): ?><p class="empty-state">No associated graph templates.</p><?php endif; ?>
     </div>
+    <?php if ($hasEditedSystemTemplate): ?><p class="graph-origin-footnote">* System Defined · Edited: This Cacti template differs from the original supplied with Cacti.</p><?php endif; ?>
 </section>

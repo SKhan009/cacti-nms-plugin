@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . "/graph_origin.php";
 /** Read graph ownership and visibility through Cacti's native authorization service. */
 function icct_nms_device_graphs($id)
 {
