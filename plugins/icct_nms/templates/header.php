@@ -27,6 +27,7 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
                 <nav class="header-menu-panel" aria-label="Main navigation">
                     <a href="<?= icct_nms_h($config['url_path']) ?>index.php">Dashboard</a>
                     <a href="inventory.php">Inventory</a>
+                    <a href="presets.php#segment">Presets</a>
                 </nav>
             </div>
             <div class="brand">

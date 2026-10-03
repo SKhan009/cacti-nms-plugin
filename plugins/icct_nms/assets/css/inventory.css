@@ -2412,3 +2412,29 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 .protocol-content { background: #fff; }
 
 .graph-origin-footnote { margin: 12px 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+/* Presets: compact segment cards matching the shared screen. */
+.presets-heading { display:flex; justify-content:space-between; align-items:center; padding:16px; border-bottom:1px solid var(--line); }
+.presets-heading h1 { margin:8px 0 0; font-size:20px; font-weight:400; }
+.presets-breadcrumb { font-size:12px; color:#525252; }
+.presets-breadcrumb a { color:var(--blue); text-decoration:none; }
+.presets-heading .button { min-width:64px; padding:8px 16px; }
+.presets-content { padding:12px; }
+.presets-tabs { display:flex; flex-wrap:wrap; margin-bottom:12px; width:fit-content; border-bottom:1px solid var(--line); }
+.presets-tabs a,.presets-tabs button { padding:12px 16px; font-size:14px; font-family:inherit; background:none; border:0; color:var(--text); text-decoration:none; }
+.presets-tabs [aria-current] { border-bottom:2px solid var(--blue); }
+.presets-tabs button:disabled { opacity:1; cursor:default; }
+.segment-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:16px 24px; }
+.segment-card { background:#f4f4f4; min-height:88px; padding:16px 12px; display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:14px; }
+.segment-card > span { overflow-wrap:anywhere; }
+.segment-actions { display:flex; align-items:center; flex-shrink:0; gap:4px; }
+.segment-actions form { margin:0; }
+.segment-actions .icon-button { width:24px; height:28px; padding:2px; }
+.segment-actions svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; }
+.segment-editor { padding:16px; background:#f4f4f4; margin-bottom:16px; display:flex; align-items:end; gap:16px; }
+.segment-editor[hidden] { display:none; }
+.segment-editor .field { flex:1; max-width:520px; }
+.segment-editor-actions { display:flex; gap:8px; }
+@media(max-width:1100px) { .segment-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media(max-width:700px) { .segment-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } .segment-editor { flex-wrap:wrap; } }
+@media(max-width:420px) { .segment-grid { grid-template-columns:1fr; } }

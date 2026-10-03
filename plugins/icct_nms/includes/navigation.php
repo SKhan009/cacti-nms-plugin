@@ -16,5 +16,6 @@ function icct_nms_navigation()
     // The responsive Inventory is a complete document and opens in its own tab.
     $url = $config['url_path'] . 'plugins/icct_nms/inventory.php';
     $menu['ICCT NMS']['EXTERNAL::' . $url] = 'Inventory';
+    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/presets.php'] = 'Presets';
     $menu_glyphs['ICCT NMS'] = 'fas fa-network-wired';
 }

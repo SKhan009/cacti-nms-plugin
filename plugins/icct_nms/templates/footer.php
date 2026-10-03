@@ -29,5 +29,8 @@
     </dialog>
     <script src="assets/js/wizard.js?v=<?= substr(hash_file('sha256', __DIR__.'/../assets/js/wizard.js'),0,12) ?>" defer></script>
 <?php endif; ?>
+<?php if (!empty($presetsPage)): ?>
+    <script src="assets/js/presets.js?v=<?= substr(hash_file('sha256',__DIR__.'/../assets/js/presets.js'),0,12) ?>" defer></script>
+<?php endif; ?>
 </body>
 </html>
