@@ -19,5 +19,6 @@ function icct_nms_navigation()
     $menu['ICCT NMS']['EXTERNAL::' . $url] = 'Inventory';
     $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/presets.php'] = 'Presets';
     $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/node_configuration.php'] = 'Node Configuration';
+    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/topology_configuration.php'] = 'Topology Configuration';
     $menu_glyphs['ICCT NMS'] = 'fas fa-network-wired';
 }

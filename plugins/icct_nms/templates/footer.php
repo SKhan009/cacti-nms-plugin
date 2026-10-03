@@ -43,5 +43,8 @@
     <script src="assets/js/topology-view.js?v=<?= substr(hash_file('sha256',__DIR__.'/../assets/js/topology-view.js'),0,12) ?>" defer></script>
     <script src="assets/js/map.js?v=<?= substr(hash_file('sha256',__DIR__.'/../assets/js/map.js'),0,12) ?>" defer></script>
 <?php endif; ?>
+<?php if (!empty($topologyConfigurationPage)): ?>
+<script src="assets/js/topology-configuration.js?v=<?= substr(hash_file('sha256',__DIR__.'/../assets/js/topology-configuration.js'),0,12) ?>" defer></script>
+<?php endif; ?>
 </body>
 </html>

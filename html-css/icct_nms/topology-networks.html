@@ -1,0 +1,68 @@
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Topology Configuration · ICCT NMS</title>
+        <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
+        <link rel="stylesheet" href="css/inventory.css?v=b0c706e10c98" />
+            <script type="text/javascript" nonce="4PnUWu18ioBz6jpwLymwHtPc">if (top != self) {top.location.href = self.location.href;}</script></head>
+    <body class="icct-inventory">
+        <header class="topbar">
+            <div class="header-menu">
+                <button class="icon-button" type="button" aria-label="Navigation menu" aria-expanded="false">☰</button>
+                <nav class="header-menu-panel" aria-label="Main navigation">
+                    <a href="dashboard.html">Dashboard</a>
+                    <a href="index.html">Inventory</a>
+                    <a href="rack-view.html">Rack View</a>
+                    <a href="node-configuration.html">Node Configuration</a>
+                    <a href="topology-configuration.html">Topology Configuration</a>
+                    <a href="presets.html#segment">Presets</a>
+                </nav>
+            </div>
+            <div class="brand">
+                <img class="brand-logo brand-logo-drdo" src="images/drdo-logo.svg" alt="DRDO" width="34" height="34">
+                <img class="brand-logo brand-logo-bel" src="images/bharat-electronics-logo.svg" alt="Bharat Electronics" width="128" height="34">
+            </div>
+            <div class="station">
+                <strong>ICCT NMS</strong>
+                <span>Main Poller</span>
+            </div>
+            <div class="system-metrics"><span>Poller: 300 sec</span></div>
+            <a class="cacti-backend-button" href="http://127.0.0.1:8080/cacti/index.php">Cacti Backend</a>
+            <a class="profile" href="http://127.0.0.1:8080/cacti/auth_profile.php">
+                <span class="user-avatar" aria-hidden="true">◉</span>
+                <span>
+                    <strong>admin</strong>
+                    <small>Administrator</small>
+                </span>
+            </a>
+        </header>
+        <main class="workspace">
+            <section class="device-panel">
+                                <section class="topology-configuration">
+<div class="titlebar"><h1>Topology Configuration</h1><a class="button" href="dashboard.html">View Topology</a></div>
+<nav class="presets-tabs" aria-label="Topology configuration sections">
+<a href="topology-configuration.html" >Device Connections</a><a href="topology-networks.html" aria-current="page">Networks</a><a href="topology-discovered.html" >Discovered Devices</a></nav>
+<div class="titlebar"><h2>Discovery networks</h2><a class="button primary" href="http://127.0.0.1:8080/cacti/automation_networks.php?action=edit">Add Network</a><a class="button" href="http://127.0.0.1:8080/cacti/automation_networks.php">Manage / Run Discovery</a></div>
+<p>Network configuration uses Cacti’s native collector, subnet, schedule, SNMP options, reachability and automatic device-add settings.</p>
+<table class="site-table"><thead><tr><th>Network</th><th>Subnet Range</th><th>Enabled</th><th>Addresses / Up / SNMP</th><th>Last Started</th><th>Result</th><th>Actions</th></tr></thead><tbody><tr><td>Test Network</td><td>192.168.1.0/24</td><td>Enabled</td><td>254 / 14 / 0</td><td>2026-10-02 19:27:47</td><td></td><td><a class="button" href="http://127.0.0.1:8080/cacti/automation_networks.php?action=edit&amp;id=1">Configure</a><a class="button" href="?tab=discovered&amp;network=1">Discovered Devices</a></td></tr></tbody></table></section>
+        </section>
+    </main>
+    <dialog id="message-dialog" aria-labelledby="message-title" aria-describedby="message-text">
+        <div class="message-heading">
+            <h2 id="message-title"></h2>
+            <button type="button" id="message-close" aria-label="Close message">×</button>
+        </div>
+        <p id="message-text"></p>
+        <div class="message-actions">
+            <button class="button" type="button" id="message-cancel">Cancel</button>
+            <button class="button primary" type="button" id="message-confirm">OK</button>
+        </div>
+    </dialog>
+    <script src="js/inventory.js?v=e72f56a25115" defer></script>
+<script src="js/topology-configuration.js?v=777128b1c620" defer></script>
+<script src="js/preview.js" defer></script>
+</body>
+</html>
