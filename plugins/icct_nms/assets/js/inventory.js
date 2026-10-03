@@ -1429,18 +1429,49 @@ if (protocolDefaultData) {
 // Close the protocol picker after opening the shared diagnostic dialog.
 document.addEventListener("click", event => { const link=event.target.closest(".device-diagnostic-menu a[data-tool]"); if(link)link.closest("details").open=false; });
 
-// Filter only ACL-authorized graphs already rendered for the selected device.
+// Filter only ACL-authorized graphs rendered for the selected device.
 (() => {
-  const grid=document.querySelector('#device-view-graphs');
-  if(!grid)return;
-  const search=document.querySelector('#device-graph-search'),columns=document.querySelector('#device-graph-columns');
-  const graphs=[...grid.querySelectorAll('figure')];
-  const update=()=>{
-    const query=search.value.trim().toLowerCase();let visible=0;
-    graphs.forEach(graph=>{graph.hidden=!graph.querySelector('figcaption').textContent.toLowerCase().includes(query);if(!graph.hidden)visible++;});
-    grid.dataset.columns=columns.value==='3'?'3':'2';
-    document.querySelector('#device-graph-count').textContent=`${visible} of ${graphs.length} graphs`;
-    document.querySelector('#device-graph-empty').hidden=!graphs.length||visible>0;
+  const grid=document.querySelector('#device-view-graphs'); if(!grid)return;
+  const field=name=>document.querySelector('#device-graph-'+name);
+  const names=['search','columns','limit','thumbnails','preset','from','to'];
+  const graphs=[...grid.querySelectorAll('figure')];let page=1,range=null;
+  const status=field('filter-status');
+  const key='icct.graph.filters.'+document.querySelector('.device-graph-controls').dataset.deviceId;
+  const localDate=stamp=>{const d=new Date(stamp);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);};
+  const setPreset=()=>{if(field('preset').value==='custom')return;const end=Date.now();field('to').value=localDate(end);field('from').value=localDate(end-Number(field('preset').value)*1000);};
+  const render=()=>{
+    const query=field('search').value.trim().toLowerCase();
+    const matches=graphs.filter(g=>g.querySelector('figcaption').textContent.toLowerCase().includes(query));
+    const size=Number(field('limit').value)||Math.max(1,matches.length),pages=Math.max(1,Math.ceil(matches.length/size));page=Math.max(1,Math.min(page,pages));
+    graphs.forEach(g=>g.hidden=true);matches.slice((page-1)*size,page*size).forEach(g=>g.hidden=false);
+    grid.style.setProperty('--graph-columns',Math.max(1,Math.min(6,Number(field('columns').value))));
+    grid.dataset.columns=field('columns').value;grid.classList.toggle('graph-thumbnails',field('thumbnails').checked);
+    field('count').textContent=matches.length?`${(page-1)*size+1}–${Math.min(page*size,matches.length)} of ${matches.length} matching graphs (${graphs.length} total)`:`0 of ${graphs.length} graphs`;
+    field('empty').hidden=!graphs.length||matches.length>0;field('page').textContent=`Page ${page} of ${pages}`;
+    field('prev').disabled=page===1;field('next').disabled=page===pages;
   };
-  search.addEventListener('input',update);columns.addEventListener('change',update);update();
+  const applyRange=()=>{
+    const start=Math.floor(new Date(field('from').value).getTime()/1000),end=Math.floor(new Date(field('to').value).getTime()/1000);
+    if(!Number.isFinite(start)||!Number.isFinite(end)||start>=end||start<0){status.textContent='Choose a valid start and end time; From must be earlier than To.';return false;}
+    range={start,end};
+    graphs.forEach(g=>{
+      const image=g.querySelector('.device-graph-image img');const url=new URL(image.src,location.href);
+      url.searchParams.set('graph_start',start);url.searchParams.set('graph_end',end);url.searchParams.set('_refresh',Date.now());
+      if(field('thumbnails').checked){url.searchParams.set('graph_width','250');url.searchParams.set('graph_height','80');url.searchParams.set('graph_nolegend','true');}
+      else ['graph_width','graph_height','graph_nolegend'].forEach(k=>url.searchParams.delete(k));image.src=url.href;
+      g.querySelectorAll('a').forEach(a=>{const u=new URL(a.href,location.href);if(/\/(graph.php|graph_xport.php)$/.test(u.pathname)){u.searchParams.set('graph_start',start);u.searchParams.set('graph_end',end);a.href=u.href;}});
+    });status.textContent='';return true;
+  };
+  setPreset();
+  try{const saved=JSON.parse(localStorage.getItem(key));if(saved){['search','columns','limit','preset'].forEach(n=>{if(saved[n]!==undefined && (n==='search'||[...field(n).options].some(o=>o.value===saved[n])))field(n).value=saved[n];});field('thumbnails').checked=saved.thumbnails===true;if(saved.preset==='custom'){field('from').value=saved.from||'';field('to').value=saved.to||'';}else setPreset();}}catch{}
+  ['search','columns','limit'].forEach(n=>field(n).addEventListener(n==='search'?'input':'change',()=>{page=1;render();}));
+  field('thumbnails').addEventListener('change',()=>{render();applyRange();});
+  field('preset').addEventListener('change',()=>{setPreset();applyRange();});
+  ['from','to'].forEach(n=>field(n).addEventListener('change',()=>{field('preset').value='custom';}));
+  field('refresh').addEventListener('click',()=>{setPreset();applyRange();render();});
+  ['earlier','later'].forEach(n=>field(n).addEventListener('click',()=>{if(!applyRange())return;const shift=(range.end-range.start)*(n==='earlier'?-1:1);field('preset').value='custom';field('from').value=localDate((range.start+shift)*1000);field('to').value=localDate((range.end+shift)*1000);applyRange();}));
+  field('prev').addEventListener('click',()=>{page--;render();});field('next').addEventListener('click',()=>{page++;render();});
+  field('save').addEventListener('click',()=>{if(!applyRange())return;try{localStorage.setItem(key,JSON.stringify(Object.fromEntries(names.map(n=>[n,n==='thumbnails'?field(n).checked:field(n).value]))));status.textContent='Filters saved in this browser for this device.';}catch{status.textContent='This browser cannot save filters.';}});
+  field('clear').addEventListener('click',()=>{field('search').value='';field('columns').value='2';field('limit').value='10';field('thumbnails').checked=false;field('preset').value='86400';try{localStorage.removeItem(key);}catch{}page=1;setPreset();applyRange();render();});
+  render();applyRange();
 })();
