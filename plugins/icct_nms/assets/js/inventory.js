@@ -261,17 +261,18 @@ if (rackData) {
     site = document.querySelector('[name="site_id"]'),
     rack = document.querySelector('[name="rack_id"]'),
     position = document.querySelector('[name="rack_position"]');
-  const count=document.querySelector('[name="rack_unit_count"]');
   function updateRacks() {
     const selected=rack.value;
     rack.replaceChildren(new Option('Unassigned','0'));
-    racks.filter(record=>String(record.site_id)===site.value).forEach(record=>rack.add(new Option(record.name+' — '+record.node_name,String(record.id))));
+    const saved=racks.filter(record=>String(record.site_id)===site.value);
+    const profiles=new Set(saved.map(record=>record.profile_id));
+    const choices=saved.concat(site.value && site.value!=='0' ? racks.filter(record=>Number(record.site_id)===0 && !profiles.has(record.profile_id)) : []);
+    choices.forEach(record=>rack.add(new Option(record.name+(record.node_name?' — '+record.node_name:''),String(record.id))));
     rack.value=[...rack.options].some(option=>option.value===selected)?selected:'0';
     updateUnits();
   }
   function updateUnits() {
     const record=racks.find(item=>String(item.id)===rack.value),selected=position.value;
-    if(count)count.value=record?String(record.unit_count):'';
     position.replaceChildren(new Option('Unassigned',''));
     if(record)for(let unit=1;unit<=Number(record.unit_count);unit++)position.add(new Option(unit+'U',unit+':1'));
     // Preserve saved multi-unit placements when they remain inside the selected rack.

@@ -123,15 +123,11 @@
                 $values["site_id"],
             );
             $racks = [0 => "Unassigned"];
-            $rackData = db_fetch_assoc(
-                "SELECT r.*,n.site_id,n.name AS node_name FROM plugin_icct_nms_racks r JOIN plugin_icct_nms_rack_nodes n ON n.id=r.node_id ORDER BY r.name",
-            );
+            $rackData = icct_nms_device_rack_choices();
             foreach ($rackData as $r) {
-                $racks[$r["id"]] = $r["name"]." — ".$r["node_name"];
+                $racks[$r["id"]] = $r["name"].($r["node_name"] ? " — ".$r["node_name"] : "");
             }
             icct_nms_select("Rack Name", "rack_id", $racks, $values["rack_id"]);
-            $selectedRack=null;foreach($rackData as $record)if((int)$record['id']===(int)$values['rack_id'])$selectedRack=$record;
-            icct_nms_input('Units in Selected Rack','rack_unit_count',$selectedRack['unit_count'] ?? '', 'text','readonly placeholder="Select rack"');
             $positions = ["" => "Unassigned"];
             for ($u = 1; $u <= 100; $u++) {
                 $positions[$u . ":1"] = $u . "U";

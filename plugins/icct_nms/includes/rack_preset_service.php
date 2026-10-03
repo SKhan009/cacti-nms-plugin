@@ -49,3 +49,44 @@ function icct_nms_apply_node_rack_preset($id,$site,$name,$input,$kind='node') {
     foreach($racks as $rack)icct_backend_topology_config_apply('save_rack',$site,['rack_id'=>$rack['id'],'name'=>$profile['name'].($profile['rack_count']>1?' '.$rack['rack_number']:''),'unit_count'=>$profile['unit_count']]);
     icct_backend_category_execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',['node_rack_profile_'.$id,$key]);
 }
+
+/** Catalogue choices include reusable presets not yet instantiated at a device site. */
+function icct_nms_device_rack_choices() {
+    $rows=db_fetch_assoc("SELECT r.*,n.site_id,n.name AS node_name,m.meta_value AS profile_id FROM plugin_icct_nms_racks r JOIN plugin_icct_nms_rack_nodes n ON n.id=r.node_id LEFT JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT('node_rack_profile_',n.id) ORDER BY r.name,n.name,r.id");
+    foreach (icct_nms_rack_presets() as $key=>$profile) for ($number=1;$number<=(int)$profile['rack_count'];$number++) {
+        $rows[]=['id'=>'preset:'.$key.':'.$number,'name'=>$profile['name'].((int)$profile['rack_count']>1?' '.$number:''),'unit_count'=>(int)$profile['unit_count'],'site_id'=>0,'node_name'=>'','profile_id'=>$key];
+    }
+    return $rows;
+}
+/** Instantiate a selected reusable rack at its device site under the shared rack lock. */
+function icct_nms_resolve_preset_rack($selection,$site,$position) {
+    icct_backend_require_management(3);
+    if (!is_string($selection) || !preg_match('/^preset:([a-f0-9]{16}):([1-9][0-9]*)$/D',$selection,$match)) throw new InvalidArgumentException('Select a saved rack.');
+    $key=$match[1]; $number=(int)$match[2];
+    if (!$site || !db_fetch_cell_prepared('SELECT id FROM sites WHERE id=?',[$site])) throw new InvalidArgumentException('Select a device site before choosing a rack.');
+    $lock='icct_backend_racks_'.substr(hash('sha256',(string)db_fetch_cell('SELECT DATABASE()')),0,32);
+    if ((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',[$lock])!==1) throw new RuntimeException('Rack configuration is busy. Retry shortly.');
+    icct_backend_category_execute('START TRANSACTION');
+    try {
+        $profile=icct_nms_rack_presets()[$key] ?? null;
+        if (!$profile || $number>(int)$profile['rack_count']) throw new InvalidArgumentException('This rack preset changed. Reload the page.');
+        $parts=explode(':',(string)$position);
+        if (count($parts)!==2) throw new InvalidArgumentException('Select rack placement.');
+        $start=icct_backend_topology_integer($parts[0],1,100,'Rack unit');
+        $height=icct_backend_topology_integer($parts[1],1,100,'Rack height');
+        if ($start+$height-1>(int)$profile['unit_count']) throw new InvalidArgumentException('Placement exceeds rack capacity.');
+        $node=db_fetch_row_prepared("SELECT n.* FROM plugin_icct_nms_rack_nodes n JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT('node_rack_profile_',n.id) WHERE n.site_id=? AND m.meta_value=? ORDER BY n.id LIMIT 1",[$site,$key]);
+        if (!$node) {
+            $name=mb_substr($profile['name'],0,120).' racks';
+            if (db_fetch_cell_prepared('SELECT id FROM plugin_icct_nms_rack_nodes WHERE site_id=? AND name=?',[$site,$name])) $name.=' '.substr($key,0,8);
+            $id=icct_backend_topology_config_apply('save_node',$site,['node_id'=>0,'name'=>$name,'node_kind'=>'node','rack_count'=>$profile['rack_count'],'unit_count'=>$profile['unit_count']]);
+            icct_nms_apply_node_rack_preset($id,$site,$name,['rack_profile_id'=>$key]);
+            $node=['id'=>$id];
+        }
+        $rack=(int)db_fetch_cell_prepared('SELECT id FROM plugin_icct_nms_racks WHERE node_id=? AND rack_number=?',[(int)$node['id'],$number]);
+        if (!$rack) throw new RuntimeException('The preset rack is unavailable. Reload the page.');
+        icct_backend_category_execute('COMMIT');
+        return $rack;
+    } catch (Throwable $failure) {icct_backend_category_execute('ROLLBACK');throw $failure;}
+    finally {db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]);}
+}

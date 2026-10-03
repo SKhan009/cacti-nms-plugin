@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__.'/device_type_service.php';
+require_once __DIR__.'/rack_preset_service.php';
 require_once __DIR__.'/configuration_history.php';
 
 /**
@@ -71,7 +72,10 @@ function icct_nms_save_device($id, $old, $input)
     ) {
         throw new InvalidArgumentException('Cross Launch URL must use HTTP or HTTPS.');
     }
-    $rack = icct_backend_topology_integer($input['rack_id'] ?? '', 0, 2147483647, 'Rack');
+    $rackSelection=$input['rack_id'];
+    $rack = is_string($rackSelection) && str_starts_with($rackSelection,'preset:')
+        ? icct_nms_resolve_preset_rack($rackSelection,(int)$values['site_id'],$input['rack_position'])
+        : icct_backend_topology_integer($rackSelection,0,2147483647,'Rack');
     $placement = null;
     if ($rack) {
         $r = db_fetch_row_prepared(
