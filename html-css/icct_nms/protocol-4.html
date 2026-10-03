@@ -6,8 +6,8 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Edit Device · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
-        <link rel="stylesheet" href="css/inventory.css?v=1ecefa85c3e7" />
-    <script type="text/javascript" nonce="RiM8TIKWideUiN8lk1UJW26g">if (top != self) {top.location.href = self.location.href;}</script></head>
+        <link rel="stylesheet" href="css/inventory.css?v=a3e71314db29" />
+    <script type="text/javascript" nonce="PmlBQlouHpoSC0XNlKFjpfmM">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -1989,9 +1989,9 @@
 <p>Physical port count comes from Device Type presets. Actual interface names and link status come from the device. In use means link up; Available means enabled with link down, which does not prove the port is unplugged.</p>
 <p id="port-summary" role="status"></p><p id="port-observation"></p>
 <p>Interfaces without reported physical-connector information are listed separately. Preset slots are not mapped to an interface until the device identifies its physical ports.</p>
+<div class="port-search field"><label for="ports-search">Search ports</label><input type="search" id="ports-search" placeholder="Search by port, status or description" autocomplete="off" aria-controls="port-rows"></div>
 <div class="site-table-wrap"><table class="site-table"><thead><tr><th>Port / Interface</th><th>ifIndex</th><th>Type</th><th>Status</th><th>Description</th></tr></thead><tbody id="port-rows"></tbody></table></div>
-<div class="port-pagination"><button type="button" class="button" id="ports-previous">Previous ports</button><span id="ports-page"></span><button type="button" class="button" id="ports-next">Next ports</button></div>
-<script type="application/json" id="port-observations">{"ports":[{"index":9001,"name":"NMS-Lab-Uplink","description":"NMS-Lab-Uplink","alias":"","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"}],"fresh":true,"collected":1790961418,"source":"SNMP IF-MIB \/ IF-X-MIB","message":"Port status from the latest collector observation."}</script>
+<script type="application/json" id="port-observations">{"ports":[{"index":9001,"name":"NMS-Lab-Uplink","description":"NMS-Lab-Uplink","alias":"","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"}],"fresh":true,"collected":1790963702,"source":"SNMP IF-MIB \/ IF-X-MIB","message":"Port status from the latest collector observation."}</script>
 </section>
 </div><footer class="form-footer wizard-footer"><button type="button" class="button" id="wizard-previous">Previous ←</button><button type="button" class="button" id="wizard-next">Next →</button></footer></div>        </section>
     </main>
@@ -2012,7 +2012,7 @@
         <p>Save your changes before leaving this device?</p>
         <div class="message-actions"><button type="button" class="button" data-draft-choice="cancel">Keep editing</button><button type="button" class="button" data-draft-choice="discard">Discard</button><button type="button" class="button primary" data-draft-choice="save">Save</button></div>
     </dialog>
-    <script src="js/ports.js?v=101e4dd98535" defer></script>
+    <script src="js/ports.js?v=3ac7fe872dc5" defer></script>
     <script src="js/wizard.js?v=143b59eebfe5" defer></script>
 <script src="js/preview.js" defer></script>
 </body>

@@ -2571,4 +2571,5 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 .device-ports { padding:24px 16px; background:#fff; }
 .device-ports p { color:#666; line-height:1.5; }
 #port-summary { color:#222; font-weight:600; }
-.port-pagination { display:flex; justify-content:flex-end; align-items:center; gap:16px; margin-top:16px; }
+.port-search { max-width:420px; margin:20px 0; }
+.port-search input { background:#f4f4f4; }
