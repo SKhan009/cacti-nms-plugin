@@ -11,23 +11,19 @@ Object.entries(data.layout).forEach(([id,p])=>{if(positions[id]&&Number(id)!==Nu
 let saved=structuredClone(positions);
 const severityColors={Critical:'#ff4148',Major:'#ff7226',Minor:'#ff9b17',Warning:'#43aa91',Information:'#277f9b'};
 function el(tag,cls,text){const e=document.createElement(tag);e.className=cls;if(text!==undefined)e.textContent=text;return e;}
-function showDevice(d){
+function showDevice(d, refreshed=false){
  const detail=document.querySelector('#topologyDeviceDialog');document.querySelector('#topologyDeviceTitle').textContent=d.name;document.querySelector('#topologyDeviceAddress').textContent=d.address;
  const state=document.querySelector('#topologyDeviceStatus');state.className='device-status '+window.icctStatusClass(d.status);state.textContent=d.status==='Up'?'Online':d.status==='Down'?'Offline':d.status;
  const image=document.querySelector('#topologyDeviceImage');image.hidden=!d.network_asset;if(d.network_asset)image.src=d.network_asset;else image.removeAttribute('src');image.alt=d.name;
  const summary=document.querySelector('#topologyDeviceSummary');summary.replaceChildren();Object.entries(d.summary||{}).forEach(([label,value])=>{const row=el('div','');row.append(el('dt','',label),el('dd','',value===null||value===''?'—':String(value)));summary.append(row);});
- const capacity=document.querySelector('#topologyDeviceCapacity');capacity.replaceChildren();['Switching Capacity (Tbps)','Forwarding Rate (Bpps)','Hardware Redundancy (W)','Table Scale (TCAM / FIB)'].forEach(label=>{const row=el('div','');row.append(el('dt','',label),el('dd','','—'));capacity.append(row);});
+ const capacity=document.querySelector('#topologyDeviceCapacity');capacity.replaceChildren();['Switching Capacity (Tbps)','Forwarding Rate (Bpps)','Hardware Redundancy (W)','Table Scale (TCAM / FIB)'].forEach(label=>{const row=el('div','');row.append(el('dt','',label),el('dd','',d.capacity?.[label]===null||d.capacity?.[label]===undefined?'—':Number(d.capacity[label]).toLocaleString(undefined,{maximumFractionDigits:3})));capacity.append(row);});
  const alarms=document.querySelector('#topologyDeviceAlarms');alarms.replaceChildren();Object.entries(severityColors).forEach(([severity,color])=>{const badge=el('span',''),dot=el('i','');dot.style.background=color;badge.append(dot,document.createTextNode((severity==='Warning'?'Warn':severity==='Information'?'Info':severity)+': '+(d.fault_counts?.[severity]||0)));alarms.append(badge);});
  const links=document.querySelector('#topologyDeviceLinks');links.replaceChildren();for(const [label,tab] of [['Device Details','details'],['Graphs','graphs'],['Active Alarms','fcaps']]){const a=el('a','',label+' →');a.href='device.php?id='+encodeURIComponent(d.id)+'&view=1#view-'+tab;links.append(a);}
- detail.querySelector('.topology-summary-extra').open=false;
- const actions=document.querySelector('#topologyDeviceDiagnostics');actions.replaceChildren();
- Object.entries(d.diagnostics||{}).forEach(([tool,label])=>{const a=el('a','button',label);a.href='diagnostics.php?host_id='+encodeURIComponent(d.id)+'&tool='+encodeURIComponent(tool);actions.append(a);});
- if(!actions.children.length)actions.append(el('p','','No diagnostics selected.'));
- const discoveryLink=el('a','button','Device Connections');discoveryLink.href='topology_configuration.php?tab=connections#connection-device-'+encodeURIComponent(d.id);actions.append(discoveryLink);
- const rows=document.querySelector('#topologyDeviceDiscovery');rows.replaceChildren();
- (d.discovery||[]).forEach(o=>{const row=el('tr','');row.append(el('td','',o.label));const status=el('td','');status.append(el('span','device-status '+(o.status==='Current'?'online':o.status==='Failed'?'offline':o.status==='Disabled'?'disabled':'other'),o.status));row.append(status,el('td','',o.count===null?'—':String(o.count)),el('td','',o.evidence));rows.append(row);});
- if(!rows.children.length){const row=el('tr',''),cell=el('td','','No topology discovery methods selected.');cell.colSpan=4;row.append(cell);rows.append(row);}
- detail.showModal();
+ if(!detail.open) detail.showModal();
+ if(!refreshed && !document.documentElement.dataset.staticPreview && source.dataset.summaryUrl){
+  detail.dataset.deviceId=String(d.id);detail.dataset.summaryState='loading';
+  fetch(source.dataset.summaryUrl+'?device_summary='+encodeURIComponent(d.id),{credentials:'same-origin',cache:'no-store'}).then(response=>{if(!response.ok)throw new Error('Summary unavailable');return response.json();}).then(fresh=>{if(detail.open && detail.dataset.deviceId===String(d.id)){showDevice({...d,...fresh},true);detail.dataset.summaryState='current';}}).catch(()=>{if(detail.dataset.deviceId===String(d.id))detail.dataset.summaryState='unavailable';});
+ }
 }
 function render(){
  cards.replaceChildren();canvas.style.transform='scale('+scale+')';canvas.style.width='100%';canvas.style.height='100%';
