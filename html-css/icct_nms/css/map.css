@@ -9,3 +9,20 @@
 .icct-state-label{width:max-content!important;max-width:120px;text-align:center;font:11px/1.15 Arial,sans-serif;color:#364348;text-shadow:0 1px 2px white,1px 0 2px white;pointer-events:none}.icct-state-label span{display:block;transform:translate(-50%,-50%)}.icct-map-site-label{font-weight:700;font-size:13px}
 #icctSiteMap svg{width:auto;height:auto;fill:initial}#icctSiteMap .leaflet-interactive:focus{outline:none}#icctSiteMap:focus-visible{outline:2px solid #0f62fe;outline-offset:-2px}
 @media(max-width:700px){.icct-map-page{min-height:580px;padding:0 4px 4px}.icct-map-toolbar{gap:6px}.icct-map-toolbar .field{width:100%}.icct-map-counts{margin-left:0;width:100%}}
+
+/* Dashboard content switcher and compact map controls. */
+.icct-map-toolbar{align-items:center;padding:12px 8px;gap:16px}
+.icct-view-tabs{display:flex;border:1px solid #444;border-radius:3px;overflow:hidden}
+.icct-view-tabs button{border:0;border-right:1px solid #ddd;background:white;color:#333;padding:7px 14px;font:inherit;font-size:13px;cursor:pointer}
+.icct-view-tabs button:last-child{border-right:0}.icct-view-tabs button[aria-selected="true"]{background:#222;color:white}
+.icct-view-tabs button:focus-visible,.icct-map-controls button:focus-visible{outline:2px solid #0f62fe;outline-offset:-2px}
+.icct-view-panel{position:relative;flex:1;min-height:0;display:flex}.icct-view-panel[hidden]{display:none}
+.icct-map-controls{position:absolute;right:12px;top:12px;z-index:600;display:flex;flex-direction:column;gap:8px}
+.icct-map-controls button{width:28px;height:28px;border:1px solid #555;border-radius:50%;background:white;color:#333;font-size:20px;line-height:1;cursor:pointer;padding:0}
+#icctMapStatus:empty{display:none}.icct-map-credits{position:relative;align-self:flex-end;font-size:11px;color:#666;margin:4px 8px 0}
+.icct-map-credits summary{cursor:pointer;list-style:none;font-size:15px}.icct-map-credits span{position:absolute;right:20px;bottom:0;background:white;border:1px solid #ddd;padding:8px;width:240px;z-index:700}
+.icct-device-view{display:block;overflow:auto;padding:12px 8px}.icct-device-view table{width:100%;border-collapse:collapse}.icct-device-view th,.icct-device-view td{text-align:left;padding:14px;border-bottom:1px solid #ddd}
+.icct-device-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:20px}.icct-device-card{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px;border:1px solid #ddd;color:#333;text-decoration:none;text-align:center}.icct-device-card img{width:64px;height:64px;object-fit:contain}.icct-device-card span{font-size:12px;color:#666}
+@media(max-width:700px){.icct-view-tabs button{padding:7px 9px}.icct-map-counts{width:auto}.icct-map-toolbar{padding:8px 4px}}
+
+.icct-map-counts .online::before,.icct-map-counts .offline::before,.icct-map-counts .other::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;background:currentColor;margin-right:5px}

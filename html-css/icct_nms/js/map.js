@@ -11,7 +11,7 @@
         page.style.setProperty('--icct-map-page-height', Math.max(240, window.innerHeight - top) + 'px');
     }
     sizePage();
-    var map = L.map('icctSiteMap', {minZoom: 2, zoomSnap: 0, maxZoom: 18, zoomAnimation: false, markerZoomAnimation: false});
+    var map = L.map('icctSiteMap', {zoomControl: false, attributionControl: false, minZoom: 2, zoomSnap: 0, maxZoom: 18, zoomAnimation: false, markerZoomAnimation: false});
     var countryView = true;
     function fitIndia() {
         map.fitBounds(indiaBounds, {padding: [12, 12], animate: false});
@@ -23,6 +23,7 @@
     // Recompute geographic fit when the screen or navigation rail changes size.
     window.addEventListener('resize', sizePage);
     var resizeObserver = new ResizeObserver(function () {
+        if (document.getElementById('icct-panel-map').hidden) return;
         var refit = countryView;
         map.invalidateSize({pan: false});
 
@@ -176,20 +177,23 @@
             fillColor: down ? '#c83232' : up ? '#21864a' : '#aa740a', fillOpacity: 1}).addTo(map)
             .bindTooltip(label, {direction: 'top', permanent: false, className: 'icct-map-site-label', offset: [0, -10]}).bindPopup(popup, {className: 'icct-map-compact-popup', autoPan: true, autoPanPadding: [16, 16], keepInView: true, maxWidth: 260, minWidth: 220});
     });
-    /** Fit all native site markers without inventing locations for unassigned devices. */
-    function fitSites() {
-        countryView = false;
-        var points = data.sites.map(function (s) { return s.coordinates; });
-        if (points.length) map.fitBounds(points, {padding: [40, 40], maxZoom: 8, animate: false});
-    }
-    document.getElementById('icctMapIndia').addEventListener('click', function () { document.getElementById('icctMapSite').value = ''; map.closePopup(); fitIndia(); });
+    document.getElementById('icctMapZoomIn').addEventListener('click', function () { map.zoomIn(); });
+    document.getElementById('icctMapZoomOut').addEventListener('click', function () { map.zoomOut(); });
+    document.getElementById('icctMapFit').addEventListener('click', function () { map.closePopup(); fitIndia(); });
     document.getElementById('icctMapFullscreen').addEventListener('click', function () { if (document.fullscreenElement) document.exitFullscreen(); else document.querySelector('.icct-map-panel').requestFullscreen().catch(function () { status.textContent = 'Fullscreen is unavailable in this browser.'; }); });
-    document.getElementById('icctMapFit').addEventListener('click', function () {
-        document.getElementById('icctMapSite').value = ''; map.closePopup(); fitSites();
-    });
-    document.getElementById('icctMapSite').addEventListener('change', function () {
-        var marker = markers[this.value];
-        if (marker) { countryView = false; map.setView(marker.getLatLng(), 8, {animate: false}); marker.openPopup(); } else fitSites();
+    var tabs = Array.from(document.querySelectorAll('.icct-view-tabs [role="tab"]'));
+    function selectView(tab) {
+        tabs.forEach(function (item) { var selected = item === tab; item.setAttribute('aria-selected', String(selected)); item.tabIndex = selected ? 0 : -1; document.getElementById(item.getAttribute('aria-controls')).hidden = !selected; });
+        status.hidden = tab.dataset.view !== 'map';
+        document.querySelector('.icct-map-credits').hidden = tab.dataset.view !== 'map';
+        if (tab.dataset.view === 'map') { map.invalidateSize({pan: false}); if (countryView) fitIndia(); }
+    }
+    tabs.forEach(function (tab, index) {
+        tab.addEventListener('click', function () { selectView(tab); });
+        tab.addEventListener('keydown', function (event) {
+            var next = event.key === 'ArrowRight' ? (index + 1) % tabs.length : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : null;
+            if (next !== null) { event.preventDefault(); tabs[next].focus(); selectView(tabs[next]); }
+        });
     });
     drawBasemap();
 })();
