@@ -145,6 +145,20 @@ svg {
   background: #dfe1e6;
   font-size: 12px;
 }
+.topbar .cacti-backend-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  background: #0f62fe;
+  color: #fff;
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.topbar .cacti-backend-button:hover { background: #0043ce; color: #fff; }
+.topbar .cacti-backend-button:focus-visible { outline: 2px solid #0f62fe; outline-offset: 3px; }
 .network-status {
   display: grid;
   grid-template-columns: repeat(2, 49px);

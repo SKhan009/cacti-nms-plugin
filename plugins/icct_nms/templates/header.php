@@ -44,6 +44,7 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
                 <span><?= icct_nms_h($collector) ?></span>
             </div>
             <div class="system-metrics"><span>Poller: <?= icct_nms_h(read_config_option('poller_interval')) ?> sec</span></div>
+            <a class="cacti-backend-button" href="<?= icct_nms_h($config['url_path']) ?>index.php">Cacti Backend</a>
             <a class="profile" href="<?= icct_nms_h($config['url_path']) ?>auth_profile.php">
                 <span class="user-avatar" aria-hidden="true">◉</span>
                 <span>
