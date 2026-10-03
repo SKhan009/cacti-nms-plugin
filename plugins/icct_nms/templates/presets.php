@@ -4,7 +4,7 @@
 </div>
 <div class="presets-content">
 <nav class="presets-tabs" aria-label="Preset sections">
-<?php foreach (['Node','Rack Config','Site','Segment','Device Type','Network Connections','Protocols'] as $tab): ?>
+<?php foreach (['Site','Rack Config','Node','Segment','Device Type','Network Connections','Protocols'] as $tab): ?>
 <?php $key=array_search($tab,$presetTabs,true); if ($key!==false): ?><a href="presets.php?tab=<?= $key ?>" <?= $activePreset===$key?'aria-current="page"':'' ?>><?= icct_nms_h($tab) ?></a><?php else: ?><button type="button" disabled><?= icct_nms_h($tab) ?></button><?php endif; ?>
 <?php endforeach; ?>
 </nav>
