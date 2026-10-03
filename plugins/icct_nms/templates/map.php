@@ -8,7 +8,7 @@
 </div>
 <div class="icct-map-counts" aria-label="Device status totals"><span>Total: <?= $mapData['counts']['total'] ?></span><span class="online">Online: <?= $mapData['counts']['online'] ?></span><span class="offline">Offline: <?= $mapData['counts']['offline'] ?></span><span class="other">Other: <?= $mapData['counts']['other'] ?></span></div>
 </div>
-<p id="icctMapStatus" role="status"><?php if (!$mapConfigured): ?>GeoServer is not configured; local boundaries and site markers remain available.<?php endif; ?></p>
+<p id="icctMapStatus" role="status"></p>
 <div class="icct-view-panel" id="icct-panel-map" role="tabpanel" aria-labelledby="icct-view-map">
 <div id="icctSiteMap" aria-label="Map of Cacti sites"></div>
 <div class="icct-map-controls" aria-label="Map controls">
@@ -32,7 +32,7 @@
 <?php endforeach; ?></div><?php endif; ?>
 </div>
 <?php endforeach; ?>
-<details class="icct-map-credits"><summary title="Map credits" aria-label="Map credits">ⓘ</summary><span>Leaflet · GeoServer · Natural Earth. State boundaries: geoBoundaries / DataMeet (CC BY 2.5 IN).</span></details>
+<details class="icct-map-credits"><summary title="Map credits" aria-label="Map credits">ⓘ</summary><span>Leaflet. State boundaries: geoBoundaries / DataMeet (CC BY 2.5 IN).</span></details>
 </section>
-<script type="application/json" id="icctMapData"><?= json_encode($mapData+['states'=>'assets/maps/india-states.json','tiles'=>$mapConfigured?'topology.php?map_tile=1':null],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
+<script type="application/json" id="icctMapData"><?= json_encode($mapData+['states'=>'assets/maps/india-states.json','tiles'=>null],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
 </section>

@@ -1,4 +1,4 @@
-/** Display native Cacti site locations over the configured GeoServer raster layer. */
+/** Display native Cacti site locations over locally served India state boundaries. */
 (function () {
     'use strict';
     var element = document.getElementById('icctMapData');
@@ -11,10 +11,12 @@
         page.style.setProperty('--icct-map-page-height', Math.max(240, window.innerHeight - top) + 'px');
     }
     sizePage();
-    var map = L.map('icctSiteMap', {zoomControl: false, attributionControl: false, minZoom: 2, zoomSnap: 0, maxZoom: 18, zoomAnimation: false, markerZoomAnimation: false});
+    var map = L.map('icctSiteMap', {zoomControl: false, attributionControl: false, maxBoundsViscosity: 1, minZoom: 2, zoomSnap: 0, maxZoom: 18, zoomAnimation: false, markerZoomAnimation: false});
     var countryView = true;
     function fitIndia() {
+        map.setMinZoom(2);
         map.fitBounds(indiaBounds, {padding: [12, 12], animate: false});
+        map.setMinZoom(map.getZoom());
         countryView = true;
     }
     fitIndia();
@@ -32,49 +34,12 @@
     resizeObserver.observe(document.getElementById('icctSiteMap'));
     var status = document.getElementById('icctMapStatus');
     var originalStatus = status.textContent;
-    var mapError = '', stateError = '';
+    var stateError = '';
     function showStatus() {
-        status.textContent = [originalStatus, mapError, stateError].filter(Boolean).join(' ');
+        status.textContent = [originalStatus, stateError].filter(Boolean).join(' ');
     }
-    // Every runtime resource is served by the NMS web server or its configured WMS.
-    var raster = null, pendingRaster = null, rasterTimer;
-    function drawBasemap() {
-        if (!data.tiles) return;
-        // Preserve Leaflet's remove handler so obsolete overlays detach their map listeners.
-        if (pendingRaster) map.removeLayer(pendingRaster);
-        var view = map.getBounds();
-        var bounds = L.latLngBounds(
-            [Math.max(-85.051128, view.getSouth()), Math.max(-179.99999, view.getWest())],
-            [Math.min(85.051128, view.getNorth()), Math.min(179.99999, view.getEast())]);
-        var sw = L.CRS.EPSG3857.project(bounds.getSouthWest());
-        var ne = L.CRS.EPSG3857.project(bounds.getNorthEast());
-        if (sw.x >= ne.x || sw.y >= ne.y) return;
-        var size = map.getSize();
-        var url = data.tiles + '&bbox=' + [sw.x, sw.y, ne.x, ne.y].join(',') +
-            '&width=' + Math.min(2048, Math.max(1, Math.round(size.x))) +
-            '&height=' + Math.min(2048, Math.max(1, Math.round(size.y)));
-        var next = L.imageOverlay(url, bounds, {pane: 'tilePane', opacity: 0,
-            attribution: 'GeoServer · Natural Earth'});
-        pendingRaster = next;
-        next.on('load', function () {
-            if (pendingRaster !== next) return;
-            if (raster) map.removeLayer(raster);
-            raster = next; pendingRaster = null; next.setOpacity(1);
-            mapError = ''; showStatus();
-        });
-        next.on('error', function () {
-            if (pendingRaster !== next) return;
-            map.removeLayer(next); pendingRaster = null;
-            mapError = 'Local basemap unavailable. Site markers and state boundaries remain available.';
-            showStatus();
-        });
-        next.addTo(map);
-    }
-    map.on('moveend resize', function () {
-        clearTimeout(rasterTimer); rasterTimer = setTimeout(drawBasemap, 150);
-    });
-    map.setMaxBounds([[-85, -179.99], [85, 179.99]]);
-    // Local polygons and labels do not depend on GeoServer or external fonts.
+    map.setMaxBounds(indiaBounds);
+    // Only India polygons are drawn; surrounding countries and ocean tiles are omitted.
     map.createPane('statePolygons');
     map.getPane('statePolygons').style.zIndex = 350;
     map.createPane('stateLabels');
@@ -195,5 +160,4 @@
             if (next !== null) { event.preventDefault(); tabs[next].focus(); selectView(tabs[next]); }
         });
     });
-    drawBasemap();
 })();
