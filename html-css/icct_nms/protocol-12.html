@@ -6,8 +6,8 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Edit Device · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
-        <link rel="stylesheet" href="css/inventory.css?v=75427fde3e2f" />
-            <script type="text/javascript" nonce="NLDJ1xGTokTHSG3ogvrqedgv">if (top != self) {top.location.href = self.location.href;}</script></head>
+        <link rel="stylesheet" href="css/inventory.css?v=53464e0f6905" />
+            <script type="text/javascript" nonce="xNj_1n-DhDFKTvF1vFCA_21g">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -236,7 +236,7 @@
                     <h3>Network Discovery</h3><div class="protocol-grid cols-3">
                     <label class="field"><span class="field-label">Collection Interval (Sec)</span><input type="number" name="interval_seconds" value="300" required min="300" max="86400"></label><label class="field"><span class="field-label">Stale (Seconds)</span><input type="number" name="stale_seconds" value="900" required min="600" max="604800"></label><label class="field"><span class="field-label">Display Refresh (Seconds)</span><input type="number" name="refresh_seconds" value="30" required min="10" max="300"></label>                    </div><input type="hidden" name="discovery_methods_present" value="1">
 <fieldset class="device-discovery-observations"><legend>SNMP Network Discovery</legend>
-<label class="check-row"><input type="checkbox" name="methods[]" value="arp" > IP neighbours (IPv4 / IPv6) <span class="field-info" tabindex="0" role="img" aria-label="Information about IP neighbours (IPv4 / IPv6)" data-tooltip="Collect IP neighbour observations using this device’s saved SNMP credentials. These are not confirmed direct connections.">ⓘ</span></label><label class="check-row"><input type="checkbox" name="methods[]" value="fdb" > MAC/FDB table <span class="field-info" tabindex="0" role="img" aria-label="Information about MAC/FDB table" data-tooltip="Collect learned MAC addresses using this device’s saved SNMP credentials. A learned MAC is not a confirmed direct connection.">ⓘ</span></label><label class="check-row"><input type="checkbox" name="collection_enabled" value="1" checked> Enable collection</label>
+<label class="check-row"><input type="checkbox" name="methods[]" value="arp" > IP neighbours (IPv4 / IPv6) <span class="field-info" tabindex="0" role="img" aria-label="Information about IP neighbours (IPv4 / IPv6)" data-tooltip="Collect IP neighbour observations using this device’s saved SNMP credentials. These are not confirmed direct connections."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span></label><label class="check-row"><input type="checkbox" name="methods[]" value="fdb" > MAC/FDB table <span class="field-info" tabindex="0" role="img" aria-label="Information about MAC/FDB table" data-tooltip="Collect learned MAC addresses using this device’s saved SNMP credentials. A learned MAC is not a confirmed direct connection."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span></label><label class="check-row"><input type="checkbox" name="collection_enabled" value="1" checked> Enable collection</label>
 </fieldset>
                     <div class="protocol-actions"><button class="button primary">Save</button></div>
                 </form>
@@ -844,7 +844,7 @@
 <p>Only discovered interfaces are shown. The preset count is expected capacity; it does not assign interface names or link status.</p>
 <div class="port-search field"><label for="ports-search">Search ports</label><input type="search" id="ports-search" placeholder="Search by port, status or description" autocomplete="off" aria-controls="port-rows"></div>
 <div class="site-table-wrap"><table class="site-table"><thead><tr><th>Port / Interface</th><th>ifIndex</th><th>Type</th><th>Status</th><th>Description</th></tr></thead><tbody id="port-rows"></tbody></table></div>
-<script type="application/json" id="port-observations">{"ports":[{"index":9001,"name":"NMS-Lab-Uplink","description":"NMS-Lab-Uplink","alias":"","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"}],"fresh":true,"collected":1790991605,"source":"SNMP IF-MIB \/ IF-X-MIB","message":"Port status from the latest collector observation."}</script>
+<script type="application/json" id="port-observations">{"ports":[{"index":9001,"name":"NMS-Lab-Uplink","description":"NMS-Lab-Uplink","alias":"","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"}],"fresh":true,"collected":1790991904,"source":"SNMP IF-MIB \/ IF-X-MIB","message":"Port status from the latest collector observation."}</script>
 </section>
 <section id="device-fcaps" class="device-fcaps" hidden>
 <div class="fcaps-tabs" role="tablist" aria-label="FCAPS">
