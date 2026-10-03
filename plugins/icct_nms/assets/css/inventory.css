@@ -2708,3 +2708,5 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 
 @media(max-width:760px){.mib-editor .protocol-grid.cols-3{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.mib-editor .protocol-grid.cols-2,.mib-editor .protocol-grid.cols-3{grid-template-columns:minmax(0,1fr)}}
+
+.topology-row-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:210px;max-width:340px}.topology-configuration .topology-row-actions form{display:flex;margin:0}.topology-configuration .topology-row-actions .button{margin:0;min-height:36px;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;white-space:nowrap}.topology-heading-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.topology-configuration .site-table td:has(.topology-row-actions){vertical-align:middle}

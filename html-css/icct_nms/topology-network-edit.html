@@ -6,8 +6,8 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Topology Configuration · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
-        <link rel="stylesheet" href="css/inventory.css?v=11fd9e9f541b" />
-            <script type="text/javascript" nonce="19uADbuHi-IFipL_Il_wQDVK">if (top != self) {top.location.href = self.location.href;}</script></head>
+        <link rel="stylesheet" href="css/inventory.css?v=7f6ce2a8a5ee" />
+            <script type="text/javascript" nonce="IDTrxuoIc9q36keiCA8AHdF9">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -45,7 +45,7 @@
                                 <section class="topology-configuration">
 <div class="titlebar"><h1>Topology Configuration</h1><a class="button" href="dashboard.html">View Topology</a></div>
 <nav class="presets-tabs" aria-label="Topology configuration sections">
-<a href="topology-configuration.html" >Device Connections</a><a href="topology-networks.html" aria-current="page">Networks</a><a href="topology-discovered.html" >Discovered Devices</a><a href="topology-diagnostics.html">Discovery &amp; Diagnostics</a></nav>
+<a href="topology-configuration.html" >Device Connections</a><a href="topology-networks.html" aria-current="page">Networks</a><a href="topology-discovered.html" >Discovered Devices</a></nav>
 <form data-static-preview="true" method="post" class="topology-config-form network-editor" id="networkEditor">
 <input type="hidden" name="action" value="save_network"><input type="hidden" name="network_id" value="1">
 <div class="titlebar"><h2>Edit Network</h2><div class="type-editor-actions"><a class="button" href="topology-networks.html">Cancel</a><button class="button primary">Save</button></div></div>
@@ -126,15 +126,15 @@
             <button class="button primary" type="button" id="message-confirm">OK</button>
         </div>
     </dialog>
-        <dialog id="shared-diagnostic-dialog" aria-labelledby="shared-diagnostic-title">
+    <dialog id="shared-diagnostic-dialog" aria-labelledby="shared-diagnostic-title">
         <div class="message-heading"><h2 id="shared-diagnostic-title">Device Diagnostics</h2><button type="button" data-shared-diagnostic-close aria-label="Close diagnostics">×</button></div>
-        <form id="shared-diagnostic-form" data-static-preview="true"><input type="hidden" name="host_id"><input type="hidden" name="action" value="queue"><div class="field"><label for="shared-diagnostic-tool">Diagnostic method</label><select id="shared-diagnostic-tool" name="tool"></select></div><div class="protocol-actions"><button class="button primary" type="submit">Run Diagnostic</button></div></form>
+        <form data-static-preview="true" id="shared-diagnostic-form"><input type="hidden" name="host_id"><input type="hidden" name="action" value="queue"><div class="field"><label for="shared-diagnostic-tool">Diagnostic method</label><select id="shared-diagnostic-tool" name="tool"></select></div><div class="protocol-actions"><button class="button primary" type="submit">Run Diagnostic</button></div></form>
         <p id="shared-diagnostic-status" role="status" aria-live="polite"></p><pre id="shared-diagnostic-output" hidden></pre>
         <div class="message-actions"><button class="button" type="button" data-shared-diagnostic-close>Close</button></div>
     </dialog>
-    <script src="js/diagnostic-popup.js" defer></script>
-<script src="js/inventory.js?v=08b604729768" defer></script>
-<script src="js/topology-configuration.js?v=b18f24081b44" defer></script>
+    <script src="js/diagnostic-popup.js?v=f34e2afb2dfc" defer></script>
+    <script src="js/inventory.js?v=8971c0696730" defer></script>
+<script src="js/topology-configuration.js?v=8c2db66895c1" defer></script>
 <script src="js/preview.js" defer></script>
 </body>
 </html>

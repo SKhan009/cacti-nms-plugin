@@ -6,9 +6,9 @@ require_once __DIR__.'/includes/connection_service.php';
 require_once __DIR__.'/includes/protocol_service.php';
 require_once __DIR__.'/includes/topology_configuration_service.php';
 require_once __DIR__.'/includes/network_configuration_service.php';
-$error='';$tab=$_GET['tab']??'connections';if(!in_array($tab,['connections','networks','discovered','diagnostics'],true))$tab='connections';
+$error='';$tab=$_GET['tab']??'connections';if(!in_array($tab,['connections','networks','discovered'],true))$tab='connections';
 try{
-    icct_nms_backend();$management=is_realm_allowed(3);$automation=is_realm_allowed(23);
+    icct_nms_backend();if($_SERVER['REQUEST_METHOD']==='GET'&&($_GET['tab']??'')==='diagnostics')icct_nms_redirect('topology_configuration.php?tab=connections');$management=is_realm_allowed(3);$automation=is_realm_allowed(23);
     if($_SERVER['REQUEST_METHOD']==='POST'){
         try{icct_nms_post();$action=$_POST['action']??'';
             if(in_array($action,['save_network','run_network'],true)){
@@ -30,7 +30,7 @@ try{
     }
     $devices=icct_nms_inventory();$byId=array_column($devices,null,'id');$profiles=icct_nms_connections();$links=array_filter(icct_nms_manual_links(),fn($link)=>isset($byId[$link['source']],$byId[$link['target']]));
     $deviceDiscovery=[];$deviceDiagnostics=[];
-    if($tab==='diagnostics'){foreach($devices as $device){$id=(int)$device['id'];$deviceDiscovery[$id]=icct_nms_device_discovery_summary($id);$deviceDiagnostics[$id]=$management?icct_backend_diag_selected_labels($id):[];}}
+    if($tab==='connections'){foreach($devices as $device){$id=(int)$device['id'];$deviceDiscovery[$id]=icct_nms_device_discovery_summary($id);$deviceDiagnostics[$id]=$management?icct_backend_diag_selected_labels($id):[];}}
     $observations=icct_nms_topology_discovery_rows($devices);$networks=[];$coreDevices=[];
     if($automation){$networks=db_fetch_assoc('SELECT id,name,subnet_range,enabled,total_ips,up_hosts,snmp_hosts,last_started,last_status FROM automation_networks ORDER BY name');
         $coreDevices=db_fetch_assoc('SELECT d.id,d.network_id,d.hostname,d.ip,d.sysName,d.sysLocation,d.os,d.snmp,d.known,d.up,FROM_UNIXTIME(d.time) AS last_check,n.name AS network FROM automation_devices d LEFT JOIN automation_networks n ON n.id=d.network_id ORDER BY d.ip');}
