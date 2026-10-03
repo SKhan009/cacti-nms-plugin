@@ -245,9 +245,10 @@ if (discoveryDialog) {
 }
 // Keep the character counter aligned with the textarea limit.
 const notes = document.querySelector('[name="notes"]');
-if (notes) {
+const notesCount = document.querySelector("#notes-count");
+if (notes && notesCount) {
   const update = () =>
-    (document.querySelector("#notes-count").textContent =
+    (notesCount.textContent =
       `${notes.value.length}/${notes.maxLength}`);
   notes.addEventListener("input", update);
   update();
@@ -956,11 +957,27 @@ if (document.body) {
     trace_hops: "Maximum traceroute hops.",
     bandwidth_seconds: "Bandwidth-test duration.",
   };
+  // Match Cacti's Site field help without reusing device-specific descriptions.
+  const siteFieldHelp = {
+    name: "The primary name for the site.",
+    address1: "The primary address for the site.",
+    address2: "Additional address information for the site.",
+    city: "The city or locality for the site.",
+    state: "The state for the site.",
+    postal_code: "The postal or zip code for the site.",
+    country: "The country for the site.",
+    timezone: "The timezone for the site.",
+    latitude: "The latitude for this site, in degrees.",
+    longitude: "The longitude for this site, in degrees.",
+    zoom: "Default map zoom for this site. Some regions support a maximum zoom of 15.",
+    notes: "Additional notes related to this site.",
+    alternate_id: "An alternate name used to describe this site.",
+  };
   document.querySelectorAll(".field-label, .radio-group legend").forEach((label) => {
     const field = label
       .closest(".field, .enable-field, .radio-group")
       ?.querySelector("input, select, textarea");
-    let help = fieldHelp[field?.name] || "";
+    let help = (label.closest("#site-editor") ? siteFieldHelp[field?.name] : fieldHelp[field?.name]) || "";
     if (field?.type === "number" && !field.readOnly) {
       const min = field.getAttribute("min"), max = field.getAttribute("max");
       const caption = label.textContent.trim();
