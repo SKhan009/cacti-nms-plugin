@@ -2390,3 +2390,15 @@ body:has(#diagnostics:not([hidden])) .protocol-form {
 @media (max-width: 560px) {
   .graph-association > summary .graph-badges { grid-row: 2; justify-content: flex-start; margin-left: 30px; }
 }
+
+/* The application header remains visible during page and wizard scrolling. */
+body.icct-inventory { padding-top: var(--app-header-height, 48px); }
+.icct-inventory > .topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 110;
+  box-shadow: 0 1px 4px #00000012;
+}
+#toast-region { top: calc(var(--app-header-height, 48px) + 16px); }

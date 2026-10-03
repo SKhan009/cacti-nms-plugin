@@ -1324,3 +1324,12 @@ if (graphAddButton && graphAddPanel) {
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && !graphAddPanel.hidden) { closeGraphAdd(); graphAddButton.focus(); } });
   window.addEventListener('hashchange', closeGraphAdd);
 }
+
+// Reserve the real header height when the responsive header wraps.
+const applicationHeader = document.querySelector('.topbar');
+if (applicationHeader) {
+  const reserveHeaderSpace = () => document.body.style.setProperty('--app-header-height', `${applicationHeader.getBoundingClientRect().height}px`);
+  reserveHeaderSpace();
+  if (typeof ResizeObserver === 'function') new ResizeObserver(reserveHeaderSpace).observe(applicationHeader);
+  else window.addEventListener('resize', reserveHeaderSpace);
+}
