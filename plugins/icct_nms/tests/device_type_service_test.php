@@ -24,6 +24,15 @@ try { icct_nms_resolve_device_type(7,'Switch'); throw new RuntimeException('Cros
 $folder=__DIR__.'/../assets/images/icons'; if(!is_dir($folder)) mkdir($folder);
 $file=$folder.'/test-discovery.svg'; file_put_contents($file,'<svg xmlns="http://www.w3.org/2000/svg"/>');
 try { if(!isset(icct_nms_type_icons()['test-discovery']) || icct_nms_type_icon_asset('test-discovery')!=='assets/images/icons/test-discovery.svg') throw new RuntimeException('Icon folder discovery failed'); } finally { unlink($file); }
+reject_type(['shape'=>'<script>'],'device shape');
+reject_type(['shape'=>['square']],'device shape');
+foreach(array_keys(icct_nms_type_shapes()) as $shape) {
+    icct_nms_save_device_type(array_replace($input,['shape'=>$shape]));
+    $types=icct_nms_device_types();
+    if($types[$input['type_id']]['shape']!==$shape || icct_nms_device_shape(4,'Switch',$types)!==$shape) throw new RuntimeException('Shape did not persist or resolve for assigned devices');
+    if(icct_nms_device_shape(7,'Switch',$types)!=='rectangle') throw new RuntimeException('Shape leaked across segments');
+}
+if(icct_nms_type_shape(['icon'=>'switch'])!=='wide' || icct_nms_type_shape(['shape'=>'bad'])!=='rectangle') throw new RuntimeException('Legacy shape fallback failed');
 icct_nms_save_device_type(['action'=>'delete_type','type_id'=>$input['type_id']]);
 if($catalogue) throw new RuntimeException('Delete failed');
 echo "Device type validation, visibility and persistence tests passed.\n";

@@ -98,6 +98,7 @@
             }
             var title = document.createElement('strong');
             title.className = 'icct-map-device-name'; title.textContent = device.name;
+            var shape=document.createElement('span');shape.className='device-shape-symbol shape-'+(device.shape||'rectangle');shape.setAttribute('aria-label','Device shape: '+(device.shape||'rectangle'));title.prepend(shape);
 
             body.appendChild(title);
             var subtitle = document.createElement('p');

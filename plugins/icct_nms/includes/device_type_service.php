@@ -1,5 +1,16 @@
 <?php
 /** Topology appearance uses local assets and the NMS network/rack/map visibility model. */
+function icct_nms_type_shapes() {
+    return ['square'=>'Square','rectangle'=>'Rectangle','wide'=>'Wide rectangle','tall'=>'Tall rectangle'];
+}
+function icct_nms_type_shape($type) {
+    $shape=$type['shape'] ?? (($type['icon'] ?? '')==='switch'?'wide':'rectangle');
+    return is_string($shape) && isset(icct_nms_type_shapes()[$shape]) ? $shape : 'rectangle';
+}
+function icct_nms_device_shape($category,$name,$types) {
+    foreach($types as $type) if((int)$type['category_id']===(int)$category && $type['name']===$name) return icct_nms_type_shape($type);
+    return 'rectangle';
+}
 function icct_nms_type_icons() {
     $labels=['switch'=>'Switch','router'=>'Router','server'=>'Server','workstation'=>'PC / desktop','laptop'=>'Laptop','phone'=>'Phone','ipphone'=>'Desk phone','ups'=>'UPS / battery','sensor'=>'Sensor','printer'=>'Printer','camera'=>'Camera','wireless'=>'Wireless AP','firewall'=>'Firewall','satellite'=>'Satellite / VSAT','device'=>'Generic device'];
     $icons=[];
@@ -31,6 +42,7 @@ function icct_nms_device_types() {
         $icon='device'; foreach (icct_nms_type_icons() as $key=>$label) if ($key!=='device' && stripos($row['device_type'],$key)!==false) { $icon=$key; break; }
         $types[substr(sha1($row['category_id'].'|'.$row['device_type']),0,16)] = ['name'=>$row['device_type'],'category_id'=>(int)$row['category_id'],'icon'=>$icon,'physical_ports'=>null,'image'=>'','display_modes'=>['network'=>'icon','rack'=>'icon','map'=>'icon']];
     }
+    foreach($types as &$type) $type['shape']=icct_nms_type_shape($type); unset($type);
     return $types;
 }
 function icct_nms_type_asset($type,$view='network') {
@@ -79,6 +91,8 @@ function icct_nms_save_device_type($input,$file=null) {
             if ($inUse && ($name!==$old['name'] || $category!==(int)$old['category_id'])) throw new InvalidArgumentException('Reassign devices before renaming this type or changing its segment.');
             foreach ($types as $key=>$type) if ($key!==$id && (int)$type['category_id']===$category && strcasecmp($type['name'],$name)===0) throw new InvalidArgumentException('This segment already has that device type.');
             $icon=$input['icon'] ?? ''; if (!is_string($icon) || !isset(icct_nms_type_icons()[$icon])) throw new InvalidArgumentException('Choose a topology icon.');
+            $shape=$input['shape'] ?? icct_nms_type_shape($old ?? ['icon'=>$icon]);
+            if(!is_string($shape) || !isset(icct_nms_type_shapes()[$shape])) throw new InvalidArgumentException('Choose a valid device shape.');
             $ports=icct_backend_topology_integer($input['physical_ports'] ?? '',0,65535,'Number of ports');
             $image=icct_nms_type_image_upload($file);
             $savedImage=$image ?: (empty($input['remove_image']) ? ($old['image'] ?? '') : '');
@@ -90,7 +104,7 @@ function icct_nms_save_device_type($input,$file=null) {
                 $modes[$view]=$mode;
             }
             $id=$id ?: bin2hex(random_bytes(8));
-            $types[$id]=['name'=>$name,'category_id'=>$category,'icon'=>$icon,'physical_ports'=>$ports,'image'=>$savedImage,'display_modes'=>$modes];
+            $types[$id]=['name'=>$name,'category_id'=>$category,'icon'=>$icon,'shape'=>$shape,'physical_ports'=>$ports,'image'=>$savedImage,'display_modes'=>$modes];
         }
         $json=json_encode($types,JSON_THROW_ON_ERROR);
         if (strlen($json)>60000) throw new InvalidArgumentException('The device type catalogue is full.');

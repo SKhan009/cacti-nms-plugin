@@ -20,6 +20,9 @@ $pageUrl=static fn($n)=>'presets.php?tab=device-type&per_page='.$perPage.'&sort=
 </div></div>
 <label class="field"><span class="field-label">No. of Ports *</span><input name="physical_ports" type="number" min="0" max="65535" placeholder="Enter (e.g., 1 or 96)" required value="<?= icct_nms_h($typeValues['physical_ports'] ?? '') ?>"></label>
 </div>
+<section class="type-shape-section"><h3>Device Shape</h3><fieldset class="type-shape-options"><legend class="sr-only">Device Shape</legend>
+<?php foreach(icct_nms_type_shapes() as $shape=>$label): ?><label class="type-shape-choice"><input type="radio" name="shape" value="<?= $shape ?>" required <?= ($typeValues['shape']??'rectangle')===$shape?'checked':'' ?>><span class="device-shape-symbol shape-<?= $shape ?>" aria-hidden="true"></span><span><?= $label ?></span></label><?php endforeach; ?>
+</fieldset></section>
 <section class="type-image-upload"><h3>Device Type Image</h3><p>Maximum file size: 500 KB. Supported formats: .jpg, .png, .webp.</p><label class="button primary type-upload-button">Upload <span aria-hidden="true">+</span><input type="file" name="device_image" accept="image/png,image/jpeg,image/webp" aria-label="Upload device type image"></label><span id="type-upload-name"></span><img id="type-upload-preview" alt="Device type image preview" hidden><label class="enable-field" id="type-remove-image"><input type="checkbox" name="remove_image" value="1" <?= empty($typeValues['remove_image'])?'':'checked' ?>>Remove saved image</label></section>
 <section class="type-visibility" aria-label="Topology visibility"><h3>Visibility</h3><div class="form-grid">
 <?php foreach (['network'=>'Network Topology','rack'=>'Rack View','map'=>'Map View'] as $view=>$label): ?><label class="field"><span class="field-label"><?= $label ?></span><select name="display_<?= $view ?>" required><option value="">Select display type</option><?php foreach (['none'=>'None','icon'=>'Icon','image'=>'Image'] as $mode=>$text): ?><option value="<?= $mode ?>" <?= ($typeValues['display_'.$view] ?? '')===$mode?'selected':'' ?>><?= $text ?></option><?php endforeach; ?></select></label><?php endforeach; ?>
@@ -28,10 +31,11 @@ $pageUrl=static fn($n)=>'presets.php?tab=device-type&per_page='.$perPage.'&sort=
 </form>
 <?php endif; ?>
 <div class="device-types-list">
-<table class="device-types-table"><thead><tr><th><a href="<?= icct_nms_h('presets.php?tab=device-type&per_page='.$perPage.'&sort='.($sort==='asc'?'desc':'asc')) ?>" aria-label="Sort device types <?= $sort==='asc'?'descending':'ascending' ?>">Device Type Name &amp; Segment <span aria-hidden="true"><?= $sort==='asc'?'↑':'↓' ?></span></a></th><th>Icon</th><th>No. of Ports</th><th>Device Type Image</th><th>Actions</th></tr></thead><tbody>
+<table class="device-types-table"><thead><tr><th><a href="<?= icct_nms_h('presets.php?tab=device-type&per_page='.$perPage.'&sort='.($sort==='asc'?'desc':'asc')) ?>" aria-label="Sort device types <?= $sort==='asc'?'descending':'ascending' ?>">Device Type Name &amp; Segment <span aria-hidden="true"><?= $sort==='asc'?'↑':'↓' ?></span></a></th><th>Icon</th><th>Device Shape</th><th>No. of Ports</th><th>Device Type Image</th><th>Actions</th></tr></thead><tbody>
 <?php foreach ($rows as $id=>$type): ?>
 <tr><td><?= icct_nms_h($type['name']) ?><small><?= icct_nms_h($segmentNames[$type['category_id']] ?? 'None') ?></small></td>
 <td><img class="type-icon" src="<?= icct_nms_h(icct_nms_type_asset($type, 'catalogue-icon') ) ?>" alt="<?= icct_nms_h(icct_nms_type_icons()[$type['icon']] ?? 'Device') ?>"></td>
+<td><span class="type-shape-summary"><span class="device-shape-symbol shape-<?= icct_nms_type_shape($type) ?>" aria-hidden="true"></span><?= icct_nms_type_shapes()[icct_nms_type_shape($type)] ?></span></td>
 <td><?= $type['physical_ports']===null?'Not set':(int)$type['physical_ports'] ?></td>
 <td><?php $image=icct_nms_type_asset(array_replace($type,['display_modes'=>['network'=>'image'] ])); if (!empty($type['image']) && str_contains($image,'/uploads/')): ?><img class="type-thumbnail" src="<?= icct_nms_h($image) ?>" alt="<?= icct_nms_h($type['name']) ?>"><?php else: ?><span class="type-no-image">None</span><?php endif; ?></td>
 <td><?php if ($management): ?><div class="type-actions">
@@ -39,7 +43,7 @@ $pageUrl=static fn($n)=>'presets.php?tab=device-type&per_page='.$perPage.'&sort=
 <form method="post" data-delete-type data-type-name="<?= icct_nms_h($type['name']) ?>"><?php icct_nms_token(); ?><input type="hidden" name="action" value="delete_type"><input type="hidden" name="type_id" value="<?= icct_nms_h($id) ?>"><button class="icon-button primary" aria-label="Delete <?= icct_nms_h($type['name']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7"/></svg></button></form>
 </div><?php endif; ?></td></tr>
 <?php endforeach; ?>
-<?php if (!$rows): ?><tr><td colspan="5">No device types yet. Add a device type to get started.</td></tr><?php endif; ?>
+<?php if (!$rows): ?><tr><td colspan="6">No device types yet. Add a device type to get started.</td></tr><?php endif; ?>
 </tbody></table>
 <footer class="type-pagination"><form method="get"><input type="hidden" name="tab" value="device-type"><input type="hidden" name="sort" value="<?= $sort ?>"><label>Items per page: <select name="per_page" aria-label="Items per page"><?php foreach ([10,25,50] as $size): ?><option <?= $perPage===$size?'selected':'' ?>><?= $size ?></option><?php endforeach; ?></select></label><button type="submit">Apply</button></form><span><?= $total ? (($page-1)*$perPage+1).'–'.min($total,$page*$perPage) : '0' ?> of <?= $total ?> items</span><span class="type-page-count"><?= $page ?> of <?= $pages ?> pages</span><a href="<?= icct_nms_h($pageUrl(max(1,$page-1))) ?>" aria-label="Previous page" <?= $page===1?'aria-disabled="true" tabindex="-1"':'' ?>>‹</a><a href="<?= icct_nms_h($pageUrl(min($pages,$page+1))) ?>" aria-label="Next page" <?= $page===$pages?'aria-disabled="true" tabindex="-1"':'' ?>>›</a></footer>
 </div>

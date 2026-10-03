@@ -45,13 +45,13 @@ function icct_nms_rack_place($id,$site,$rack,$units,$peripheral=false,$revision=
     finally {if ($ownTransaction) db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]);}
 }
 function icct_nms_rack_view_data() {
-    $devices=icct_nms_inventory(); $allowed=[]; $out=[];
+    $devices=icct_nms_inventory(); $types=icct_nms_device_types(); $allowed=[]; $out=[];
     foreach ($devices as $device) {
         $id=(int)$device['id']; $allowed[$id]=true;
         $peripheral=(int)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['rack_peripheral_'.$id]);
         $rackId=(int)($device['rack_id'] ?: $peripheral);
         $nodeId=$rackId ? (int)db_fetch_cell_prepared('SELECT node_id FROM plugin_icct_nms_racks WHERE id=?',[$rackId]) : (int)icct_nms_meta('device_node_id_'.$id);
-        $out[]=['id'=>$id,'node_id'=>$nodeId,'name'=>$device['description'],'site_id'=>(int)$device['site_id'],'status'=>$device['status_label'],'rack_id'=>(int)($device['rack_id'] ?: $peripheral),'start'=>(int)$device['start_unit'],'height'=>(int)($device['unit_height'] ?: 1),'peripheral'=>(bool)$peripheral,'revision'=>icct_nms_rack_revision($id)];
+        $out[]=['shape'=>icct_nms_device_shape($device['category_id'],$device['device_type'],$types),'id'=>$id,'node_id'=>$nodeId,'name'=>$device['description'],'site_id'=>(int)$device['site_id'],'status'=>$device['status_label'],'rack_id'=>(int)($device['rack_id'] ?: $peripheral),'start'=>(int)$device['start_unit'],'height'=>(int)($device['unit_height'] ?: 1),'peripheral'=>(bool)$peripheral,'revision'=>icct_nms_rack_revision($id)];
     }
     $racks=db_fetch_assoc('SELECT r.*,n.site_id,n.name AS node_name FROM plugin_icct_nms_racks r JOIN plugin_icct_nms_rack_nodes n ON n.id=r.node_id ORDER BY n.name,r.rack_number');
     foreach ($racks as &$rack) {

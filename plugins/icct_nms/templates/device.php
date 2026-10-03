@@ -115,7 +115,7 @@
             foreach ($typeProfiles as $profile) if ((int)$profile['category_id']===(int)$values['category_id']) $typeChoices[$profile['name']]=$profile['name'];
             icct_nms_select('Device Type','device_type',$typeChoices,$values['device_type']);
             ?>
-            <script type="application/json" id="device-type-profiles"><?= json_encode(array_map(static function($p) { return ['name'=>$p['name'],'category_id'=>$p['category_id'],'physical_ports'=>$p['physical_ports']]; },array_values($typeProfiles)),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?></script>
+            <script type="application/json" id="device-type-profiles"><?= json_encode(array_map(static function($p) { return ['name'=>$p['name'],'category_id'=>$p['category_id'],'physical_ports'=>$p['physical_ports'],'shape'=>icct_nms_type_shape($p)]; },array_values($typeProfiles)),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?></script>
             <?php
             icct_nms_core_select(
                 "Device Site Location",

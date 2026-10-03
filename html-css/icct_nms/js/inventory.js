@@ -858,12 +858,16 @@ if (typeProfileData) {
   const profiles = JSON.parse(typeProfileData.textContent);
   const segment = document.querySelector('#device-form [name="category_id"]');
   const type = document.querySelector('#device-form [name="device_type"]');
+  const shapePreview=document.createElement('span');shapePreview.className='type-shape-summary device-type-shape-preview';type.insertAdjacentElement('afterend',shapePreview);
+  const updateShape=()=>{const profile=profiles.find(p=>String(p.category_id)===segment.value && p.name===type.value);shapePreview.replaceChildren();shapePreview.hidden=!profile;if(profile){const glyph=document.createElement('span');glyph.className='device-shape-symbol shape-'+profile.shape;glyph.setAttribute('aria-hidden','true');shapePreview.append(glyph,document.createTextNode('Device Shape: '+({square:'Square',rectangle:'Rectangle',wide:'Wide rectangle',tall:'Tall rectangle'}[profile.shape]||'Rectangle')));}};
+  type.addEventListener('change',updateShape);updateShape();
   const updateTypes = () => {
     const saved = type.value;
     type.replaceChildren(new Option('None',''));
     for (const profile of profiles.filter(p => String(p.category_id) === segment.value)) type.add(new Option(profile.name,profile.name));
     if (saved && [...type.options].some(option => option.value === saved)) type.value = saved;
     else if (type.options.length === 2) type.selectedIndex = 1;
+    updateShape();
   };
   segment.addEventListener('change',updateTypes);
   // Server-rendered choices preserve the saved selection on first render.
