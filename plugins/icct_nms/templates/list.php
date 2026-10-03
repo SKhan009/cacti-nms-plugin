@@ -190,7 +190,7 @@
                             ) ?>">⋮</summary>
                             <div class="row-menu-panel">
                                 <?php $deviceDiagnostics=icct_backend_diag_selected_labels($id);foreach($deviceDiagnostics as $tool=>$label): ?>
-                                <a href="diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h($tool) ?>#diagnostic-run" <?= in_array($tool,['ping','traceroute','arp'],true)?'data-instant-diagnostic':'' ?> data-host-id="<?= $id ?>" data-tool="<?= icct_nms_h($tool) ?>" data-device-name="<?= icct_nms_h($d['description']) ?>"><?= icct_nms_h($label) ?></a>
+                                <a href="diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h($tool) ?>#diagnostic-run" data-host-id="<?= $id ?>" data-tool="<?= icct_nms_h($tool) ?>" data-device-name="<?= icct_nms_h($d['description']) ?>"><?= icct_nms_h($label) ?></a>
                                 <?php endforeach; ?>
                                 <?php if(!$deviceDiagnostics): ?><span>No diagnostics selected</span><?php endif; ?>
                                 <?php $launch = icct_nms_meta(
@@ -296,14 +296,3 @@
     </form>
 </dialog>
 <?php endif; ?>
-
-<form id="instant-diagnostic-request" method="post" action="diagnostics.php" hidden>
-    <input type="hidden" name="action" value="instant" />
-    <?php icct_nms_token(); ?>
-</form>
-<dialog id="diagnostic-dialog" aria-labelledby="diagnostic-title">
-    <div class="message-heading"><h2 id="diagnostic-title"></h2><button type="button" data-diagnostic-close aria-label="Close diagnostic">×</button></div>
-    <p id="diagnostic-status" role="status" aria-live="polite"></p>
-    <pre id="diagnostic-output"></pre>
-    <div class="message-actions"><button class="button" type="button" data-diagnostic-close>Close</button></div>
-</dialog>

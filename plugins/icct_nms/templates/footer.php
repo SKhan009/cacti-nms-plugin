@@ -16,6 +16,13 @@
             <button class="button primary" type="button" id="message-confirm">OK</button>
         </div>
     </dialog>
+    <dialog id="shared-diagnostic-dialog" aria-labelledby="shared-diagnostic-title">
+        <div class="message-heading"><h2 id="shared-diagnostic-title">Device Diagnostics</h2><button type="button" data-shared-diagnostic-close aria-label="Close diagnostics">×</button></div>
+        <form id="shared-diagnostic-form"><?php icct_nms_token(); ?><input type="hidden" name="host_id"><input type="hidden" name="action" value="queue"><div class="field"><label for="shared-diagnostic-tool">Diagnostic method</label><select id="shared-diagnostic-tool" name="tool"></select></div><div class="protocol-actions"><button class="button primary" type="submit">Run Diagnostic</button></div></form>
+        <p id="shared-diagnostic-status" role="status" aria-live="polite"></p><pre id="shared-diagnostic-output" hidden></pre>
+        <div class="message-actions"><button class="button" type="button" data-shared-diagnostic-close>Close</button></div>
+    </dialog>
+    <script src="assets/js/diagnostic-popup.js?v=<?= substr(hash_file('sha256',ICCT_NMS_ROOT.'/assets/js/diagnostic-popup.js'),0,12) ?>" defer></script>
     <script src="assets/js/inventory.js?v=<?= substr(
         hash_file("sha256", __DIR__ . "/../assets/js/inventory.js"),
         0,

@@ -100,7 +100,14 @@
             <button class="button primary" type="button" id="message-confirm">OK</button>
         </div>
     </dialog>
-    <script src="js/inventory.js?v=08b604729768" defer></script>
+        <dialog id="shared-diagnostic-dialog" aria-labelledby="shared-diagnostic-title">
+        <div class="message-heading"><h2 id="shared-diagnostic-title">Device Diagnostics</h2><button type="button" data-shared-diagnostic-close aria-label="Close diagnostics">×</button></div>
+        <form id="shared-diagnostic-form" data-static-preview="true"><input type="hidden" name="host_id"><input type="hidden" name="action" value="queue"><div class="field"><label for="shared-diagnostic-tool">Diagnostic method</label><select id="shared-diagnostic-tool" name="tool"></select></div><div class="protocol-actions"><button class="button primary" type="submit">Run Diagnostic</button></div></form>
+        <p id="shared-diagnostic-status" role="status" aria-live="polite"></p><pre id="shared-diagnostic-output" hidden></pre>
+        <div class="message-actions"><button class="button" type="button" data-shared-diagnostic-close>Close</button></div>
+    </dialog>
+    <script src="js/diagnostic-popup.js" defer></script>
+<script src="js/inventory.js?v=08b604729768" defer></script>
     <script src="js/presets.js?v=f7bee72ee11b" defer></script>
 <script src="js/preview.js" defer></script>
 </body>

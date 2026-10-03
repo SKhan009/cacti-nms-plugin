@@ -30,6 +30,18 @@ if (
 
     exit();
 }
+if (($_GET['action']??'')==='options') {
+    header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
+    try {
+        icct_nms_backend();icct_backend_require_management(3);
+        $id=icct_nms_id($_GET['host_id']??0);icct_backend_require_device_access($id);
+        $host=icct_nms_device($id);$labels=icct_backend_diag_selected_labels($id);
+        $tool=(string)($_GET['tool']??array_key_first($labels)??'');
+        if($tool!==''&&!isset($labels[$tool]))throw new InvalidArgumentException('This diagnostic is not selected for the device.');
+        echo json_encode(['ok'=>true,'name'=>$host['description'],'tools'=>$labels,'tool'=>$tool],JSON_INVALID_UTF8_SUBSTITUTE|JSON_THROW_ON_ERROR);
+    }catch(Throwable $exception){http_response_code(400);echo json_encode(['ok'=>false,'error'=>$exception->getMessage()],JSON_INVALID_UTF8_SUBSTITUTE);}
+    exit;
+}
 if (($_GET['action']??'')==='status' || ($_POST['action']??'')==='queue') {
     header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
     try {

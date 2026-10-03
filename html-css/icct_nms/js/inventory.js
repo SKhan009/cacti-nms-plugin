@@ -170,7 +170,7 @@ if (table) {
         const item = document.createElement("div");
         item.className = "tree-device";
         const link = document.createElement("a");
-        link.href = `device-${row.dataset.id}.html&view=1`;
+        link.href = `device.php?id=${row.dataset.id}&view=1`;
         link.textContent = row.dataset.name;
         const status = document.createElement("span");
         status.textContent = row.dataset.status;
@@ -570,7 +570,7 @@ if (protocolWorkspace && !document.querySelector("#device-wizard") && !document.
       next = document.querySelector("#protocol-next");
     if (dataQuery) {
       previous.href = "#graphs";
-      next.href = "index.html";
+      next.href = "inventory.php";
       next.textContent = "Done →";
     } else if (graphs) {
       previous.href = "#diagnostics";
@@ -1277,70 +1277,6 @@ document.querySelectorAll("[data-clone-device]").forEach((link) => {
     if (accepted) location.href = link.href;
   });
 });
-
-// Immediate diagnostics stay in the inventory popup; text is never interpreted as HTML.
-const diagnosticDialog = document.querySelector("#diagnostic-dialog");
-if (diagnosticDialog) {
-  const requestForm = document.querySelector("#instant-diagnostic-request");
-  const status = document.querySelector("#diagnostic-status");
-  const output = document.querySelector("#diagnostic-output");
-  let diagnosticRunning = false;
-  diagnosticDialog
-    .querySelectorAll("[data-diagnostic-close]")
-    .forEach((button) =>
-      button.addEventListener("click", () => diagnosticDialog.close()),
-    );
-  document.querySelectorAll("[data-instant-diagnostic]").forEach((link) => {
-    link.addEventListener("click", async (event) => {
-      event.preventDefault();
-      if (diagnosticRunning) return;
-      document.querySelector("#diagnostic-title").textContent =
-        `${link.textContent.trim()} — ${link.dataset.deviceName}`;
-      output.textContent = "";
-      diagnosticDialog.showModal();
-      if (requestForm.dataset.staticPreview) {
-        status.textContent = "Run diagnostics in the deployed plugin.";
-        return;
-      }
-      diagnosticRunning = true;
-      status.textContent = "Running…";
-      const data = new FormData(requestForm);
-      data.set("host_id", link.dataset.hostId);
-      data.set("tool", link.dataset.tool);
-      try {
-        const response = await fetch(requestForm.getAttribute("action"), {
-          method: "POST",
-          body: data,
-          credentials: "same-origin",
-        });
-        const payload = await response.json();
-        if (!response.ok || !payload.ok)
-          throw new Error(payload.error || "Diagnostic could not complete.");
-        const result = payload.result;
-        status.textContent = result.timed_out
-          ? "Timed out"
-          : result.exit === 0
-            ? "Complete"
-            : "Finished with an error";
-        // Add the saved inventory name to the target heading, preserving actual IP and hops.
-        const commandOutput =
-          result.output || "The command returned no output.";
-        output.textContent =
-          link.dataset.tool === "traceroute"
-            ? commandOutput.replace(
-                /^traceroute to \S+ (?=\()/m,
-                () => `traceroute to ${link.dataset.deviceName} `,
-              )
-            : commandOutput;
-      } catch (error) {
-        status.textContent = "Unable to complete diagnostic";
-        output.textContent = error.message;
-      } finally {
-        diagnosticRunning = false;
-      }
-    });
-  });
-}
 
 // Removing a graph association follows the same confirmation popup as other plugin actions.
 document.querySelectorAll("[data-remove-graph-template]").forEach((form) => {

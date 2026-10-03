@@ -23,5 +23,4 @@
         <pre id="diagnostic-live-output" <?= $result?'':'hidden' ?>><?= icct_nms_h($result['output']??'') ?></pre>
         <p id="diagnostic-live-progress" <?= $job&&in_array($job['status'],['queued','running'],true)?'':'hidden' ?>>Results update automatically when the collector finishes.</p>
     </section>
-    <script src="assets/js/diagnostics.js?v=<?= substr(hash_file('sha256',ICCT_NMS_ROOT.'/assets/js/diagnostics.js'),0,12) ?>" defer></script>
 </section>
