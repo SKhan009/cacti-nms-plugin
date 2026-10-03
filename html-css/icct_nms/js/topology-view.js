@@ -1,0 +1,38 @@
+(function(){
+'use strict';
+const source=document.querySelector('#topologyData');if(!source)return;
+const data=JSON.parse(source.textContent),stage=document.querySelector('#topologyStage'),canvas=document.querySelector('#topologyCanvas'),cards=document.querySelector('#topologyDevices'),svg=document.querySelector('#topologyLinks'),panel=document.querySelector('#icct-panel-topology'),save=document.querySelector('#topologySave'),message=document.querySelector('#topologyMessage'),dialog=document.querySelector('#topologyDraftDialog');
+let editing=false,busy=false,scale=1,dirty=false,pending=null,bypass=false,drag=null;
+const devices=data.devices,positions={},core=devices.find(d=>/core.*sw|sw.*core/i.test(d.name))||devices.find(d=>/switch|\bsw\b/i.test(d.name));
+const others=devices.filter(d=>d!==core),cols=Math.max(4,Math.ceil(Math.sqrt(others.length*1.7))),rows=Math.ceil(others.length/cols);
+others.forEach((d,i)=>{const row=Math.floor(i/cols),col=i%cols;positions[d.id]=[.08+col*.84/Math.max(1,cols-1),row<Math.ceil(rows/2)? .12+row*.23/Math.max(1,Math.ceil(rows/2)-1):.65+(row-Math.ceil(rows/2))*.23/Math.max(1,rows-Math.ceil(rows/2)-1)];});
+if(core)positions[core.id]=[.5,.5];
+Object.entries(data.layout).forEach(([id,p])=>{if(positions[id])positions[id]=p;});
+let saved=structuredClone(positions);
+const severityColors={Critical:'#ff4148',Major:'#ff7226',Minor:'#ff9b17',Warning:'#43aa91',Information:'#277f9b'};
+function el(tag,cls,text){const e=document.createElement(tag);e.className=cls;if(text!==undefined)e.textContent=text;return e;}
+function render(){
+ cards.replaceChildren();canvas.style.transform='scale('+scale+')';canvas.style.width='100%';canvas.style.height='100%';
+ const w=canvas.clientWidth,h=canvas.clientHeight;
+ devices.forEach(d=>{const card=el('div','topology-device '+(d.status==='Up'?'online':d.status==='Down'?'offline':'other')+(d===core?' core':''));card.dataset.deviceId=d.id;card.tabIndex=0;card.setAttribute('aria-label',d.name+' · '+d.status);card.title=d.name+' · '+d.status;card.style.left=(positions[d.id][0]*100)+'%';card.style.top=(positions[d.id][1]*100)+'%';card.append(el('strong','',d.name));const badge=el('span','topology-alarm',String(d.fault_count||0));badge.style.background=d.alarm?severityColors[d.alarm.severity]||'#aaa':'white';badge.title=d.alarm?d.alarm.severity+': '+d.alarm.message:'No active fault';card.append(badge);
+ card.addEventListener('pointerdown',e=>{if(!editing||busy||e.button!==0)return;e.preventDefault();drag={id:d.id,card};card.setPointerCapture(e.pointerId);card.classList.add('dragging');});
+ card.addEventListener('pointermove',e=>{if(!drag||drag.id!==d.id)return;const rect=canvas.getBoundingClientRect();positions[d.id]=[Math.max(.05,Math.min(.95,(e.clientX-rect.left)/rect.width)),Math.max(.07,Math.min(.93,(e.clientY-rect.top)/rect.height))];card.style.left=positions[d.id][0]*100+'%';card.style.top=positions[d.id][1]*100+'%';lines();});
+ function finish(){if(!drag)return;drag=null;card.classList.remove('dragging');dirty=JSON.stringify(positions)!==JSON.stringify(saved);controls();}
+ card.addEventListener('pointerup',finish);card.addEventListener('pointercancel',finish);
+ card.addEventListener('keydown',e=>{if(!editing||busy||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const p=positions[d.id];p[0]=Math.max(.05,Math.min(.95,p[0]+(e.key==='ArrowLeft'?-.01:e.key==='ArrowRight'?.01:0)));p[1]=Math.max(.07,Math.min(.93,p[1]+(e.key==='ArrowUp'?-.01:e.key==='ArrowDown'?.01:0)));dirty=true;render();cards.querySelector('[data-device-id="'+d.id+'"]').focus();});cards.append(card);});
+ svg.setAttribute('viewBox','0 0 '+w+' '+h);lines();controls();
+}
+function lines(){svg.replaceChildren();const w=canvas.clientWidth,h=canvas.clientHeight;data.links.forEach(link=>{const a=positions[link.source],b=positions[link.target];if(!a||!b)return;const path=document.createElementNS('http://www.w3.org/2000/svg','path');const x=a[0]*w,y=a[1]*h,X=b[0]*w,Y=b[1]*h,mid=(y+Y)/2;path.setAttribute('d',`M${x} ${y} V${mid} H${X} V${Y}`);const title=document.createElementNS('http://www.w3.org/2000/svg','title');title.textContent=link.protocol.toUpperCase();path.append(title);svg.append(path);});}
+function controls(){save.disabled=!dirty||busy;document.querySelector('.topology-actions').hidden=!editing;document.querySelector('#topologyEdit').hidden=!data.management;document.querySelector('#topologyEdit').setAttribute('aria-pressed',String(editing));cards.classList.toggle('editing',editing);}
+function discard(){Object.assign(positions,structuredClone(saved));dirty=false;message.textContent='';render();}
+async function persist(){if(busy)return false;if(!dirty)return true;busy=true;controls();const body=new FormData(document.querySelector('#topologyToken'));body.set('topology_positions',JSON.stringify(positions));body.set('revision',data.revision);try{const response=await fetch('topology.php',{method:'POST',body,credentials:'same-origin'}),result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||'Unable to save layout.');data.revision=result.revision;saved=structuredClone(positions);dirty=false;message.textContent='';return true;}catch(e){message.textContent=e.message;return false;}finally{busy=false;controls();}}
+function leave(action){if(dirty){pending=action;dialog.showModal();}else action();}
+dialog.querySelectorAll('[data-topology-choice]').forEach(b=>b.addEventListener('click',async()=>{const choice=b.dataset.topologyChoice;if(choice==='save'&&!await persist())return;if(choice==='discard')discard();dialog.close();if(choice!=='cancel'&&pending){const action=pending;pending=null;bypass=true;action();bypass=false;}}));dialog.addEventListener('cancel',()=>{pending=null;});
+save.addEventListener('click',persist);document.querySelector('#topologyDiscard').addEventListener('click',discard);
+document.querySelector('#topologyEdit').addEventListener('click',()=>leave(()=>{editing=!editing;render();}));
+[['topologyZoomIn',.15],['topologyZoomOut',-.15]].forEach(([id,delta])=>document.getElementById(id).addEventListener('click',()=>{scale=Math.max(.6,Math.min(2,scale+delta));render();}));document.querySelector('#topologyFit').addEventListener('click',()=>{scale=1;render();});document.querySelector('#topologyFullscreen').addEventListener('click',()=>{if(document.fullscreenElement)document.exitFullscreen();else document.querySelector('.icct-map-panel').requestFullscreen().catch(()=>{message.textContent='Fullscreen is unavailable.';});});
+document.addEventListener('icct:before-view-change',e=>{if(!panel.hidden&&dirty&&!bypass){e.preventDefault();leave(()=>e.detail.tab.click());}});
+document.addEventListener('click',e=>{const link=e.target.closest('a[href]');if(link&&!panel.hidden&&dirty&&!bypass){e.preventDefault();leave(()=>{window.location.href=link.href;});}},true);
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});new ResizeObserver(()=>{if(!panel.hidden)render();}).observe(stage);
+const totals={Critical:0,Major:0,Minor:0,Warning:0,Information:0};devices.forEach(d=>{Object.entries(d.fault_counts||{}).forEach(([severity,count])=>{if(severity in totals)totals[severity]+=count;});});const alarms=document.querySelector('#topologyAlarms');alarms.append(el('span','','Total: '+Object.values(totals).reduce((a,b)=>a+b,0)));Object.entries(totals).forEach(([name,count])=>{const item=el('span','',name+': '+count);const dot=el('i','');dot.style.background=severityColors[name];item.prepend(dot);alarms.append(item);});render();
+})();

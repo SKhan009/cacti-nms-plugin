@@ -23,6 +23,7 @@
 <div class="icct-view-panel icct-device-view" id="icct-panel-<?= $view ?>" role="tabpanel" aria-labelledby="icct-view-<?= $view ?>" hidden>
 <?php if ($view==='rack'): ?>
 <?php require __DIR__.'/rack_view.php'; ?>
+<?php elseif ($view==='topology'): require __DIR__.'/topology_view.php'; ?>
 <?php else: ?><div class="icct-device-cards">
 <?php foreach ($viewDevices as $device): $asset=''; foreach ($viewTypes as $type) if ((int)$type['category_id']===(int)$device['category_id'] && $type['name']===$device['device_type']) { $asset=icct_nms_type_asset($type,$view==='image'?'map':'network'); break; } ?>
 <a class="icct-device-card" href="device.php?id=<?= (int)$device['id'] ?>"><?php if ($asset): ?><img src="<?= icct_nms_h($asset) ?>" alt=""><?php endif; ?><strong><?= icct_nms_h($device['description']) ?></strong><span><?= icct_nms_h($device['site_name'] ?: 'Unassigned site') ?></span><span><?= icct_nms_h($device['status_label']) ?></span></a>

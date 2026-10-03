@@ -1,0 +1,26 @@
+<?php
+require __DIR__.'/../includes/topology_view_service.php';
+$stored=[];$allowed=true;
+function icct_backend_require_management($r){if(!$GLOBALS['allowed'])throw new RuntimeException('Denied');}
+function icct_backend_require_device_access($id){if($id>5)throw new RuntimeException('Denied device');}
+function icct_backend_topology_integer($v,$min,$max,$name){if(filter_var($v,FILTER_VALIDATE_INT)===false||$v<$min||$v>$max)throw new InvalidArgumentException($name);return(int)$v;}
+function db_fetch_cell_prepared($sql,$args){if(str_contains($sql,'LOCK'))return 1;return json_encode($GLOBALS['stored']);}
+function icct_backend_category_execute($sql,$args){$GLOBALS['stored']=json_decode($args[1],true);}
+function reject($cb){try{$cb();throw new LogicException('Accepted invalid layout');}catch(InvalidArgumentException $e){}}
+$rev=hash('sha256',json_encode($stored));icct_nms_topology_save([1=>[.2,.3]],$rev);
+if($stored[1]!==[.2,.3])throw new LogicException('Position lost');
+reject(fn()=>icct_nms_topology_save([1=>[.5,.5]],$rev));
+$rev=hash('sha256',json_encode($stored));
+foreach([[-1,.2],[.2,2],[.2],[.2,'bad'],[INF,.2]] as $point)reject(fn()=>icct_nms_topology_save([1=>$point],$rev));
+try{icct_nms_topology_save([6=>[.2,.2]],$rev);throw new LogicException('Device permission bypass');}catch(RuntimeException $e){}
+icct_nms_topology_save([2=>[.6,.4]],$rev);if(!isset($stored[1],$stored[2]))throw new LogicException('Save removed other device positions');
+$allowed=false;try{icct_nms_topology_save([],hash('sha256',json_encode($stored)));throw new LogicException('Realm bypass');}catch(RuntimeException $e){}
+echo "Topology persistence, bounds, stale writes and device/realm permissions passed.\n";
+function is_realm_allowed($id){return true;}
+function icct_nms_inventory(){return [['id'=>1],['id'=>2],['id'=>3]];}
+function icct_nms_fault_observations($host){return $host['id']===1?[['state'=>'Critical'],['state'=>'Minor']]:[];}
+function db_fetch_assoc_prepared($sql,$args){return $args[0]===1?[['protocol'=>'lldp','data_json'=>json_encode(['neighbors'=>[['present'=>true,'peer_label'=>'Switch'],['present'=>false,'peer_label'=>'Sensor'],['present'=>true,'management_addresses'=>['127.0.0.1']]]])]]:[];}
+$diagram=icct_nms_topology_data(['unlocated'=>[['id'=>1,'name'=>'Host','address'=>'127.0.0.1'],['id'=>2,'name'=>'Switch','address'=>'127.0.0.1'],['id'=>3,'name'=>'Sensor','address'=>'127.0.0.1']],'sites'=>[]]);
+if(count($diagram['links'])!==1||$diagram['links'][0]['target']!==2)throw new LogicException('Ambiguous or absent neighbour linked');
+if($diagram['devices'][0]['fault_count']!==2)throw new LogicException('Fault counts are incomplete');
+echo "Topology neighbour resolution and actual fault counts passed.\n";

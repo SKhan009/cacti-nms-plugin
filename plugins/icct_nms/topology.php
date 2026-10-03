@@ -7,9 +7,16 @@ require_once __DIR__.'/includes/device_type_service.php';
 require_once __DIR__.'/includes/graph_service.php';
 require_once __DIR__.'/includes/map_service.php';
 require_once __DIR__.'/includes/rack_view_service.php';
+require_once __DIR__.'/includes/topology_view_service.php';
 try {
     icct_nms_backend();
     if (isset($_GET['map_tile'])) { icct_nms_map_tile(); exit; }
+    if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['topology_positions'])) {
+        header('Content-Type: application/json; charset=utf-8');
+        try {icct_nms_post();icct_nms_topology_save(json_decode($_POST['topology_positions'],true,512,JSON_THROW_ON_ERROR),$_POST['revision'] ?? '');echo json_encode(['ok'=>true,'revision'=>hash('sha256',json_encode(icct_nms_topology_layout()))]);}
+        catch(Throwable $error){http_response_code(400);echo json_encode(['ok'=>false,'error'=>$error->getMessage()]);}
+        exit;
+    }
     $mapData=icct_nms_map_data();
     $mapConfigured=!empty($config['nms_geoserver_wms_url']) && !empty($config['nms_geoserver_layer']);
 } catch (Throwable $error) { icct_nms_failure($error); }
