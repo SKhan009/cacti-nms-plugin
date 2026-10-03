@@ -5,13 +5,13 @@
   if (!wizard) return;
   const basic = document.querySelector('#device-form');
   const panels = document.querySelector('#wizard-panels');
-  const steps = ['basic','protocol','diagnostics','graphs','data-query','ports'];
-  const nav = [...basic.querySelectorAll('.steps li')].slice(0,6);
+  const steps = ['basic','protocol','diagnostics','graphs','data-query','ports','fcaps'];
+  const nav = [...basic.querySelectorAll('.steps li')].slice(0,7);
   const dialog = document.querySelector('#unsaved-dialog');
   const previous = document.querySelector('#wizard-previous');
   const next = document.querySelector('#wizard-next');
   let id = Number(wizard.dataset.deviceId), leaving = false, busy = false;
-  const forms = [...panels.querySelectorAll('form')].filter(f => ['snmp','ssh','serial','discovery','diagnostics'].includes(f.elements.action?.value));
+  const forms = [...panels.querySelectorAll('form')].filter(f => ['snmp','ssh','serial','discovery','diagnostics','faults'].includes(f.elements.action?.value));
   
   const snapshot = f => JSON.stringify([...new FormData(f)].filter(([n]) => n !== '__csrf_magic').map(([n,v]) => [n,v instanceof File ? (v.name ? `${v.name}:${v.size}:${v.lastModified}` : '') : v]));
   const baseline = new Map([basic,...forms].map(f => [f,snapshot(f)]));
@@ -34,9 +34,10 @@
     document.querySelector('#device-graphs').hidden = step !== 'graphs';
     document.querySelector('#device-data-queries').hidden = step !== 'data-query';
     document.querySelector('#device-ports').hidden = step !== 'ports';
+    document.querySelector('#device-fcaps').hidden = step !== 'fcaps';
     nav.forEach((item,i)=>{item.classList.toggle('current',i===index);item.removeAttribute('aria-disabled'); if(i===index)item.setAttribute('aria-current','step');else item.removeAttribute('aria-current');});
     previous.disabled = index === 0;
-    next.textContent = index === 5 ? 'Done →' : 'Next →';
+    next.textContent = index === 6 ? 'Done →' : 'Next →';
   }
   nav.forEach((item,i)=>{
     const a = item.querySelector('a') || document.createElement('a');
@@ -46,7 +47,7 @@
   previous.addEventListener('click',()=>{location.hash=steps[Math.max(0,steps.indexOf(currentStep())-1)];});
   next.addEventListener('click',()=>{
     const index=steps.indexOf(currentStep());
-    if(index===5) { leave('index.html'); return; }
+    if(index===6) { leave('index.html'); return; }
     // Navigation keeps incomplete drafts; validation occurs only on explicit Save.
     location.hash=steps[index+1];
   });
@@ -86,6 +87,7 @@
     const invalid=form.querySelector(':invalid');
     if(form===basic)location.hash='basic';
     else if(form.closest('#diagnostics'))location.hash='diagnostics';
+    else if(form.closest('#device-fcaps'))location.hash='fcaps';
     else location.hash='protocol';
     showStep(); invalid?.focus();form.reportValidity();return false;
   }
@@ -115,11 +117,12 @@
         else continue;
         await post(data);protocolInitial.set(name,{hidden:p.hidden,enabled});saved++;
       }
-      for(const form of active.filter(f=>f!==basic)) {
+      for(const form of active.filter(f=>f!==basic && f.elements.action?.value!=='faults')) {
         errorContext=form;
         await post(new FormData(form));baseline.set(form,snapshot(form));saved++;
       }
       for(const [k,data] of staged) {errorContext=document.querySelector(k.startsWith('graph:')?'#device-graphs':'#device-data-queries');await post(data);staged.delete(k);saved++;}
+      for(const form of active.filter(f=>f.elements.action?.value==='faults')) {errorContext=form;await post(new FormData(form));baseline.set(form,snapshot(form));saved++;}
       // Hidden/disabled draft edits are discarded after a successful explicit save.
       for(const form of changed)baseline.set(form,snapshot(form));
       for(const [name] of protocolInitial) {
@@ -131,6 +134,7 @@
       const panel=errorContext.closest('.protocol-item');
       if(panel){panel.hidden=false;panel.open=true;location.hash='protocol';showStep();}
       else if(errorContext===basic){location.hash='basic';showStep();}
+      else if(errorContext.closest('#device-fcaps')){location.hash='fcaps';showStep();}
       else if(errorContext.closest('#diagnostics')){location.hash='diagnostics';showStep();}
       else if(errorContext.id==='device-graphs'){location.hash='graphs';showStep();}
       else if(errorContext.id==='device-data-queries'){location.hash='data-query';showStep();}
@@ -173,7 +177,7 @@
     if(!wizard.contains(event.target))return;
     event.preventDefault();event.stopImmediatePropagation();
     const form=event.target,action=form.elements.action?.value;
-    if(form===basic || ['snmp','ssh','serial','discovery','diagnostics'].includes(action)) {
+    if(form===basic || ['snmp','ssh','serial','discovery','diagnostics','faults'].includes(action)) {
       explicitSave();return;
     }
     const data=new FormData(form);
@@ -189,7 +193,7 @@
     if(action?.startsWith('remove_')) {form.closest('.graph-association, tr')?.setAttribute('hidden','');}
     else if(action?.startsWith('add_')) {
       const select=form.querySelector('select');
-      const entry=document.createElement('p');entry.className='wizard-pending';entry.textContent=select.selectedOptions[0].textContent+' — Added to draft';
+      const entry=document.createElement('p');entry.className='wizard-pending';if(action==='add_graph_template')entry.dataset.graphTemplateId=itemId;entry.textContent=select.selectedOptions[0].textContent+' — Added to draft';
       if(action==='add_graph_template') {
         document.querySelector('.graph-accordion-list').append(entry);
         document.querySelector('#graph-add-panel').hidden=true;

@@ -10,6 +10,7 @@ function icct_nms_poller_bottom()
         icct_backend_collect_inventory_values();
         icct_backend_collect_identity();
         icct_backend_collect_ports();
+        icct_backend_collect_faults();
         icct_backend_nd_poll();
     } catch (Throwable $error) {
         cacti_log('ICCT NMS collector: ' . $error->getMessage(), false, 'ICCT NMS');

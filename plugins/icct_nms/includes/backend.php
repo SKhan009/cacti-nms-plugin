@@ -52,3 +52,5 @@ require_once __DIR__ . "/services/ssh_broker.php";
 require_once __DIR__ . "/services/identity.php";
 
 require_once __DIR__."/services/ports.php";
+
+require_once __DIR__.'/fcaps_service.php';

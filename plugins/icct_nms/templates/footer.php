@@ -28,6 +28,7 @@
         <div class="message-actions"><button type="button" class="button" data-draft-choice="cancel">Keep editing</button><button type="button" class="button" data-draft-choice="discard">Discard</button><button type="button" class="button primary" data-draft-choice="save">Save</button></div>
     </dialog>
     <script src="assets/js/ports.js?v=<?= substr(hash_file('sha256', __DIR__.'/../assets/js/ports.js'),0,12) ?>" defer></script>
+    <script src="assets/js/fcaps.js?v=<?= substr(hash_file('sha256', __DIR__.'/../assets/js/fcaps.js'),0,12) ?>" defer></script>
     <script src="assets/js/wizard.js?v=<?= substr(hash_file('sha256', __DIR__.'/../assets/js/wizard.js'),0,12) ?>" defer></script>
 <?php endif; ?>
 <?php if (!empty($presetsPage)): ?>

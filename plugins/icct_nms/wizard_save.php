@@ -10,6 +10,7 @@ require_once __DIR__ . '/includes/protocol_service.php';
 require_once __DIR__ . '/includes/serial_service.php';
 require_once __DIR__ . '/includes/graph_service.php';
 require_once __DIR__ . '/includes/data_query_service.php';
+require_once __DIR__.'/includes/fcaps_service.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 try {
@@ -24,6 +25,7 @@ try {
         icct_backend_require_management(3);
         $host = icct_nms_device($id);
         switch ($action) {
+            case 'faults': icct_nms_save_faults($id,$_POST); break;
             case 'snmp': icct_nms_save_snmp($id, $host, $_POST); break;
             case 'ssh': icct_nms_save_ssh($id, $_POST); break;
             case 'serial': icct_nms_save_serial($id, $_POST); break;

@@ -25,7 +25,7 @@
         <?php $hasEditedSystemTemplate = false; foreach ($graphAssociations as $index => $template):
             $origin = icct_nms_graph_origin((int)$template["id"]);
             $hasEditedSystemTemplate = $hasEditedSystemTemplate || $origin["edited"]; ?>
-        <details class="graph-association">
+        <details class="graph-association" data-graph-template-id="<?= (int)$template["id"] ?>">
             <summary>
                 <span class="graph-association-name"><?= icct_nms_h($template["name"]) ?></span>
                 <span class="graph-badges">

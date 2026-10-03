@@ -33,17 +33,8 @@ $failedProtocol = $failedProtocol ?? '';
         </li>
         <li data-protocol-step="3"><a href="protocol.php?id=<?= $id ?>#graphs">Graphs<small>4/7</small></a></li>
         <li data-protocol-step="4"><a href="#data-query">Data Query<small>5/7</small></a></li>
-        <?php foreach (
-            ["Port Config", "FCAPS"]
-            as $i => $label
-        ): ?>
-        <li aria-disabled="true">
-            <span>
-                <?= $label ?>
-                <small><?= $i + 6 ?>/7</small>
-            </span>
-        </li>
-        <?php endforeach; ?>
+        <li><a href="device.php?id=<?= $id ?>#ports">Port Config<small>6/7</small></a></li>
+        <li><a href="device.php?id=<?= $id ?>#fcaps">FCAPS<small>7/7</small></a></li>
     </ol>
 </nav>
 <?php endif; ?>

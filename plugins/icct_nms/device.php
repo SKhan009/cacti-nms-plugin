@@ -11,6 +11,7 @@ require_once __DIR__ . "/includes/forms.php";
 require_once __DIR__ . "/includes/device_service.php";
 require_once __DIR__ . "/includes/graph_service.php";
 require_once __DIR__ . "/includes/data_query_service.php";
+require_once __DIR__."/includes/fcaps_service.php";
 require_once __DIR__ . "/includes/protocol_service.php";
 require_once __DIR__ . "/includes/serial_service.php";
 require_once __DIR__ . "/includes/protocol_preset_service.php";
@@ -146,6 +147,7 @@ try {
         echo '<div id="wizard-panels" hidden>';
         require __DIR__ . "/templates/protocol.php";
         require __DIR__.'/templates/ports.php';
+        require __DIR__.'/templates/fcaps.php';
         echo '</div><footer class="form-footer wizard-footer"><button type="button" class="button" id="wizard-previous">Previous ←</button><button type="button" class="button" id="wizard-next">Next →</button></footer></div>';
     }
     require __DIR__ . "/templates/footer.php";
