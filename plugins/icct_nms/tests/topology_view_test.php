@@ -1,5 +1,6 @@
 <?php
 require __DIR__.'/../includes/topology_view_service.php';
+require __DIR__.'/../includes/services/device_metadata.php';
 $stored=[];$allowed=true;
 function icct_backend_require_management($r){if(!$GLOBALS['allowed'])throw new RuntimeException('Denied');}
 function icct_backend_require_device_access($id){if($id>5)throw new RuntimeException('Denied device');}
@@ -8,7 +9,7 @@ function db_fetch_cell_prepared($sql,$args){if(str_contains($sql,'LOCK'))return 
 function icct_backend_category_execute($sql,$args){$GLOBALS['stored']=json_decode($args[1],true);}
 function reject($cb){try{$cb();throw new LogicException('Accepted invalid layout');}catch(InvalidArgumentException $e){}}
 $rev=hash('sha256',json_encode($stored));icct_nms_topology_save([1=>[.2,.3]],$rev);
-if($stored[1]!==[.2,.3])throw new LogicException('Position lost');
+if($stored[1]!==[.5,.5])throw new LogicException('Central switch can be moved');
 reject(fn()=>icct_nms_topology_save([1=>[.5,.5]],$rev));
 $rev=hash('sha256',json_encode($stored));
 foreach([[-1,.2],[.2,2],[.2],[.2,'bad'],[INF,.2]] as $point)reject(fn()=>icct_nms_topology_save([1=>$point],$rev));
@@ -17,7 +18,7 @@ icct_nms_topology_save([2=>[.6,.4]],$rev);if(!isset($stored[1],$stored[2]))throw
 $allowed=false;try{icct_nms_topology_save([],hash('sha256',json_encode($stored)));throw new LogicException('Realm bypass');}catch(RuntimeException $e){}
 echo "Topology persistence, bounds, stale writes and device/realm permissions passed.\n";
 function is_realm_allowed($id){return true;}
-function icct_nms_inventory(){return [['id'=>1,'category_id'=>1,'device_type'=>'Switch'],['id'=>2],['id'=>3]];}
+function icct_nms_inventory(){return [['id'=>1,'category_id'=>1,'device_type'=>'Switch'],['id'=>2,'short_name'=>'PEER SW'],['id'=>3]];}
 function icct_nms_device_types(){return [['category_id'=>1,'name'=>'Switch','icon'=>'switch']];}
 function icct_nms_type_icon_asset($key){return 'assets/'.$key.'.svg';}
 function icct_nms_type_asset($type,$view){return 'assets/'.$view.'-'.$type['icon'].'.svg';}
@@ -50,3 +51,7 @@ $snapshots[2]=[$makeSnapshot(['name'=>'PEER','identity'=>'4:peer'])];
 $snapshots[3]=[$makeSnapshot(['name'=>'PEER','identity'=>'4:peer'])];
 if(icct_nms_topology_data($map)['links'])throw new LogicException('Ambiguous reported identity created a link');
 echo "Network type icons, reported identities, port labels and stale/ambiguous identity safeguards passed.\n";
+
+if($diagram['core_id']!==1||$diagram['devices'][1]['short_name']!=='PEER SW')throw new LogicException('Core or saved short name not supplied');
+if(icct_backend_short_name_generate('Core Switch','Core Switch',1)!=='CORE SW'||icct_backend_short_name_generate('Example','Switch',2)!=='SW-2')throw new LogicException('Type short code generation failed');
+echo "Short code labels, manual short names and fixed central switch passed.\n";

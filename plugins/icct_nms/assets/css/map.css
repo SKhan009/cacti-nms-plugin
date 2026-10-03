@@ -52,3 +52,5 @@
 
 .topology-device-heading{display:flex;align-items:center;justify-content:center;gap:5px;max-width:100%}.topology-device-heading strong{min-width:0}
 .topology-device-icon{width:20px;height:20px;object-fit:contain;flex-shrink:0;pointer-events:none}
+
+.topology-device-heading{flex-direction:column;width:100%;gap:4px}.topology-device-icon{display:block;margin:0 auto}.editing .topology-device.fixed-core{cursor:default}

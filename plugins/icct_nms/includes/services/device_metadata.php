@@ -172,11 +172,16 @@ function icct_backend_single_topology_site()
 }
 
 /** Derive an editable, eight-character ASCII short name from the device's words. */
-function icct_backend_short_name_generate($name)
+function icct_backend_short_name_generate($name, $type = '', $id = 0)
 {
     preg_match_all('/[A-Za-z0-9]+/', (string) $name, $matches);
     $words = $matches[0];
     if (!$words) return 'DEVICE';
     $short = count($words) === 1 ? $words[0] : implode('', array_map(function ($word) { return $word[0]; }, $words));
+    $type = strtolower(trim((string)$type));
+    if (preg_match('/core.*(?:switch|sw)|(?:switch|sw).*core/i', (string)$name)) return 'CORE SW';
+    if (preg_match('/core.*(?:switch|sw)|(?:switch|sw).*core/i', $type)) return substr('CSW-'.($id ? (string)(int)$id : strtoupper($short)),0,8);
+    $prefix = preg_match('/switch|\bsw\b/', $type) ? 'SW' : (preg_match('/router/', $type) ? 'RTR' : (preg_match('/server/', $type) ? 'SRV' : (preg_match('/sensor/', $type) ? 'SNS' : '')));
+    if ($prefix !== '') return substr($prefix.'-'.($id ? (string)(int)$id : strtoupper($short)),0,8);
     return strtoupper(substr($short, 0, 8));
 }

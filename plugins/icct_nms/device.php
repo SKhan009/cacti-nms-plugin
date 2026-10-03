@@ -98,7 +98,7 @@ try {
     }
     if ($shortNameAuto && $values["description"] !== "") {
         $values["short_name"] = icct_backend_short_name_generate(
-            $values["description"],
+            $values["description"], $values["device_type"], $id,
         );
     }
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
@@ -122,7 +122,7 @@ try {
                 trim((string) ($values["short_name"] ?? "")) === "";
             if ($shortNameAuto) {
                 $values["short_name"] = icct_backend_short_name_generate(
-                    $values["description"],
+                    $values["description"], $values["device_type"], $id,
                 );
             }
         }

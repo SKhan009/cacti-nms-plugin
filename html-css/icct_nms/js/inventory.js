@@ -682,11 +682,17 @@ if (headerMenu) {
 
 // Auto-generate while the user has not supplied a manual short name.
 const deviceName = document.querySelector('#device-form [name="description"]');
+const shortType = document.querySelector('#device-form [name="device_type"]');
 const shortName = document.querySelector('#device-form [name="short_name"]');
 if (deviceName && shortName && !shortName.disabled) {
   let automatic = shortName.dataset.autoShort === "1";
   const generate = () => {
     const words = deviceName.value.match(/[A-Za-z0-9]+/g) || [];
+    const type=(shortType?.value||'').toLowerCase(), initials=words.length===1?words[0]:words.map(word=>word[0]).join('');
+    if(/core.*(?:switch|sw)|(?:switch|sw).*core/i.test(deviceName.value))return 'CORE SW';
+    if(/core.*(?:switch|sw)|(?:switch|sw).*core/i.test(type)){const id=Number(document.querySelector('#device-wizard')?.dataset.deviceId)||0;return ('CSW-'+(id||initials.toUpperCase())).slice(0,8);}
+    const prefix=/switch|\bsw\b/.test(type)?'SW':/router/.test(type)?'RTR':/server/.test(type)?'SRV':/sensor/.test(type)?'SNS':'';
+    if(prefix&&words.length){const id=Number(document.querySelector('#device-wizard')?.dataset.deviceId)||0;return (prefix+'-'+(id||initials.toUpperCase())).slice(0,8);}
     return words.length
       ? (words.length === 1 ? words[0] : words.map((word) => word[0]).join(""))
           .slice(0, 8)
@@ -699,6 +705,7 @@ if (deviceName && shortName && !shortName.disabled) {
     if (automatic) shortName.value = generate();
   };
   deviceName.addEventListener("input", update);
+  shortType?.addEventListener("change", update);
   shortName.addEventListener("input", () => {
     automatic = shortName.value.trim() === "";
   });

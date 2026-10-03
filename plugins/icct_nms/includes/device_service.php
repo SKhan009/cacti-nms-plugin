@@ -46,7 +46,7 @@ function icct_nms_save_device($id, $old, $input)
     $values['proxy'] = $id ? icct_backend_shared_endpoint_get($id) : false;
     $short = icct_backend_short_name_validate($input['short_name'] ?? '');
     if ($short === '') {
-        $short = icct_backend_short_name_generate($values['description']);
+        $short = icct_backend_short_name_generate($values['description'], $input['device_type'], $id);
     }
     // Displayed collector evidence is not silently promoted to a manual override.
     $observed = $id ? icct_backend_identity_observed($old) : [];

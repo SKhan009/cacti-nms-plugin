@@ -1,6 +1,13 @@
 <?php
 require_once __DIR__.'/topology_configuration_service.php';
 require_once __DIR__.'/connection_service.php';
+/** Select one central switch deterministically; shape alone does not imply device role. */
+function icct_nms_topology_core_id($devices){
+    foreach($devices as $device)if(preg_match('/core.*(?:switch|sw)|(?:switch|sw).*core/i',$device['description']??$device['name']??''))return (int)$device['id'];
+    foreach($devices as $device)if(preg_match('/core.*(?:switch|sw)|(?:switch|sw).*core/i',$device['device_type']??''))return (int)$device['id'];
+    foreach($devices as $device)if(preg_match('/switch|\bsw\b/i',($device['device_type']??'').' '.($device['description']??$device['name']??'')))return (int)$device['id'];
+    return 0;
+}
 /** Visual positions are independent of rack units and geographic coordinates. */
 function icct_nms_topology_layout() {
     $raw=(string)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['topology_layout']);
@@ -17,6 +24,7 @@ function icct_nms_topology_data($mapData) {
     };
     foreach($devices as &$device){
         $host=$inventory[$device['id']];
+        $device['short_name']=trim((string)($host['short_name']??'')) ?: icct_backend_short_name_generate($device['name'],$host['device_type']??'',(int)$device['id']);
         $device['network_asset']=icct_nms_type_icon_asset('device');
         foreach($types as $type) if((int)$type['category_id']===(int)($host['category_id']??0) && $type['name']===($host['device_type']??'')){$device['network_asset']=icct_nms_type_asset($type,'network');break;}
         foreach([$device['name'],$device['address'],$host['snmp_sysName']??''] as $value)$addIdentity($value,$device['id']);
@@ -46,7 +54,7 @@ function icct_nms_topology_data($mapData) {
     $profiles=icct_nms_connections();$allowed=array_column($devices,null,'id');
     foreach(icct_nms_manual_links() as $key=>$link)if(isset($allowed[$link['source']],$allowed[$link['target']])){$pair=[$link['source'],$link['target']];sort($pair);$links[implode('-',$pair)]=['source'=>$link['source'],'target'=>$link['target'],'protocol'=>'manual','color'=>$profiles[$link['profile']]['color']??'#555','label'=>($profiles[$link['profile']]['name']??'Manual').' · '.($link['source_port']?:'?').' / '.($link['target_port']?:'?')];}
     $layout=icct_nms_topology_layout();
-    return ['devices'=>$devices,'links'=>array_values($links),'layout'=>$layout,'revision'=>hash('sha256',json_encode($layout)),'management'=>is_realm_allowed(3)];
+    return ['core_id'=>icct_nms_topology_core_id(array_values($inventory)),'devices'=>$devices,'links'=>array_values($links),'layout'=>$layout,'revision'=>hash('sha256',json_encode($layout)),'management'=>is_realm_allowed(3)];
 }
 function icct_nms_topology_save($positions,$revision){
     icct_backend_require_management(3);
@@ -59,6 +67,7 @@ function icct_nms_topology_save($positions,$revision){
     $lock='icct_topology_layout';if((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',[$lock])!==1)throw new RuntimeException('Layout is busy. Retry shortly.');
     try{$layout=icct_nms_topology_layout();if(!hash_equals(hash('sha256',json_encode($layout)),(string)$revision))throw new InvalidArgumentException('Layout changed in another page. Reload before saving.');
         foreach($clean as $id=>$point)$layout[$id]=$point;
+        $coreId=icct_nms_topology_core_id(icct_nms_inventory());if($coreId)$layout[$coreId]=[0.5,0.5];
         icct_backend_category_execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',['topology_layout',json_encode($layout,JSON_THROW_ON_ERROR)]);
     }finally{db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]);}
 }
