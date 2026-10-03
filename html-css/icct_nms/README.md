@@ -28,3 +28,5 @@ python3 -m http.server 8765 --bind 127.0.0.1 --directory html-css/icct_nms
 `device-types.html` previews the Presets Device Type table and inline editor. Native image uploads are saved under the plugin’s `assets/images/device-types/uploads/`; the static preview does not upload files or change saved profiles.
 
 `network-connections.html` previews the Network Connections cards, style editor and live line preview. Save/delete actions in static previews do not change Cacti.
+
+Device Type Add/Edit has a six-column local SVG icon picker and a 500 KB upload limit. Add/Edit Device previews load appearance details from the selected saved type profile.

@@ -19,6 +19,11 @@ if($catalogue[$input['type_id']]['physical_ports']!==48 || $catalogue[$input['ty
 reject_type(['type_id'=>'','icon'=>'device'],'already has');
 if(icct_nms_type_asset(['icon'=>'../../etc','display_modes'=>['network'=>'icon']])!=='assets/images/device-types/device.svg') throw new RuntimeException('Unsafe asset');
 if(icct_nms_type_asset(['display_modes'=>['rack'=>'none']],'rack')!=='') throw new RuntimeException('None visibility failed');
+if(icct_nms_resolve_device_type(4,'Switch')!=='Switch') throw new RuntimeException('Saved type not resolved');
+try { icct_nms_resolve_device_type(7,'Switch'); throw new RuntimeException('Cross-segment type accepted'); } catch(InvalidArgumentException $e) {}
+$folder=__DIR__.'/../assets/images/icons'; if(!is_dir($folder)) mkdir($folder);
+$file=$folder.'/test-discovery.svg'; file_put_contents($file,'<svg xmlns="http://www.w3.org/2000/svg"/>');
+try { if(!isset(icct_nms_type_icons()['test-discovery']) || icct_nms_type_icon_asset('test-discovery')!=='assets/images/icons/test-discovery.svg') throw new RuntimeException('Icon folder discovery failed'); } finally { unlink($file); }
 icct_nms_save_device_type(['action'=>'delete_type','type_id'=>$input['type_id']]);
 if($catalogue) throw new RuntimeException('Delete failed');
 echo "Device type validation, visibility and persistence tests passed.\n";

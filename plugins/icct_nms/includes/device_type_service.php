@@ -1,7 +1,26 @@
 <?php
 /** Topology appearance uses local assets and the NMS network/rack/map visibility model. */
 function icct_nms_type_icons() {
-    return ['switch'=>'Switch','router'=>'Router','server'=>'Server','workstation'=>'PC / desktop','laptop'=>'Laptop','phone'=>'Phone','ipphone'=>'Desk phone','ups'=>'UPS / battery','sensor'=>'Sensor','printer'=>'Printer','camera'=>'Camera','wireless'=>'Wireless AP','firewall'=>'Firewall','satellite'=>'Satellite / VSAT','device'=>'Generic device'];
+    $labels=['switch'=>'Switch','router'=>'Router','server'=>'Server','workstation'=>'PC / desktop','laptop'=>'Laptop','phone'=>'Phone','ipphone'=>'Desk phone','ups'=>'UPS / battery','sensor'=>'Sensor','printer'=>'Printer','camera'=>'Camera','wireless'=>'Wireless AP','firewall'=>'Firewall','satellite'=>'Satellite / VSAT','device'=>'Generic device'];
+    $icons=[];
+    foreach (['device-types','icons'] as $folder) foreach (glob(__DIR__.'/../assets/images/'.$folder.'/*.svg') ?: [] as $file) {
+        $key=basename($file,'.svg');
+        if (preg_match('/^[a-z][a-z0-9_-]{0,63}$/D',$key)) $icons[$key]=$labels[$key] ?? ucwords(str_replace(['-','_'],' ',$key));
+    }
+    asort($icons,SORT_NATURAL|SORT_FLAG_CASE);
+    return $icons;
+}
+function icct_nms_type_icon_asset($key) {
+    if (!is_string($key) || !isset(icct_nms_type_icons()[$key])) $key='device';
+    foreach (['device-types','icons'] as $folder) if (is_file(__DIR__.'/../assets/images/'.$folder.'/'.$key.'.svg')) return 'assets/images/'.$folder.'/'.$key.'.svg';
+    return '';
+}
+/** Resolve a submitted device type against the current segment catalogue. */
+function icct_nms_resolve_device_type($category,$name) {
+    $name=icct_backend_classification_text($name,150);
+    if ($name==='') return '';
+    foreach(icct_nms_device_types() as $profile) if ((int)$profile['category_id']===(int)$category && $profile['name']===$name) return $name;
+    throw new InvalidArgumentException('Choose a saved device type for the selected segment.');
 }
 function icct_nms_device_types() {
     $json = db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?', ['device_type_profiles']);
@@ -19,12 +38,12 @@ function icct_nms_type_asset($type,$view='network') {
     if ($mode==='none') return '';
     if ($mode==='image' && preg_match('/^uploads\/[a-f0-9]{32}\.(png|jpg|webp)$/D',$type['image'] ?? '')) return 'assets/images/device-types/'.$type['image'];
     $icon=isset(icct_nms_type_icons()[$type['icon'] ?? '']) ? $type['icon'] : 'device';
-    return 'assets/images/device-types/'.$icon.'.svg';
+    return icct_nms_type_icon_asset($icon);
 }
 function icct_nms_type_image_upload($file) {
     if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE)===UPLOAD_ERR_NO_FILE) return '';
     if (($file['error'] ?? -1)!==UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) throw new InvalidArgumentException('Upload a valid device image.');
-    if (filesize($file['tmp_name'])>2097152) throw new InvalidArgumentException('Use an image up to 2 MB.');
+    if (filesize($file['tmp_name'])>512000) throw new InvalidArgumentException('Use an image up to 500 KB.');
     $info=@getimagesize($file['tmp_name']);
     $extensions=[IMAGETYPE_PNG=>'png',IMAGETYPE_JPEG=>'jpg',IMAGETYPE_WEBP=>'webp'];
     if (!$info || !isset($extensions[$info[2]]) || $info[0]*$info[1]>16000000) throw new InvalidArgumentException('Use PNG, JPEG or WebP, up to 16 megapixels.');

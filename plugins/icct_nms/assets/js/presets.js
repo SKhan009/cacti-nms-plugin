@@ -17,23 +17,55 @@ document.querySelectorAll('[data-delete-segment]').forEach(form => form.addEvent
 }));
 const typeEditor = document.querySelector('#device-type-editor');
 const iconPreview = document.querySelector('#device-type-icon-preview');
+const iconGrid = document.querySelector('#icon-picker-grid');
+const iconToggle = document.querySelector('#icon-picker-toggle');
+const typeSaveButton = document.querySelector('#save-device-type');
 function updateTypeIcon() {
-  if (iconPreview) iconPreview.src = new URL(`../images/device-types/${typeEditor.elements.icon.value}.svg`, document.querySelector('script[src*="presets.js"]').src).href;
+  if (!typeEditor) return;
+  const option = [...iconGrid.querySelectorAll('[data-icon]')].find(button=>button.dataset.icon===typeEditor.elements.icon.value);
+  iconPreview.hidden = !option;
+  document.querySelector('#icon-picker-value').textContent = option?.dataset.iconLabel ?? 'Select Icon';
+  if(option) iconPreview.src=option.dataset.iconAsset; else iconPreview.removeAttribute('src');
+  iconGrid.querySelectorAll('[data-icon]').forEach(button=>button.setAttribute('aria-selected',String(button===option)));
+  typeSaveButton.disabled = !typeEditor.elements.type_name.value.trim() || !option || !typeEditor.elements.physical_ports.validity.valid;
 }
+function closeIconPicker() { if(iconGrid) { iconGrid.hidden=true;iconToggle.setAttribute('aria-expanded','false'); } }
 function openTypeEditor(type = {}) {
   typeEditor.reset();
-  const fields = {type_id:type.type_id ?? '',type_name:type.name ?? '',category_id:type.category_id ?? 0,physical_ports:type.physical_ports ?? 0,icon:type.icon ?? 'device'};
+  const fields = {type_id:type.type_id ?? '',type_name:type.name ?? '',category_id:type.category_id ?? 0,physical_ports:type.physical_ports ?? '',icon:type.icon ?? ''};
   for (const view of ['network','rack','map']) fields[`display_${view}`] = type.display_modes?.[view] ?? 'icon';
   for (const [name,value] of Object.entries(fields)) typeEditor.elements[name].value = value;
   document.querySelector('#type-editor-title').textContent = type.type_id ? 'Edit Device Type' : 'Add Device Type';
+  typeSaveButton.textContent = type.type_id ? 'Save' : 'Add';
   typeEditor.hidden = false;
-  updateTypeIcon();
+  document.querySelector('main').classList.add('type-editor-active');
+  const preview=document.querySelector('#type-upload-preview');
+  const validImage=/^uploads\/[a-f0-9]{32}\.(png|jpg|webp)$/.test(type.image ?? '');
+  preview.hidden=!validImage;
+  document.querySelector('#type-remove-image').hidden=!validImage;
+  if(validImage) preview.src=new URL('../images/device-types/'+type.image,document.querySelector('script[src*="presets.js"]').src).href; else preview.removeAttribute('src');
+  document.querySelector('#type-upload-name').textContent='';
+  closeIconPicker(); updateTypeIcon();
   typeEditor.elements.type_name.focus();
-  typeEditor.scrollIntoView({block:'start',behavior:'smooth'});
 }
 document.querySelector('#add-device-type')?.addEventListener('click', () => openTypeEditor());
-document.querySelector('#cancel-device-type')?.addEventListener('click', () => { typeEditor.hidden = true; });
-document.querySelector('#device-type-icon')?.addEventListener('change', updateTypeIcon);
+document.querySelector('#cancel-device-type')?.addEventListener('click', () => { typeEditor.hidden = true; document.querySelector('main').classList.remove('type-editor-active'); closeIconPicker(); });
+iconToggle?.addEventListener('click',()=>{ iconGrid.hidden=!iconGrid.hidden;iconToggle.setAttribute('aria-expanded',String(!iconGrid.hidden)); if(!iconGrid.hidden) iconGrid.querySelector('[aria-selected="true"], [data-icon]')?.focus(); });
+iconGrid?.querySelectorAll('[data-icon]').forEach((button,index,buttons)=>{
+  button.addEventListener('click',()=>{typeEditor.elements.icon.value=button.dataset.icon;updateTypeIcon();closeIconPicker();iconToggle.focus();});
+  button.addEventListener('keydown',event=>{const offsets={ArrowRight:1,ArrowLeft:-1,ArrowDown:6,ArrowUp:-6};if(event.key in offsets){event.preventDefault();buttons[(index+offsets[event.key]+buttons.length)%buttons.length].focus();}if(event.key==='Escape'){closeIconPicker();iconToggle.focus();}});
+});
+document.addEventListener('click',event=>{if(iconGrid&&!event.target.closest('.icon-picker'))closeIconPicker();});
+typeEditor?.addEventListener('input',updateTypeIcon);
+typeEditor?.elements.device_image.addEventListener('change',()=>{
+  const file=typeEditor.elements.device_image.files[0];
+  if(!file) return;
+  typeEditor.elements.device_image.setCustomValidity(file.size>512000?'Use an image up to 500 KB.':'');
+  document.querySelector('#type-upload-name').textContent=file.name;
+  const preview=document.querySelector('#type-upload-preview');
+  if(file.size<=512000){ preview.src=URL.createObjectURL(file);preview.hidden=false; }
+});
+if(typeEditor&&!typeEditor.hidden){ document.querySelector('main').classList.add('type-editor-active');updateTypeIcon(); }
 document.querySelectorAll('[data-edit-type]').forEach(button => button.addEventListener('click', () => openTypeEditor(JSON.parse(button.dataset.editType))));
 document.querySelectorAll('[data-delete-type]').forEach(form => form.addEventListener('submit', async event => {
   event.preventDefault();

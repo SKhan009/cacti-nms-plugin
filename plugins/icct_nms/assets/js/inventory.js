@@ -836,19 +836,36 @@ document
     window.addEventListener("resize", () => closeTemplates());
   });
 
-// Segment determines the read-only device type from saved ICCT classifications.
-const segmentData = document.querySelector("#segment-data");
-if (segmentData) {
-  const types = JSON.parse(segmentData.textContent);
+// Saved presets populate the device type choices and read-only appearance details.
+const typeProfileData = document.querySelector('#device-type-profiles');
+if (typeProfileData) {
+  const profiles = JSON.parse(typeProfileData.textContent);
   const segment = document.querySelector('#device-form [name="category_id"]');
-  const deviceType = document.querySelector(
-    '#device-form [name="device_type"]',
-  );
-  const updateType = () => {
-    deviceType.value = types[segment.value] || "";
+  const type = document.querySelector('#device-form [name="device_type"]');
+  const info = document.querySelector('#device-type-info');
+  const details = () => {
+    const profile = profiles.find(p => String(p.category_id) === segment.value && p.name === type.value);
+    info.hidden = !profile;
+    if (!profile) return;
+    document.querySelector('#assigned-type-name').textContent = profile.name;
+    document.querySelector('#assigned-type-ports').textContent = profile.physical_ports ?? 'Not set';
+    document.querySelector('#assigned-type-icon').src = profile.icon_asset;
+    const image = document.querySelector('#assigned-type-image');
+    image.hidden = !profile.image_asset;
+    if (profile.image_asset) image.src = profile.image_asset; else image.removeAttribute('src');
   };
-  segment.addEventListener("change", updateType);
-  updateType();
+  const updateTypes = () => {
+    const saved = type.value;
+    type.replaceChildren(new Option('None',''));
+    for (const profile of profiles.filter(p => String(p.category_id) === segment.value)) type.add(new Option(profile.name,profile.name));
+    if (saved && [...type.options].some(option => option.value === saved)) type.value = saved;
+    else if (type.options.length === 2) type.selectedIndex = 1;
+    details();
+  };
+  segment.addEventListener('change',updateTypes);
+  type.addEventListener('change',details);
+  // Preserve an existing selection, including explicit None, on the first render.
+  details();
 }
 
 // A changed endpoint cannot keep auto-observed identity belonging to the previous IP.

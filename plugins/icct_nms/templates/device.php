@@ -119,13 +119,18 @@
                 $categories,
                 $values["category_id"],
             );
-            icct_nms_input(
-                "Device Type",
-                "device_type",
-                $segmentTypes[$values["category_id"]] ?? "",
-                "text",
-                "readonly",
-            );
+            $typeProfiles=icct_nms_device_types();
+            $typeChoices=[''=>'None'];
+            foreach ($typeProfiles as $profile) if ((int)$profile['category_id']===(int)$values['category_id']) $typeChoices[$profile['name']]=$profile['name'];
+            icct_nms_select('Device Type','device_type',$typeChoices,$values['device_type']);
+            ?>
+            <div id="device-type-info" class="device-type-info" hidden>
+                <img id="assigned-type-icon" alt="Device type icon" width="32" height="32">
+                <div><span id="assigned-type-name"></span><small>No. of Ports: <span id="assigned-type-ports"></span></small></div>
+                <img id="assigned-type-image" alt="Device type image" hidden>
+            </div>
+            <script type="application/json" id="device-type-profiles"><?= json_encode(array_map(static function($p) { $p['icon_asset']=icct_nms_type_icon_asset($p['icon']); $p['image_asset']=!empty($p['image'])?icct_nms_type_asset(array_replace($p,['display_modes'=>['network'=>'image']])):''; return $p; },array_values($typeProfiles)),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_SLASHES) ?></script>
+            <?php
             icct_nms_core_select(
                 "Device Site Location",
                 "site_id",

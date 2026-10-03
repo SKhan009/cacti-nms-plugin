@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__.'/device_type_service.php';
+
 /**
  * Device and SNMP writes using Cacti field definitions and existing NMS services.
  */
@@ -58,8 +60,8 @@ function icct_nms_save_device($id, $old, $input)
     if ($category && !icct_backend_category_exists($category)) {
         throw new InvalidArgumentException('Select a saved segment.');
     }
-    // The read-only type is resolved server-side from the selected segment.
-    $type = icct_backend_category_device_type($category, $id);
+    // Only a saved profile in the selected segment can be assigned.
+    $type = icct_nms_resolve_device_type($category, $input['device_type']);
     $url = icct_backend_config_text($input['cross_launch_url'] ?? '', 2048, 'Cross Launch URL', false);
     if (
         $url !== '' &&
