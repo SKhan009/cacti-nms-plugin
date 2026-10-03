@@ -13,7 +13,7 @@ try {
     icct_nms_post();
     if (isset($_POST['moves'])) {
         $moves=json_decode($_POST['moves'],true,512,JSON_THROW_ON_ERROR);
-        foreach (icct_nms_rack_save_draft($moves) as $id) icct_nms_configuration_record($id,'Rack placement changed');
+        foreach (icct_nms_rack_save_draft($moves,json_decode($_POST['reservations'] ?? '[]',true,512,JSON_THROW_ON_ERROR)) as $id) icct_nms_configuration_record($id,'Rack placement changed');
     } else {
         $id=icct_nms_id($_POST['host_id'] ?? 0); $host=icct_nms_device($id);
         $rack=icct_backend_topology_integer($_POST['rack_id'] ?? 0,0,2147483647,'Rack');

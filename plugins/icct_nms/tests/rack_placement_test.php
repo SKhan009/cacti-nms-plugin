@@ -17,6 +17,10 @@ function db_fetch_cell_prepared($sql,$args){
  if(str_contains($sql,'JOIN plugin_icct_nms_racks r ON m.meta_value'))return isset($GLOBALS['meta'][$args[0]])?1:0;
  if(str_contains($sql,'SELECT n.id FROM plugin_icct_nms_meta'))return (int)($GLOBALS['meta'][$args[0]]??0);
  if(str_contains($sql,'meta_value'))return $GLOBALS['meta'][$args[0]]??'';
+ if(str_contains($sql,'rack_id=? AND start_unit<=?')) {
+  foreach($GLOBALS['placements'] as $p)if($p['rack_id']===$args[0] && $p['start_unit']<=$args[1] && $p['start_unit']+$p['unit_height']-1>=$args[2])return 1;
+  return 0;
+ }
  if(str_contains($sql,'host_id !='))return $GLOBALS['overlap']?1:0;
  return 0;
 }
@@ -60,6 +64,25 @@ $valid=$move(3,['6'],icct_nms_rack_revision(3));
 reject(fn()=>icct_nms_rack_save_draft([$valid,$valid]));
 reject(fn()=>icct_nms_rack_save_draft([$valid,$move(4,['24','25'],icct_nms_rack_revision(4))]));
 if([$placements,$meta]!==$before)throw new LogicException('Failed batch changed saved placements');
+// Reservations persist without creating hosts and protect physical capacity.
+$placements=[];$meta=[];
+$reserve=fn($items,$revision)=>['rack_id'=>1,'revision'=>$revision,'items'=>$items];
+$revision=icct_nms_rack_reservation_revision(1);
+$item=['id'=>'reserved-test','start'=>3,'height'=>2];
+icct_nms_rack_save_draft([],[$reserve([$item],$revision)]);
+if(icct_nms_rack_reserved_units(1)!==[3,4])throw new LogicException('Reservation did not persist');
+reject(fn()=>icct_nms_rack_place(3,6,1,['3']));
+reject(fn()=>icct_nms_rack_save_draft([],[$reserve([],$revision)]));
+$revision=icct_nms_rack_reservation_revision(1);
+reject(fn()=>icct_nms_rack_save_draft([],[$reserve([$item,['id'=>'second','start'=>4,'height'=>1]],$revision)]));
+reject(fn()=>icct_nms_rack_save_draft([],[$reserve([['id'=>'large','start'=>24,'height'=>2]],$revision)]));
+icct_nms_rack_place(3,6,1,['6']);
+$before=[$placements,$meta];
+reject(fn()=>icct_nms_rack_save_draft([],[$reserve([['id'=>'collision','start'=>6,'height'=>1]],$revision)]));
+reject(fn()=>icct_nms_rack_save_draft([$move(3,['3'],icct_nms_rack_revision(3))],[$reserve([$item],$revision)]));
+if([$placements,$meta]!==$before)throw new LogicException('Failed reservation batch changed saved data');
+icct_nms_rack_save_draft([],[$reserve([],$revision)]);
+icct_nms_rack_place(3,6,1,['3']);
 $denied=true;try{icct_nms_rack_place(3,6,1,['1']);throw new LogicException('Access bypass');}catch(RuntimeException $expected){}
 if(!in_array('ROLLBACK',$transactions,true))throw new LogicException('Failed moves did not rollback');
 echo "Rack units, overlap, capacity, stale edits, site, permissions, peripheral transitions and unassignment passed.\n";

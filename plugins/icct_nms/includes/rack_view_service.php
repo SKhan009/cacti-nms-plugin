@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__."/rack_reservation_service.php";
 require_once __DIR__ . "/node_membership_service.php";
 /** Both rack editing surfaces share these placement records and validation. */
 function icct_nms_rack_units($units,$capacity) {
@@ -55,15 +56,17 @@ function icct_nms_rack_view_data() {
     $racks=db_fetch_assoc('SELECT r.*,n.site_id,n.name AS node_name FROM plugin_icct_nms_racks r JOIN plugin_icct_nms_rack_nodes n ON n.id=r.node_id ORDER BY n.name,r.rack_number');
     foreach ($racks as &$rack) {
         $rack['blocked']=[];
+        $rack['reservations']=icct_nms_rack_reservations((int)$rack['id']);
+        $rack['reservation_revision']=icct_nms_rack_reservation_revision((int)$rack['id']);
         foreach (db_fetch_assoc_prepared('SELECT host_id,start_unit,unit_height FROM plugin_icct_nms_rack_devices WHERE rack_id=?',[(int)$rack['id']]) as $placement) if (!isset($allowed[(int)$placement['host_id']])) for ($u=(int)$placement['start_unit'];$u<(int)$placement['start_unit']+(int)$placement['unit_height'];$u++) $rack['blocked'][]=$u;
     } unset($rack);
     return ['nodes'=>db_fetch_assoc('SELECT n.*,s.name AS site_name FROM plugin_icct_nms_rack_nodes n JOIN sites s ON s.id=n.site_id ORDER BY n.name'),'racks'=>$racks,'devices'=>$out,'management'=>is_realm_allowed(3)];
 }
 
 /** Save a whole drag draft atomically, including swaps between occupied units. */
-function icct_nms_rack_save_draft($moves) {
+function icct_nms_rack_save_draft($moves,$reservations=[]) {
     icct_backend_require_management(3);
-    if (!is_array($moves) || !$moves || count($moves)>200) throw new InvalidArgumentException('Select between 1 and 200 device moves.');
+    if (!is_array($moves) || !is_array($reservations) || (!$moves && !$reservations) || count($moves)>200 || count($reservations)>200) throw new InvalidArgumentException('Select between 1 and 200 device moves.');
     $lock='icct_backend_racks_'.substr(hash('sha256',(string)db_fetch_cell('SELECT DATABASE()')),0,32);
     if ((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',[$lock])!==1) throw new RuntimeException('Rack configuration is busy. Retry shortly.');
     icct_backend_category_execute('START TRANSACTION');
@@ -90,6 +93,25 @@ function icct_nms_rack_save_draft($moves) {
         foreach ($checked as $id=>$move) {
             icct_backend_category_execute('DELETE FROM plugin_icct_nms_rack_devices WHERE host_id=?',[$id]);
             icct_backend_category_execute('DELETE FROM plugin_icct_nms_meta WHERE meta_key=?',['rack_peripheral_'.$id]);
+        }
+        $seen=[];
+        foreach($reservations as $change) {
+            $rack=icct_backend_topology_integer($change['rack_id'] ?? 0,1,2147483647,'Rack');
+            if(isset($seen[$rack]))throw new InvalidArgumentException('Duplicate rack reservation.');$seen[$rack]=true;
+            $record=db_fetch_row_prepared('SELECT * FROM plugin_icct_nms_racks WHERE id=? FOR UPDATE',[$rack]);
+            if(!$record || !hash_equals(icct_nms_rack_reservation_revision($rack),(string)($change['revision'] ?? '')))throw new InvalidArgumentException('Reserved units changed. Discard and reload before editing.');
+            $items=$change['items'] ?? null;if(!is_array($items)||count($items)>100)throw new InvalidArgumentException('Invalid reserved units.');
+            $occupied=[];$clean=[];$ids=[];
+            foreach($items as $item){
+                $id=$item['id'] ?? '';if(!is_string($id)||!preg_match('/^[a-zA-Z0-9-]{1,80}$/',$id)||isset($ids[$id]))throw new InvalidArgumentException('Invalid reservation ID.');$ids[$id]=true;
+                $start=icct_backend_topology_integer($item['start'] ?? 0,1,(int)$record['unit_count'],'Start unit');
+                $height=icct_backend_topology_integer($item['height'] ?? 0,1,(int)$record['unit_count'],'Units occupied');
+                if($start+$height-1>(int)$record['unit_count'])throw new InvalidArgumentException('Reserved units exceed rack capacity.');
+                for($u=$start;$u<$start+$height;$u++){if(isset($occupied[$u]))throw new InvalidArgumentException('Reserved units overlap.');$occupied[$u]=true;}
+                if((int)db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_icct_nms_rack_devices WHERE rack_id=? AND start_unit<=? AND start_unit+unit_height-1>=?',[$rack,$start+$height-1,$start]))throw new InvalidArgumentException('These rack units are already occupied.');
+                $clean[]=['id'=>$id,'start'=>$start,'height'=>$height];
+            }
+            icct_backend_category_execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',['rack_reserved_'.$rack,json_encode($clean,JSON_THROW_ON_ERROR)]);
         }
         foreach ($checked as $id=>$move) icct_nms_rack_place($id,$move['site'],$move['rack'],$move['units'],$move['peripheral'],null,$move['rack']===0,false);
         icct_backend_category_execute('COMMIT');

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__."/../rack_reservation_service.php";
 /** ICCT-owned topology config services, derived from the existing ICCT NMS implementation. */
 
 /** Reused Inventory service: topology config apply. */
@@ -36,7 +37,7 @@ function icct_backend_topology_config_apply($action, $site_id, $input)
         if ($id) {
             if (
                 (int) db_fetch_cell_prepared(
-                    "SELECT COUNT(*) FROM plugin_icct_nms_racks r WHERE r.node_id = ? AND r.rack_number > ? AND (EXISTS(SELECT 1 FROM plugin_icct_nms_rack_devices d WHERE d.rack_id=r.id) OR EXISTS(SELECT 1 FROM plugin_icct_nms_meta m WHERE m.meta_key LIKE 'rack_peripheral_%' AND m.meta_value=CAST(r.id AS CHAR)))",
+                    "SELECT COUNT(*) FROM plugin_icct_nms_racks r WHERE r.node_id = ? AND r.rack_number > ? AND (EXISTS(SELECT 1 FROM plugin_icct_nms_rack_devices d WHERE d.rack_id=r.id) OR EXISTS(SELECT 1 FROM plugin_icct_nms_meta m WHERE m.meta_key LIKE 'rack_peripheral_%' AND m.meta_value=CAST(r.id AS CHAR)) OR EXISTS(SELECT 1 FROM plugin_icct_nms_meta m WHERE m.meta_key=CONCAT('rack_reserved_',r.id) AND m.meta_value!='[]'))",
                     [$id, $count]
                 )
             ) {
@@ -98,6 +99,9 @@ function icct_backend_topology_config_apply($action, $site_id, $input)
                 'The smaller rack would exclude installed devices. Move them first.'
             );
         }
+        foreach (icct_nms_rack_reserved_units($rack_id) as $reserved_unit) {
+            if ($reserved_unit > $units) throw new InvalidArgumentException('The smaller rack would exclude reserved units. Clear them first.');
+        }
         icct_backend_category_execute(
             'UPDATE plugin_icct_nms_racks SET name = ?, unit_count = ?, updated_by = ?, updated_at = NOW() WHERE id = ?',
             [$name, $units, $user, $rack_id]
@@ -132,6 +136,7 @@ function icct_backend_topology_config_apply($action, $site_id, $input)
             ) {
                 throw new InvalidArgumentException('These rack units are already occupied.');
             }
+            foreach(icct_nms_rack_reserved_units($rack_id) as $unit) if($unit>=$start && $unit<$start+$height) throw new InvalidArgumentException('These rack units are reserved.');
             icct_backend_category_execute(
                 'INSERT INTO plugin_icct_nms_rack_devices (host_id, rack_id, start_unit, unit_height, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE rack_id = VALUES(rack_id), start_unit = VALUES(start_unit), unit_height = VALUES(unit_height), updated_by = VALUES(updated_by), updated_at = NOW()',
                 [$host_id, $rack_id, $start, $height, $user]

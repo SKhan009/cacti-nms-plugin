@@ -278,9 +278,9 @@ if (rackData) {
     options.replaceChildren();
     const [start,height]=selected.split(':').map(Number);
     if(record){
-      const make=(text,value,peripheral=false)=>{const label=document.createElement('label'), input=document.createElement('input');input.type='checkbox';input.name=peripheral?'rack_peripheral':'rack_units[]';input.value=value;input.setAttribute('aria-label',text);input.checked=peripheral?selected==='peripheral':start>0&&Number(value)>=start&&Number(value)<start+height;input.disabled=!peripheral&&(record.occupied||[]).includes(Number(value));label.classList.toggle('occupied',input.disabled);label.append(input,document.createTextNode(text));options.append(label);input.addEventListener('change',()=>{if(peripheral&&input.checked)options.querySelectorAll('[name="rack_units[]"]').forEach(i=>i.checked=false);if(!peripheral&&input.checked)options.querySelector('[name="rack_peripheral"]').checked=false;sync();});};
+      const make=(text,value,peripheral=false)=>{const label=document.createElement('label'), input=document.createElement('input');input.type='checkbox';input.name=peripheral?'rack_peripheral':'rack_units[]';input.value=value;input.setAttribute('aria-label',text);input.checked=peripheral?selected==='peripheral':start>0&&Number(value)>=start&&Number(value)<start+height;input.disabled=!peripheral&&(record.occupied||[]).includes(Number(value));label.classList.toggle('occupied',input.disabled);label.append(input,document.createTextNode(text));options.append(label);input.addEventListener('change',()=>{if(peripheral&&input.checked)options.querySelectorAll('[name="rack_units[]"]').forEach(i=>i.checked=false);sync();});};
       for(let unit=1;unit<=Number(record.unit_count);unit++)make(unit+'U'+((record.occupied||[]).includes(unit)?' — In use':''),String(unit));
-      make('Peripheral slot','1',true);
+
     }
     sync();
   }

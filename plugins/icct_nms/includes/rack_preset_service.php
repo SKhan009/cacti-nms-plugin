@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__."/rack_reservation_service.php";
 /** Rack configurations are reusable defaults; instantiated racks remain node-owned. */
 function icct_nms_rack_presets() {
     $json=db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['rack_profiles']);
@@ -54,7 +55,7 @@ function icct_nms_apply_node_rack_preset($id,$site,$name,$input,$kind='node') {
 function icct_nms_device_rack_choices($excludeDevice=0) {
     $rows=db_fetch_assoc("SELECT r.*,n.site_id,n.name AS node_name,m.meta_value AS profile_id FROM plugin_icct_nms_racks r JOIN plugin_icct_nms_rack_nodes n ON n.id=r.node_id LEFT JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT('node_rack_profile_',n.id) ORDER BY r.name,n.name,r.id");
     foreach ($rows as &$row) {
-        $row['occupied']=[];
+        $row['occupied']=icct_nms_rack_reserved_units((int)$row['id']);
         foreach (db_fetch_assoc_prepared('SELECT start_unit,unit_height FROM plugin_icct_nms_rack_devices WHERE rack_id=? AND host_id<>?',[(int)$row['id'],(int)$excludeDevice]) as $placement) for ($u=(int)$placement['start_unit'];$u<(int)$placement['start_unit']+(int)$placement['unit_height'];$u++) $row['occupied'][]=$u;
     } unset($row);
     foreach (icct_nms_rack_presets() as $key=>$profile) for ($number=1;$number<=(int)$profile['rack_count'];$number++) {

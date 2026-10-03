@@ -96,9 +96,9 @@
                 picture.alt = device.name; picture.style.cssText = 'display:block;width:96px;height:64px;object-fit:contain;margin-bottom:8px';
                 body.appendChild(picture);
             }
-            var title = document.createElement('a');
+            var title = document.createElement('strong');
             title.className = 'icct-map-device-name'; title.textContent = device.name;
-            title.href = 'device.php?id=' + encodeURIComponent(device.id);
+
             body.appendChild(title);
             var subtitle = document.createElement('p');
             subtitle.textContent = [device.alarm ? device.alarm.severity : device.status, device.address, device.system].filter(Boolean).join(' · ');
