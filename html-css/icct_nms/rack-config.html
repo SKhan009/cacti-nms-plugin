@@ -7,7 +7,7 @@
         <title>Presets · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
         <link rel="stylesheet" href="css/inventory.css?v=291181019041" />
-    <script type="text/javascript" nonce="CyhIE5UZG3vh38O-wSvh4RMT">if (top != self) {top.location.href = self.location.href;}</script></head>
+    <script type="text/javascript" nonce="1vdTdDqehK9eOpetsbSzJAT4">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -49,7 +49,7 @@
 <div class="type-editor-heading"><h2 id="rack-editor-title">Add Rack Configuration</h2><div><button type="button" id="cancel-rack-config" class="button">Cancel</button><button type="submit" class="button primary">Save</button></div></div>
 <div class="site-fields">
 <label class="field"><span class="field-label">Rack Name *</span><input name="rack_name" required maxlength="150" placeholder="Enter rack name" value=""></label>
-<label class="field"><span class="field-label">Number of Racks *</span><input type="number" name="rack_count" min="1" max="100" step="1" required placeholder="Enter 1–100" value=""></label><label class="field"><span class="field-label">Units per Rack *</span><input type="number" name="unit_count" min="1" max="100" step="1" required placeholder="Enter 1–100" value=""></label></div><p>Select this configuration on a node to create its racks. Each rack receives the specified unit capacity. Existing device placements are protected when applying changes.</p>
+<label class="field"><span class="field-label">Number of Racks *</span><input type="number" name="rack_count" min="1" max="100" step="1" required placeholder="Enter 1–100" value=""></label><label class="field"><span class="field-label">Units per Rack *</span><input type="number" name="unit_count" min="1" max="100" step="1" required placeholder="Enter 1–100" value=""></label></div><p>Select this configuration on a node to create its racks. Each rack receives the specified unit capacity. Changes also update assigned nodes. Existing device placements are protected.</p>
 </form><section aria-label="Rack configurations"><label class="field site-search"><span class="field-label">Search racks</span><input type="search" id="rack-profile-search" placeholder="Search by rack name"></label>
 <div class="site-table-wrap"><table class="site-table"><thead><tr><th>Rack Name</th><th>Number of Racks</th><th>Units per Rack</th><th>Actions</th></tr></thead><tbody>
 </tbody></table></div><p class="empty-state">No rack configurations yet. Add a configuration, then select it on a node.</p></section>
@@ -67,7 +67,7 @@
             <button class="button primary" type="button" id="message-confirm">OK</button>
         </div>
     </dialog>
-    <script src="js/inventory.js?v=4ba646572879" defer></script>
+    <script src="js/inventory.js?v=c54a3a56fd98" defer></script>
     <script src="js/presets.js?v=fb4fb0913801" defer></script>
 <script src="js/preview.js" defer></script>
 </body>

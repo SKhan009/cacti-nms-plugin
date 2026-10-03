@@ -5,7 +5,7 @@
 <div class="site-fields">
 <label class="field"><span class="field-label">Rack Name *</span><input name="rack_name" required maxlength="150" placeholder="Enter rack name" value="<?= icct_nms_h(is_string($rackValues['rack_name'] ?? '') ? ($rackValues['rack_name'] ?? '') : '') ?>"></label>
 <?php foreach(['rack_count'=>'Number of Racks','unit_count'=>'Units per Rack'] as $key=>$label): ?><label class="field"><span class="field-label"><?= $label ?> *</span><input type="number" name="<?= $key ?>" min="1" max="100" step="1" required placeholder="Enter 1–100" value="<?= icct_nms_h(is_scalar($rackValues[$key] ?? '') ? ($rackValues[$key] ?? '') : '') ?>"></label><?php endforeach; ?>
-</div><p>Select this configuration on a node to create its racks. Each rack receives the specified unit capacity. Existing device placements are protected when applying changes.</p>
+</div><p>Select this configuration on a node to create its racks. Each rack receives the specified unit capacity. Changes also update assigned nodes. Existing device placements are protected.</p>
 </form><?php endif; ?>
 <section aria-label="Rack configurations"><label class="field site-search"><span class="field-label">Search racks</span><input type="search" id="rack-profile-search" placeholder="Search by rack name"></label>
 <div class="site-table-wrap"><table class="site-table"><thead><tr><th>Rack Name</th><th>Number of Racks</th><th>Units per Rack</th><th>Actions</th></tr></thead><tbody>

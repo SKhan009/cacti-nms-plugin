@@ -261,21 +261,26 @@ if (rackData) {
     site = document.querySelector('[name="site_id"]'),
     rack = document.querySelector('[name="rack_id"]'),
     position = document.querySelector('[name="rack_position"]');
+  const count=document.querySelector('[name="rack_unit_count"]');
   function updateRacks() {
-    Array.from(rack.options).forEach((option) => {
-      const record = racks.find((r) => String(r.id) === option.value);
-      option.disabled = !!record && String(record.site_id) !== site.value;
-    });
-    const record = racks.find((r) => String(r.id) === rack.value);
-    Array.from(position.options).forEach((option) => {
-      const [start, height] = option.value.split(":").map(Number);
-      option.disabled =
-        !!option.value &&
-        (!record || start + height - 1 > Number(record.unit_count));
-    });
+    const selected=rack.value;
+    rack.replaceChildren(new Option('Unassigned','0'));
+    racks.filter(record=>String(record.site_id)===site.value).forEach(record=>rack.add(new Option(record.name+' — '+record.node_name,String(record.id))));
+    rack.value=[...rack.options].some(option=>option.value===selected)?selected:'0';
+    updateUnits();
+  }
+  function updateUnits() {
+    const record=racks.find(item=>String(item.id)===rack.value),selected=position.value;
+    if(count)count.value=record?String(record.unit_count):'';
+    position.replaceChildren(new Option('Unassigned',''));
+    if(record)for(let unit=1;unit<=Number(record.unit_count);unit++)position.add(new Option(unit+'U',unit+':1'));
+    // Preserve saved multi-unit placements when they remain inside the selected rack.
+    const [start,height]=selected.split(':').map(Number);
+    if(record&&start>0&&height>1&&start+height-1<=Number(record.unit_count))position.add(new Option(start+'U–'+(start+height-1)+'U',selected));
+    position.value=[...position.options].some(option=>option.value===selected)?selected:'';
   }
   site.addEventListener("change", updateRacks);
-  rack.addEventListener("change", updateRacks);
+  rack.addEventListener("change",()=>{position.value='';updateUnits();});
   updateRacks();
 }
 // SNMP version radios retain native numeric values and switch only relevant fields.

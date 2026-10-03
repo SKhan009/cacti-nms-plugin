@@ -6,9 +6,12 @@ function icct_nms_rack_presets() {
 }
 function icct_nms_save_rack_preset($input) {
     icct_backend_require_management(3);
+    $rackLock='icct_backend_racks_'.substr(hash('sha256',(string)db_fetch_cell('SELECT DATABASE()')),0,32);
+    if((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',[$rackLock])!==1)throw new RuntimeException('Rack configuration is busy. Retry shortly.');
     $lock='icct_nms_rack_profiles';
-    if((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',[$lock])!==1)throw new RuntimeException('Rack configurations are busy. Retry shortly.');
+    if((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',[$lock])!==1){db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$rackLock]);throw new RuntimeException('Rack configurations are busy. Retry shortly.');}
     try {
+        icct_backend_category_execute('START TRANSACTION');
         $profiles=icct_nms_rack_presets();$id=$input['rack_profile_id'] ?? '';
         if(!is_string($id)||($id!==''&&!preg_match('/^[a-f0-9]{16}$/D',$id)))throw new InvalidArgumentException('Invalid rack configuration.');
         if($id!==''&&!isset($profiles[$id]))throw new InvalidArgumentException('This rack configuration no longer exists.');
@@ -21,8 +24,11 @@ function icct_nms_save_rack_preset($input) {
         $json=json_encode($profiles,JSON_THROW_ON_ERROR);
         if(strlen($json)>60000)throw new InvalidArgumentException('Rack configuration catalogue is full.');
         icct_backend_category_execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',['rack_profiles',$json]);
-        return 'Rack configuration saved. Select it on a node to apply these values.';
-    } finally {db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]);}
+        $nodes=db_fetch_assoc_prepared("SELECT n.* FROM plugin_icct_nms_rack_nodes n JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT('node_rack_profile_',n.id) WHERE m.meta_value=?",[$id]);
+        foreach($nodes as $node)icct_nms_apply_node_rack_preset((int)$node['id'],(int)$node['site_id'],$node['name'],['rack_profile_id'=>$id],$node['node_kind']);
+        icct_backend_category_execute('COMMIT');
+        return 'Rack configuration saved and assigned node racks synchronized.';
+    } catch(Throwable $failure) {icct_backend_category_execute('ROLLBACK');throw $failure;} finally {db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]);db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$rackLock]);}
 }
 function icct_nms_apply_node_rack_preset($id,$site,$name,$input,$kind='node') {
     $key=$input['rack_profile_id'] ?? '';
