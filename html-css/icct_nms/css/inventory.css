@@ -2431,7 +2431,7 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 .segment-actions form { margin:0; }
 .segment-actions .icon-button { width:24px; height:28px; padding:2px; }
 .segment-actions svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.8; }
-.segment-editor { padding:16px; background:#f4f4f4; margin-bottom:16px; display:flex; align-items:end; gap:16px; }
+.segment-editor { padding:16px; background:#fff; margin-bottom:16px; display:flex; align-items:end; gap:16px; }
 .segment-editor[hidden] { display:none; }
 .segment-editor .field { flex:1; max-width:520px; }
 .segment-editor-actions { display:flex; gap:8px; }
@@ -2439,7 +2439,7 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 @media(max-width:700px) { .segment-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; } .segment-editor { flex-wrap:wrap; } }
 @media(max-width:420px) { .segment-grid { grid-template-columns:1fr; } }
 /* Device type presets use the same local topology icon and image catalogue. */
-.device-type-editor { background:#f4f4f4; padding:20px; margin:12px 0 20px; scroll-margin-top:90px; }
+.device-type-editor { background:#fff; padding:20px; margin:12px 0 20px; scroll-margin-top:90px; }
 .device-type-editor h2 { margin:0 0 18px; font-size:18px; font-weight:400; }
 .device-type-editor .form-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; }
 .device-type-editor .field { min-width:0; }
@@ -2477,7 +2477,7 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 .connection-preview { width:120px; max-width:100%; height:16px; flex:none; }
 .connection-card { gap:8px; }
 .connection-card .segment-actions { flex-shrink:0; }
-.connection-editor { background:#f4f4f4; padding:20px; margin:12px 0 20px; }
+.connection-editor { background:#fff; padding:20px; margin:12px 0 20px; }
 .connection-editor h2 { margin:0 0 18px; font-size:18px; font-weight:400; }
 .connection-fields { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:16px; }
 .connection-fields .field { min-width:0; }
@@ -2485,7 +2485,7 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 #connection-editor-preview { margin-top:16px; }
 @media(max-width:700px) { .connection-fields { grid-template-columns:1fr; } }
 /* Full add/edit device type workspace and six-column local icon picker. */
-.device-type-editor { background:#f4f4f4; padding:20px; margin:12px 0 20px; min-height:0; }
+.device-type-editor { background:#fff; padding:20px; margin:12px 0 20px; min-height:0; }
 .type-editor-heading { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; margin-bottom:20px; padding:8px 0 16px; }
 .type-editor-heading h2 { margin:0; font-size:20px; }
 .type-editor-heading .type-editor-actions { margin:0; }
@@ -2550,3 +2550,7 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 
 .type-visibility h3 { margin:0 0 12px; font-size:14px; font-weight:600; color:#222; }
 .device-type-editor[hidden],.connection-editor[hidden] { display:none; }
+
+/* Preset editor surfaces stay white; editable controls use the shared grey fill. */
+.segment-editor .field input,.device-type-editor .field input:not([type=checkbox]):not([type=file]),.device-type-editor .field select,.connection-editor .field input:not([type=hidden]),.connection-choice summary,.connection-color-control { background:#f4f4f4; }
+.connection-color-control { padding:0 12px; box-sizing:border-box; border-bottom:1px solid #aaa; }
