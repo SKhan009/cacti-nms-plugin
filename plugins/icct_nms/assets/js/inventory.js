@@ -651,17 +651,17 @@ document.addEventListener(
 const headerMenu = document.querySelector(".header-menu");
 if (headerMenu) {
   const trigger = headerMenu.querySelector("button");
-  const update = () =>
-    trigger.setAttribute(
-      "aria-expanded",
-      String(
-        headerMenu.matches(":hover") ||
-          headerMenu.contains(document.activeElement),
-      ),
-    );
-  ["mouseenter", "mouseleave", "focusin", "focusout"].forEach((event) =>
+  const update = () => {
+    const open = headerMenu.matches(":hover") || headerMenu.contains(document.activeElement);
+    trigger.setAttribute("aria-expanded", String(open));
+    document.body.classList.toggle("navigation-menu-open", open);
+  };
+  ["mouseenter", "mouseleave", "focusin"].forEach(event =>
     headerMenu.addEventListener(event, update),
   );
+  // Focus moves after focusout fires; read the final focused element.
+  headerMenu.addEventListener("focusout", () => Promise.resolve().then(update));
+  update();
 }
 
 // Auto-generate while the user has not supplied a manual short name.

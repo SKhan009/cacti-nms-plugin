@@ -1454,6 +1454,10 @@ a.button {
 .header-menu-panel a:hover {
   background: #e5e5e5;
 }
+/* Keep navigation clear while blurring the page for hover and keyboard focus. */
+body.navigation-menu-open main {
+  filter: blur(3px);
+}
 /* Pager controls remain outside the table scrolling region. */
 .inventory-pagination {
   margin: 0 16px;
