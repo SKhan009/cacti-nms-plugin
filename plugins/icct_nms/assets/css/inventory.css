@@ -2752,3 +2752,5 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 #view-records .device-record-body,#view-records .device-record-snapshot,#view-records .device-record-snapshot>.site-table-wrap{display:block;width:100%;max-width:none;min-width:0;box-sizing:border-box}#view-records .device-record-snapshot .site-table{width:100%;max-width:none}#view-records .device-record-snapshot .site-table th:first-child{width:38%}#view-records .device-record-body .device-record-output{width:100%;box-sizing:border-box}
 
 #view-records .device-record-item .device-status{display:inline-block;padding:4px 10px;border-radius:12px;font-size:12px;line-height:1.3}
+
+#shared-diagnostic-recovery{border-top:1px solid #ddd;margin-top:16px;padding-top:16px}#shared-diagnostic-recovery[hidden]{display:none}#shared-diagnostic-recovery h3{font-size:16px;margin:0 0 12px}#shared-diagnostic-recovery pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f4f4;padding:12px;font-size:13px}
