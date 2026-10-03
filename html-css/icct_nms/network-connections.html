@@ -6,8 +6,8 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Presets · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
-        <link rel="stylesheet" href="css/inventory.css?v=06b456c81eef" />
-    <script type="text/javascript" nonce="ehW79n9h8OFK8gNdTLGuJrZy">if (top != self) {top.location.href = self.location.href;}</script></head>
+        <link rel="stylesheet" href="css/inventory.css?v=9cfb281e304d" />
+    <script type="text/javascript" nonce="XmkNvl0Izvb4I0Fma9NNUYms">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -49,9 +49,21 @@
 <h2 id="connection-editor-title">Add Network Connection</h2>
 <div class="connection-fields">
 <label class="field"><span class="field-label">Connection Name *</span><input name="connection_name" maxlength="150" required value=""></label>
-<label class="field"><span class="field-label">Color</span><input type="color" name="color" value="#00bfae"></label>
-<label class="field"><span class="field-label">Line Style</span><select name="line_style"><option value="solid" >Solid</option><option value="dashed" >Dashed</option><option value="dotted" selected>Dotted</option><option value="dash-dot" >Dash Dot</option><option value="fine-dotted" >Fine Dotted</option><option value="short-dashed" >Short Dashed</option></select></label>
-<label class="field"><span class="field-label">Endpoint Symbol</span><select name="symbol"><option value="none" >None</option><option value="circle" selected>Circle</option><option value="square" >Square</option><option value="arrow" >Arrow</option></select></label>
+<div class="field connection-color-field"><span class="field-label">Color</span><input type="hidden" name="color" value=""><label class="connection-color-control"><input type="color" id="connection-color-picker" aria-label="Select color" value="#00bfae"><span id="connection-color-label">Select color</span></label></div>
+<div class="field connection-choice"><span class="field-label">Line Style</span><input type="hidden" name="line_style" value=""><details data-connection-choice="line_style"><summary><span data-choice-label>Select line style</span></summary><div class="connection-options" role="group" aria-label="Line Style">
+<button type="button" data-connection-value="solid"><svg class="connection-preview" viewBox="0 0 120 16" role="img" aria-label="Solid line preview" style="color:#333333"><path d="M8 8h104" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray=""/></svg><span>Solid</span></button>
+<button type="button" data-connection-value="dashed"><svg class="connection-preview" viewBox="0 0 120 16" role="img" aria-label="Dashed line preview" style="color:#333333"><path d="M8 8h104" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="9 5"/></svg><span>Dashed</span></button>
+<button type="button" data-connection-value="dotted"><svg class="connection-preview" viewBox="0 0 120 16" role="img" aria-label="Dotted line preview" style="color:#333333"><path d="M8 8h104" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 5"/></svg><span>Dotted</span></button>
+<button type="button" data-connection-value="dash-dot"><svg class="connection-preview" viewBox="0 0 120 16" role="img" aria-label="Dash Dot line preview" style="color:#333333"><path d="M8 8h104" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="10 4 2 4"/></svg><span>Dash Dot</span></button>
+<button type="button" data-connection-value="fine-dotted"><svg class="connection-preview" viewBox="0 0 120 16" role="img" aria-label="Fine Dotted line preview" style="color:#333333"><path d="M8 8h104" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="1 3"/></svg><span>Fine Dotted</span></button>
+<button type="button" data-connection-value="short-dashed"><svg class="connection-preview" viewBox="0 0 120 16" role="img" aria-label="Short Dashed line preview" style="color:#333333"><path d="M8 8h104" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4"/></svg><span>Short Dashed</span></button>
+</div></details></div>
+<div class="field connection-choice"><span class="field-label">Endpoint Symbol</span><input type="hidden" name="symbol" value=""><details data-connection-choice="symbol"><summary><span data-choice-label>Select endpoint symbol</span></summary><div class="connection-options" role="group" aria-label="Endpoint Symbol">
+<button type="button" data-connection-value="none"><svg class="connection-preview" viewBox="0 0 120 16" role="img" aria-label="None line preview" style="color:#333333"><path d="M8 8h104" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray=""/></svg><span>None</span></button>
+<button type="button" data-connection-value="circle"><svg class="connection-preview" viewBox="0 0 120 16" role="img" aria-label="Circle line preview" style="color:#333333"><path d="M8 8h104" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray=""/><circle cx="8" cy="8" r="4" fill="currentColor"/><circle cx="112" cy="8" r="4" fill="currentColor"/></svg><span>Circle</span></button>
+<button type="button" data-connection-value="square"><svg class="connection-preview" viewBox="0 0 120 16" role="img" aria-label="Square line preview" style="color:#333333"><path d="M8 8h104" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray=""/><path d="M4 4h8v8H4zM108 4h8v8h-8z" fill="currentColor"/></svg><span>Square</span></button>
+<button type="button" data-connection-value="arrow"><svg class="connection-preview" viewBox="0 0 120 16" role="img" aria-label="Arrow line preview" style="color:#333333"><path d="M8 8h104" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray=""/><path d="m12 5-4 3 4 3M108 5l4 3-4 3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span>Arrow</span></button>
+</div></details></div>
 </div><div id="connection-editor-preview"><svg class="connection-preview" viewBox="0 0 120 16" role="img" aria-label="Connection line preview" style="color:#00bfae"><path d="M8 8h104" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 5"/><circle cx="8" cy="8" r="4" fill="currentColor"/><circle cx="112" cy="8" r="4" fill="currentColor"/></svg></div>
 <div class="type-editor-actions"><button type="button" class="button" id="cancel-connection">Cancel</button><button type="submit" class="button primary">Save</button></div>
 </form>
@@ -102,7 +114,7 @@
         </div>
     </dialog>
     <script src="js/inventory.js?v=b9835f46c294" defer></script>
-    <script src="js/presets.js?v=540da90577b2" defer></script>
+    <script src="js/presets.js?v=e1456d89dfc3" defer></script>
 <script src="js/preview.js" defer></script>
 </body>
 </html>

@@ -4,9 +4,13 @@
 <h2 id="connection-editor-title"><?= empty($connectionValues['connection_id'])?'Add':'Edit' ?> Network Connection</h2>
 <div class="connection-fields">
 <label class="field"><span class="field-label">Connection Name *</span><input name="connection_name" maxlength="150" required value="<?= icct_nms_h($connectionValues['connection_name'] ?? '') ?>"></label>
-<label class="field"><span class="field-label">Color</span><input type="color" name="color" value="<?= icct_nms_h(preg_match('/^#[a-f0-9]{6}$/iD',$connectionValues['color'] ?? '') ? $connectionValues['color'] : '#00bfae') ?>"></label>
-<label class="field"><span class="field-label">Line Style</span><select name="line_style"><?php foreach (icct_nms_connection_styles() as $style=>$dash): ?><option value="<?= $style ?>" <?= ($connectionValues['line_style'] ?? 'dotted')===$style?'selected':'' ?>><?= icct_nms_h(ucwords(str_replace('-',' ',$style))) ?></option><?php endforeach; ?></select></label>
-<label class="field"><span class="field-label">Endpoint Symbol</span><select name="symbol"><?php foreach (['none','circle','square','arrow'] as $symbol): ?><option value="<?= $symbol ?>" <?= ($connectionValues['symbol'] ?? 'circle')===$symbol?'selected':'' ?>><?= ucfirst($symbol) ?></option><?php endforeach; ?></select></label>
+<div class="field connection-color-field"><span class="field-label">Color</span><input type="hidden" name="color" value="<?= icct_nms_h($connectionValues['color'] ?? '') ?>"><label class="connection-color-control"><input type="color" id="connection-color-picker" aria-label="Select color" value="<?= icct_nms_h($connectionValues['color'] ?? '#00bfae') ?>"><span id="connection-color-label">Select color</span></label></div>
+<?php foreach (['line_style'=>'Line Style','symbol'=>'Endpoint Symbol'] as $field=>$label): ?>
+<div class="field connection-choice"><span class="field-label"><?= $label ?></span><input type="hidden" name="<?= $field ?>" value="<?= icct_nms_h($connectionValues[$field] ?? '') ?>"><details data-connection-choice="<?= $field ?>"><summary><span data-choice-label>Select <?= strtolower($label) ?></span></summary><div class="connection-options" role="group" aria-label="<?= $label ?>">
+<?php foreach (($field==='line_style' ? array_keys(icct_nms_connection_styles()) : ['none','circle','square','arrow']) as $choice): ?>
+<button type="button" data-connection-value="<?= $choice ?>"><?= icct_nms_connection_preview(['name'=>ucwords(str_replace('-',' ',$choice)),'color'=>'#333333','line_style'=>$field==='line_style'?$choice:'solid','symbol'=>$field==='symbol'?$choice:'none']) ?><span><?= icct_nms_h(ucwords(str_replace('-',' ',$choice))) ?></span></button>
+<?php endforeach; ?></div></details></div>
+<?php endforeach; ?>
 </div><div id="connection-editor-preview"><?= icct_nms_connection_preview(['name'=>'Connection','color'=>$connectionValues['color'] ?? '#00bfae','line_style'=>$connectionValues['line_style'] ?? 'dotted','symbol'=>$connectionValues['symbol'] ?? 'circle']) ?></div>
 <div class="type-editor-actions"><button type="button" class="button" id="cancel-connection">Cancel</button><button type="submit" class="button primary">Save</button></div>
 </form>

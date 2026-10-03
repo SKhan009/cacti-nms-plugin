@@ -79,7 +79,19 @@ function updateConnectionPreview() {
   if (!connectionEditor) return;
   const fields=connectionEditor.elements;
   const svg=document.querySelector('#connection-editor-preview svg');
+  svg.parentElement.hidden=!(fields.color.value && fields.line_style.value && fields.symbol.value);
   svg.style.color=fields.color.value;
+  document.querySelector('#connection-color-label').textContent=fields.color.value || 'Select color';
+  document.querySelector('.connection-color-control').classList.toggle('unselected',!fields.color.value);
+  if(fields.color.value) document.querySelector('#connection-color-picker').value=fields.color.value;
+  document.querySelectorAll('[data-connection-choice]').forEach(picker=>{
+    const selected=picker.querySelector(`[data-connection-value="${fields[picker.dataset.connectionChoice].value}"]`);
+    const label=picker.querySelector('[data-choice-label]');
+    label.replaceChildren();
+    if(selected) { for(const child of selected.children) label.append(child.cloneNode(true)); }
+    else label.textContent=picker.dataset.connectionChoice==='line_style'?'Select line style':'Select endpoint symbol';
+    picker.querySelectorAll('[data-connection-value]').forEach(option=>option.setAttribute('aria-pressed',String(option===selected)));
+  });
   const styles={'solid':'','dashed':'9 5','dotted':'2 5','dash-dot':'10 4 2 4','fine-dotted':'1 3','short-dashed':'4 4'};
   svg.replaceChildren();
   const node=(tag,attributes)=>{ const el=document.createElementNS('http://www.w3.org/2000/svg',tag); for(const [key,value] of Object.entries(attributes)) el.setAttribute(key,value); svg.append(el); };
@@ -90,13 +102,23 @@ function updateConnectionPreview() {
 }
 function openConnectionEditor(profile={}) {
   connectionEditor.reset();
-  for(const [name,value] of Object.entries({connection_id:profile.connection_id ?? '',connection_name:profile.name ?? '',color:profile.color ?? '#00bfae',line_style:profile.line_style ?? 'dotted',symbol:profile.symbol ?? 'circle'})) connectionEditor.elements[name].value=value;
+  for(const [name,value] of Object.entries({connection_id:profile.connection_id ?? '',connection_name:profile.name ?? '',color:profile.color ?? '',line_style:profile.line_style ?? '',symbol:profile.symbol ?? ''})) connectionEditor.elements[name].value=value;
   document.querySelector('#connection-editor-title').textContent=profile.connection_id?'Edit Network Connection':'Add Network Connection';
   connectionEditor.hidden=false; updateConnectionPreview(); connectionEditor.elements.connection_name.focus();
 }
 document.querySelector('#add-network-connections')?.addEventListener('click',()=>openConnectionEditor());
 document.querySelector('#cancel-connection')?.addEventListener('click',()=>{connectionEditor.hidden=true;});
 connectionEditor?.addEventListener('input',updateConnectionPreview);
+document.querySelector('#connection-color-picker')?.addEventListener('input',event=>{connectionEditor.elements.color.value=event.target.value; updateConnectionPreview();});
+document.querySelectorAll('[data-connection-value]').forEach(option=>option.addEventListener('click',()=>{
+  const picker=option.closest('[data-connection-choice]');
+  connectionEditor.elements[picker.dataset.connectionChoice].value=option.dataset.connectionValue;
+  picker.open=false; picker.querySelector('summary').focus(); updateConnectionPreview();
+}));
+document.querySelectorAll('[data-connection-choice]').forEach(picker=>picker.addEventListener('toggle',()=>{if(picker.open) document.querySelectorAll('[data-connection-choice]').forEach(other=>{if(other!==picker) other.open=false;});}));
+document.addEventListener('click',event=>document.querySelectorAll('[data-connection-choice]').forEach(picker=>{if(!picker.contains(event.target)) picker.open=false;}));
+connectionEditor?.addEventListener('keydown',event=>{if(event.key==='Escape') document.querySelectorAll('[data-connection-choice][open]').forEach(picker=>{picker.open=false; picker.querySelector('summary').focus();});});
+if(connectionEditor) updateConnectionPreview();
 document.querySelectorAll('[data-edit-connection]').forEach(button=>button.addEventListener('click',()=>openConnectionEditor(JSON.parse(button.dataset.editConnection))));
 document.querySelectorAll('[data-delete-connection]').forEach(form=>form.addEventListener('submit',async event=>{
   event.preventDefault();
