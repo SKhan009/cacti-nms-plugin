@@ -1,0 +1,78 @@
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Dashboard · ICCT NMS</title>
+        <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
+        <link rel="stylesheet" href="css/inventory.css?v=291181019041" />
+                <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+        <link rel="stylesheet" href="css/map.css?v=206449e8fb1f">
+            <script type="text/javascript" nonce="mkCVGBfsDt6MQoJjtLxTEZl8">if (top != self) {top.location.href = self.location.href;}</script></head>
+    <body class="icct-inventory">
+        <header class="topbar">
+            <div class="header-menu">
+                <button class="icon-button" type="button" aria-label="Navigation menu" aria-expanded="false">☰</button>
+                <nav class="header-menu-panel" aria-label="Main navigation">
+                    <a href="dashboard.html">Dashboard</a>
+                    <a href="index.html">Inventory</a>
+                    <a href="rack-view.html">Rack View</a>
+                    <a href="presets.html#segment">Presets</a>
+                </nav>
+            </div>
+            <div class="brand">
+                <img class="brand-logo brand-logo-drdo" src="images/drdo-logo.svg" alt="DRDO" width="34" height="34">
+                <img class="brand-logo brand-logo-bel" src="images/bharat-electronics-logo.svg" alt="Bharat Electronics" width="128" height="34">
+            </div>
+            <div class="station">
+                <strong>ICCT NMS</strong>
+                <span>Main Poller</span>
+            </div>
+            <div class="system-metrics"><span>Poller: 300 sec</span></div>
+            <a class="profile" href="http://127.0.0.1:8080/cacti/auth_profile.php">
+                <span class="user-avatar" aria-hidden="true">◉</span>
+                <span>
+                    <strong>admin</strong>
+                    <small>Administrator</small>
+                </span>
+            </a>
+        </header>
+        <main class="workspace">
+            <section class="device-panel">
+                                <section class="icct-map-page">
+<div class="titlebar"><h1>Dashboard</h1><span>Map Topology</span></div>
+<section class="icct-map-panel">
+<div class="icct-map-toolbar">
+<label class="field"><span class="field-label">Site</span><select id="icctMapSite"><option value="">All located sites</option><option value="4">Demo — Bengaluru</option><option value="6">Demo — Delhi</option><option value="5">Demo — Mumbai</option></select></label>
+<button id="icctMapFit" type="button" class="button">Fit sites</button>
+<button id="icctMapIndia" type="button" class="button">India overview</button>
+<a href="dashboard.html" class="button" aria-label="Refresh map">↻</a>
+<button id="icctMapFullscreen" type="button" class="button" aria-label="Toggle map fullscreen">⛶</button>
+<div class="icct-map-counts" aria-label="Device status totals"><span>Total: 13</span><span class="online">Online: 12</span><span class="offline">Offline: 0</span><span class="other">Other: 1</span></div>
+</div>
+<p id="icctMapStatus" role="status">3 located sites. 10 devices without a location.</p>
+<div id="icctSiteMap" aria-label="Map of Cacti sites"></div>
+<div class="icct-map-footer"><details><summary>Devices without a location (10)</summary><p>Select a site with latitude and longitude in Add/Edit Device. Site coordinates 0,0 are treated as unset.</p><ul><li><a href="device-2.html">Cacti RHEL 9 Local</a> — Topology Lab Location 01</li><li><a href="device-1.html">Local Linux Machine</a> — Topology Lab Location 01</li><li><a href="device-14.html">NMS Core Switch (Simulated)</a> — Topology Lab Location 01</li><li><a href="device-13.html">NMS Final QA offline</a> — Topology Lab Location 01</li><li><a href="device-12.html">NMS Final QA online</a> — Topology Lab Location 01</li><li><a href="device-6.html">NMS Imported Sensor Demo Device</a> — Topology Lab Location 01</li><li><a href="device-64.html">Serial Demo - Modbus RTU Simulator</a> — Topology Lab Location 01</li><li><a href="device-9.html">Topology Lab Switch A</a> — Topology Lab Location 01</li><li><a href="device-10.html">Topology Lab Switch B</a> — Topology Lab Location 01</li><li><a href="device-11.html">Topology Upload QA 0.11.0</a> — Topology Lab Location 01</li></ul></details></div>
+</section>
+<script type="application/json" id="icctMapData">{"sites":[{"id":4,"name":"Demo \u2014 Bengaluru","coordinates":[12.9716,77.5946],"location":"Bengaluru, India","devices":[{"id":3,"name":"NMS Simulated Router","status":"Up","address":"127.0.0.1","system":"NMS simulated branch router","category":"Network","serial":"","image":"","alarm":null,"response_ms":0,"cpu":null,"memory":null,"packet_loss":null,"diagnostic_measurement":{"state":"Not measured","packet_loss":null,"latency_ms":null,"method":null,"target":null,"collector_id":null,"collected_at":null}}]},{"id":6,"name":"Demo \u2014 Delhi","coordinates":[28.6139,77.209],"location":"Delhi, India","devices":[{"id":5,"name":"NMS Simulated Sensor","status":"Up","address":"127.0.0.1","system":"","category":"Sensors \u0026 Instrumentation","serial":"","image":"","alarm":null,"response_ms":0,"cpu":null,"memory":null,"packet_loss":null,"diagnostic_measurement":{"state":"Not measured","packet_loss":null,"latency_ms":null,"method":null,"target":null,"collector_id":null,"collected_at":null}}]},{"id":5,"name":"Demo \u2014 Mumbai","coordinates":[19.076,72.8777],"location":"Mumbai, India","devices":[{"id":4,"name":"NMS Simulated Server","status":"Up","address":"127.0.0.1","system":"NMS simulated Linux application server","category":"Computers","serial":"","image":"","alarm":null,"response_ms":0,"cpu":8,"memory":37.5,"packet_loss":null,"diagnostic_measurement":{"state":"Not measured","packet_loss":null,"latency_ms":null,"method":null,"target":null,"collector_id":null,"collected_at":null}}]}],"unlocated":[{"id":2,"name":"Cacti RHEL 9 Local","status":"Up","address":"127.0.0.1","system":"Linux cacti-rhel9.local 5.14.0-687.5.3.el9_8.aarch64 #1 SMP PREEMPT_DYNAMIC Sat May 9 03:02:36 UTC 2026 aarch64","category":"Computers","serial":"","image":"","alarm":null,"response_ms":0,"cpu":6,"memory":null,"packet_loss":null,"diagnostic_measurement":{"state":"Stale","packet_loss":null,"latency_ms":null,"method":null,"target":null,"collector_id":null,"collected_at":null},"site":"Topology Lab Location 01"},{"id":1,"name":"Local Linux Machine","status":"Up","address":"localhost","system":"","category":"Computers","serial":"","image":"","alarm":null,"response_ms":0,"cpu":null,"memory":null,"packet_loss":null,"diagnostic_measurement":{"state":"Not measured","packet_loss":null,"latency_ms":null,"method":null,"target":null,"collector_id":null,"collected_at":null},"site":"Topology Lab Location 01"},{"id":14,"name":"NMS Core Switch (Simulated)","status":"Up","address":"127.0.0.1","system":"NMS simulated core switch - lab LLDP connections, not physical cable evidence","category":"Network","serial":"SIM-CORE-001","image":"images\/device-types\/switch.svg","alarm":null,"response_ms":0,"cpu":null,"memory":null,"packet_loss":null,"diagnostic_measurement":{"state":"Not measured","packet_loss":null,"latency_ms":null,"method":null,"target":null,"collector_id":null,"collected_at":null},"site":"Topology Lab Location 01"},{"id":13,"name":"NMS Final QA offline","status":"Up","address":"127.0.0.1","system":"BEFSX41","category":"","serial":"","image":"","alarm":null,"response_ms":0,"cpu":null,"memory":null,"packet_loss":null,"diagnostic_measurement":{"state":"Not measured","packet_loss":null,"latency_ms":null,"method":null,"target":null,"collector_id":null,"collected_at":null},"site":"Topology Lab Location 01"},{"id":12,"name":"NMS Final QA online","status":"Up","address":"127.0.0.1","system":"BEFSX41","category":"","serial":"","image":"","alarm":null,"response_ms":0,"cpu":null,"memory":null,"packet_loss":null,"diagnostic_measurement":{"state":"Not measured","packet_loss":null,"latency_ms":null,"method":null,"target":null,"collector_id":null,"collected_at":null},"site":"Topology Lab Location 01"},{"id":6,"name":"NMS Imported Sensor Demo Device","status":"Up","address":"127.0.0.1","system":"NMS uploaded record demonstration","category":"Sensors \u0026 Instrumentation","serial":"","image":"","alarm":null,"response_ms":0,"cpu":null,"memory":null,"packet_loss":null,"diagnostic_measurement":{"state":"Not measured","packet_loss":null,"latency_ms":null,"method":null,"target":null,"collector_id":null,"collected_at":null},"site":"Topology Lab Location 01"},{"id":64,"name":"Serial Demo - Modbus RTU Simulator","status":"Unavailable","address":"[127.0.0.1]:15020","system":"","category":"","serial":"","image":"","alarm":null,"response_ms":null,"cpu":null,"memory":null,"packet_loss":null,"diagnostic_measurement":{"state":"Not measured","packet_loss":null,"latency_ms":null,"method":null,"target":null,"collector_id":null,"collected_at":null},"site":"Topology Lab Location 01"},{"id":9,"name":"Topology Lab Switch A","status":"Up","address":"127.0.0.1","system":"Topology static lab switch A","category":"","serial":"","image":"images\/device-types\/switch.svg","alarm":null,"response_ms":0,"cpu":null,"memory":null,"packet_loss":null,"diagnostic_measurement":{"state":"Not measured","packet_loss":null,"latency_ms":null,"method":null,"target":null,"collector_id":null,"collected_at":null},"site":"Topology Lab Location 01"},{"id":10,"name":"Topology Lab Switch B","status":"Up","address":"127.0.0.1","system":"Topology static lab switch B","category":"","serial":"","image":"","alarm":null,"response_ms":0,"cpu":null,"memory":null,"packet_loss":null,"diagnostic_measurement":{"state":"Not measured","packet_loss":null,"latency_ms":null,"method":null,"target":null,"collector_id":null,"collected_at":null},"site":"Topology Lab Location 01"},{"id":11,"name":"Topology Upload QA 0.11.0","status":"Up","address":"127.0.0.1","system":"","category":"","serial":"","image":"","alarm":null,"response_ms":0,"cpu":null,"memory":null,"packet_loss":null,"diagnostic_measurement":{"state":"Not measured","packet_loss":null,"latency_ms":null,"method":null,"target":null,"collector_id":null,"collected_at":null},"site":"Topology Lab Location 01"}],"counts":{"total":13,"online":12,"offline":0,"other":1},"states":"maps\/india-states.json","tiles":"http://127.0.0.1:8080/cacti/plugins/icct_nms/topology.php?map_tile=1"}</script>
+</section>
+        </section>
+    </main>
+    <dialog id="message-dialog" aria-labelledby="message-title" aria-describedby="message-text">
+        <div class="message-heading">
+            <h2 id="message-title"></h2>
+            <button type="button" id="message-close" aria-label="Close message">×</button>
+        </div>
+        <p id="message-text"></p>
+        <div class="message-actions">
+            <button class="button" type="button" id="message-cancel">Cancel</button>
+            <button class="button primary" type="button" id="message-confirm">OK</button>
+        </div>
+    </dialog>
+    <script src="js/inventory.js?v=c54a3a56fd98" defer></script>
+    <script src="vendor/leaflet/leaflet.js" defer></script>
+    <script src="js/map.js?v=126912b4c836" defer></script>
+<script src="js/preview.js" defer></script>
+</body>
+</html>

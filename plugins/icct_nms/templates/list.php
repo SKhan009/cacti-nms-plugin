@@ -6,9 +6,7 @@
 <div class="inventory-heading">
     <div>
         <p class="breadcrumb">
-            <a href="<?= icct_nms_h(
-                $config["url_path"],
-            ) ?>index.php">Dashboard</a>
+            <a href="topology.php">Dashboard</a>
             /
             <a href="inventory.php">Inventory</a>
             / Table View

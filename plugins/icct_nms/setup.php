@@ -52,7 +52,7 @@ function icct_nms_setup_registration()
     );
     api_plugin_register_realm(
         'icct_nms',
-        'inventory.php,device.php,protocol.php,export.php,diagnostics.php,wizard_save.php,wizard_templates.php,presets.php,ports.php',
+        'topology.php,inventory.php,device.php,protocol.php,export.php,diagnostics.php,wizard_save.php,wizard_templates.php,presets.php,ports.php',
         'View ICCT NMS Inventory',
         1
     );

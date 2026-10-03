@@ -34,5 +34,9 @@
 <?php if (!empty($presetsPage)): ?>
     <script src="assets/js/presets.js?v=<?= substr(hash_file('sha256',__DIR__.'/../assets/js/presets.js'),0,12) ?>" defer></script>
 <?php endif; ?>
+<?php if (!empty($mapPage)): ?>
+    <script src="assets/vendor/leaflet/leaflet.js" defer></script>
+    <script src="assets/js/map.js?v=<?= substr(hash_file('sha256',__DIR__.'/../assets/js/map.js'),0,12) ?>" defer></script>
+<?php endif; ?>
 </body>
 </html>

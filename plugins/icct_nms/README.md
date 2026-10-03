@@ -119,3 +119,24 @@ Native SNMP/availability fields use one shared range definition for server valid
 Device Type add/edit appears inline below the preset tabs, matching the Segment and Network Connection panels. Topology visibility controls stay visible without an accordion. It uses the four-column reference layout and an overlay icon picker with six compact columns. The picker discovers SVG files from `assets/images/device-types/` and `assets/images/icons/` (lowercase filename keys with letters, digits, hyphens or underscores); copy trusted icon assets there to add choices. The Add/Edit Device form filters saved type profiles by segment without displaying icon, image or port summaries. A segment with one type selects it automatically when changed; existing selections, including None, are retained on initial load. Device saves validate the type against the selected segment, and appearance settings remain in the shared preset catalogue.
 
 Presets → Site reads Cacti’s native `sites` table on each page load, with a searchable list and active device counts. Add/Edit covers the site name, address, timezone, latitude/longitude, map zoom, notes, and alternate name. Saves use Cacti’s native `sql_save()` and site cache timestamps, with management realm 3 and CSRF protection. Coordinate ranges are −90–90 latitude and −180–180 longitude; zoom is 0–23. Validation errors retain the form; successful saves show a toast.
+
+## Dashboard map topology
+
+`plugins/icct_nms/topology.php` is the Dashboard entry in the ICCT NMS console and header menus. It uses the same bundled Leaflet 1.9.4, local state/UT polygons and GeoServer web service as NMS. ICCT owns its map controller and data adapter; it does not load NMS runtime code or read NMS-owned device tables.
+
+The administrator's existing Cacti configuration is reused:
+
+```php
+$config['nms_geoserver_wms_url'] = 'http://127.0.0.1:8090/geoserver/wms';
+$config['nms_geoserver_layer'] = 'nms:countries';
+```
+
+Cacti authenticates both the page and WMS image endpoint under the existing ICCT view realm. Bounded EPSG:3857 PNG requests use only the configured upstream URL and layer; request parameters cannot select a server. No change to the GeoServer service or security configuration is required.
+
+Native Cacti sites provide coordinates and grouping; ICCT inventory supplies only devices permitted for the current account. Default 0,0 and invalid coordinates remain unlocated. Editing the native site or device site assignment is reflected on refresh. Device Type map visibility chooses the popup icon/image. Disabled, stale and pending devices remain visible as Other rather than being counted online. Counts cover all permitted inventory; site markers cover only located devices.
+
+Site selection opens device details. Fit sites, India overview, zoom, refresh and fullscreen controls are available. Device links open ICCT Add/Edit Device. Multiple devices at a site get a popup selector. The popup shows current availability, segment, serial number, response time, supported fresh CPU/memory RRD measurements, private current-user ping measurements and current threshold alarms. Unsupported or stale measurements remain unavailable. Packet loss is never inferred from Cacti availability. No live diagnostics or device writes occur when viewing the map.
+
+CPU sources are explicit cpu_percent / 5min_cpu or 100 − ssCpuIdle. Memory is memory_percent or (mem_total − mem_free) / mem_total. Reads use only graphs the account can access, fresh AVERAGE data before CDEF/VDEF transformations. Arbitrary graph names, load averages and unknown units are not treated as percentage measurements. Ping output is parsed on the server, checked against its current device/profile/collector signature and retained privately by request owner; no raw output or credentials are sent to the map.
+
+Tests: `plugins/icct_nms/tests/map_service_test.php` covers authorized grouping, hidden devices, unlocated records, counts, coordinate bounds, safe WMS parameters and valid percentage conversion. Browser checks covered the live GeoServer image, Bengaluru and Delhi popups, Fit sites, India overview and error-free console. A restricted interactive account was unavailable; device filtering uses the shared native ACL and is covered by the regression fixture.
