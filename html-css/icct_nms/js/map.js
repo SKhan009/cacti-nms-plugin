@@ -116,6 +116,7 @@
                 var cell = document.createElement('div');
                 var label = document.createElement('dt'); label.textContent = field[0];
                 var value = document.createElement('dd'); value.textContent = field[1] == null || field[1] === '' ? 'Not available' : field[1];
+                if(field[0]==='Availability')value.className='device-status '+window.icctStatusClass(device.status);
                 cell.append(label, value); grid.appendChild(cell);
             });
             body.appendChild(grid);
@@ -139,7 +140,7 @@
         var label = document.createElement('span');
         label.textContent = site.name;
         markers[site.id] = L.circleMarker(site.coordinates, {radius: 10, color: '#fff', weight: 2,
-            fillColor: down ? '#c83232' : up ? '#21864a' : '#aa740a', fillOpacity: 1}).addTo(map)
+            fillColor: down ? '#c83232' : up ? '#21864a' : site.devices.every(d=>d.status==='Disabled') ? '#777' : '#aa740a', fillOpacity: 1}).addTo(map)
             .bindTooltip(label, {direction: 'top', permanent: false, className: 'icct-map-site-label', offset: [0, -10]}).bindPopup(popup, {className: 'icct-map-compact-popup', autoPan: true, autoPanPadding: [16, 16], keepInView: true, maxWidth: 260, minWidth: 220});
     });
     document.getElementById('icctMapZoomIn').addEventListener('click', function () { map.zoomIn(); });

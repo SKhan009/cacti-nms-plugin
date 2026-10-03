@@ -28,7 +28,7 @@
       if(query&&!values.some(value=>String(value).toLowerCase().includes(query)))continue;
       matched++;
       const tr=document.createElement('tr');
-      for(const value of values){const td=document.createElement('td');td.textContent=String(value);tr.append(td);}rows.append(tr);
+      for(const [column,value] of values.entries()){const td=document.createElement('td');if(column===3){const badge=document.createElement('span');badge.className='device-status '+(value==='In use'?'in-use':String(value).startsWith('Available')?'online':value==='Disabled'?'disabled':'other');badge.textContent=String(value);td.append(badge);}else td.textContent=String(value);tr.append(td);}rows.append(tr);
     }
     if(!matched){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=5;td.textContent=total?'No ports match your search.':'No ports discovered yet. Save this device with SNMP enabled to start automatic discovery.';tr.append(td);rows.append(tr);}
 

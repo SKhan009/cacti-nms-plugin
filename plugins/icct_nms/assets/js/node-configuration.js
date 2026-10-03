@@ -3,11 +3,19 @@
   const search=document.querySelector('#nodeListSearch'),site=document.querySelector('#nodeListSite'),node=document.querySelector('#nodeListNode'),status=document.querySelector('#nodeListStatus');
   if(!search)return;
   const rows=[...document.querySelectorAll('#nodeDeviceTable tbody tr[data-site]')];
-  function filter(){
-    const query=search.value.trim().toLowerCase();let count=0;
-    rows.forEach(row=>{row.hidden=!!((site.value&&row.dataset.site!==site.value)||(node.value&&row.dataset.node!==node.value)||(status.value&&row.dataset.status!==status.value)||!row.textContent.toLowerCase().includes(query));if(!row.hidden)count++;});
-    document.querySelector('#nodeListCount').textContent=count+' of '+rows.length+' devices';document.querySelector('#nodeListEmpty').hidden=count>0;
+  let page=1,filtered=rows;
+  const size=document.querySelector('#nodePageSize'),previous=document.querySelector('#nodePagePrevious'),next=document.querySelector('#nodePageNext');
+  function renderPage(){
+    const limit=Number(size.value),pages=Math.max(1,Math.ceil(filtered.length/limit));page=Math.min(page,pages);
+    rows.forEach(row=>row.hidden=true);filtered.slice((page-1)*limit,page*limit).forEach(row=>row.hidden=false);
+    document.querySelector('#nodeListCount').textContent=(filtered.length?((page-1)*limit+1)+'–'+Math.min(page*limit,filtered.length):'0')+' of '+filtered.length+' devices'+(filtered.length!==rows.length?' ('+rows.length+' total)':'');
+    document.querySelector('#nodeListEmpty').hidden=filtered.length>0;document.querySelector('#nodePageNumber').textContent='Page '+page+' of '+pages;previous.disabled=page===1;next.disabled=page===pages;
   }
+  function filter(){
+    const query=search.value.trim().toLowerCase();page=1;
+    filtered=rows.filter(row=>!((site.value&&row.dataset.site!==site.value)||(node.value&&row.dataset.node!==node.value)||(status.value&&row.dataset.status!==status.value)||!row.textContent.toLowerCase().includes(query)));renderPage();
+  }
+  previous.addEventListener('click',()=>{page--;renderPage();});next.addEventListener('click',()=>{page++;renderPage();});size.addEventListener('change',()=>{page=1;renderPage();});
   [search,site,node,status].forEach(control=>control.addEventListener('input',filter));
   site.addEventListener('change',()=>{[...node.options].forEach(option=>option.hidden=!!(option.dataset.site&&site.value&&option.dataset.site!==site.value));if(node.selectedOptions[0].hidden)node.value='';filter();});filter();
   const form=document.querySelector('#nodeAssignment');if(!form)return;

@@ -127,9 +127,7 @@
                     <?= icct_nms_h($d["segment"]) ?>
                     <small><?= icct_nms_h($d["device_type"]) ?></small>
                 </td>
-                <td><span class="device-status <?= $d["status_label"] === "Up"
-                    ? "online"
-                    : "" ?>"><?= icct_nms_h($d["status_label"]) ?></span></td>
+                <td><span class="device-status <?= icct_nms_status_class($d["status_label"]) ?>"><?= icct_nms_h($d["status_label"]) ?></span></td>
                 <td>
                     <?= icct_nms_h($d["manual_serial_number"]) ?>
                     <small><?= icct_nms_h($d["mac_address"]) ?></small>

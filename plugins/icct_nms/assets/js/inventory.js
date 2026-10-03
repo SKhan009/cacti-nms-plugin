@@ -1,4 +1,5 @@
 "use strict";
+window.icctStatusClass = status => status === "Up" ? "online" : status === "Down" ? "offline" : status === "Disabled" ? "disabled" : "other";
 // Errors stay beside their form; success notifications never interrupt editing.
 const messageDialog = document.querySelector("#message-dialog");
 function icctInlineMessage({title, text, danger = false, context}) {

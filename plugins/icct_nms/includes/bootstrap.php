@@ -76,3 +76,8 @@ function icct_nms_failure(Throwable $error)
         '</p></html>';
     exit();
 }
+
+/** Shared device status palette; text remains available alongside colour. */
+function icct_nms_status_class($status) {
+    return $status === 'Up' ? 'online' : ($status === 'Down' ? 'offline' : ($status === 'Disabled' ? 'disabled' : 'other'));
+}
