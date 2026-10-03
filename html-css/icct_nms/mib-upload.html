@@ -4,10 +4,10 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
-        <title>Topology Configuration · ICCT NMS</title>
+        <title>MIB Repository · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
         <link rel="stylesheet" href="css/inventory.css?v=11fd9e9f541b" />
-            <script type="text/javascript" nonce="HlCQD9pQkRf-2nGwvKVc93xc">if (top != self) {top.location.href = self.location.href;}</script></head>
+            <script type="text/javascript" nonce="ZrCGZDd0EupymftjjpPxTLq9">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -42,12 +42,15 @@
         </header>
         <main class="workspace">
             <section class="device-panel">
-                                <section class="topology-configuration">
-<div class="titlebar"><h1>Topology Configuration</h1><a class="button" href="dashboard.html">View Topology</a></div>
-<nav class="presets-tabs" aria-label="Topology configuration sections">
-<a href="topology-configuration.html" >Device Connections</a><a href="topology-networks.html" aria-current="page">Networks</a><a href="topology-discovered.html" >Discovered Devices</a></nav>
-<div class="titlebar"><h2>Discovery networks</h2><a class="button primary" href="topology-network-add.html">Add Network</a></div>
-<table class="site-table"><thead><tr><th>Network</th><th>Subnet Range</th><th>Enabled</th><th>Addresses / Up / SNMP</th><th>Last Started</th><th>Result</th><th>Actions</th></tr></thead><tbody><tr><td>Test Network</td><td>192.168.1.0/24</td><td>Enabled</td><td>254 / 14 / 0</td><td>2026-10-02 19:27:47</td><td></td><td><a class="button" href="topology-network-edit.html">Configure</a><a class="button" href="?tab=discovered&amp;network=1">Discovered Devices</a><form data-static-preview="true" method="post" class="topology-inline-form"><input type="hidden" name="action" value="run_network"><input type="hidden" name="network_id" value="1"><button class="button" >Discover Now</button></form></td></tr></tbody></table></section>
+                                <div class="titlebar"><h1>MIB Repository</h1></div>
+<nav class="presets-tabs" aria-label="MIB repository sections"><a href="mib-repository.html" aria-current="page">MIB Files</a></nav>
+<form data-static-preview="true" method="post" enctype="multipart/form-data" class="mib-editor">
+<input type="hidden" name="action" value="upload">
+<h2>Upload MIB files</h2><div class="protocol-grid cols-2">
+<label class="field"><span class="field-label">Device Type *</span><select name="type_id" required><option value="">Select device type</option><option value="88a9005e64ebd09c">Server</option><option value="de452ef13110f6ca">Core Switch</option><option value="20eb503a47b3ea9c">Switch</option><option value="f09b9e9a740f85aa">Generic device</option></select></label>
+<label class="field"><span class="field-label">MIB Files *</span><input type="file" name="mibs[]" accept=".mib,.my,.txt" multiple required></label></div>
+<p>Upload the main MIB and its dependencies together. Up to 8 files; 1 MiB per file and 4 MiB total. Parsing runs locally without contacting a device.</p>
+<div class="type-editor-actions"><a class="button" href="mib-repository.html">Cancel</a><button class="button primary">Upload and Review</button></div></form>
         </section>
     </main>
     <dialog id="message-dialog" aria-labelledby="message-title" aria-describedby="message-text">
@@ -62,7 +65,7 @@
         </div>
     </dialog>
     <script src="js/inventory.js?v=0b94d5b140bf" defer></script>
-<script src="js/topology-configuration.js?v=b18f24081b44" defer></script>
+<script src="js/mib-repository.js?v=85df47c7dc38" defer></script>
 <script src="js/preview.js" defer></script>
 </body>
 </html>

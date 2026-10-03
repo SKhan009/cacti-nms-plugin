@@ -46,5 +46,8 @@
 <?php if (!empty($topologyConfigurationPage)): ?>
 <script src="assets/js/topology-configuration.js?v=<?= substr(hash_file('sha256',__DIR__.'/../assets/js/topology-configuration.js'),0,12) ?>" defer></script>
 <?php endif; ?>
+<?php if (!empty($mibRepositoryPage)): ?>
+<script src="assets/js/mib-repository.js?v=<?= substr(hash_file('sha256',__DIR__.'/../assets/js/mib-repository.js'),0,12) ?>" defer></script>
+<?php endif; ?>
 </body>
 </html>

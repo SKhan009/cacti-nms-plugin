@@ -20,5 +20,6 @@ function icct_nms_navigation()
     $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/presets.php'] = 'Presets';
     $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/node_configuration.php'] = 'Node Configuration';
     $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/topology_configuration.php'] = 'Topology Configuration';
+    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/mib_repository.php'] = 'MIB Repository';
     $menu_glyphs['ICCT NMS'] = 'fas fa-network-wired';
 }

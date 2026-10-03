@@ -33,6 +33,7 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
                     <a href="inventory.php">Inventory</a>
                     <a href="node_configuration.php">Node Configuration</a>
                     <a href="topology_configuration.php">Topology Configuration</a>
+                    <a href="mib_repository.php">MIB Repository</a>
                     <a href="presets.php#segment">Presets</a>
                 </nav>
             </div>
