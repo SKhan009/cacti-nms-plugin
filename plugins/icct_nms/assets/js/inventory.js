@@ -1475,3 +1475,48 @@ document.addEventListener("click", event => { const link=event.target.closest(".
   field('clear').addEventListener('click',()=>{field('search').value='';field('columns').value='2';field('limit').value='10';field('thumbnails').checked=false;field('preset').value='86400';try{localStorage.removeItem(key);}catch{}page=1;setPreset();applyRange();render();});
   render();applyRange();
 })();
+
+// Real-time graphs use Cacti's authenticated JSON endpoint within this page.
+(function(){
+'use strict';
+if(!document.querySelector('[data-graph-popup]'))return;
+const dialog=document.createElement('dialog');dialog.className='device-graph-dialog';
+const heading=document.createElement('div');heading.className='message-heading';
+const title=document.createElement('h2');title.id='device-graph-dialog-title';dialog.setAttribute('aria-labelledby',title.id);
+const close=document.createElement('button');close.type='button';close.textContent='×';close.setAttribute('aria-label','Close graph tool');heading.append(title,close);
+const controls=document.createElement('div');controls.className='device-graph-filter-row';
+const windowSelect=document.createElement('select');windowSelect.setAttribute('aria-label','Real-time window');
+for(const [value,label] of [[60,'1 minute'],[300,'5 minutes'],[900,'15 minutes'],[1800,'30 minutes'],[3600,'1 hour']])windowSelect.append(new Option(label,value));
+const interval=document.createElement('select');interval.setAttribute('aria-label','Real-time refresh interval');
+const status=document.createElement('p');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+const image=document.createElement('img');image.className='device-realtime-image';image.alt='Real-time graph';image.hidden=true;
+const footer=document.createElement('div');footer.className='message-actions';const done=document.createElement('button');done.type='button';done.className='button';done.textContent='Close';footer.append(done);controls.append(windowSelect,interval);dialog.append(heading,controls,status,image,footer);document.body.append(dialog);
+let focus=null,endpoint=null,timer=null,request=null,version=0;
+function stop(){clearTimeout(timer);request?.abort();request=null;version++;}
+async function refresh(){
+ stop();const v=version;if(!dialog.open||!endpoint)return;
+ request=new AbortController();status.textContent='Collecting real-time data…';
+ const body=new URLSearchParams({action:'init',local_graph_id:endpoint.searchParams.get('local_graph_id'),graph_start:String(-Number(windowSelect.value)),ds_step:interval.value,size:'100',graph_nolegend:'false'});
+ const token=document.querySelector('#shared-diagnostic-form input[name=__csrf_magic]');if(token)body.set('__csrf_magic',token.value);
+ try{
+  const response=await fetch(endpoint,{method:'POST',body,credentials:'same-origin',cache:'no-store',signal:request.signal});
+  if(!response.ok)throw Error('Real-time graph unavailable. Check graph permissions and the real-time collector.');
+  const data=await response.json();if(v!==version||!dialog.open)return;
+  if(!data.data||!['png','svg+xml'].includes(data.image_format))throw Error('No real-time image returned. Check the real-time cache directory and collector.');
+  image.src='data:image/'+data.image_format+';base64,'+data.data;image.hidden=false;
+  status.textContent='Updated '+new Date().toLocaleTimeString()+'. Refreshes every '+interval.value+' seconds.';
+  timer=setTimeout(refresh,Number(interval.value)*1000);
+ }catch(error){if(v!==version||error.name==='AbortError')return;status.textContent=error.message==='Unexpected end of JSON input'?'Real-time response unavailable. Sign in again or check the collector.':error.message;}
+}
+for(const button of [close,done])button.addEventListener('click',()=>dialog.close());
+dialog.addEventListener('close',()=>{stop();image.removeAttribute('src');focus?.focus();});
+for(const select of [windowSelect,interval])select.addEventListener('change',refresh);
+document.addEventListener('click',event=>{
+ const link=event.target.closest('button[data-graph-popup]');if(!link)return;
+ const url=new URL(link.dataset.graphUrl,location.href);if(url.origin!==location.origin)return;
+ event.preventDefault();focus=link;endpoint=url;title.textContent='Real-time — '+link.closest('figure').querySelector('figcaption').textContent;image.alt=title.textContent;
+ const minimum=Math.max(1,Number(link.dataset.realtimeStep)||10);interval.replaceChildren();for(const seconds of [...new Set([minimum,10,20,30,60].filter(n=>n>=minimum))].sort((a,b)=>a-b))interval.append(new Option(seconds+' seconds',seconds));
+ image.hidden=true;dialog.showModal();refresh();
+});
+window.addEventListener('pagehide',stop);
+})();
