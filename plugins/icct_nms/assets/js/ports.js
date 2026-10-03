@@ -14,23 +14,23 @@
     const ports=changed?[]:observation.ports;
     const physical=ports.filter(p=>p.connector===1),other=ports.filter(p=>p.connector!==1);
     const unknownSlots=expected===null?0:Math.max(0,Number(expected)-physical.length);
-    const total=physical.length+unknownSlots+other.length;
+    const total=ports.length;
     const query=search.value.trim().toLowerCase();
     let matched=0;
     rows.replaceChildren();
-    const counts={inUse:0,available:0,disabled:0,unknown:unknownSlots};
+    const counts={inUse:0,available:0,disabled:0,unknown:0};
     physical.forEach(p=>{if(p.status==='In use')counts.inUse++;else if(p.status==='Available (link down)')counts.available++;else if(p.status==='Disabled')counts.disabled++;else counts.unknown++;});
     document.querySelector('#port-summary').textContent=`Preset physical ports: ${expected===null?'Not set':expected} · Identified physical ports: ${physical.length} · Physical status — In use: ${counts.inUse} · Available: ${counts.available} · Disabled: ${counts.disabled} · Unknown: ${counts.unknown} · Other interfaces: ${other.length}`;
+    document.querySelector('#port-setup').textContent=!form.elements.device_type.value?'Select a Device Type to use its preset port count. Automatic discovery lists real interfaces below.':expected===null?(physical.length?`Auto-detected ${physical.length} physical ports. Set No. of Ports in the Device Type preset if you want an expected capacity.`:'Set No. of Ports in the Device Type preset. Automatic discovery continues; the physical port count is not reported yet.'):unknownSlots?`${expected} ports configured in the preset; ${physical.length} physical ports identified. Automatic discovery is waiting to identify the remaining ${unknownSlots}. Only real discovered interfaces are listed below.`:`${expected} ports configured in the preset; ${physical.length} physical ports identified automatically.`;
     document.querySelector('#port-observation').textContent=changed?'Device connection settings changed. Save to discover ports for the updated device.':observation.message+(observation.collected?` Last collected: ${new Date(observation.collected*1000).toLocaleString()}.`:'');
-    for(let i=0;i<total;i++) {
-      const p=i<physical.length?physical[i]:i<physical.length+unknownSlots?null:other[i-physical.length-unknownSlots];
-      const values=p?[p.name,p.index,p.connector===1?'Physical':p.connector===2?'Logical / no connector':'Physical type unreported',p.status,p.alias||p.description||'—']:['Unidentified preset slot '+(i-physical.length+1),'—','Preset capacity','Unknown','Awaiting physical-port identification'];
+    for(const p of [...physical,...other]) {
+      const values=[p.name,p.index,p.connector===1?'Physical':p.connector===2?'Logical / no connector':'Physical type unreported',p.status,p.alias||p.description||'—'];
       if(query&&!values.some(value=>String(value).toLowerCase().includes(query)))continue;
       matched++;
       const tr=document.createElement('tr');
       for(const value of values){const td=document.createElement('td');td.textContent=String(value);tr.append(td);}rows.append(tr);
     }
-    if(!matched){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=5;td.textContent=total?'No ports match your search.':'No interfaces discovered yet. Set the port count in Device Type presets and configure SNMP on this device.';tr.append(td);rows.append(tr);}
+    if(!matched){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=5;td.textContent=total?'No ports match your search.':'No ports discovered yet. Save this device with SNMP enabled to start automatic discovery.';tr.append(td);rows.append(tr);}
 
   }
   form.elements.category_id.addEventListener('change',render);

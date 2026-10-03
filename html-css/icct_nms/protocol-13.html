@@ -7,7 +7,7 @@
         <title>Edit Device · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
         <link rel="stylesheet" href="css/inventory.css?v=a6f70a88aa34" />
-    <script type="text/javascript" nonce="kvFTKNE5-NVdkArN_ZgBd2pN">if (top != self) {top.location.href = self.location.href;}</script></head>
+    <script type="text/javascript" nonce="ngUGtjTlAklw5tk7l_B28uy7">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -822,11 +822,12 @@
 <section id="device-ports" class="device-ports" hidden>
 <h2>Port Config</h2>
 <p>Physical port count comes from Device Type presets. Actual interface names and link status come from the device. In use means link up; Available means enabled with link down, which does not prove the port is unplugged.</p>
+<p id="port-setup" role="status"></p>
 <p id="port-summary" role="status"></p><p id="port-observation"></p>
-<p>Interfaces without reported physical-connector information are listed separately. Preset slots are not mapped to an interface until the device identifies its physical ports.</p>
+<p>Only discovered interfaces are shown. The preset count is expected capacity; it does not assign interface names or link status.</p>
 <div class="port-search field"><label for="ports-search">Search ports</label><input type="search" id="ports-search" placeholder="Search by port, status or description" autocomplete="off" aria-controls="port-rows"></div>
 <div class="site-table-wrap"><table class="site-table"><thead><tr><th>Port / Interface</th><th>ifIndex</th><th>Type</th><th>Status</th><th>Description</th></tr></thead><tbody id="port-rows"></tbody></table></div>
-<script type="application/json" id="port-observations">{"ports":[{"index":9001,"name":"NMS-Lab-Uplink","description":"NMS-Lab-Uplink","alias":"","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"}],"fresh":true,"collected":1790964004,"source":"SNMP IF-MIB \/ IF-X-MIB","message":"Port status from the latest collector observation."}</script>
+<script type="application/json" id="port-observations">{"ports":[{"index":9001,"name":"NMS-Lab-Uplink","description":"NMS-Lab-Uplink","alias":"","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"}],"fresh":true,"collected":1790964304,"source":"SNMP IF-MIB \/ IF-X-MIB","message":"Port status from the latest collector observation."}</script>
 </section>
 <section id="device-fcaps" class="device-fcaps" hidden>
 <h2>FCAPS</h2>
@@ -878,7 +879,7 @@
         <p>Save your changes before leaving this device?</p>
         <div class="message-actions"><button type="button" class="button" data-draft-choice="cancel">Keep editing</button><button type="button" class="button" data-draft-choice="discard">Discard</button><button type="button" class="button primary" data-draft-choice="save">Save</button></div>
     </dialog>
-    <script src="js/ports.js?v=3ac7fe872dc5" defer></script>
+    <script src="js/ports.js?v=a68e19fc6272" defer></script>
     <script src="js/fcaps.js?v=3a7ddce44437" defer></script>
     <script src="js/wizard.js?v=b3c7b01e889f" defer></script>
 <script src="js/preview.js" defer></script>
