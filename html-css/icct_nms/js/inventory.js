@@ -1425,3 +1425,6 @@ if (protocolDefaultData) {
   };
   window.addEventListener('hashchange', render); render();
 })();
+
+// Close the protocol picker after opening the shared diagnostic dialog.
+document.addEventListener("click", event => { const link=event.target.closest(".device-diagnostic-menu a[data-tool]"); if(link)link.closest("details").open=false; });
