@@ -17,6 +17,8 @@ try{icct_nms_topology_save([6=>[.2,.2]],$rev);throw new LogicException('Device p
 icct_nms_topology_save([2=>[.6,.4]],$rev);if(!isset($stored[1],$stored[2]))throw new LogicException('Save removed other device positions');
 $allowed=false;try{icct_nms_topology_save([],hash('sha256',json_encode($stored)));throw new LogicException('Realm bypass');}catch(RuntimeException $e){}
 echo "Topology persistence, bounds, stale writes and device/realm permissions passed.\n";
+function icct_nms_uptime($ticks){return $ticks?'Reported uptime':'Not reported';}
+function read_config_option($name){return '300';}
 function is_realm_allowed($id){return true;}
 function icct_nms_inventory(){return [['id'=>1,'category_id'=>1,'device_type'=>'Switch'],['id'=>2,'short_name'=>'PEER SW'],['id'=>3]];}
 function icct_nms_device_types(){return [['category_id'=>1,'name'=>'Switch','icon'=>'switch']];}

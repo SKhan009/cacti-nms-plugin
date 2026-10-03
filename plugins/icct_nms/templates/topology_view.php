@@ -10,4 +10,11 @@
 <dialog id="topologyDraftDialog"><h2>Unsaved topology layout</h2><p>Save your changes before leaving edit mode?</p><div class="message-actions"><button class="button" type="button" data-topology-choice="cancel">Keep editing</button><button class="button" type="button" data-topology-choice="discard">Discard</button><button class="button primary" type="button" data-topology-choice="save">Save</button></div></dialog>
 <script type="application/json" id="topologyData"><?= json_encode(icct_nms_topology_data($mapData),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
 
-<dialog id="topologyDeviceDialog" class="topology-device-dialog" aria-labelledby="topologyDeviceTitle"><h2 id="topologyDeviceTitle"></h2><p id="topologyDeviceAddress"></p><h3>Device diagnostics</h3><div id="topologyDeviceDiagnostics" class="message-actions"></div><h3>Topology discovery</h3><div class="table-wrap"><table class="site-table"><thead><tr><th>Method</th><th>Status</th><th>Current observations</th><th>Evidence</th></tr></thead><tbody id="topologyDeviceDiscovery"></tbody></table></div><form method="dialog"><button class="button">Close</button></form></dialog>
+<dialog id="topologyDeviceDialog" class="topology-device-dialog" aria-labelledby="topologyDeviceTitle">
+<header class="topology-summary-heading"><div><h2 id="topologyDeviceTitle"></h2><p id="topologyDeviceAddress"></p></div><span id="topologyDeviceStatus" class="device-status"></span><img id="topologyDeviceImage" alt=""><form method="dialog"><button type="submit" class="button" aria-label="Close device summary">×</button></form></header>
+<dl id="topologyDeviceCapacity" class="topology-capacity"></dl>
+<dl id="topologyDeviceSummary" class="topology-summary"></dl>
+<div id="topologyDeviceAlarms" class="topology-summary-alarms"></div>
+<nav id="topologyDeviceLinks" class="topology-summary-links" aria-label="Device sections"></nav>
+<details class="topology-summary-extra"><summary>Discovery and diagnostics</summary><h3>Device diagnostics</h3><div id="topologyDeviceDiagnostics" class="message-actions"></div><h3>Topology discovery</h3><div class="table-wrap"><table class="site-table"><thead><tr><th>Method</th><th>Status</th><th>Current observations</th><th>Evidence</th></tr></thead><tbody id="topologyDeviceDiscovery"></tbody></table></div></details>
+</dialog>

@@ -72,3 +72,16 @@
 .topology-device.has-device-image.shape-wide .topology-device-icon{width:36px;height:20px}
 .topology-device.shape-wide .topology-device-heading{gap:5px}
 .topology-alarm{border-color:#333}
+
+/* Device summary matches the topology reference card. */
+.topology-device-dialog{width:min(820px,calc(100vw - 40px));padding:0;background:#fff;border:1px solid #ccc}
+.topology-summary-heading{display:flex;align-items:center;gap:16px;padding:20px;border-bottom:1px solid #ccc}
+.topology-summary-heading>div{flex:1}.topology-summary-heading h2{margin:0 0 8px;font-size:24px}.topology-summary-heading p{margin:0;color:#666}
+.topology-summary-heading img{width:110px;height:64px;object-fit:contain}.topology-summary-heading img[hidden]{display:none}.topology-summary-heading form{margin:0}
+.topology-capacity{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;padding:16px 20px;margin:0;border-bottom:1px solid #ccc}
+.topology-capacity dt{font-size:14px;color:#666}.topology-capacity dd{margin:6px 0 0;font-size:20px}
+.topology-summary{padding:16px 20px;margin:0}.topology-summary>div{display:grid;grid-template-columns:1fr 1fr;padding:8px 0}.topology-summary dt{padding-right:16px}.topology-summary dd{margin:0;border-left:1px solid #ccc;padding-left:16px;overflow-wrap:anywhere}
+.topology-summary-alarms{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;padding:16px;border-top:1px solid #ccc}.topology-summary-alarms span{border:1px solid #555;border-radius:20px;padding:4px 8px;font-size:13px;white-space:nowrap}.topology-summary-alarms i{display:inline-block;width:13px;height:13px;border-radius:50%;vertical-align:middle;margin-right:5px}
+.topology-summary-links{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #0f62fe}.topology-summary-links a{padding:16px;color:#0f62fe;text-decoration:none;border-right:1px solid #0f62fe}.topology-summary-links a:last-child{border-right:0}
+.topology-summary-extra{padding:16px 20px;border-top:1px solid #ddd}.topology-summary-extra summary{cursor:pointer;color:#0f62fe}
+@media(max-width:600px){.topology-capacity{grid-template-columns:repeat(2,1fr)}.topology-summary-heading{flex-wrap:wrap}.topology-summary-links a{font-size:12px;padding:12px}}

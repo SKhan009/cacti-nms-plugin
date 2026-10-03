@@ -13,6 +13,13 @@ const severityColors={Critical:'#ff4148',Major:'#ff7226',Minor:'#ff9b17',Warning
 function el(tag,cls,text){const e=document.createElement(tag);e.className=cls;if(text!==undefined)e.textContent=text;return e;}
 function showDevice(d){
  const detail=document.querySelector('#topologyDeviceDialog');document.querySelector('#topologyDeviceTitle').textContent=d.name;document.querySelector('#topologyDeviceAddress').textContent=d.address;
+ const state=document.querySelector('#topologyDeviceStatus');state.className='device-status '+window.icctStatusClass(d.status);state.textContent=d.status==='Up'?'Online':d.status==='Down'?'Offline':d.status;
+ const image=document.querySelector('#topologyDeviceImage');image.hidden=!d.network_asset;if(d.network_asset)image.src=d.network_asset;else image.removeAttribute('src');image.alt=d.name;
+ const summary=document.querySelector('#topologyDeviceSummary');summary.replaceChildren();Object.entries(d.summary||{}).forEach(([label,value])=>{const row=el('div','');row.append(el('dt','',label),el('dd','',value===null||value===''?'—':String(value)));summary.append(row);});
+ const capacity=document.querySelector('#topologyDeviceCapacity');capacity.replaceChildren();['Switching Capacity (Tbps)','Forwarding Rate (Bpps)','Hardware Redundancy (W)','Table Scale (TCAM / FIB)'].forEach(label=>{const row=el('div','');row.append(el('dt','',label),el('dd','','—'));capacity.append(row);});
+ const alarms=document.querySelector('#topologyDeviceAlarms');alarms.replaceChildren();Object.entries(severityColors).forEach(([severity,color])=>{const badge=el('span',''),dot=el('i','');dot.style.background=color;badge.append(dot,document.createTextNode((severity==='Warning'?'Warn':severity==='Information'?'Info':severity)+': '+(d.fault_counts?.[severity]||0)));alarms.append(badge);});
+ const links=document.querySelector('#topologyDeviceLinks');links.replaceChildren();for(const [label,tab] of [['Device Details','details'],['Graphs','graphs'],['Active Alarms','fcaps']]){const a=el('a','',label+' →');a.href='device.php?id='+encodeURIComponent(d.id)+'&view=1#view-'+tab;links.append(a);}
+ detail.querySelector('.topology-summary-extra').open=false;
  const actions=document.querySelector('#topologyDeviceDiagnostics');actions.replaceChildren();
  Object.entries(d.diagnostics||{}).forEach(([tool,label])=>{const a=el('a','button',label);a.href='http://127.0.0.1:8080/cacti/plugins/icct_nms/diagnostics.php?host_id='+encodeURIComponent(d.id)+'&tool='+encodeURIComponent(tool);actions.append(a);});
  if(!actions.children.length)actions.append(el('p','','No diagnostics selected.'));

@@ -24,6 +24,13 @@ function icct_nms_topology_data($mapData) {
     };
     foreach($devices as &$device){
         $host=$inventory[$device['id']];
+        $device['summary']=[
+            'System Uptime (DD:HH:MM:SS)'=>icct_nms_uptime($host['snmp_sysUpTimeInstance']??0),
+            'Device Type/Model'=>$host['device_type']??'',
+            'Polling Interval (Sec)'=>$host['polling_interval']??read_config_option('poller_interval'),
+            'Serial Number'=>$device['serial']??'',
+            'Rack Placement'=>empty($host['rack_name'])?'':(isset($host['start_unit'])?'U'.$host['start_unit'].'–U'.((int)$host['start_unit']+(int)$host['unit_height']-1).' ('.$host['rack_name'].')':$host['rack_name'].' (Peripheral)'),
+        ];
         $device['diagnostics']=is_realm_allowed(3)?icct_backend_diag_selected_labels($device['id']):[];
         $device['discovery']=icct_nms_device_discovery_summary($device['id'],$discoveryHosts[$device['id']]??null);
         $device['short_name']=trim((string)($host['short_name']??'')) ?: icct_backend_short_name_generate($device['name'],$host['device_type']??'',(int)$device['id']);
