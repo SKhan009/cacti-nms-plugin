@@ -2584,3 +2584,12 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 .fault-rule input[type=checkbox] { width:20px; min-height:20px; margin:14px 0; }
 .fcaps-form-actions { display:flex; justify-content:flex-end; margin:20px 0; }
 @media(max-width:1000px) { .fault-rule { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+.configuration-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px 24px; margin:16px 0 24px; }
+.configuration-summary dt { color:#666; font-size:12px; }
+.configuration-summary dd { margin:0; overflow-wrap:anywhere; }
+.configuration-summary > div { min-width:0; }
+.configuration-summary dd { margin-top:6px; }
+.configuration-protocol { border-top:1px solid #ddd; padding:12px 0; }
+.configuration-protocol h4 { margin:0; font-size:14px; }
+@media(max-width:700px) { .configuration-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }

@@ -6,8 +6,8 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Edit Device · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
-        <link rel="stylesheet" href="css/inventory.css?v=8f04777f4d55" />
-    <script type="text/javascript" nonce="Ss58jikW2tJwxznIRHTiVRkA">if (top != self) {top.location.href = self.location.href;}</script></head>
+        <link rel="stylesheet" href="css/inventory.css?v=cc4f3252cb71" />
+    <script type="text/javascript" nonce="lo84CKHjxwl4hdScxva6lJee">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -2197,7 +2197,7 @@
 <p>Only discovered interfaces are shown. The preset count is expected capacity; it does not assign interface names or link status.</p>
 <div class="port-search field"><label for="ports-search">Search ports</label><input type="search" id="ports-search" placeholder="Search by port, status or description" autocomplete="off" aria-controls="port-rows"></div>
 <div class="site-table-wrap"><table class="site-table"><thead><tr><th>Port / Interface</th><th>ifIndex</th><th>Type</th><th>Status</th><th>Description</th></tr></thead><tbody id="port-rows"></tbody></table></div>
-<script type="application/json" id="port-observations">{"ports":[{"index":1,"name":"Ethernet1","description":"Ethernet1","alias":"Link to LAB-SW-A","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"},{"index":2,"name":"Ethernet2","description":"Ethernet2","alias":"Spare lab port","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"}],"fresh":true,"collected":1790964603,"source":"SNMP IF-MIB \/ IF-X-MIB","message":"Port status from the latest collector observation."}</script>
+<script type="application/json" id="port-observations">{"ports":[{"index":1,"name":"Ethernet1","description":"Ethernet1","alias":"Link to LAB-SW-A","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"},{"index":2,"name":"Ethernet2","description":"Ethernet2","alias":"Spare lab port","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"}],"fresh":true,"collected":1790975703,"source":"SNMP IF-MIB \/ IF-X-MIB","message":"Port status from the latest collector observation."}</script>
 </section>
 <section id="device-fcaps" class="device-fcaps" hidden>
 <div class="fcaps-tabs" role="tablist" aria-label="FCAPS">
@@ -2222,7 +2222,14 @@
 <div class="site-table-wrap"><table class="site-table"><thead><tr><th>Graph</th><th>Data Source</th><th>Value</th><th>Severity / State</th><th>Sample Time</th></tr></thead><tbody>
 <tr><td colspan="5">No current fault observations. Save rules and wait for the assigned poller.</td></tr></tbody></table></div>
 </section>
-<section id="fcaps-configuration" role="tabpanel" aria-labelledby="fcaps-tab-configuration" hidden><h3>Configuration</h3><p>Configure this device in Basic Information and Protocol Config. Changes are saved for this device only.</p><dl><dt>Device</dt><dd>Topology Lab Switch B</dd><dt>Address</dt><dd>127.0.0.1</dd></dl></section>
+<section id="fcaps-configuration" role="tabpanel" aria-labelledby="fcaps-tab-configuration" hidden>
+<h3>Configuration summary</h3>
+<p>Read-only summary of the current form values, including unsaved changes. Edit settings in Basic Information and Protocol Config. Changes are saved for this device only.</p>
+<dl id="configuration-device-summary" class="configuration-summary"></dl>
+<h3>Selected protocols</h3>
+<div id="configuration-protocol-summary"></div>
+<p id="configuration-save-status">Configuration backup and change history are not configured yet.</p>
+</section>
 <section id="fcaps-accounting" role="tabpanel" aria-labelledby="fcaps-tab-accounting" hidden><h3>Accounting</h3><p>Accounting policies and usage reports are not configured for this device yet.</p></section>
 <section id="fcaps-performance" role="tabpanel" aria-labelledby="fcaps-tab-performance" hidden><h3>Performance</h3><p>Selected graph templates provide performance measurements. View graph definitions in Graphs and interface status in Port Config.</p><ul><li>Topology Lab 2 143190ff0a - Port 1 HC input octets</li><li>Topology Lab 2 18ded16929 - Port 1 Speed</li><li>Topology Lab 2 2cc17d01d0 - Port 1 Output octets</li><li>Topology Lab 2 4026e99df0 - Port 2 Input octets</li><li>Topology Lab 2 48a817831f - Port 2 Admin status</li><li>Topology Lab 2 4edd67d661 - Port 1 MTU</li><li>Topology Lab 2 55aaf3b4e1 - Port 2 Oper status</li><li>Topology Lab 2 5a3f5b0b1b - Interface count</li><li>Topology Lab 2 6fb1523163 - Port 2 Type</li><li>Topology Lab 2 78ced6f27d - Port 2 Index</li><li>Topology Lab 2 7a7bef1204 - Port 1 Admin status</li><li>Topology Lab 2 7d3f0092c1 - Port 1 High speed</li><li>Topology Lab 2 8c960da370 - Port 2 Speed</li><li>Topology Lab 2 95b1d87c19 - Port 1 Type</li><li>Topology Lab 2 acc0664d96 - Port 1 Oper status</li><li>Topology Lab 2 b6d20229f4 - Port 2 MTU</li><li>Topology Lab 2 b6e9667e55 - Port 2 HC input octets</li><li>Topology Lab 2 b9038c26bb - Port 2 Output octets</li><li>Topology Lab 2 cb0e8166a9 - Port 1 HC output octets</li><li>Topology Lab 2 cbb6c7f190 - System uptime (ticks)</li><li>Topology Lab 2 d50c70b782 - Port 1 Input octets</li><li>Topology Lab 2 df1fd4a2ed - Port 2 HC output octets</li><li>Topology Lab 2 e4a62969ca - Port 2 High speed</li><li>Topology Lab 2 fc18f6f306 - Port 1 Index</li></ul></section>
 <section id="fcaps-security" role="tabpanel" aria-labelledby="fcaps-tab-security" hidden><h3>Security</h3><p>Security monitoring policies are not configured yet. Manage device credentials and enabled protocols in Protocol Config.</p></section>
@@ -2249,7 +2256,7 @@
         <div class="message-actions"><button type="button" class="button" data-draft-choice="cancel">Keep editing</button><button type="button" class="button" data-draft-choice="discard">Discard</button><button type="button" class="button primary" data-draft-choice="save">Save</button></div>
     </dialog>
     <script src="js/ports.js?v=a68e19fc6272" defer></script>
-    <script src="js/fcaps.js?v=3a7ddce44437" defer></script>
+    <script src="js/fcaps.js?v=ba7c996576fd" defer></script>
     <script src="js/wizard.js?v=b3c7b01e889f" defer></script>
 <script src="js/preview.js" defer></script>
 </body>

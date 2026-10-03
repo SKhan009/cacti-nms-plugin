@@ -6,8 +6,8 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Clone Device · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
-        <link rel="stylesheet" href="css/inventory.css?v=8f04777f4d55" />
-    <script type="text/javascript" nonce="khkDYor8MK9WTEaYPP__auKL">if (top != self) {top.location.href = self.location.href;}</script></head>
+        <link rel="stylesheet" href="css/inventory.css?v=cc4f3252cb71" />
+    <script type="text/javascript" nonce="KUtWdmBbQFkqDmUqKc6TDBpE">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -580,7 +580,14 @@
 <div class="site-table-wrap"><table class="site-table"><thead><tr><th>Graph</th><th>Data Source</th><th>Value</th><th>Severity / State</th><th>Sample Time</th></tr></thead><tbody>
 <tr><td colspan="5">No current fault observations. Save rules and wait for the assigned poller.</td></tr></tbody></table></div>
 </section>
-<section id="fcaps-configuration" role="tabpanel" aria-labelledby="fcaps-tab-configuration" hidden><h3>Configuration</h3><p>Configure this device in Basic Information and Protocol Config. Changes are saved for this device only.</p><dl><dt>Device</dt><dd></dd><dt>Address</dt><dd></dd></dl></section>
+<section id="fcaps-configuration" role="tabpanel" aria-labelledby="fcaps-tab-configuration" hidden>
+<h3>Configuration summary</h3>
+<p>Read-only summary of the current form values, including unsaved changes. Edit settings in Basic Information and Protocol Config. Changes are saved for this device only.</p>
+<dl id="configuration-device-summary" class="configuration-summary"></dl>
+<h3>Selected protocols</h3>
+<div id="configuration-protocol-summary"></div>
+<p id="configuration-save-status">Save this device to enable configuration backup and change history.</p>
+<p>Configuration backup and change history integrations are not implemented yet.</p></section>
 <section id="fcaps-accounting" role="tabpanel" aria-labelledby="fcaps-tab-accounting" hidden><h3>Accounting</h3><p>Accounting policies and usage reports are not configured for this device yet.</p></section>
 <section id="fcaps-performance" role="tabpanel" aria-labelledby="fcaps-tab-performance" hidden><h3>Performance</h3><p>Selected graph templates provide performance measurements. View graph definitions in Graphs and interface status in Port Config.</p><ul></ul></section>
 <section id="fcaps-security" role="tabpanel" aria-labelledby="fcaps-tab-security" hidden><h3>Security</h3><p>Security monitoring policies are not configured yet. Manage device credentials and enabled protocols in Protocol Config.</p></section>
@@ -607,7 +614,7 @@
         <div class="message-actions"><button type="button" class="button" data-draft-choice="cancel">Keep editing</button><button type="button" class="button" data-draft-choice="discard">Discard</button><button type="button" class="button primary" data-draft-choice="save">Save</button></div>
     </dialog>
     <script src="js/ports.js?v=a68e19fc6272" defer></script>
-    <script src="js/fcaps.js?v=3a7ddce44437" defer></script>
+    <script src="js/fcaps.js?v=ba7c996576fd" defer></script>
     <script src="js/wizard.js?v=b3c7b01e889f" defer></script>
 <script src="js/preview.js" defer></script>
 </body>

@@ -21,7 +21,15 @@
 <?php endforeach; if(!$faultObservations): ?><tr><td colspan="5">No current fault observations. Save rules and wait for the assigned poller.</td></tr><?php endif; ?>
 </tbody></table></div>
 </section>
-<section id="fcaps-configuration" role="tabpanel" aria-labelledby="fcaps-tab-configuration" hidden><h3>Configuration</h3><p>Configure this device in Basic Information and Protocol Config. Changes are saved for this device only.</p><dl><dt>Device</dt><dd><?= icct_nms_h($host['description']) ?></dd><dt>Address</dt><dd><?= icct_nms_h($host['hostname']) ?></dd></dl></section>
+<section id="fcaps-configuration" role="tabpanel" aria-labelledby="fcaps-tab-configuration" hidden>
+<h3>Configuration summary</h3>
+<p>Read-only summary of the current form values, including unsaved changes. Edit settings in Basic Information and Protocol Config. Changes are saved for this device only.</p>
+<dl id="configuration-device-summary" class="configuration-summary"></dl>
+<h3>Selected protocols</h3>
+<div id="configuration-protocol-summary"></div>
+<p id="configuration-save-status"><?= $id ? 'Configuration backup and change history are not configured yet.' : 'Save this device to enable configuration backup and change history.' ?></p>
+<?php if (!$id): ?><p>Configuration backup and change history integrations are not implemented yet.</p><?php endif; ?>
+</section>
 <section id="fcaps-accounting" role="tabpanel" aria-labelledby="fcaps-tab-accounting" hidden><h3>Accounting</h3><p>Accounting policies and usage reports are not configured for this device yet.</p></section>
 <section id="fcaps-performance" role="tabpanel" aria-labelledby="fcaps-tab-performance" hidden><h3>Performance</h3><p>Selected graph templates provide performance measurements. View graph definitions in Graphs and interface status in Port Config.</p><ul><?php foreach($graphAssociations as $template): ?><li><?= icct_nms_h($template['name']) ?></li><?php endforeach; ?></ul></section>
 <section id="fcaps-security" role="tabpanel" aria-labelledby="fcaps-tab-security" hidden><h3>Security</h3><p>Security monitoring policies are not configured yet. Manage device credentials and enabled protocols in Protocol Config.</p></section>

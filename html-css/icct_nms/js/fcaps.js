@@ -26,7 +26,50 @@
   }
   saved.forEach(addRule);sync();document.querySelector('#add-fault-rule').addEventListener('click',()=>{if(list.children.length<100)addRule();});
   new MutationObserver(()=>{for(const row of list.children){const select=row.querySelector('[data-template]'),value=select.value;const allowed=associated();for(const item of catalogue){if(allowed.has(Number(item.template_id))&&![...select.options].some(o=>o.value===String(item.template_id)))option(select,item.template_id,item.template_name);}for(const o of [...select.options])if(o.value&&!allowed.has(Number(o.value))&&o.value!==value)o.remove();}sync();}).observe(document.querySelector('.graph-accordion-list'),{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});
+  const basic=document.querySelector('#device-form');
+  const deviceSummary=document.querySelector('#configuration-device-summary');
+  const protocolSummary=document.querySelector('#configuration-protocol-summary');
+  // Explicit allowlist: never copy credentials or hidden form metadata into the summary.
+  const settingNames=new Set(['snmp_version','snmp_port','snmp_timeout','max_oids','availability_method','ping_method','ping_timeout','ping_retries','snmp_auth_protocol','snmp_priv_protocol','snmp_security_level','interval_seconds','stale_seconds','refresh_seconds','port','connect_timeout','auth_method','command_timeout','retries','keepalive','monitoring','serial_interface','baud_rate','data_bits','parity','stop_bits','flow_control','response_timeout','serial_retries','serial_interval','serial_protocol','version','active_timeout','inactive_timeout','sampling_rate','timeout','poll_interval','maximum_offset','authentication']);
+  function valueText(control){
+    if(control.type==='checkbox')return control.checked?'Enabled':'Disabled';
+    if(control.type==='radio'&&!control.checked)return null;
+    if(control.tagName==='SELECT')return control.selectedOptions[0]?.textContent.trim()||'Not selected';
+    if(control.type==='radio')return control.closest('label')?.textContent.trim()||control.value;
+    return control.value.trim()||'Not set';
+  }
+  function entry(target,label,value){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;const group=document.createElement('div');group.append(dt,dd);target.append(group);}
+  function configurationSummary(){
+    deviceSummary.replaceChildren();
+    [['Device Name','description'],['Address','hostname'],['Device Type','device_type'],['Segment','category_id'],['Site','site_id'],['Rack','rack_id'],['Rack Placement','rack_position'],['Device Status','enabled']].forEach(([label,name])=>{
+      const control=basic.querySelector('[name="'+name+'"]');if(control)entry(deviceSummary,label,valueText(control));
+    });
+    protocolSummary.replaceChildren();
+    const protocols=[...document.querySelectorAll('#protocol-workspace .protocol-item')].filter(item=>!item.hidden);
+    protocols.forEach(item=>{
+      const section=document.createElement('section');section.className='configuration-protocol';
+      const heading=document.createElement('h4');heading.textContent=item.querySelector('summary > span:not(.accordion-chevron)')?.textContent.trim()||item.id.replace('protocol-','').toUpperCase();section.append(heading);
+      const enable=item.querySelector('.protocol-enable input'),pending=item.querySelector('.pending-protocol-status');
+      const state=document.createElement('p');state.textContent=pending?'Not available yet':enable&&!enable.checked?'Disabled':'Enabled';section.append(state);
+      const settings=document.createElement('dl');settings.className='configuration-summary';
+      const names=new Set();
+      item.querySelectorAll('input,select').forEach(control=>{
+        if(!settingNames.has(control.name)||names.has(control.name)||control.type==='hidden'||control.type==='password'||item.contains(control.closest('[hidden]')))return;
+        const value=valueText(control);if(value===null)return;
+        const caption=control.closest('.field')?.querySelector('.field-label');
+        const label=caption?[...caption.childNodes].filter(node=>node.nodeType===3).map(node=>node.textContent).join('').trim():control.closest('.radio-group')?.querySelector('legend')?.textContent.trim()||control.name.replaceAll('_',' ');
+        entry(settings,control.name==='monitoring'?'SSH Monitoring':label,value);names.add(control.name);
+      });
+      section.append(settings);protocolSummary.append(section);
+    });
+    if(!protocols.length){const message=document.createElement('p');message.textContent='No protocols selected. Add protocols in Protocol Config.';protocolSummary.append(message);}
+  }
+  basic.addEventListener('input',configurationSummary);basic.addEventListener('change',()=>queueMicrotask(configurationSummary));
+  document.querySelector('#protocol-workspace').addEventListener('input',configurationSummary);
+  document.querySelector('#protocol-workspace').addEventListener('change',()=>queueMicrotask(configurationSummary));
+  new MutationObserver(configurationSummary).observe(document.querySelector('#protocol-workspace'),{subtree:true,attributes:true,attributeFilter:['hidden']});
+  configurationSummary();
   const tabs=[...panel.querySelectorAll('[role=tab]')];
-  function activate(tab){tabs.forEach(item=>{const selected=item===tab;item.setAttribute('aria-selected',String(selected));item.tabIndex=selected?0:-1;document.getElementById(item.getAttribute('aria-controls')).hidden=!selected;});}
+  function activate(tab){configurationSummary();tabs.forEach(item=>{const selected=item===tab;item.setAttribute('aria-selected',String(selected));item.tabIndex=selected?0:-1;document.getElementById(item.getAttribute('aria-controls')).hidden=!selected;});}
   tabs.forEach((tab,index)=>{tab.addEventListener('click',()=>activate(tab));tab.addEventListener('keydown',event=>{let next;if(event.key==='ArrowRight')next=(index+1)%tabs.length;if(event.key==='ArrowLeft')next=(index+tabs.length-1)%tabs.length;if(event.key==='Home')next=0;if(event.key==='End')next=tabs.length-1;if(next!==undefined){event.preventDefault();activate(tabs[next]);tabs[next].focus();}});});
 })();
