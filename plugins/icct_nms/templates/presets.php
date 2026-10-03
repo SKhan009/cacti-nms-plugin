@@ -8,7 +8,7 @@
 <?php $key=array_search($tab,$presetTabs,true); if ($key!==false): ?><a href="presets.php?tab=<?= $key ?>" <?= $activePreset===$key?'aria-current="page"':'' ?>><?= icct_nms_h($tab) ?></a><?php else: ?><button type="button" disabled><?= icct_nms_h($tab) ?></button><?php endif; ?>
 <?php endforeach; ?>
 </nav>
-<?php if ($activePreset === 'protocols'): require __DIR__.'/protocol_presets.php'; elseif ($activePreset === 'site'): require __DIR__.'/sites.php'; elseif ($activePreset === 'device-type'): require __DIR__.'/device_types.php'; elseif ($activePreset === 'network-connections'): require __DIR__.'/connections.php'; else: ?>
+<?php if ($activePreset === 'node'): require __DIR__.'/nodes.php'; elseif ($activePreset === 'protocols'): require __DIR__.'/protocol_presets.php'; elseif ($activePreset === 'site'): require __DIR__.'/sites.php'; elseif ($activePreset === 'device-type'): require __DIR__.'/device_types.php'; elseif ($activePreset === 'network-connections'): require __DIR__.'/connections.php'; else: ?>
 <?php if ($management): ?>
 <form method="post" class="segment-editor" id="segment-editor" <?= $editing ? '' : 'hidden' ?>>
     <?php icct_nms_token(); ?><input type="hidden" name="action" value="save_segment"><input type="hidden" name="segment_id" value="<?= (int)$segmentId ?>">

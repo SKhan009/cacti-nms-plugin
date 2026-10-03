@@ -882,6 +882,7 @@ if (identityEndpoint) {
 // One floating tooltip layer keeps help visible outside scrolling form panels.
 if (document.body) {
   const fieldHelp = {
+    node_name: "Name used to identify this node. Maximum 150 characters.",
     description: "Name used to identify this device in inventory.",
     short_name:
       "Created automatically from the device name. You can enter your own short name, up to 8 characters.",
@@ -977,7 +978,7 @@ if (document.body) {
     const field = label
       .closest(".field, .enable-field, .radio-group")
       ?.querySelector("input, select, textarea");
-    let help = (label.closest("#site-editor") ? siteFieldHelp[field?.name] : fieldHelp[field?.name]) || "";
+    let help = (label.closest("#node-editor") && field?.name === "site_id" ? "Select the Cacti site for this node." : label.closest("#site-editor") ? siteFieldHelp[field?.name] : fieldHelp[field?.name]) || "";
     if (field?.type === "number" && !field.readOnly) {
       const min = field.getAttribute("min"), max = field.getAttribute("max");
       const caption = label.textContent.trim();

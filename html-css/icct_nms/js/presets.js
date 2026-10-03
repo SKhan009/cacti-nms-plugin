@@ -136,3 +136,30 @@ document.querySelector('#site-search')?.addEventListener('input',event=>{
   document.querySelectorAll('[data-site-row]').forEach(row=>{row.hidden=!row.dataset.siteSearch.includes(search); if(!row.hidden) count++;});
   document.querySelector('#site-empty').hidden=count>0;
 });
+
+const nodeEditor=document.querySelector('#node-editor');
+function openNodeEditor(node={}) {
+  nodeEditor.reset();
+  nodeEditor.elements.node_id.value=node.id ?? '';
+  nodeEditor.elements.node_name.value=node.name ?? '';
+  nodeEditor.elements.site_id.value=node.site_id ?? '';
+  document.querySelector('#node-editor-title').textContent=node.id?'Edit Node':'Add Node';
+  nodeEditor.hidden=false;
+  nodeEditor.elements.node_name.focus();
+}
+document.querySelector('#add-node')?.addEventListener('click',()=>openNodeEditor());
+document.querySelector('#cancel-node')?.addEventListener('click',()=>{nodeEditor.hidden=true;});
+document.querySelectorAll('[data-edit-node]').forEach(button=>button.addEventListener('click',()=>openNodeEditor(JSON.parse(button.dataset.editNode))));
+document.querySelectorAll('[data-delete-node]').forEach(form=>form.addEventListener('submit',async event=>{
+  event.preventDefault();
+  if(await icctShowMessage({title:'Delete node',text:`Delete “${form.dataset.nodeName}”? Nodes containing racks cannot be deleted.`,confirm:true,danger:true,accept:'Delete'})) {
+    if(form.dataset.staticPreview) icctToast({title:'Preview',text:'Delete nodes in the deployed plugin. Saved nodes are unchanged.'});
+    else form.submit();
+  }
+}));
+document.querySelector('#node-search')?.addEventListener('input',event=>{
+  const query=event.target.value.trim().toLocaleLowerCase();
+  let count=0;
+  document.querySelectorAll('[data-node-row]').forEach(row=>{row.hidden=!row.dataset.nodeSearch.includes(query);if(!row.hidden)count++;});
+  document.querySelector('#node-empty').hidden=count>0;
+});

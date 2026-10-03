@@ -2566,3 +2566,5 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 .pending-protocol-options > div { position:absolute; top:100%; left:0; right:0; max-height:260px; overflow:auto; background:#fff; box-shadow:0 4px 12px #0003; padding:12px; z-index:20; }
 .pending-protocol-options label { display:flex; align-items:center; gap:8px; padding:6px; }
 .pending-protocol-options input { width:auto; min-height:0; }
+.node-actions { display:flex; align-items:center; gap:12px; }
+.node-actions form { margin:0; }

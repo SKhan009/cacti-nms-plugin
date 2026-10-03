@@ -34,3 +34,5 @@ Device Type Add/Edit has a six-column local SVG icon picker and a 500 KB upload 
 `sites.html` previews the Site preset list and Add/Edit form using exported native Cacti site data. Preview saves do not write to Cacti.
 
 `protocol-presets.html` previews the Protocols preset tab. Supported defaults (CDP, LLDP, SNMP, SSH and Serial) are copied into new protocol drafts. Saving a device preserves its own settings; changing defaults never updates existing device assignments. Credentials, serial endpoints and bus addresses are configured per device. Device serial settings use a private snapshot consumed by the collector; shared serial connection settings remain unchanged.
+
+`nodes.html` previews the Node list and inline Add/Edit form with Node Name and native Cacti Site selection. Live Node CRUD shares rack topology records; nodes containing racks cannot be deleted or moved to another site through Presets. Static preview saves and deletes do not modify Cacti.
