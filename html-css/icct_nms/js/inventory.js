@@ -1523,3 +1523,28 @@ document.addEventListener('click',event=>{
 });
 window.addEventListener('pagehide',()=>active.forEach(cancel));
 })();
+
+// Filter all authorized segment entries; expand matches without losing the prior folder state.
+(() => {
+  const search = document.querySelector('#segment-tree-search');
+  if (!search) return;
+  const segments = [...document.querySelectorAll('.inventory-segment')];
+  let priorOpen = null;
+  search.addEventListener('input', () => {
+    const query = search.value.trim().toLocaleLowerCase();
+    if (query && !priorOpen) priorOpen = segments.map(segment => segment.open);
+    let count = 0;
+    segments.forEach((segment, index) => {
+      const entries = [...segment.querySelectorAll('[data-tree-search]')];
+      entries.forEach(entry => {
+        entry.hidden = !entry.dataset.treeSearch.toLocaleLowerCase().includes(query);
+        if (!entry.hidden) count++;
+      });
+      segment.hidden = entries.every(entry => entry.hidden);
+      if (query && !segment.hidden) segment.open = true;
+      else if (!query && priorOpen) segment.open = priorOpen[index];
+    });
+    if (!query) priorOpen = null;
+    document.querySelector('#segment-tree-empty').hidden = count > 0;
+  });
+})();

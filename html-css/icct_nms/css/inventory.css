@@ -2766,3 +2766,32 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 .device-realtime-controls select{background:#f4f4f4;padding:10px;border:0;border-bottom:1px solid #bbb}
 .device-realtime-status{font-size:12px;color:#555;margin:6px 0}
 .device-graph-tools button[aria-pressed=true]{background:#d5efdf;border-radius:50%;outline:1px solid #238636}
+
+/* Inventory tree: segment folders and the existing device view share one page. */
+.view-toggle a{display:block;text-decoration:none;background:#fff;color:#555;padding:9px 16px;font:inherit}
+.view-toggle a.active{color:#fff;background:#161616}
+.inventory-tree-layout{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:calc(100vh - 210px);border-top:1px solid #ddd;background:#fff}
+.inventory-segment-sidebar{border-right:1px solid #ddd;min-width:0}
+.inventory-tree-search{display:flex;align-items:center;gap:10px;padding:12px;background:#f4f4f4;border-bottom:1px solid #ccc}
+.inventory-tree-search svg,.inventory-segment summary svg{width:18px;height:18px;fill:none;stroke:#777;stroke-width:1.5;flex-shrink:0}
+.inventory-tree-search input{width:100%;min-width:0;background:transparent;border:0;padding:6px 0;font:inherit;font-size:13px}
+.inventory-segment-tree{max-height:calc(100vh - 265px);overflow:auto;padding:4px 0}
+.inventory-segment summary{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;list-style:none;font-size:14px}
+.inventory-segment summary::-webkit-details-marker{display:none}
+.inventory-segment summary::before{content:'▸';width:12px;color:#666}
+.inventory-segment[open]>summary::before{content:'▾'}
+.inventory-tree-entry{display:flex;align-items:center;gap:10px;color:#333;text-decoration:none;padding:10px 14px 10px 40px;border-left:3px solid transparent;font-size:14px}
+.inventory-tree-entry:hover{background:#f4f4f4}
+.inventory-tree-entry.selected{background:#e9e9e9;border-left-color:#0f62fe}
+.inventory-tree-entry span:last-child{overflow-wrap:anywhere}
+.inventory-tree-entry[hidden],.inventory-segment[hidden]{display:none}
+.inventory-tree-content{min-width:0;background:#fff}
+.inventory-tree-content .device-back{display:none}
+.inventory-tree-content .device-view-header{padding:14px;gap:12px}
+.inventory-tree-content .device-view-header h1{font-size:18px}
+.inventory-tree-content .device-view-metrics{gap:14px}
+.inventory-tree-content .device-view-actions{gap:6px}
+.inventory-tree-content .device-view-tabs{flex-wrap:wrap}
+.inventory-tree-content .device-detail-grid{gap:24px 20px}
+@media(max-width:1000px){.inventory-tree-layout{grid-template-columns:220px minmax(0,1fr)}.inventory-tree-content .device-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.inventory-tree-layout{grid-template-columns:1fr}.inventory-segment-sidebar{border-right:0;border-bottom:1px solid #ddd}.inventory-segment-tree{max-height:240px}}

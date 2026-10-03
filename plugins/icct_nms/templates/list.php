@@ -18,7 +18,7 @@
             <button class="active" type="button" data-view="table" aria-pressed="true">
                 Table View
             </button>
-            <button type="button" data-view="tree" aria-pressed="false">Tree View</button>
+            <a href="inventory.php?view=tree">Tree View</a>
         </div>
         <a class="export-button" href="export.php" aria-label="Export inventory CSV">↥</a>
         <?php if ($management): ?>
