@@ -11,7 +11,7 @@ $pageUrl=static fn($n)=>'presets.php?tab=device-type&per_page='.$perPage.'&sort=
 <?php if ($management): ?>
 <form method="post" enctype="multipart/form-data" class="device-type-editor" id="device-type-editor" <?= $typeEditing?'':'hidden' ?>>
 <?php icct_nms_token(); ?><input type="hidden" name="action" value="save_type"><input type="hidden" name="type_id" value="<?= icct_nms_h($typeValues['type_id'] ?? '') ?>">
-<div class="type-editor-heading"><h2 id="type-editor-title"><?= empty($typeValues['type_id'])?'Add Device Type':'Edit Device Type' ?></h2><div class="type-editor-actions"><button type="button" class="button" id="cancel-device-type">Cancel</button><button type="submit" class="button primary" id="save-device-type"><?= empty($typeValues['type_id'])?'Add':'Save' ?></button></div></div>
+<h2 id="type-editor-title"><?= empty($typeValues['type_id'])?'Add Device Type':'Edit Device Type' ?></h2>
 <div class="form-grid">
 <label class="field"><span class="field-label">Device Type Name *</span><input name="type_name" maxlength="150" required placeholder="Enter Device Type Name" value="<?= icct_nms_h($typeValues['type_name'] ?? '') ?>"></label>
 <label class="field"><span class="field-label">Segment</span><select name="category_id"><option value="0">None</option><?php foreach ($segments as $segment): ?><option value="<?= (int)$segment['id'] ?>" <?= (int)($typeValues['category_id'] ?? 0)===(int)$segment['id']?'selected':'' ?>><?= icct_nms_h($segment['name']) ?></option><?php endforeach; ?></select></label>
@@ -21,9 +21,10 @@ $pageUrl=static fn($n)=>'presets.php?tab=device-type&per_page='.$perPage.'&sort=
 <label class="field"><span class="field-label">No. of Ports *</span><input name="physical_ports" type="number" min="0" max="65535" placeholder="Enter (e.g., 1 or 96)" required value="<?= icct_nms_h($typeValues['physical_ports'] ?? '') ?>"></label>
 </div>
 <section class="type-image-upload"><h3>Device Type Image</h3><p>Maximum file size: 500 KB. Supported formats: .jpg, .png, .webp.</p><label class="button primary type-upload-button">Upload <span aria-hidden="true">+</span><input type="file" name="device_image" accept="image/png,image/jpeg,image/webp" aria-label="Upload device type image"></label><span id="type-upload-name"></span><img id="type-upload-preview" alt="Device type image preview" hidden><label class="enable-field" id="type-remove-image"><input type="checkbox" name="remove_image" value="1" <?= empty($typeValues['remove_image'])?'':'checked' ?>>Remove saved image</label></section>
-<details class="type-visibility"><summary>Topology visibility</summary><div class="form-grid">
+<section class="type-visibility" aria-label="Topology visibility"><h3>Topology Visibility</h3><div class="form-grid">
 <?php foreach (['network'=>'Network Topology','rack'=>'Rack View','map'=>'Map View'] as $view=>$label): ?><label class="field"><span class="field-label"><?= $label ?> Visibility</span><select name="display_<?= $view ?>"><?php foreach (['none'=>'None','icon'=>'Icon','image'=>'Image'] as $mode=>$text): ?><option value="<?= $mode ?>" <?= ($typeValues['display_'.$view] ?? 'icon')===$mode?'selected':'' ?>><?= $text ?></option><?php endforeach; ?></select></label><?php endforeach; ?>
-</div></details>
+</div></section>
+<div class="type-editor-actions"><button type="button" class="button" id="cancel-device-type">Cancel</button><button type="submit" class="button primary" id="save-device-type"><?= empty($typeValues['type_id'])?'Add':'Save' ?></button></div>
 </form>
 <?php endif; ?>
 <div class="device-types-list">

@@ -38,7 +38,6 @@ function openTypeEditor(type = {}) {
   document.querySelector('#type-editor-title').textContent = type.type_id ? 'Edit Device Type' : 'Add Device Type';
   typeSaveButton.textContent = type.type_id ? 'Save' : 'Add';
   typeEditor.hidden = false;
-  document.querySelector('main').classList.add('type-editor-active');
   const preview=document.querySelector('#type-upload-preview');
   const validImage=/^uploads\/[a-f0-9]{32}\.(png|jpg|webp)$/.test(type.image ?? '');
   preview.hidden=!validImage;
@@ -49,7 +48,7 @@ function openTypeEditor(type = {}) {
   typeEditor.elements.type_name.focus();
 }
 document.querySelector('#add-device-type')?.addEventListener('click', () => openTypeEditor());
-document.querySelector('#cancel-device-type')?.addEventListener('click', () => { typeEditor.hidden = true; document.querySelector('main').classList.remove('type-editor-active'); closeIconPicker(); });
+document.querySelector('#cancel-device-type')?.addEventListener('click', () => { typeEditor.hidden = true; closeIconPicker(); });
 iconToggle?.addEventListener('click',()=>{ iconGrid.hidden=!iconGrid.hidden;iconToggle.setAttribute('aria-expanded',String(!iconGrid.hidden)); if(!iconGrid.hidden) iconGrid.querySelector('[aria-selected="true"], [data-icon]')?.focus(); });
 iconGrid?.querySelectorAll('[data-icon]').forEach((button,index,buttons)=>{
   button.addEventListener('click',()=>{typeEditor.elements.icon.value=button.dataset.icon;updateTypeIcon();closeIconPicker();iconToggle.focus();});
@@ -65,7 +64,7 @@ typeEditor?.elements.device_image.addEventListener('change',()=>{
   const preview=document.querySelector('#type-upload-preview');
   if(file.size<=512000){ preview.src=URL.createObjectURL(file);preview.hidden=false; }
 });
-if(typeEditor&&!typeEditor.hidden){ document.querySelector('main').classList.add('type-editor-active');updateTypeIcon(); }
+if(typeEditor&&!typeEditor.hidden) updateTypeIcon();
 document.querySelectorAll('[data-edit-type]').forEach(button => button.addEventListener('click', () => openTypeEditor(JSON.parse(button.dataset.editType))));
 document.querySelectorAll('[data-delete-type]').forEach(form => form.addEventListener('submit', async event => {
   event.preventDefault();
