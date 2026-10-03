@@ -6,8 +6,8 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Clone Device · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
-        <link rel="stylesheet" href="css/inventory.css?v=9f610b93fbbb" />
-    <script type="text/javascript" nonce="SjQ33e-0M5-oQU8SxsrxxGCz">if (top != self) {top.location.href = self.location.href;}</script></head>
+        <link rel="stylesheet" href="css/inventory.css?v=18896c9cdd16" />
+    <script type="text/javascript" nonce="z4gdz3mOJs-wAi0XyXYz-arU">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -321,7 +321,18 @@
                 </button>
             </summary>
             <div class="protocol-content">
-                <p class="empty-state">Configuration unavailable.</p>
+                <p class="pending-protocol-status" role="status">Not available yet. Configuration and Save will be enabled when the required package and backend integration are ready.</p>
+<div class="protocol-grid cols-2">
+<div class="field"><span class="field-label">Severity <span class="field-info" tabindex="0" role="img" aria-label="Information about Syslog severity levels: 0–7." data-tooltip="Syslog severity levels: 0–7."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<details class="pending-protocol-options"><summary>Select severity</summary><div><label><input type="checkbox" disabled> 0 — Emergency</label><label><input type="checkbox" disabled> 1 — Alert</label><label><input type="checkbox" disabled> 2 — Critical</label><label><input type="checkbox" disabled> 3 — Error</label><label><input type="checkbox" disabled> 4 — Warning</label><label><input type="checkbox" disabled> 5 — Notice</label><label><input type="checkbox" disabled> 6 — Informational</label><label><input type="checkbox" disabled> 7 — Debug</label></div></details></div>
+<div class="field"><span class="field-label">Facility <span class="field-info" tabindex="0" role="img" aria-label="Information about Syslog facility codes: 0–23." data-tooltip="Syslog facility codes: 0–23."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<details class="pending-protocol-options"><summary>Select facility</summary><div><label><input type="checkbox" disabled> 0 — Kernel</label><label><input type="checkbox" disabled> 1 — User</label><label><input type="checkbox" disabled> 2 — Mail</label><label><input type="checkbox" disabled> 3 — System daemon</label><label><input type="checkbox" disabled> 4 — Security/authentication</label><label><input type="checkbox" disabled> 5 — Syslog</label><label><input type="checkbox" disabled> 6 — Line printer</label><label><input type="checkbox" disabled> 7 — Network news</label><label><input type="checkbox" disabled> 8 — UUCP</label><label><input type="checkbox" disabled> 9 — Clock daemon</label><label><input type="checkbox" disabled> 10 — Security/authentication</label><label><input type="checkbox" disabled> 11 — FTP</label><label><input type="checkbox" disabled> 12 — NTP</label><label><input type="checkbox" disabled> 13 — Log audit</label><label><input type="checkbox" disabled> 14 — Log alert</label><label><input type="checkbox" disabled> 15 — Clock daemon</label><label><input type="checkbox" disabled> 16 — Local 0</label><label><input type="checkbox" disabled> 17 — Local 1</label><label><input type="checkbox" disabled> 18 — Local 2</label><label><input type="checkbox" disabled> 19 — Local 3</label><label><input type="checkbox" disabled> 20 — Local 4</label><label><input type="checkbox" disabled> 21 — Local 5</label><label><input type="checkbox" disabled> 22 — Local 6</label><label><input type="checkbox" disabled> 23 — Local 7</label></div></details></div>
+</div>
+<label class="field"><span class="field-label">Trigger Keywords / Match Strings <span class="field-info" tabindex="0" role="img" aria-label="Information about Text to match in incoming syslog messages." data-tooltip="Text to match in incoming syslog messages."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span><textarea disabled rows="2" placeholder="Enter keywords or match strings"></textarea></label>
+<div class="protocol-actions"><button type="button" class="button primary" disabled>Save</button></div>
             </div>
         </details>
                 <details class="protocol-item" id="protocol-netflow" data-saved="0" hidden>
@@ -332,7 +343,29 @@
                 </button>
             </summary>
             <div class="protocol-content">
-                <p class="empty-state">Configuration unavailable.</p>
+                <p class="pending-protocol-status" role="status">Not available yet. Configuration and Save will be enabled when the required package and backend integration are ready.</p>
+<div class="protocol-grid cols-4">
+<label class="field"><span class="field-label">Version <span class="field-info" tabindex="0" role="img" aria-label="Information about Choose version for Netflow." data-tooltip="Choose version for Netflow."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<select disabled aria-label="Version"><option value="">Select version</option><option value="5">NetFlow v5</option><option value="9">NetFlow v9</option><option value="10">IPFIX</option></select>
+</label>
+<label class="field"><span class="field-label">Collector Address <span class="field-info" tabindex="0" role="img" aria-label="Information about Collector hostname or IP address." data-tooltip="Collector hostname or IP address."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<input disabled type="text" placeholder="Collector hostname or IP address" aria-label="Collector Address"></label>
+<label class="field"><span class="field-label">Collector Port <span class="field-info" tabindex="0" role="img" aria-label="Information about 1–65535." data-tooltip="1–65535."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<input disabled type="number" placeholder="1–65535" aria-label="Collector Port"></label>
+<label class="field"><span class="field-label">Active Timeout (Sec) <span class="field-info" tabindex="0" role="img" aria-label="Information about Exporter active-flow timeout." data-tooltip="Exporter active-flow timeout."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<input disabled type="number" placeholder="Exporter active-flow timeout" aria-label="Active Timeout (Sec)"></label>
+<label class="field"><span class="field-label">Inactive Timeout (Sec) <span class="field-info" tabindex="0" role="img" aria-label="Information about Exporter inactive-flow timeout." data-tooltip="Exporter inactive-flow timeout."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<input disabled type="number" placeholder="Exporter inactive-flow timeout" aria-label="Inactive Timeout (Sec)"></label>
+<label class="field"><span class="field-label">Sampling Rate <span class="field-info" tabindex="0" role="img" aria-label="Information about Packets per sample." data-tooltip="Packets per sample."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<input disabled type="number" placeholder="Packets per sample" aria-label="Sampling Rate"></label>
+</div>
+<div class="protocol-actions"><button type="button" class="button primary" disabled>Save</button></div>
             </div>
         </details>
                 <details class="protocol-item" id="protocol-ntp" data-saved="0" hidden>
@@ -343,7 +376,29 @@
                 </button>
             </summary>
             <div class="protocol-content">
-                <p class="empty-state">Configuration unavailable.</p>
+                <p class="pending-protocol-status" role="status">Not available yet. Configuration and Save will be enabled when the required package and backend integration are ready.</p>
+<div class="protocol-grid cols-4">
+<label class="field"><span class="field-label">NTP Server <span class="field-info" tabindex="0" role="img" aria-label="Information about Server hostname or IP address." data-tooltip="Server hostname or IP address."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<input disabled type="text" placeholder="Server hostname or IP address" aria-label="NTP Server"></label>
+<label class="field"><span class="field-label">Port <span class="field-info" tabindex="0" role="img" aria-label="Information about 1–65535." data-tooltip="1–65535."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<input disabled type="number" placeholder="1–65535" aria-label="Port"></label>
+<label class="field"><span class="field-label">Version <span class="field-info" tabindex="0" role="img" aria-label="Information about Choose version for NTP." data-tooltip="Choose version for NTP."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<select disabled aria-label="Version"><option value="">Select version</option><option value="3">NTP v3</option><option value="4">NTP v4</option></select>
+</label>
+<label class="field"><span class="field-label">Timeout (Sec) <span class="field-info" tabindex="0" role="img" aria-label="Information about Response timeout." data-tooltip="Response timeout."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<input disabled type="number" placeholder="Response timeout" aria-label="Timeout (Sec)"></label>
+<label class="field"><span class="field-label">Poll Interval (Sec) <span class="field-info" tabindex="0" role="img" aria-label="Information about Time between checks." data-tooltip="Time between checks."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<input disabled type="number" placeholder="Time between checks" aria-label="Poll Interval (Sec)"></label>
+<label class="field"><span class="field-label">Maximum Offset (ms) <span class="field-info" tabindex="0" role="img" aria-label="Information about Offset threshold." data-tooltip="Offset threshold."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<input disabled type="number" placeholder="Offset threshold" aria-label="Maximum Offset (ms)"></label>
+</div>
+<div class="protocol-actions"><button type="button" class="button primary" disabled>Save</button></div>
             </div>
         </details>
                 <details class="protocol-item" id="protocol-tacacs" data-saved="0" hidden>
@@ -354,7 +409,26 @@
                 </button>
             </summary>
             <div class="protocol-content">
-                <p class="empty-state">Configuration unavailable.</p>
+                <p class="pending-protocol-status" role="status">Not available yet. Configuration and Save will be enabled when the required package and backend integration are ready.</p>
+<div class="protocol-grid cols-4">
+<label class="field"><span class="field-label">Server Address <span class="field-info" tabindex="0" role="img" aria-label="Information about Server hostname or IP address." data-tooltip="Server hostname or IP address."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<input disabled type="text" placeholder="Server hostname or IP address" aria-label="Server Address"></label>
+<label class="field"><span class="field-label">Port <span class="field-info" tabindex="0" role="img" aria-label="Information about 1–65535." data-tooltip="1–65535."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<input disabled type="number" placeholder="1–65535" aria-label="Port"></label>
+<label class="field"><span class="field-label">Timeout (Sec) <span class="field-info" tabindex="0" role="img" aria-label="Information about Response timeout." data-tooltip="Response timeout."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<input disabled type="number" placeholder="Response timeout" aria-label="Timeout (Sec)"></label>
+<label class="field"><span class="field-label">Retries <span class="field-info" tabindex="0" role="img" aria-label="Information about Retry count." data-tooltip="Retry count."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<input disabled type="number" placeholder="Retry count" aria-label="Retries"></label>
+<label class="field"><span class="field-label">Authentication Method <span class="field-info" tabindex="0" role="img" aria-label="Information about Choose authentication method for TACACS+." data-tooltip="Choose authentication method for TACACS+."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
+</span>
+<select disabled aria-label="Authentication Method"><option value="">Select authentication method</option><option value="ascii">ASCII</option><option value="pap">PAP</option><option value="chap">CHAP</option></select>
+</label>
+</div>
+<p class="pending-protocol-status">Shared secret and authentication credentials will be configured per device.</p><div class="protocol-actions"><button type="button" class="button primary" disabled>Save</button></div>
             </div>
         </details>
             </div>

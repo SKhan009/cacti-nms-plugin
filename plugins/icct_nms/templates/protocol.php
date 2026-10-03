@@ -341,7 +341,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial"] as $key) {
                 </button>
             </summary>
             <div class="protocol-content">
-                <p class="empty-state">Configuration unavailable.</p>
+                <?php require __DIR__ . "/protocol_pending.php"; ?>
             </div>
         </details>
         <?php endforeach; ?>
