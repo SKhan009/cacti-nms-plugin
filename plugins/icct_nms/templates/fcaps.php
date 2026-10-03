@@ -1,5 +1,4 @@
 <section id="device-fcaps" class="device-fcaps" hidden>
-<h2>FCAPS</h2>
 <div class="fcaps-tabs" role="tablist" aria-label="FCAPS">
 <?php foreach(['fault'=>'Fault','configuration'=>'Configuration','accounting'=>'Accounting','performance'=>'Performance','security'=>'Security'] as $key=>$label): ?>
 <button type="button" role="tab" id="fcaps-tab-<?= $key ?>" aria-controls="fcaps-<?= $key ?>" aria-selected="<?= $key==='fault'?'true':'false' ?>" tabindex="<?= $key==='fault'?'0':'-1' ?>"><?= $label ?></button>

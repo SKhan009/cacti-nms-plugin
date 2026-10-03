@@ -2573,7 +2573,8 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 #port-summary { color:#222; font-weight:600; }
 .port-search { max-width:420px; margin:20px 0; }
 .port-search input { background:#f4f4f4; }
-.device-fcaps { padding:24px 16px; background:#fff; }
+.device-fcaps { padding:0 16px 24px; background:#fff; }
+#wizard-panels:has(#device-fcaps:not([hidden])) > .protocol-form { display:none; }
 .device-fcaps p { color:#666; line-height:1.5; }
 .fcaps-tabs { display:flex; flex-wrap:wrap; border-bottom:1px solid #ccc; margin-bottom:24px; }
 .fcaps-tabs button { padding:14px 20px; background:#fff; border:0; border-bottom:2px solid transparent; cursor:pointer; font:inherit; }
