@@ -2402,3 +2402,11 @@ body.icct-inventory { padding-top: var(--app-header-height, 48px); }
   box-shadow: 0 1px 4px #00000012;
 }
 #toast-region { top: calc(var(--app-header-height, 48px) + 16px); }
+
+/* Device configuration remains white below the viewport as sections expand. */
+body.icct-inventory:has(#device-form),
+body.icct-inventory:has(.protocol-form) { background: #fff; }
+#device-wizard,
+#protocol-workspace,
+.protocol-item,
+.protocol-content { background: #fff; }
