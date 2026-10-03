@@ -17,6 +17,14 @@ rejectFault(array_replace($rule,['minimum'=>'','maximum'=>'']),$catalogue,[1]);
 rejectFault(array_replace($rule,['maximum'=>'1e999']),$catalogue,[1]);
 rejectFault(array_replace($rule,['severity'=>'Other']),$catalogue,[1]);
 checkFault(icct_nms_fault_validate([array_replace($rule,['minimum'=>''])],$catalogue,[1])[0]['minimum']===null,'No-bound minimum failed');
+$notificationRule=array_replace($rule,['name'=>'High CPU','corrective_action'=>'Check running processes','email'=>true,'audio'=>true,'email_recipients'=>'ops@example.com; team@example.com']);
+$notifications=icct_nms_fault_validate([$notificationRule],$catalogue,[1])[0];
+checkFault($notifications['email'] && $notifications['audio'] && $notifications['name']==='High CPU','Fault preferences lost');
+checkFault($notifications['email_recipients']==='ops@example.com, team@example.com','Recipients not normalized');
+rejectFault(array_replace($notificationRule,['email_recipients'=>'']),$catalogue,[1]);
+rejectFault(array_replace($notificationRule,['email_recipients'=>'invalid']),$catalogue,[1]);
+rejectFault(array_replace($notificationRule,['corrective_action'=>[]]),$catalogue,[1]);
+checkFault(!$validated['email'] && !$validated['audio'],'Legacy rule unexpectedly enables alerts');
 echo "Fault thresholds, exact boundaries, unknown values, disabled rules, severity and graph ownership validation passed.\n";
 $writes=[];
 function icct_backend_require_management($realm){}

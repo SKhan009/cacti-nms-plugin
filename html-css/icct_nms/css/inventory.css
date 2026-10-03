@@ -2579,7 +2579,10 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 .fcaps-tabs { display:flex; flex-wrap:wrap; border-bottom:1px solid #ccc; margin-bottom:24px; }
 .fcaps-tabs button { padding:14px 20px; background:#fff; border:0; border-bottom:2px solid transparent; cursor:pointer; font:inherit; }
 .fcaps-tabs button[aria-selected=true] { border-bottom-color:#165dff; color:#165dff; }
-.fault-rule { display:grid; grid-template-columns:repeat(2,minmax(160px,1.5fr)) repeat(3,minmax(100px,1fr)) 70px 90px; gap:16px; align-items:end; margin:20px 0; }
+.fault-rule { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:16px; align-items:end; margin:20px 0; }
+.fault-rule { border-bottom:1px solid #ddd; padding-bottom:20px; }
+.fault-rule .fault-guidance { grid-column:span 3; }
+.fault-rule .fault-recipients { grid-column:span 3; }
 .fault-rule input:not([type=checkbox]),.fault-rule select { background:#f4f4f4; }
 .fault-rule input[type=checkbox] { width:20px; min-height:20px; margin:14px 0; }
 .fcaps-form-actions { display:flex; justify-content:flex-end; margin:20px 0; }
@@ -2593,3 +2596,12 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 .configuration-protocol { border-top:1px solid #ddd; padding:12px 0; }
 .configuration-protocol h4 { margin:0; font-size:14px; }
 @media(max-width:700px) { .configuration-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+@media(max-width:1000px) { .fault-rule .fault-guidance,.fault-rule .fault-recipients { grid-column:1 / -1; } }
+
+.fault-rule .field:has([data-name]),.fault-rule .field:has([data-template]),.fault-rule .field:has([data-metric]) { grid-column:span 2; }
+@media(max-width:1000px) { .fault-rule .field:has([data-name]),.fault-rule .field:has([data-template]),.fault-rule .field:has([data-metric]) { grid-column:auto; } }
+
+.fault-rule .field:has([data-email]),.fault-rule .field:has([data-audio]) { order:1; }
+.fault-rule .fault-guidance,.fault-rule .fault-recipients { order:2; }
+.fault-rule > button { order:3; justify-self:start; }

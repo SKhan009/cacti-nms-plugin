@@ -24,7 +24,18 @@ function icct_nms_fault_validate($rules,$catalogue,$associated) {
         if($bounds['minimum']===null && $bounds['maximum']===null)throw new InvalidArgumentException('Enter at least one minimum or maximum threshold.');
         if($bounds['minimum']!==null && $bounds['maximum']!==null && $bounds['minimum']>=$bounds['maximum'])throw new InvalidArgumentException('Minimum must be less than maximum.');
         $severity=$rule['severity'] ?? '';if(!in_array($severity,['Information','Minor','Warning','Major','Critical'],true))throw new InvalidArgumentException('Select a fault severity.');
-        $out[]=['template_id'=>$template,'metric_id'=>$metric]+$bounds+['severity'=>$severity,'enabled'=>!empty($rule['enabled'])];
+        $text=[];
+        foreach(['name'=>120,'corrective_action'=>1000,'email_recipients'=>1000] as $key=>$limit) {
+            $value=$rule[$key] ?? '';
+            if(!is_string($value) || strlen($value)>$limit || strpos($value,"\0")!==false)throw new InvalidArgumentException('Invalid fault '.str_replace('_',' ',$key).'.');
+            $text[$key]=trim($value);
+        }
+        $recipients=preg_split('/[;,\s]+/',$text['email_recipients'],-1,PREG_SPLIT_NO_EMPTY);
+        if(count($recipients)>20)throw new InvalidArgumentException('Use no more than 20 email recipients per rule.');
+        foreach($recipients as $email)if(!filter_var($email,FILTER_VALIDATE_EMAIL))throw new InvalidArgumentException('Enter valid email recipients separated by commas.');
+        if(!empty($rule['email']) && !$recipients)throw new InvalidArgumentException('Enter a recipient when Email is selected.');
+        $text['email_recipients']=implode(', ',array_unique($recipients));
+        $out[]=['template_id'=>$template,'metric_id'=>$metric]+$bounds+$text+['severity'=>$severity,'enabled'=>!empty($rule['enabled']),'email'=>!empty($rule['email']),'audio'=>!empty($rule['audio'])];
     }
     return $out;
 }

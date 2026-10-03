@@ -6,8 +6,8 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Edit Device · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
-        <link rel="stylesheet" href="css/inventory.css?v=cc4f3252cb71" />
-    <script type="text/javascript" nonce="9bHPMyhjNCYgY4iC-dnInu0k">if (top != self) {top.location.href = self.location.href;}</script></head>
+        <link rel="stylesheet" href="css/inventory.css?v=291181019041" />
+    <script type="text/javascript" nonce="4qcT_QUwWiumA6vtmGQehoEa">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -925,7 +925,7 @@
 <p>Only discovered interfaces are shown. The preset count is expected capacity; it does not assign interface names or link status.</p>
 <div class="port-search field"><label for="ports-search">Search ports</label><input type="search" id="ports-search" placeholder="Search by port, status or description" autocomplete="off" aria-controls="port-rows"></div>
 <div class="site-table-wrap"><table class="site-table"><thead><tr><th>Port / Interface</th><th>ifIndex</th><th>Type</th><th>Status</th><th>Description</th></tr></thead><tbody id="port-rows"></tbody></table></div>
-<script type="application/json" id="port-observations">{"ports":[{"index":1,"name":"Gi0\/0","description":"GigabitEthernet0\/0","alias":"","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"},{"index":2,"name":"Gi0\/1","description":"GigabitEthernet0\/1","alias":"","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"},{"index":9001,"name":"NMS-Lab-Uplink","description":"NMS-Lab-Uplink","alias":"","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"}],"fresh":true,"collected":1790976303,"source":"SNMP IF-MIB \/ IF-X-MIB","message":"Port status from the latest collector observation."}</script>
+<script type="application/json" id="port-observations">{"ports":[{"index":1,"name":"Gi0\/0","description":"GigabitEthernet0\/0","alias":"","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"},{"index":2,"name":"Gi0\/1","description":"GigabitEthernet0\/1","alias":"","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"},{"index":9001,"name":"NMS-Lab-Uplink","description":"NMS-Lab-Uplink","alias":"","admin":1,"oper":1,"connector":null,"type":null,"status":"In use"}],"fresh":true,"collected":1790977803,"source":"SNMP IF-MIB \/ IF-X-MIB","message":"Port status from the latest collector observation."}</script>
 </section>
 <section id="device-fcaps" class="device-fcaps" hidden>
 <div class="fcaps-tabs" role="tablist" aria-label="FCAPS">
@@ -939,6 +939,8 @@
 <h3>Fault thresholds</h3>
 <p>Select an associated graph template and data source. A value below Minimum or above Maximum raises the selected severity; values equal to a threshold stay Normal. Add multiple rules for different severity levels.</p>
 <p>Thresholds use the stored data source’s AVERAGE values before graph CDEF/VDEF transformations. Template data limits populate new rules where defined; review them before saving. Blank means no bound.</p>
+<p>Polling interval: <strong>300 seconds</strong> (inherited from Cacti). Template data limits are suggestions, not alarm thresholds.</p>
+<p>Email and Audio preferences are saved with each rule. Notification delivery is not active yet; selecting these options does not send email or play an alarm.</p>
 <form data-static-preview="true" id="fault-form" method="post">
 <input type="hidden" name="action" value="faults"><input type="hidden" name="fault_rules" id="fault-rules-value">
 <div id="fault-rule-list"></div>
@@ -992,7 +994,7 @@
         <div class="message-actions"><button type="button" class="button" data-draft-choice="cancel">Keep editing</button><button type="button" class="button" data-draft-choice="discard">Discard</button><button type="button" class="button primary" data-draft-choice="save">Save</button></div>
     </dialog>
     <script src="js/ports.js?v=a68e19fc6272" defer></script>
-    <script src="js/fcaps.js?v=0fd276bdc884" defer></script>
+    <script src="js/fcaps.js?v=72c1400f2c71" defer></script>
     <script src="js/wizard.js?v=b3c7b01e889f" defer></script>
 <script src="js/preview.js" defer></script>
 </body>

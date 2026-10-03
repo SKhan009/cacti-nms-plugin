@@ -7,6 +7,8 @@
 <h3>Fault thresholds</h3>
 <p>Select an associated graph template and data source. A value below Minimum or above Maximum raises the selected severity; values equal to a threshold stay Normal. Add multiple rules for different severity levels.</p>
 <p>Thresholds use the stored data source’s AVERAGE values before graph CDEF/VDEF transformations. Template data limits populate new rules where defined; review them before saving. Blank means no bound.</p>
+<p>Polling interval: <strong><?= (int)read_config_option('poller_interval') ?> seconds</strong> (inherited from Cacti). Template data limits are suggestions, not alarm thresholds.</p>
+<p>Email and Audio preferences are saved with each rule. Notification delivery is not active yet; selecting these options does not send email or play an alarm.</p>
 <form id="fault-form" method="post">
 <?php icct_nms_token(); ?><input type="hidden" name="action" value="faults"><input type="hidden" name="fault_rules" id="fault-rules-value">
 <div id="fault-rule-list"></div>
