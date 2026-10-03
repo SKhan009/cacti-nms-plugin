@@ -2736,3 +2736,6 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 .device-graph-filters{display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:24px;align-items:end;margin-bottom:16px}.device-graph-filters .field{margin:0}
 .device-view-graphs[data-columns="2"]{grid-template-columns:repeat(2,minmax(0,1fr))}.device-view-graphs[data-columns="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}.device-view-graphs figure[hidden]{display:none}.device-view-graphs img{width:100%;height:auto}.device-view-graphs figure{min-width:0}.device-view-graphs figcaption{overflow-wrap:anywhere}
 @media(max-width:800px){.device-view-graphs[data-columns="3"]{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:550px){.device-graph-filters{grid-template-columns:1fr}.device-view-graphs[data-columns]{grid-template-columns:1fr}}
+
+/* Device history keeps saved readings contained within the shared lists. */
+#view-records h3{margin:28px 0 12px}#view-records details summary{cursor:pointer;color:#0f62fe}#view-records td{vertical-align:top;overflow-wrap:anywhere}.device-record-output{white-space:pre-wrap;overflow-wrap:anywhere;max-height:360px;overflow:auto;background:#f4f4f4;padding:16px;max-width:640px}#view-records .site-table-wrap{overflow-x:auto}

@@ -6,8 +6,8 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Device Details · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
-        <link rel="stylesheet" href="css/inventory.css?v=29d8387368b6" />
-            <script type="text/javascript" nonce="xVwWg1W6Al9wpi3Dnqur4VRg">if (top != self) {top.location.href = self.location.href;}</script></head>
+        <link rel="stylesheet" href="css/inventory.css?v=f72bc7b37acf" />
+            <script type="text/javascript" nonce="V13vZ3BIEpBLBqG50QxeVfa7">if (top != self) {top.location.href = self.location.href;}</script></head>
     <body class="icct-inventory">
         <header class="topbar">
             <div class="header-menu">
@@ -46,7 +46,7 @@
 <header class="device-view-header">
  <a class="device-back" href="index.html" aria-label="Back to inventory">←</a>
  <div class="device-view-identity"><h1><span class="device-status-dot online" aria-label="Up"></span>Cacti RHEL 9 Local</h1><span>127.0.0.1</span></div>
- <dl class="device-view-metrics"><div><dt>Packet Loss</dt><dd>—</dd></div><div><dt>Response Time</dt><dd>0.00 ms</dd></div><div><dt>System Uptime</dt><dd>00d 14h 47m 22s</dd></div></dl>
+ <dl class="device-view-metrics"><div><dt>Packet Loss</dt><dd>—</dd></div><div><dt>Response Time</dt><dd>0.00 ms</dd></div><div><dt>System Uptime</dt><dd>00d 14h 52m 21s</dd></div></dl>
  <div class="device-view-actions" aria-label="Device diagnostics and actions">
    <a class="device-tool" href="http://127.0.0.1:8080/cacti/plugins/icct_nms/diagnostics.php?host_id=2&amp;tool=ping#diagnostic-run" data-host-id="2" data-tool="ping" data-device-name="Cacti RHEL 9 Local" aria-label="Ping ICMP" data-tooltip="Ping ICMP"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg></a>
    <details class="row-menu device-diagnostic-menu"><summary class="device-tool" aria-label="Traceroute protocols" data-tooltip="Traceroute"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h5v7h8v7h5 M18 16l3 3-3 3"/></svg><span class="device-tool-caret" aria-hidden="true">⌄</span></summary><div class="row-menu-panel">
@@ -64,7 +64,7 @@
  <a href="clone-2.html" data-clone-device data-device-name="Cacti RHEL 9 Local">Clone Device</a>
  <form data-static-preview="true" method="post" action="http://127.0.0.1:8080/cacti/host.php" ><input type="hidden" name="action" value="actions"><input type="hidden" name="drp_action" value="3"><input type="hidden" name="chk_2" value="on"><button type="submit">Disable Device</button></form><form data-static-preview="true" method="post" action="http://127.0.0.1:8080/cacti/host.php" class="danger-action"><input type="hidden" name="action" value="actions"><input type="hidden" name="drp_action" value="1"><input type="hidden" name="chk_2" value="on"><button type="submit">Delete Device</button></form> </div></details> </div>
 </header>
-<nav class="device-view-tabs" aria-label="Device view sections"><a href="#view-details" data-device-view-tab="details">Device Details</a><a href="#view-graphs" data-device-view-tab="graphs">Graphs</a><a href="#view-ports" data-device-view-tab="ports">Interfaces/Ports</a><a href="#view-fcaps" data-device-view-tab="fcaps">FCAPS</a></nav>
+<nav class="device-view-tabs" aria-label="Device view sections"><a href="#view-details" data-device-view-tab="details">Device Details</a><a href="#view-graphs" data-device-view-tab="graphs">Graphs</a><a href="#view-ports" data-device-view-tab="ports">Interfaces/Ports</a><a href="#view-fcaps" data-device-view-tab="fcaps">FCAPS</a><a href="#view-records" data-device-view-tab="records">Records</a></nav>
 <section id="view-details" data-device-view-panel="details">
 <dl class="device-detail-grid">
 <div><dt>Short Name</dt><dd>CR9L</dd></div><div><dt>Segment</dt><dd>Computers</dd></div><div><dt>Device Type/Model</dt><dd>Server</dd></div><div><dt>Serial Number</dt><dd>—</dd></div><div><dt>MAC Address</dt><dd>—</dd></div><div><dt>Polling Interval (Sec)</dt><dd>300</dd></div><div><dt>Rack Placement</dt><dd>U6–U7 (Demo 2)</dd></div><div><dt>Firmware Version</dt><dd>—</dd></div><div><dt>Configured Protocols</dt><dd>SNMP, LLDP, SSH</dd></div><div><dt>Discovery Protocol</dt><dd>LLDP, IP neighbours (IPv4/IPv6), MAC/FDB</dd></div><div><dt>Default SNMP Version</dt><dd>SNMP v2c</dd></div><div><dt>Last Maintenance Date</dt><dd>—</dd></div></dl>
@@ -73,6 +73,456 @@
 <section id="view-graphs" data-device-view-panel="graphs" hidden><h2>Graphs</h2><div class="device-graph-filters"><label class="field"><span class="field-label">Search graphs</span><input type="search" id="device-graph-search" placeholder="Graph title" aria-controls="device-view-graphs"></label><label class="field"><span class="field-label">Columns</span><select id="device-graph-columns" aria-controls="device-view-graphs"><option value="2" selected>2 columns</option><option value="3">3 columns</option></select></label></div><p id="device-graph-count" role="status" aria-live="polite"></p><div class="device-view-graphs" id="device-view-graphs" data-columns="2"><figure><figcaption>Cacti RHEL 9 Local - Broadcast Packets - enp0s8/2</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=11"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=11&amp;rra_id=0" alt="Cacti RHEL 9 Local - Broadcast Packets - enp0s8/2"></a></figure><figure><figcaption>Cacti RHEL 9 Local - CPU Utilization</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=10"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=10&amp;rra_id=0" alt="Cacti RHEL 9 Local - CPU Utilization"></a></figure><figure><figcaption>Cacti RHEL 9 Local - Load Average</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=6"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=6&amp;rra_id=0" alt="Cacti RHEL 9 Local - Load Average"></a></figure><figure><figcaption>Cacti RHEL 9 Local - Logged in Users</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=7"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=7&amp;rra_id=0" alt="Cacti RHEL 9 Local - Logged in Users"></a></figure><figure><figcaption>Cacti RHEL 9 Local - Memory Usage</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=8"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=8&amp;rra_id=0" alt="Cacti RHEL 9 Local - Memory Usage"></a></figure><figure><figcaption>Cacti RHEL 9 Local - NMS SSH Linux CPU utilization</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=62"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=62&amp;rra_id=0" alt="Cacti RHEL 9 Local - NMS SSH Linux CPU utilization"></a></figure><figure><figcaption>Cacti RHEL 9 Local - NMS SSH Linux Memory utilization</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=63"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=63&amp;rra_id=0" alt="Cacti RHEL 9 Local - NMS SSH Linux Memory utilization"></a></figure><figure><figcaption>Cacti RHEL 9 Local - NMS SSH Linux Uptime</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=64"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=64&amp;rra_id=0" alt="Cacti RHEL 9 Local - NMS SSH Linux Uptime"></a></figure><figure><figcaption>Cacti RHEL 9 Local - Processes</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=5"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=5&amp;rra_id=0" alt="Cacti RHEL 9 Local - Processes"></a></figure><figure><figcaption>Cacti RHEL 9 Local - Traffic - enp0s8/2</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=16"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=16&amp;rra_id=0" alt="Cacti RHEL 9 Local - Traffic - enp0s8/2"></a></figure><figure><figcaption>Cacti RHEL 9 Local - Traffic - enp0s8/2</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=14"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=14&amp;rra_id=0" alt="Cacti RHEL 9 Local - Traffic - enp0s8/2"></a></figure><figure><figcaption>Cacti RHEL 9 Local - Traffic - lo/1</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=12"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=12&amp;rra_id=0" alt="Cacti RHEL 9 Local - Traffic - lo/1"></a></figure><figure><figcaption>Cacti RHEL 9 Local - Uptime</figcaption><a href="http://127.0.0.1:8080/cacti/graph.php?action=view&amp;local_graph_id=9"><img loading="lazy" src="/cacti/graph_image.php?local_graph_id=9&amp;rra_id=0" alt="Cacti RHEL 9 Local - Uptime"></a></figure></div><p id="device-graph-empty" hidden>No graphs match your search.</p></section>
 <section id="view-ports" data-device-view-panel="ports" hidden><h2>Interfaces/Ports</h2><p>Port status from the latest collector observation.</p><div class="site-table-wrap"><table class="site-table"><thead><tr><th>Port / Interface</th><th>ifIndex</th><th>Status</th><th>Description</th></tr></thead><tbody><tr><td>lo</td><td>1</td><td>In use</td><td>lo</td></tr><tr><td>enp0s8</td><td>2</td><td>In use</td><td>enp0s8</td></tr></tbody></table></div></section>
 <section id="view-fcaps" data-device-view-panel="fcaps" hidden><h2>FCAPS</h2><p>Saved fault rules and current device observations.</p><div class="site-table-wrap"><table class="site-table"><thead><tr><th>Rule</th><th>Severity</th><th>Minimum</th><th>Maximum</th><th>Enabled</th></tr></thead><tbody><tr><td colspan="5">No fault rules configured.</td></tr></tbody></table></div></section>
+<section id="view-records" data-device-view-panel="records" hidden>
+<h2>Records</h2>
+<h3>Configuration changes</h3>
+<p>Recorded changes and configuration snapshots, newest first. Passwords and private keys are excluded. Changes before history recording began are unavailable.</p>
+<div class="site-table-wrap"><table class="site-table"><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Changed settings</th></tr></thead><tbody>
+<tr><td>2026-10-03T05:13:12+05:30</td><td>admin</td><td>Rack placement changed</td><td><details><summary>1 changed settings</summary><table class="site-table"><thead><tr><th>Setting</th><th>Before</th><th>After</th></tr></thead><tbody><tr><td>rack.rack_id</td><td>83</td><td>84</td></tr></tbody></table></details><details><summary>Configuration snapshot</summary><table class="site-table"><thead><tr><th>Setting</th><th>Saved value</th></tr></thead><tbody><tr><td>classification.category_id</td><td>7</td></tr><tr><td>classification.device_type</td><td>Server</td></tr><tr><td>device.availability_method</td><td>2</td></tr><tr><td>device.description</td><td>Cacti RHEL 9 Local</td></tr><tr><td>device.device_threads</td><td>1</td></tr><tr><td>device.disabled</td><td>—</td></tr><tr><td>device.host_template_id</td><td>21</td></tr><tr><td>device.hostname</td><td>127.0.0.1</td></tr><tr><td>device.max_oids</td><td>10</td></tr><tr><td>device.notes</td><td>—</td></tr><tr><td>device.ping_method</td><td>1</td></tr><tr><td>device.ping_retries</td><td>1</td></tr><tr><td>device.ping_timeout</td><td>400</td></tr><tr><td>device.poller_id</td><td>1</td></tr><tr><td>device.site_id</td><td>3</td></tr><tr><td>device.snmp_auth_protocol</td><td>—</td></tr><tr><td>device.snmp_port</td><td>161</td></tr><tr><td>device.snmp_priv_protocol</td><td>—</td></tr><tr><td>device.snmp_timeout</td><td>500</td></tr><tr><td>device.snmp_version</td><td>2</td></tr><tr><td>discovery.interval_seconds</td><td>300</td></tr><tr><td>discovery.protocol</td><td>lldp,arp,fdb</td></tr><tr><td>discovery.refresh_seconds</td><td>30</td></tr><tr><td>discovery.stale_seconds</td><td>900</td></tr><tr><td>fault.rules</td><td>[]</td></tr><tr><td>graphs.template_ids</td><td>[&quot;84&quot;,&quot;250&quot;,&quot;87&quot;,&quot;502&quot;,&quot;503&quot;,&quot;504&quot;,&quot;248&quot;,&quot;249&quot;,&quot;247&quot;]</td></tr><tr><td>identity.chassis_id</td><td>—</td></tr><tr><td>identity.mac_address</td><td>—</td></tr><tr><td>identity.serial_number</td><td>—</td></tr><tr><td>identity.short_name</td><td>CR9L</td></tr><tr><td>protocol_enabled.cdp</td><td>1</td></tr><tr><td>protocol_enabled.lldp</td><td>1</td></tr><tr><td>protocol_enabled.serial</td><td>1</td></tr><tr><td>protocol_enabled.snmp</td><td>1</td></tr><tr><td>protocol_enabled.ssh</td><td>1</td></tr><tr><td>rack.peripheral_rack_id</td><td>—</td></tr><tr><td>rack.rack_id</td><td>84</td></tr><tr><td>rack.start_unit</td><td>6</td></tr><tr><td>rack.unit_height</td><td>2</td></tr><tr><td>ssh.auth_method</td><td>key</td></tr><tr><td>ssh.command_timeout</td><td>30</td></tr><tr><td>ssh.connect_timeout</td><td>10</td></tr><tr><td>ssh.keepalive</td><td>30</td></tr><tr><td>ssh.monitoring</td><td>1</td></tr><tr><td>ssh.port</td><td>22</td></tr><tr><td>ssh.retries</td><td>1</td></tr></tbody></table></details></td></tr>
+<tr><td>2026-10-03T05:08:17+05:30</td><td>admin</td><td>Basic Information saved</td><td><details><summary>5 changed settings</summary><table class="site-table"><thead><tr><th>Setting</th><th>Before</th><th>After</th></tr></thead><tbody><tr><td>identity.short_name</td><td>—</td><td>CR9L</td></tr><tr><td>rack.peripheral_rack_id</td><td>—</td><td>—</td></tr><tr><td>rack.rack_id</td><td>—</td><td>83</td></tr><tr><td>rack.start_unit</td><td>—</td><td>6</td></tr><tr><td>rack.unit_height</td><td>—</td><td>2</td></tr></tbody></table></details><details><summary>Configuration snapshot</summary><table class="site-table"><thead><tr><th>Setting</th><th>Saved value</th></tr></thead><tbody><tr><td>classification.category_id</td><td>7</td></tr><tr><td>classification.device_type</td><td>Server</td></tr><tr><td>device.availability_method</td><td>2</td></tr><tr><td>device.description</td><td>Cacti RHEL 9 Local</td></tr><tr><td>device.device_threads</td><td>1</td></tr><tr><td>device.disabled</td><td>—</td></tr><tr><td>device.host_template_id</td><td>21</td></tr><tr><td>device.hostname</td><td>127.0.0.1</td></tr><tr><td>device.max_oids</td><td>10</td></tr><tr><td>device.notes</td><td>—</td></tr><tr><td>device.ping_method</td><td>1</td></tr><tr><td>device.ping_retries</td><td>1</td></tr><tr><td>device.ping_timeout</td><td>400</td></tr><tr><td>device.poller_id</td><td>1</td></tr><tr><td>device.site_id</td><td>3</td></tr><tr><td>device.snmp_auth_protocol</td><td>—</td></tr><tr><td>device.snmp_port</td><td>161</td></tr><tr><td>device.snmp_priv_protocol</td><td>—</td></tr><tr><td>device.snmp_timeout</td><td>500</td></tr><tr><td>device.snmp_version</td><td>2</td></tr><tr><td>discovery.interval_seconds</td><td>300</td></tr><tr><td>discovery.protocol</td><td>lldp,arp,fdb</td></tr><tr><td>discovery.refresh_seconds</td><td>30</td></tr><tr><td>discovery.stale_seconds</td><td>900</td></tr><tr><td>fault.rules</td><td>[]</td></tr><tr><td>graphs.template_ids</td><td>[&quot;84&quot;,&quot;250&quot;,&quot;87&quot;,&quot;502&quot;,&quot;503&quot;,&quot;504&quot;,&quot;248&quot;,&quot;249&quot;,&quot;247&quot;]</td></tr><tr><td>identity.chassis_id</td><td>—</td></tr><tr><td>identity.mac_address</td><td>—</td></tr><tr><td>identity.serial_number</td><td>—</td></tr><tr><td>identity.short_name</td><td>CR9L</td></tr><tr><td>protocol_enabled.cdp</td><td>1</td></tr><tr><td>protocol_enabled.lldp</td><td>1</td></tr><tr><td>protocol_enabled.serial</td><td>1</td></tr><tr><td>protocol_enabled.snmp</td><td>1</td></tr><tr><td>protocol_enabled.ssh</td><td>1</td></tr><tr><td>rack.peripheral_rack_id</td><td>—</td></tr><tr><td>rack.rack_id</td><td>83</td></tr><tr><td>rack.start_unit</td><td>6</td></tr><tr><td>rack.unit_height</td><td>2</td></tr><tr><td>ssh.auth_method</td><td>key</td></tr><tr><td>ssh.command_timeout</td><td>30</td></tr><tr><td>ssh.connect_timeout</td><td>10</td></tr><tr><td>ssh.keepalive</td><td>30</td></tr><tr><td>ssh.monitoring</td><td>1</td></tr><tr><td>ssh.port</td><td>22</td></tr><tr><td>ssh.retries</td><td>1</td></tr></tbody></table></details></td></tr>
+<tr><td>2026-10-03T02:56:36+05:30</td><td>admin</td><td>Manual backup</td><td><details><summary>0 changed settings</summary><table class="site-table"><thead><tr><th>Setting</th><th>Before</th><th>After</th></tr></thead><tbody></tbody></table></details><details><summary>Configuration snapshot</summary><table class="site-table"><thead><tr><th>Setting</th><th>Saved value</th></tr></thead><tbody><tr><td>classification.category_id</td><td>7</td></tr><tr><td>classification.device_type</td><td>Server</td></tr><tr><td>device.availability_method</td><td>2</td></tr><tr><td>device.description</td><td>Cacti RHEL 9 Local</td></tr><tr><td>device.device_threads</td><td>1</td></tr><tr><td>device.disabled</td><td>—</td></tr><tr><td>device.host_template_id</td><td>21</td></tr><tr><td>device.hostname</td><td>127.0.0.1</td></tr><tr><td>device.max_oids</td><td>10</td></tr><tr><td>device.notes</td><td>—</td></tr><tr><td>device.ping_method</td><td>1</td></tr><tr><td>device.ping_retries</td><td>1</td></tr><tr><td>device.ping_timeout</td><td>400</td></tr><tr><td>device.poller_id</td><td>1</td></tr><tr><td>device.site_id</td><td>3</td></tr><tr><td>device.snmp_auth_protocol</td><td>—</td></tr><tr><td>device.snmp_port</td><td>161</td></tr><tr><td>device.snmp_priv_protocol</td><td>—</td></tr><tr><td>device.snmp_timeout</td><td>500</td></tr><tr><td>device.snmp_version</td><td>2</td></tr><tr><td>discovery.interval_seconds</td><td>300</td></tr><tr><td>discovery.protocol</td><td>lldp,arp,fdb</td></tr><tr><td>discovery.refresh_seconds</td><td>30</td></tr><tr><td>discovery.stale_seconds</td><td>900</td></tr><tr><td>fault.rules</td><td>[]</td></tr><tr><td>graphs.template_ids</td><td>[&quot;84&quot;,&quot;250&quot;,&quot;87&quot;,&quot;502&quot;,&quot;503&quot;,&quot;504&quot;,&quot;248&quot;,&quot;249&quot;,&quot;247&quot;]</td></tr><tr><td>identity.chassis_id</td><td>—</td></tr><tr><td>identity.mac_address</td><td>—</td></tr><tr><td>identity.serial_number</td><td>—</td></tr><tr><td>protocol_enabled.cdp</td><td>1</td></tr><tr><td>protocol_enabled.lldp</td><td>1</td></tr><tr><td>protocol_enabled.serial</td><td>1</td></tr><tr><td>protocol_enabled.snmp</td><td>1</td></tr><tr><td>protocol_enabled.ssh</td><td>1</td></tr><tr><td>ssh.auth_method</td><td>key</td></tr><tr><td>ssh.command_timeout</td><td>30</td></tr><tr><td>ssh.connect_timeout</td><td>10</td></tr><tr><td>ssh.keepalive</td><td>30</td></tr><tr><td>ssh.monitoring</td><td>1</td></tr><tr><td>ssh.port</td><td>22</td></tr><tr><td>ssh.retries</td><td>1</td></tr></tbody></table></details></td></tr>
+<tr><td>2026-10-03T02:56:08+05:30</td><td>admin</td><td>Manual backup</td><td><details><summary>0 changed settings</summary><table class="site-table"><thead><tr><th>Setting</th><th>Before</th><th>After</th></tr></thead><tbody></tbody></table></details><details><summary>Configuration snapshot</summary><table class="site-table"><thead><tr><th>Setting</th><th>Saved value</th></tr></thead><tbody><tr><td>classification.category_id</td><td>7</td></tr><tr><td>classification.device_type</td><td>Server</td></tr><tr><td>device.availability_method</td><td>2</td></tr><tr><td>device.description</td><td>Cacti RHEL 9 Local</td></tr><tr><td>device.device_threads</td><td>1</td></tr><tr><td>device.disabled</td><td>—</td></tr><tr><td>device.host_template_id</td><td>21</td></tr><tr><td>device.hostname</td><td>127.0.0.1</td></tr><tr><td>device.max_oids</td><td>10</td></tr><tr><td>device.notes</td><td>—</td></tr><tr><td>device.ping_method</td><td>1</td></tr><tr><td>device.ping_retries</td><td>1</td></tr><tr><td>device.ping_timeout</td><td>400</td></tr><tr><td>device.poller_id</td><td>1</td></tr><tr><td>device.site_id</td><td>3</td></tr><tr><td>device.snmp_auth_protocol</td><td>—</td></tr><tr><td>device.snmp_port</td><td>161</td></tr><tr><td>device.snmp_priv_protocol</td><td>—</td></tr><tr><td>device.snmp_timeout</td><td>500</td></tr><tr><td>device.snmp_version</td><td>2</td></tr><tr><td>discovery.interval_seconds</td><td>300</td></tr><tr><td>discovery.protocol</td><td>lldp,arp,fdb</td></tr><tr><td>discovery.refresh_seconds</td><td>30</td></tr><tr><td>discovery.stale_seconds</td><td>900</td></tr><tr><td>fault.rules</td><td>[]</td></tr><tr><td>graphs.template_ids</td><td>[&quot;84&quot;,&quot;250&quot;,&quot;87&quot;,&quot;502&quot;,&quot;503&quot;,&quot;504&quot;,&quot;248&quot;,&quot;249&quot;,&quot;247&quot;]</td></tr><tr><td>identity.chassis_id</td><td>—</td></tr><tr><td>identity.mac_address</td><td>—</td></tr><tr><td>identity.serial_number</td><td>—</td></tr><tr><td>protocol_enabled.cdp</td><td>1</td></tr><tr><td>protocol_enabled.lldp</td><td>1</td></tr><tr><td>protocol_enabled.serial</td><td>1</td></tr><tr><td>protocol_enabled.snmp</td><td>1</td></tr><tr><td>protocol_enabled.ssh</td><td>1</td></tr><tr><td>ssh.auth_method</td><td>key</td></tr><tr><td>ssh.command_timeout</td><td>30</td></tr><tr><td>ssh.connect_timeout</td><td>10</td></tr><tr><td>ssh.keepalive</td><td>30</td></tr><tr><td>ssh.monitoring</td><td>1</td></tr><tr><td>ssh.port</td><td>22</td></tr><tr><td>ssh.retries</td><td>1</td></tr></tbody></table></details></td></tr>
+<tr><td>2026-10-03T02:56:08+05:30</td><td>admin</td><td>Initial baseline</td><td><details><summary>41 changed settings</summary><table class="site-table"><thead><tr><th>Setting</th><th>Before</th><th>After</th></tr></thead><tbody><tr><td>classification.category_id</td><td>—</td><td>7</td></tr><tr><td>classification.device_type</td><td>—</td><td>Server</td></tr><tr><td>device.availability_method</td><td>—</td><td>2</td></tr><tr><td>device.description</td><td>—</td><td>Cacti RHEL 9 Local</td></tr><tr><td>device.device_threads</td><td>—</td><td>1</td></tr><tr><td>device.disabled</td><td>—</td><td>—</td></tr><tr><td>device.host_template_id</td><td>—</td><td>21</td></tr><tr><td>device.hostname</td><td>—</td><td>127.0.0.1</td></tr><tr><td>device.max_oids</td><td>—</td><td>10</td></tr><tr><td>device.notes</td><td>—</td><td>—</td></tr><tr><td>device.ping_method</td><td>—</td><td>1</td></tr><tr><td>device.ping_retries</td><td>—</td><td>1</td></tr><tr><td>device.ping_timeout</td><td>—</td><td>400</td></tr><tr><td>device.poller_id</td><td>—</td><td>1</td></tr><tr><td>device.site_id</td><td>—</td><td>3</td></tr><tr><td>device.snmp_auth_protocol</td><td>—</td><td>—</td></tr><tr><td>device.snmp_port</td><td>—</td><td>161</td></tr><tr><td>device.snmp_priv_protocol</td><td>—</td><td>—</td></tr><tr><td>device.snmp_timeout</td><td>—</td><td>500</td></tr><tr><td>device.snmp_version</td><td>—</td><td>2</td></tr><tr><td>discovery.interval_seconds</td><td>—</td><td>300</td></tr><tr><td>discovery.protocol</td><td>—</td><td>lldp,arp,fdb</td></tr><tr><td>discovery.refresh_seconds</td><td>—</td><td>30</td></tr><tr><td>discovery.stale_seconds</td><td>—</td><td>900</td></tr><tr><td>fault.rules</td><td>—</td><td>[]</td></tr><tr><td>graphs.template_ids</td><td>—</td><td>[&quot;84&quot;,&quot;250&quot;,&quot;87&quot;,&quot;502&quot;,&quot;503&quot;,&quot;504&quot;,&quot;248&quot;,&quot;249&quot;,&quot;247&quot;]</td></tr><tr><td>identity.chassis_id</td><td>—</td><td>—</td></tr><tr><td>identity.mac_address</td><td>—</td><td>—</td></tr><tr><td>identity.serial_number</td><td>—</td><td>—</td></tr><tr><td>protocol_enabled.cdp</td><td>—</td><td>1</td></tr><tr><td>protocol_enabled.lldp</td><td>—</td><td>1</td></tr><tr><td>protocol_enabled.serial</td><td>—</td><td>1</td></tr><tr><td>protocol_enabled.snmp</td><td>—</td><td>1</td></tr><tr><td>protocol_enabled.ssh</td><td>—</td><td>1</td></tr><tr><td>ssh.auth_method</td><td>—</td><td>key</td></tr><tr><td>ssh.command_timeout</td><td>—</td><td>30</td></tr><tr><td>ssh.connect_timeout</td><td>—</td><td>10</td></tr><tr><td>ssh.keepalive</td><td>—</td><td>30</td></tr><tr><td>ssh.monitoring</td><td>—</td><td>1</td></tr><tr><td>ssh.port</td><td>—</td><td>22</td></tr><tr><td>ssh.retries</td><td>—</td><td>1</td></tr></tbody></table></details><details><summary>Configuration snapshot</summary><table class="site-table"><thead><tr><th>Setting</th><th>Saved value</th></tr></thead><tbody><tr><td>classification.category_id</td><td>7</td></tr><tr><td>classification.device_type</td><td>Server</td></tr><tr><td>device.availability_method</td><td>2</td></tr><tr><td>device.description</td><td>Cacti RHEL 9 Local</td></tr><tr><td>device.device_threads</td><td>1</td></tr><tr><td>device.disabled</td><td>—</td></tr><tr><td>device.host_template_id</td><td>21</td></tr><tr><td>device.hostname</td><td>127.0.0.1</td></tr><tr><td>device.max_oids</td><td>10</td></tr><tr><td>device.notes</td><td>—</td></tr><tr><td>device.ping_method</td><td>1</td></tr><tr><td>device.ping_retries</td><td>1</td></tr><tr><td>device.ping_timeout</td><td>400</td></tr><tr><td>device.poller_id</td><td>1</td></tr><tr><td>device.site_id</td><td>3</td></tr><tr><td>device.snmp_auth_protocol</td><td>—</td></tr><tr><td>device.snmp_port</td><td>161</td></tr><tr><td>device.snmp_priv_protocol</td><td>—</td></tr><tr><td>device.snmp_timeout</td><td>500</td></tr><tr><td>device.snmp_version</td><td>2</td></tr><tr><td>discovery.interval_seconds</td><td>300</td></tr><tr><td>discovery.protocol</td><td>lldp,arp,fdb</td></tr><tr><td>discovery.refresh_seconds</td><td>30</td></tr><tr><td>discovery.stale_seconds</td><td>900</td></tr><tr><td>fault.rules</td><td>[]</td></tr><tr><td>graphs.template_ids</td><td>[&quot;84&quot;,&quot;250&quot;,&quot;87&quot;,&quot;502&quot;,&quot;503&quot;,&quot;504&quot;,&quot;248&quot;,&quot;249&quot;,&quot;247&quot;]</td></tr><tr><td>identity.chassis_id</td><td>—</td></tr><tr><td>identity.mac_address</td><td>—</td></tr><tr><td>identity.serial_number</td><td>—</td></tr><tr><td>protocol_enabled.cdp</td><td>1</td></tr><tr><td>protocol_enabled.lldp</td><td>1</td></tr><tr><td>protocol_enabled.serial</td><td>1</td></tr><tr><td>protocol_enabled.snmp</td><td>1</td></tr><tr><td>protocol_enabled.ssh</td><td>1</td></tr><tr><td>ssh.auth_method</td><td>key</td></tr><tr><td>ssh.command_timeout</td><td>30</td></tr><tr><td>ssh.connect_timeout</td><td>10</td></tr><tr><td>ssh.keepalive</td><td>30</td></tr><tr><td>ssh.monitoring</td><td>1</td></tr><tr><td>ssh.port</td><td>22</td></tr><tr><td>ssh.retries</td><td>1</td></tr></tbody></table></details></td></tr>
+</tbody></table></div>
+<div class="type-pagination"><span>1–5 of 5 records</span><span class="type-page-count">Page 1 of 1</span><a href="device-2.html&amp;changes_page=1&amp;diagnostics_page=1#view-records" aria-disabled="true" tabindex="-1">Previous</a><a href="device-2.html&amp;changes_page=1&amp;diagnostics_page=1#view-records" aria-disabled="true" tabindex="-1">Next</a></div><h3>Diagnostic readings</h3>
+<p>Your saved diagnostic runs for this device. Historical results describe the configuration at the time of the run.</p>
+<div class="site-table-wrap"><table class="site-table"><thead><tr><th>Requested</th><th>Method</th><th>Status</th><th>Finished</th><th>Reading</th></tr></thead><tbody>
+<tr><td>2026-10-03 09:17:50</td><td>ARP</td><td>complete</td><td>2026-10-03 09:17:51</td><td><details><summary>View result #83</summary><pre class="device-record-output">$ &apos;/usr/sbin/ip&apos; &apos;neigh&apos; &apos;show&apos;
+10.0.2.2 dev enp0s8 lladdr 52:54:00:12:35:00 REACHABLE
+fe80::2 dev enp0s8 lladdr 52:54:00:12:35:00 router STALE
+fd17:625c:f037:2::2 dev enp0s8 lladdr 52:54:00:12:35:00 router STALE</pre></details></td></tr>
+<tr><td>2026-10-03 09:15:24</td><td>Ping ICMP</td><td>complete</td><td>2026-10-03 09:15:27</td><td><details><summary>View result #82</summary><pre class="device-record-output">$ &apos;/usr/bin/ping&apos; &apos;-n&apos; &apos;-c&apos; &apos;4&apos; &apos;-W&apos; &apos;2&apos; &apos;-w&apos; &apos;14&apos; &apos;127.0.0.1&apos;
+PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
+64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.566 ms
+64 bytes from 127.0.0.1: icmp_seq=2 ttl=64 time=0.282 ms
+64 bytes from 127.0.0.1: icmp_seq=3 ttl=64 time=0.298 ms
+64 bytes from 127.0.0.1: icmp_seq=4 ttl=64 time=0.115 ms
+
+--- 127.0.0.1 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3004ms
+rtt min/avg/max/mdev = 0.115/0.315/0.566/0.161 ms</pre></details></td></tr>
+<tr><td>2026-10-03 08:58:35</td><td>MTR ICMP</td><td>complete</td><td>2026-10-03 08:58:45</td><td><details><summary>View result #81</summary><pre class="device-record-output">$ &apos;/usr/sbin/mtr&apos; &apos;--report&apos; &apos;--no-dns&apos; &apos;--report-cycles&apos; &apos;4&apos; &apos;--max-ttl&apos; &apos;5&apos; &apos;--interval&apos; &apos;1&apos; &apos;127.0.0.1&apos;
+Start: 2026-10-03T08:58:36+0530
+HOST: cacti-rhel9.local           Loss%   Snt   Last   Avg  Best  Wrst StDev
+  1.|-- 127.0.0.1                  0.0%     4    0.1   0.2   0.1   0.3   0.1</pre></details></td></tr>
+<tr><td>2026-10-03 08:57:45</td><td>Pathchar</td><td>complete</td><td>2026-10-03 08:57:54</td><td><details><summary>View result #80</summary><pre class="device-record-output">$ &apos;/usr/local/sbin/pchar&apos; &apos;-n&apos; &apos;-H&apos; &apos;5&apos; &apos;-R&apos; &apos;3&apos; &apos;-I&apos; &apos;128&apos; &apos;127.0.0.1&apos;
+pchar to 127.0.0.1 (127.0.0.1) using UDP/IPv4
+Using raw socket input
+Packet size increments from 32 to 1500 by 128
+11 test(s) per repetition
+3 repetition(s) per hop
+ 0: 127.0.0.1 (127.0.0.1)
+    Partial loss:      0 / 33 (0%)
+    Partial char:      rtt = 0.153751 ms, (b = 0.000012 ms/B), r2 = 0.009505
+                       stddev rtt = 0.051579, stddev b = 0.000041
+    Partial queueing:  avg = 0.000055 ms (4600 bytes)
+    Hop char:          rtt = 0.153751 ms, bw = 665567.702866 Kbps
+    Hop queueing:      avg = 0.000055 ms (4600 bytes)
+ 1: 127.0.0.1 (127.0.0.1)
+    Path length:       1 hops
+    Path char:         rtt = 0.153751 ms r2 = 0.009505
+    Path bottleneck:   665567.702866 Kbps
+    Path pipe:         12791 bytes
+    Path queueing:     average = 0.000055 ms (4600 bytes)
+    Start time:        Sat Oct  3 08:57:45 2026
+    End time:          Sat Oct  3 08:57:54 2026</pre></details></td></tr>
+<tr><td>2026-10-03 08:56:43</td><td>iPerf3</td><td>complete</td><td>2026-10-03 08:56:46</td><td><details><summary>View result #79</summary><pre class="device-record-output">$ &apos;/usr/bin/iperf3&apos; &apos;-c&apos; &apos;127.0.0.1&apos; &apos;-p&apos; &apos;35417&apos; &apos;-t&apos; &apos;3&apos; &apos;-J&apos;
+Collector local-address self-test — this is not network-link bandwidth.
+Temporary local server stopped after the test.
+
+Receiver throughput: 111,281.98 Mbit/s
+
+{
+	&quot;start&quot;:	{
+		&quot;connected&quot;:	[{
+				&quot;socket&quot;:	8,
+				&quot;local_host&quot;:	&quot;127.0.0.1&quot;,
+				&quot;local_port&quot;:	39044,
+				&quot;remote_host&quot;:	&quot;127.0.0.1&quot;,
+				&quot;remote_port&quot;:	35417
+			}],
+		&quot;version&quot;:	&quot;iperf 3.9&quot;,
+		&quot;system_info&quot;:	&quot;Linux cacti-rhel9.local 5.14.0-687.5.3.el9_8.aarch64 #1 SMP PREEMPT_DYNAMIC Sat May 9 03:02:36 UTC 2026 aarch64&quot;,
+		&quot;timestamp&quot;:	{
+			&quot;time&quot;:	&quot;Sat, 03 Oct 2026 03:26:43 GMT&quot;,
+			&quot;timesecs&quot;:	1790998003
+		},
+		&quot;connecting_to&quot;:	{
+			&quot;host&quot;:	&quot;127.0.0.1&quot;,
+			&quot;port&quot;:	35417
+		},
+		&quot;cookie&quot;:	&quot;6slhj466h4t4tfmidnmczra4lfev5z3mkwr7&quot;,
+		&quot;tcp_mss_default&quot;:	32768,
+		&quot;sock_bufsize&quot;:	0,
+		&quot;sndbuf_actual&quot;:	16384,
+		&quot;rcvbuf_actual&quot;:	131072,
+		&quot;test_start&quot;:	{
+			&quot;protocol&quot;:	&quot;TCP&quot;,
+			&quot;num_streams&quot;:	1,
+			&quot;blksize&quot;:	131072,
+			&quot;omit&quot;:	0,
+			&quot;duration&quot;:	3,
+			&quot;bytes&quot;:	0,
+			&quot;blocks&quot;:	0,
+			&quot;reverse&quot;:	0,
+			&quot;tos&quot;:	0
+		}
+	},
+	&quot;intervals&quot;:	[{
+			&quot;streams&quot;:	[{
+					&quot;socket&quot;:	8,
+					&quot;start&quot;:	0,
+					&quot;end&quot;:	1.000087,
+					&quot;seconds&quot;:	1.0000870227813721,
+					&quot;bytes&quot;:	13310361600,
+					&quot;bits_per_second&quot;:	106473627168.821,
+					&quot;retransmits&quot;:	2,
+					&quot;snd_cwnd&quot;:	4125429,
+					&quot;rtt&quot;:	14,
+					&quot;rttvar&quot;:	2,
+					&quot;pmtu&quot;:	65535,
+					&quot;omitted&quot;:	false,
+					&quot;sender&quot;:	true
+				}],
+			&quot;sum&quot;:	{
+				&quot;start&quot;:	0,
+				&quot;end&quot;:	1.000087,
+				&quot;seconds&quot;:	1.0000870227813721,
+				&quot;bytes&quot;:	13310361600,
+				&quot;bits_per_second&quot;:	106473627168.821,
+				&quot;retransmits&quot;:	2,
+				&quot;omitted&quot;:	false,
+				&quot;sender&quot;:	true
+			}
+		}, {
+			&quot;streams&quot;:	[{
+					&quot;socket&quot;:	8,
+					&quot;start&quot;:	1.000087,
+					&quot;end&quot;:	2.000011,
+					&quot;seconds&quot;:	0.99992400407791138,
+					&quot;bytes&quot;:	15383920640,
+					&quot;bits_per_second&quot;:	123080718752.71294,
+					&quot;retransmits&quot;:	0,
+					&quot;snd_cwnd&quot;:	4125429,
+					&quot;rtt&quot;:	12,
+					&quot;rttvar&quot;:	0,
+					&quot;pmtu&quot;:	65535,
+					&quot;omitted&quot;:	false,
+					&quot;sender&quot;:	true
+				}],
+			&quot;sum&quot;:	{
+				&quot;start&quot;:	1.000087,
+				&quot;end&quot;:	2.000011,
+				&quot;seconds&quot;:	0.99992400407791138,
+				&quot;bytes&quot;:	15383920640,
+				&quot;bits_per_second&quot;:	123080718752.71294,
+				&quot;retransmits&quot;:	0,
+				&quot;omitted&quot;:	false,
+				&quot;sender&quot;:	true
+			}
+		}, {
+			&quot;streams&quot;:	[{
+					&quot;socket&quot;:	8,
+					&quot;start&quot;:	2.000011,
+					&quot;end&quot;:	3.000067,
+					&quot;seconds&quot;:	1.0000560283660889,
+					&quot;bytes&quot;:	13740277760,
+					&quot;bits_per_second&quot;:	109916063662.54607,
+					&quot;retransmits&quot;:	2,
+					&quot;snd_cwnd&quot;:	4125429,
+					&quot;rtt&quot;:	10,
+					&quot;rttvar&quot;:	0,
+					&quot;pmtu&quot;:	65535,
+					&quot;omitted&quot;:	false,
+					&quot;sender&quot;:	true
+				}],
+			&quot;sum&quot;:	{
+				&quot;start&quot;:	2.000011,
+				&quot;end&quot;:	3.000067,
+				&quot;seconds&quot;:	1.0000560283660889,
+				&quot;bytes&quot;:	13740277760,
+				&quot;bits_per_second&quot;:	109916063662.54607,
+				&quot;retransmits&quot;:	2,
+				&quot;omitted&quot;:	false,
+				&quot;sender&quot;:	true
+			}
+		}],
+	&quot;end&quot;:	{
+		&quot;streams&quot;:	[{
+				&quot;sender&quot;:	{
+					&quot;socket&quot;:	8,
+					&quot;start&quot;:	0,
+					&quot;end&quot;:	3.000067,
+					&quot;seconds&quot;:	3.000067,
+					&quot;bytes&quot;:	42434560000,
+					&quot;bits_per_second&quot;:	113156299509.31096,
+					&quot;retransmits&quot;:	4,
+					&quot;max_snd_cwnd&quot;:	4125429,
+					&quot;max_rtt&quot;:	14,
+					&quot;min_rtt&quot;:	10,
+					&quot;mean_rtt&quot;:	12,
+					&quot;sender&quot;:	true
+				},
+				&quot;receiver&quot;:	{
+					&quot;socket&quot;:	8,
+					&quot;start&quot;:	0,
+					&quot;end&quot;:	3.050597,
+					&quot;seconds&quot;:	3.000067,
+					&quot;bytes&quot;:	42434560000,
+					&quot;bits_per_second&quot;:	111281981854.69926,
+					&quot;sender&quot;:	true
+				}
+			}],
+		&quot;sum_sent&quot;:	{
+			&quot;start&quot;:	0,
+			&quot;end&quot;:	3.000067,
+			&quot;seconds&quot;:	3.000067,
+			&quot;bytes&quot;:	42434560000,
+			&quot;bits_per_second&quot;:	113156299509.31096,
+			&quot;retransmits&quot;:	4,
+			&quot;sender&quot;:	true
+		},
+		&quot;sum_received&quot;:	{
+			&quot;start&quot;:	0,
+			&quot;end&quot;:	3.050597,
+			&quot;seconds&quot;:	3.050597,
+			&quot;bytes&quot;:	42434560000,
+			&quot;bits_per_second&quot;:	111281981854.69926,
+			&quot;sender&quot;:	true
+		},
+		&quot;cpu_utilization_percent&quot;:	{
+			&quot;host_total&quot;:	86.784433143675,
+			&quot;host_user&quot;:	1.7282718631630996,
+			&quot;host_system&quot;:	85.0561612805119,
+			&quot;remote_total&quot;:	79.3927236865939,
+			&quot;remote_user&quot;:	2.269826680965894,
+			&quot;remote_system&quot;:	77.122865059185571
+		},
+		&quot;sender_tcp_congestion&quot;:	&quot;cubic&quot;,
+		&quot;receiver_tcp_congestion&quot;:	&quot;cubic&quot;
+	}
+}</pre></details></td></tr>
+<tr><td>2026-10-03 08:46:17</td><td>Ping ICMP</td><td>complete</td><td>2026-10-03 08:46:21</td><td><details><summary>View result #78</summary><pre class="device-record-output">$ &apos;/usr/bin/ping&apos; &apos;-n&apos; &apos;-c&apos; &apos;4&apos; &apos;-W&apos; &apos;2&apos; &apos;-w&apos; &apos;14&apos; &apos;127.0.0.1&apos;
+PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
+64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.111 ms
+64 bytes from 127.0.0.1: icmp_seq=2 ttl=64 time=0.418 ms
+64 bytes from 127.0.0.1: icmp_seq=3 ttl=64 time=0.324 ms
+64 bytes from 127.0.0.1: icmp_seq=4 ttl=64 time=0.225 ms
+
+--- 127.0.0.1 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3000ms
+rtt min/avg/max/mdev = 0.111/0.269/0.418/0.114 ms</pre></details></td></tr>
+<tr><td>2026-10-03 08:43:55</td><td>Traceroute TCP</td><td>complete</td><td>2026-10-03 08:43:56</td><td><details><summary>View result #77</summary><pre class="device-record-output">$ &apos;/usr/bin/traceroute&apos; &apos;-n&apos; &apos;-q&apos; &apos;1&apos; &apos;-m&apos; &apos;5&apos; &apos;-w&apos; &apos;2&apos; &apos;-T&apos; &apos;-p&apos; &apos;443&apos; &apos;127.0.0.1&apos;
+traceroute to 127.0.0.1 (127.0.0.1), 5 hops max, 60 byte packets
+ 1  127.0.0.1  0.099 ms</pre></details></td></tr>
+<tr><td>2026-10-03 08:41:57</td><td>iPerf3</td><td>complete</td><td>2026-10-03 08:42:01</td><td><details><summary>View result #76</summary><pre class="device-record-output">$ &apos;/usr/bin/iperf3&apos; &apos;-c&apos; &apos;127.0.0.1&apos; &apos;-p&apos; &apos;34487&apos; &apos;-t&apos; &apos;3&apos; &apos;-J&apos;
+Collector local-address self-test — this is not network-link bandwidth.
+Temporary local server stopped after the test.
+
+Receiver throughput: 93,267.99 Mbit/s
+
+{
+	&quot;start&quot;:	{
+		&quot;connected&quot;:	[{
+				&quot;socket&quot;:	9,
+				&quot;local_host&quot;:	&quot;127.0.0.1&quot;,
+				&quot;local_port&quot;:	55412,
+				&quot;remote_host&quot;:	&quot;127.0.0.1&quot;,
+				&quot;remote_port&quot;:	34487
+			}],
+		&quot;version&quot;:	&quot;iperf 3.9&quot;,
+		&quot;system_info&quot;:	&quot;Linux cacti-rhel9.local 5.14.0-687.5.3.el9_8.aarch64 #1 SMP PREEMPT_DYNAMIC Sat May 9 03:02:36 UTC 2026 aarch64&quot;,
+		&quot;timestamp&quot;:	{
+			&quot;time&quot;:	&quot;Sat, 03 Oct 2026 03:11:58 GMT&quot;,
+			&quot;timesecs&quot;:	1790997118
+		},
+		&quot;connecting_to&quot;:	{
+			&quot;host&quot;:	&quot;127.0.0.1&quot;,
+			&quot;port&quot;:	34487
+		},
+		&quot;cookie&quot;:	&quot;m4a7vuxtmpxw5izftss5l6u7jsq4fgbbrd5a&quot;,
+		&quot;tcp_mss_default&quot;:	32768,
+		&quot;sock_bufsize&quot;:	0,
+		&quot;sndbuf_actual&quot;:	16384,
+		&quot;rcvbuf_actual&quot;:	131072,
+		&quot;test_start&quot;:	{
+			&quot;protocol&quot;:	&quot;TCP&quot;,
+			&quot;num_streams&quot;:	1,
+			&quot;blksize&quot;:	131072,
+			&quot;omit&quot;:	0,
+			&quot;duration&quot;:	3,
+			&quot;bytes&quot;:	0,
+			&quot;blocks&quot;:	0,
+			&quot;reverse&quot;:	0,
+			&quot;tos&quot;:	0
+		}
+	},
+	&quot;intervals&quot;:	[{
+			&quot;streams&quot;:	[{
+					&quot;socket&quot;:	9,
+					&quot;start&quot;:	0,
+					&quot;end&quot;:	1.00006,
+					&quot;seconds&quot;:	1.000059962272644,
+					&quot;bytes&quot;:	11936727040,
+					&quot;bits_per_second&quot;:	95488090637.074966,
+					&quot;retransmits&quot;:	2,
+					&quot;snd_cwnd&quot;:	2291905,
+					&quot;rtt&quot;:	11,
+					&quot;rttvar&quot;:	1,
+					&quot;pmtu&quot;:	65535,
+					&quot;omitted&quot;:	false,
+					&quot;sender&quot;:	true
+				}],
+			&quot;sum&quot;:	{
+				&quot;start&quot;:	0,
+				&quot;end&quot;:	1.00006,
+				&quot;seconds&quot;:	1.000059962272644,
+				&quot;bytes&quot;:	11936727040,
+				&quot;bits_per_second&quot;:	95488090637.074966,
+				&quot;retransmits&quot;:	2,
+				&quot;omitted&quot;:	false,
+				&quot;sender&quot;:	true
+			}
+		}, {
+			&quot;streams&quot;:	[{
+					&quot;socket&quot;:	9,
+					&quot;start&quot;:	1.00006,
+					&quot;end&quot;:	2.000178,
+					&quot;seconds&quot;:	1.0001180171966553,
+					&quot;bytes&quot;:	9987686400,
+					&quot;bits_per_second&quot;:	79892062562.741333,
+					&quot;retransmits&quot;:	0,
+					&quot;snd_cwnd&quot;:	2291905,
+					&quot;rtt&quot;:	224,
+					&quot;rttvar&quot;:	368,
+					&quot;pmtu&quot;:	65535,
+					&quot;omitted&quot;:	false,
+					&quot;sender&quot;:	true
+				}],
+			&quot;sum&quot;:	{
+				&quot;start&quot;:	1.00006,
+				&quot;end&quot;:	2.000178,
+				&quot;seconds&quot;:	1.0001180171966553,
+				&quot;bytes&quot;:	9987686400,
+				&quot;bits_per_second&quot;:	79892062562.741333,
+				&quot;retransmits&quot;:	0,
+				&quot;omitted&quot;:	false,
+				&quot;sender&quot;:	true
+			}
+		}, {
+			&quot;streams&quot;:	[{
+					&quot;socket&quot;:	9,
+					&quot;start&quot;:	2.000178,
+					&quot;end&quot;:	3.000051,
+					&quot;seconds&quot;:	0.99987298250198364,
+					&quot;bytes&quot;:	13852999680,
+					&quot;bits_per_second&quot;:	110838075815.075,
+					&quot;retransmits&quot;:	0,
+					&quot;snd_cwnd&quot;:	2291905,
+					&quot;rtt&quot;:	10,
+					&quot;rttvar&quot;:	1,
+					&quot;pmtu&quot;:	65535,
+					&quot;omitted&quot;:	false,
+					&quot;sender&quot;:	true
+				}],
+			&quot;sum&quot;:	{
+				&quot;start&quot;:	2.000178,
+				&quot;end&quot;:	3.000051,
+				&quot;seconds&quot;:	0.99987298250198364,
+				&quot;bytes&quot;:	13852999680,
+				&quot;bits_per_second&quot;:	110838075815.075,
+				&quot;retransmits&quot;:	0,
+				&quot;omitted&quot;:	false,
+				&quot;sender&quot;:	true
+			}
+		}],
+	&quot;end&quot;:	{
+		&quot;streams&quot;:	[{
+				&quot;sender&quot;:	{
+					&quot;socket&quot;:	9,
+					&quot;start&quot;:	0,
+					&quot;end&quot;:	3.000051,
+					&quot;seconds&quot;:	3.000051,
+					&quot;bytes&quot;:	35777413120,
+					&quot;bits_per_second&quot;:	95404813104.8439,
+					&quot;retransmits&quot;:	2,
+					&quot;max_snd_cwnd&quot;:	2291905,
+					&quot;max_rtt&quot;:	224,
+					&quot;min_rtt&quot;:	10,
+					&quot;mean_rtt&quot;:	81,
+					&quot;sender&quot;:	true
+				},
+				&quot;receiver&quot;:	{
+					&quot;socket&quot;:	9,
+					&quot;start&quot;:	0,
+					&quot;end&quot;:	3.068784,
+					&quot;seconds&quot;:	3.000051,
+					&quot;bytes&quot;:	35777413120,
+					&quot;bits_per_second&quot;:	93267986590.1282,
+					&quot;sender&quot;:	true
+				}
+			}],
+		&quot;sum_sent&quot;:	{
+			&quot;start&quot;:	0,
+			&quot;end&quot;:	3.000051,
+			&quot;seconds&quot;:	3.000051,
+			&quot;bytes&quot;:	35777413120,
+			&quot;bits_per_second&quot;:	95404813104.8439,
+			&quot;retransmits&quot;:	2,
+			&quot;sender&quot;:	true
+		},
+		&quot;sum_received&quot;:	{
+			&quot;start&quot;:	0,
+			&quot;end&quot;:	3.068784,
+			&quot;seconds&quot;:	3.068784,
+			&quot;bytes&quot;:	35777413120,
+			&quot;bits_per_second&quot;:	93267986590.1282,
+			&quot;sender&quot;:	true
+		},
+		&quot;cpu_utilization_percent&quot;:	{
+			&quot;host_total&quot;:	89.115494068050666,
+			&quot;host_user&quot;:	0.5911085918096024,
+			&quot;host_system&quot;:	88.524385476241065,
+			&quot;remote_total&quot;:	66.0458526179954,
+			&quot;remote_user&quot;:	5.5941416877679329,
+			&quot;remote_system&quot;:	60.451902011995472
+		},
+		&quot;sender_tcp_congestion&quot;:	&quot;cubic&quot;,
+		&quot;receiver_tcp_congestion&quot;:	&quot;cubic&quot;
+	}
+}</pre></details></td></tr>
+<tr><td>2026-10-03 08:40:37</td><td>Ping ICMP</td><td>complete</td><td>2026-10-03 08:40:41</td><td><details><summary>View result #75</summary><pre class="device-record-output">$ &apos;/usr/bin/ping&apos; &apos;-n&apos; &apos;-c&apos; &apos;4&apos; &apos;-W&apos; &apos;2&apos; &apos;-w&apos; &apos;14&apos; &apos;127.0.0.1&apos;
+PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
+64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.927 ms
+64 bytes from 127.0.0.1: icmp_seq=2 ttl=64 time=0.161 ms
+64 bytes from 127.0.0.1: icmp_seq=3 ttl=64 time=0.327 ms
+64 bytes from 127.0.0.1: icmp_seq=4 ttl=64 time=0.226 ms
+
+--- 127.0.0.1 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3023ms
+rtt min/avg/max/mdev = 0.161/0.410/0.927/0.304 ms</pre></details></td></tr>
+<tr><td>2026-09-22 03:49:19</td><td>Ping ICMP</td><td>complete</td><td>2026-09-22 03:49:23</td><td><details><summary>View result #74</summary><pre class="device-record-output">$ &apos;/usr/bin/ping&apos; &apos;-n&apos; &apos;-c&apos; &apos;4&apos; &apos;-W&apos; &apos;2&apos; &apos;-w&apos; &apos;14&apos; &apos;127.0.0.1&apos;
+PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
+64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.770 ms
+64 bytes from 127.0.0.1: icmp_seq=2 ttl=64 time=0.304 ms
+64 bytes from 127.0.0.1: icmp_seq=3 ttl=64 time=0.294 ms
+64 bytes from 127.0.0.1: icmp_seq=4 ttl=64 time=0.312 ms
+
+--- 127.0.0.1 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3013ms
+rtt min/avg/max/mdev = 0.294/0.420/0.770/0.202 ms</pre></details></td></tr>
+<tr><td>2026-09-22 02:46:20</td><td>Ping ICMP</td><td>complete</td><td>2026-09-22 02:46:24</td><td><details><summary>View result #73</summary><pre class="device-record-output">$ &apos;/usr/bin/ping&apos; &apos;-n&apos; &apos;-c&apos; &apos;4&apos; &apos;-W&apos; &apos;2&apos; &apos;-w&apos; &apos;14&apos; &apos;127.0.0.1&apos;
+PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
+64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.664 ms
+64 bytes from 127.0.0.1: icmp_seq=2 ttl=64 time=0.490 ms
+64 bytes from 127.0.0.1: icmp_seq=3 ttl=64 time=0.379 ms
+64 bytes from 127.0.0.1: icmp_seq=4 ttl=64 time=0.373 ms
+
+--- 127.0.0.1 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3080ms
+rtt min/avg/max/mdev = 0.373/0.476/0.664/0.117 ms</pre></details></td></tr>
+</tbody></table></div>
+<div class="type-pagination"><span>1–11 of 11 records</span><span class="type-page-count">Page 1 of 1</span><a href="device-2.html&amp;changes_page=1&amp;diagnostics_page=1#view-records" aria-disabled="true" tabindex="-1">Previous</a><a href="device-2.html&amp;changes_page=1&amp;diagnostics_page=1#view-records" aria-disabled="true" tabindex="-1">Next</a></div></section>
 </div>
         </section>
     </main>
