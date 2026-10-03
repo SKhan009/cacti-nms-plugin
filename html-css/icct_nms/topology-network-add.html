@@ -1,0 +1,130 @@
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Topology Configuration · ICCT NMS</title>
+        <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
+        <link rel="stylesheet" href="css/inventory.css?v=d5176ceb18a3" />
+            <script type="text/javascript" nonce="-GE-8NiyfuPelkXX8V32AGAK">if (top != self) {top.location.href = self.location.href;}</script></head>
+    <body class="icct-inventory">
+        <header class="topbar">
+            <div class="header-menu">
+                <button class="icon-button" type="button" aria-label="Navigation menu" aria-expanded="false">☰</button>
+                <nav class="header-menu-panel" aria-label="Main navigation">
+                    <a href="dashboard.html">Dashboard</a>
+                    <a href="index.html">Inventory</a>
+                    <a href="rack-view.html">Rack View</a>
+                    <a href="node-configuration.html">Node Configuration</a>
+                    <a href="topology-configuration.html">Topology Configuration</a>
+                    <a href="presets.html#segment">Presets</a>
+                </nav>
+            </div>
+            <div class="brand">
+                <img class="brand-logo brand-logo-drdo" src="images/drdo-logo.svg" alt="DRDO" width="34" height="34">
+                <img class="brand-logo brand-logo-bel" src="images/bharat-electronics-logo.svg" alt="Bharat Electronics" width="128" height="34">
+            </div>
+            <div class="station">
+                <strong>ICCT NMS</strong>
+                <span>Main Poller</span>
+            </div>
+            <div class="system-metrics"><span>Poller: 300 sec</span></div>
+            <a class="cacti-backend-button" href="http://127.0.0.1:8080/cacti/index.php">Cacti Backend</a>
+            <a class="profile" href="http://127.0.0.1:8080/cacti/auth_profile.php">
+                <span class="user-avatar" aria-hidden="true">◉</span>
+                <span>
+                    <strong>admin</strong>
+                    <small>Administrator</small>
+                </span>
+            </a>
+        </header>
+        <main class="workspace">
+            <section class="device-panel">
+                                <section class="topology-configuration">
+<div class="titlebar"><h1>Topology Configuration</h1><a class="button" href="dashboard.html">View Topology</a></div>
+<nav class="presets-tabs" aria-label="Topology configuration sections">
+<a href="topology-configuration.html" >Device Connections</a><a href="topology-networks.html" aria-current="page">Networks</a><a href="topology-discovered.html" >Discovered Devices</a></nav>
+<form data-static-preview="true" method="post" class="topology-config-form network-editor" id="networkEditor">
+<input type="hidden" name="action" value="save_network"><input type="hidden" name="network_id" value="0">
+<div class="titlebar"><h2>Add Network</h2><div class="type-editor-actions"><a class="button" href="topology-networks.html">Cancel</a><button class="button primary">Save</button></div></div>
+<h3>General Settings</h3><div class="form-grid">
+<div class="field" ><label for="network_name" >Network Name *</label>
+<input id="network_name" name="name" type="text" value="" required maxlength="250" ></div><div class="field" ><label for="network_poller_id" >Data Collector</label>
+<select id="network_poller_id" name="poller_id" ><option value="1" selected>Main Poller</option></select>
+</div><div class="field" ><label for="network_site_id" >Associated Site</label>
+<select id="network_site_id" name="site_id" ><option value="0" >None</option><option value="2" >Core</option><option value="4" >Demo — Bengaluru</option><option value="6" >Demo — Delhi</option><option value="5" >Demo — Mumbai</option><option value="1" selected>Edge</option><option value="3" >Topology Lab Location 01</option></select>
+</div><div class="field" ><label for="network_sched_type" >Schedule Type</label>
+<select id="network_sched_type" name="sched_type" ><option value="1" selected>Manual</option><option value="2" >Daily</option><option value="3" >Weekly</option><option value="4" >Monthly</option><option value="5" >Monthly on Day</option></select>
+</div><div class="field" ><label for="network_subnet_range" title="Comma-separated IPs, CIDR ranges, netmask ranges or wildcards.">Subnet Range *</label>
+<textarea id="network_subnet_range" name="subnet_range" rows="4" maxlength="1024" required></textarea>
+</div><div class="field" ><label for="network_total_ips" title="Calculated when the network is saved.">Total IP Addresses</label>
+<span id="network_total_ips" class="network-readonly">—</span>
+</div><div class="field" ><label for="network_dns_servers" title="Space-separated DNS IP addresses or names. Blank uses the collector’s DNS.">Alternate DNS Servers</label>
+<input id="network_dns_servers" name="dns_servers" type="text" value=""  maxlength="250" ></div><div class="field" ><label for="network_threads" >Discovery Threads</label>
+<select id="network_threads" name="threads" ><option value="1" selected>1 Threads</option><option value="2" >2 Threads</option><option value="3" >3 Threads</option><option value="4" >4 Threads</option><option value="5" >5 Threads</option><option value="6" >6 Threads</option><option value="7" >7 Threads</option><option value="8" >8 Threads</option><option value="9" >9 Threads</option><option value="10" >10 Threads</option><option value="20" >20 Threads</option><option value="50" >50 Threads</option></select>
+</div><div class="field" ><label for="network_run_limit" >Run Limit</label>
+<select id="network_run_limit" name="run_limit" ><option value="60" >1 Minute</option><option value="300" >5 Minutes</option><option value="600" >10 Minutes</option><option value="1200" selected>20 Minutes</option><option value="1800" >30 Minutes</option><option value="3600" >1 Hour</option><option value="7200" >2 Hours</option><option value="14400" >4 Hours</option><option value="28800" >8 Hours</option></select>
+</div><div class="field" ><label for="network_enabled" >Network Enabled</label>
+<label class="network-check"><input id="network_enabled" type="checkbox" name="enabled" value="1" > Enable</label>
+</div><div class="field" ><label for="network_enable_netbios" >Enable NetBIOS</label>
+<label class="network-check"><input id="network_enable_netbios" type="checkbox" name="enable_netbios" value="1" > Enable</label>
+</div><div class="field" ><label for="network_add_to_cacti" >Automatically Add to Cacti</label>
+<label class="network-check"><input id="network_add_to_cacti" type="checkbox" name="add_to_cacti" value="1" > Enable</label>
+</div><div class="field" ><label for="network_same_sysname" >Allow Same sysName on Different Hosts</label>
+<label class="network-check"><input id="network_same_sysname" type="checkbox" name="same_sysname" value="1" > Enable</label>
+</div><div class="field" ><label for="network_rerun_data_queries" >Rerun Data Queries</label>
+<label class="network-check"><input id="network_rerun_data_queries" type="checkbox" name="rerun_data_queries" value="1" > Enable</label>
+</div></div>
+<h3>Notification Settings</h3><div class="form-grid">
+<div class="field" ><label for="network_notification_enabled" >Notifications</label>
+<label class="network-check"><input id="network_notification_enabled" type="checkbox" name="notification_enabled" value="1" > Enable</label>
+</div><div class="field" data-network-notification><label for="network_notification_email" title="Separate recipients with commas or semicolons.">Notification Email</label>
+<input id="network_notification_email" name="notification_email" type="text" value=""  maxlength="250" ></div><div class="field" data-network-notification><label for="network_notification_fromname" title="Blank uses Cacti defaults.">Sender Name</label>
+<input id="network_notification_fromname" name="notification_fromname" type="text" value=""  maxlength="32" ></div><div class="field" data-network-notification><label for="network_notification_fromemail" title="Blank uses Cacti defaults.">Sender Email</label>
+<input id="network_notification_fromemail" name="notification_fromemail" type="text" value=""  maxlength="128" ></div></div>
+<h3 data-network-schedules="2,3,4,5">Discovery Timing</h3><div class="form-grid">
+<div class="field" data-network-schedules="2,3,4,5"><label for="network_start_at" title="Uses the Cacti server timezone.">Starting Date/Time *</label>
+<input id="network_start_at" name="start_at" type="text" value="2026-10-03 06:48:34" required maxlength="30" placeholder="YYYY-MM-DD HH:MM:SS"></div><div class="field" data-network-schedules="2,3"><label for="network_recur_every" >Rerun Every</label>
+<select id="network_recur_every" name="recur_every" ><option value="1" selected>1</option><option value="2" >2</option><option value="3" >3</option><option value="4" >4</option><option value="5" >5</option><option value="6" >6</option><option value="7" >7</option></select>
+</div><div class="field" data-network-schedules="3"><label for="network_day_of_week" >Days of Week</label>
+<select id="network_day_of_week" name="day_of_week[]" multiple size="5"><option value="1" >Sunday</option><option value="2" >Monday</option><option value="3" >Tuesday</option><option value="4" >Wednesday</option><option value="5" >Thursday</option><option value="6" >Friday</option><option value="7" >Saturday</option></select>
+</div><div class="field" data-network-schedules="4,5"><label for="network_month" >Months of Year</label>
+<select id="network_month" name="month[]" multiple size="5"><option value="1" >January</option><option value="2" >February</option><option value="3" >March</option><option value="4" >April</option><option value="5" >May</option><option value="6" >June</option><option value="7" >July</option><option value="8" >August</option><option value="9" >September</option><option value="10" >October</option><option value="11" >November</option><option value="12" >December</option></select>
+</div><div class="field" data-network-schedules="4"><label for="network_day_of_month" >Days of Month</label>
+<select id="network_day_of_month" name="day_of_month[]" multiple size="5"><option value="1" >1</option><option value="2" >2</option><option value="3" >3</option><option value="4" >4</option><option value="5" >5</option><option value="6" >6</option><option value="7" >7</option><option value="8" >8</option><option value="9" >9</option><option value="10" >10</option><option value="11" >11</option><option value="12" >12</option><option value="13" >13</option><option value="14" >14</option><option value="15" >15</option><option value="16" >16</option><option value="17" >17</option><option value="18" >18</option><option value="19" >19</option><option value="20" >20</option><option value="21" >21</option><option value="22" >22</option><option value="23" >23</option><option value="24" >24</option><option value="25" >25</option><option value="26" >26</option><option value="27" >27</option><option value="28" >28</option><option value="29" >29</option><option value="30" >30</option><option value="31" >31</option><option value="32" >Last</option></select>
+</div><div class="field" data-network-schedules="5"><label for="network_monthly_week" >Weeks of Month</label>
+<select id="network_monthly_week" name="monthly_week[]" multiple size="5"><option value="1" >First</option><option value="2" >Second</option><option value="3" >Third</option><option value="32" >Last</option></select>
+</div><div class="field" data-network-schedules="5"><label for="network_monthly_day" >Days of Week</label>
+<select id="network_monthly_day" name="monthly_day[]" multiple size="5"><option value="1" >Sunday</option><option value="2" >Monday</option><option value="3" >Tuesday</option><option value="4" >Wednesday</option><option value="5" >Thursday</option><option value="6" >Friday</option><option value="7" >Saturday</option></select>
+</div></div>
+<h3>Reachability Settings</h3><div class="form-grid">
+<div class="field" ><label for="network_snmp_id" >SNMP Options</label>
+<select id="network_snmp_id" name="snmp_id" ><option value="1" selected>Default Option Set</option></select>
+</div><div class="field" ><label for="network_ping_method" >Ping Method</label>
+<select id="network_ping_method" name="ping_method" ><option value="1" >ICMP Ping</option><option value="3" >TCP Ping</option><option value="5" >TCP Ping Closed</option><option value="2" selected>UDP Ping</option><option value="4" >SNMP Get</option><option value="0" >None</option></select>
+</div><div class="field" data-network-ping="2,3,5"><label for="network_ping_port" >Ping Port</label>
+<input id="network_ping_port" name="ping_port" type="number" value="23" required min="0" max="65535" ></div><div class="field" data-network-ping="1,2,3,5"><label for="network_ping_timeout" >Ping Timeout (ms)</label>
+<input id="network_ping_timeout" name="ping_timeout" type="number" value="400" required min="0" max="99999" ></div><div class="field" data-network-ping="1,2,3,5"><label for="network_ping_retries" >Ping Retry Count</label>
+<input id="network_ping_retries" name="ping_retries" type="number" value="1" required min="0" max="99999" ></div></div>
+<div class="type-editor-actions"><a class="button" href="topology-networks.html">Cancel</a><button class="button primary">Save</button></div>
+</form>
+</section>
+        </section>
+    </main>
+    <dialog id="message-dialog" aria-labelledby="message-title" aria-describedby="message-text">
+        <div class="message-heading">
+            <h2 id="message-title"></h2>
+            <button type="button" id="message-close" aria-label="Close message">×</button>
+        </div>
+        <p id="message-text"></p>
+        <div class="message-actions">
+            <button class="button" type="button" id="message-cancel">Cancel</button>
+            <button class="button primary" type="button" id="message-confirm">OK</button>
+        </div>
+    </dialog>
+    <script src="js/inventory.js?v=e72f56a25115" defer></script>
+<script src="js/topology-configuration.js?v=4f01c6bdc54e" defer></script>
+<script src="js/preview.js" defer></script>
+</body>
+</html>
