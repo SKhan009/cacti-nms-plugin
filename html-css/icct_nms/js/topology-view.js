@@ -16,9 +16,10 @@ function showDevice(d){
  const actions=document.querySelector('#topologyDeviceDiagnostics');actions.replaceChildren();
  Object.entries(d.diagnostics||{}).forEach(([tool,label])=>{const a=el('a','button',label);a.href='http://127.0.0.1:8080/cacti/plugins/icct_nms/diagnostics.php?host_id='+encodeURIComponent(d.id)+'&tool='+encodeURIComponent(tool);actions.append(a);});
  if(!actions.children.length)actions.append(el('p','','No diagnostics selected.'));
+ const discoveryLink=el('a','button','Discovery & Diagnostics');discoveryLink.href='topology-diagnostics.html#discovery-device-'+encodeURIComponent(d.id);actions.append(discoveryLink);
  const rows=document.querySelector('#topologyDeviceDiscovery');rows.replaceChildren();
- (d.discovery||[]).forEach(o=>{const row=el('tr','');row.append(el('td','',o.label));const status=el('td','');status.append(el('span','device-status '+(o.status==='Current'?'online':o.status==='Failed'?'offline':o.status==='Disabled'?'disabled':'other'),o.status));row.append(status,el('td','',o.count===null?'—':String(o.count)));rows.append(row);});
- if(!rows.children.length){const row=el('tr',''),cell=el('td','','No topology discovery methods selected.');cell.colSpan=3;row.append(cell);rows.append(row);}
+ (d.discovery||[]).forEach(o=>{const row=el('tr','');row.append(el('td','',o.label));const status=el('td','');status.append(el('span','device-status '+(o.status==='Current'?'online':o.status==='Failed'?'offline':o.status==='Disabled'?'disabled':'other'),o.status));row.append(status,el('td','',o.count===null?'—':String(o.count)),el('td','',o.evidence));rows.append(row);});
+ if(!rows.children.length){const row=el('tr',''),cell=el('td','','No topology discovery methods selected.');cell.colSpan=4;row.append(cell);rows.append(row);}
  detail.showModal();
 }
 function render(){

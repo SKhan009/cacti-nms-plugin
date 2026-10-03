@@ -52,3 +52,14 @@ if(icct_nms_device_discovery_summary(2,$assignment)[0]['count']!==null)throw new
 $enabledProtocols['snmp']=false;
 if(icct_nms_device_discovery_summary(2,$assignment)[0]['status']!=='Disabled')throw new RuntimeException('Disabled SNMP reported as active discovery');
 echo "Diagnostic/topology summaries share selected protocols, disabled state, hashes and current evidence.\n";
+
+$enabledProtocols['snmp']=true;
+$summarySnapshots[0]['config_hash']=icct_backend_nd_hash($assignment);
+foreach(['queued'=>'Queued','running'=>'Running'] as $state=>$label){
+    $summarySnapshots[0]['status']=$state;
+    $row=icct_nms_device_discovery_summary(2,$assignment)[0];
+    if($row['status']!==$label||$row['count']!==null)throw new RuntimeException('Pending discovery misreported as current or stale');
+}
+$summarySnapshots[0]['config_hash']='old';
+if(icct_nms_device_discovery_summary(2,$assignment)[0]['status']!=='Stale')throw new RuntimeException('Old pending configuration reported as active');
+echo "Queued/running discovery status synchronized; previous configuration excluded.\n";

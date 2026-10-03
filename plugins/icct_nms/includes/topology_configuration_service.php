@@ -60,7 +60,8 @@ function icct_nms_device_discovery_summary($id,$host=null){
     foreach($configured as $method){
         $snapshot=$snapshots[$method]??null;$enabled=$active&&in_array($method,$selected,true);
         $current=$enabled&&$snapshot&&icct_nms_discovery_current($snapshot,$host);
-        $status=!$enabled?'Disabled':(!$snapshot?'Not collected':($current?'Current':($snapshot['status']==='failed'?'Failed':'Stale')));
+        $pending=$snapshot&&in_array($snapshot['status'],['queued','running'],true)&&hash_equals(icct_backend_nd_hash($host),(string)($snapshot['config_hash']??''));
+        $status=!$enabled?'Disabled':(!$snapshot?'Not collected':($current?'Current':($pending?ucfirst($snapshot['status']):($snapshot['status']==='failed'?'Failed':'Stale'))));
         $data=$current?(json_decode($snapshot['data_json'],true)??[]):[];
         $items=array_filter(array_merge($data['neighbors']??[],$data['endpoints']??[]),fn($item)=>!isset($item['present'])||$item['present']);
         $rows[]=['method'=>$method,'label'=>icct_backend_nd_method_labels()[$method], 'status'=>$status,'count'=>$current?count($items):null,'last_check'=>$snapshot['succeeded_at']??'', 'evidence'=>in_array($method,['lldp','cdp'],true)?'Layer 2 neighbour adjacency':($method==='arp'?'IPv4 / IPv6 neighbour observation':'Learned MAC observation')];

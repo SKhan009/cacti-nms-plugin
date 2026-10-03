@@ -6,7 +6,7 @@ $connectionFieldHelp = static function($label,$text) { ?>
 <section class="topology-configuration">
 <div class="titlebar"><h1>Topology Configuration</h1><a class="button" href="topology.php">View Topology</a></div>
 <nav class="presets-tabs" aria-label="Topology configuration sections">
-<?php foreach(['connections'=>'Device Connections','networks'=>'Networks','discovered'=>'Discovered Devices'] as $key=>$label): ?><a href="?tab=<?= $key ?>" <?= $tab===$key?'aria-current="page"':'' ?>><?= $label ?></a><?php endforeach; ?>
+<?php foreach(['connections'=>'Device Connections','networks'=>'Networks','discovered'=>'Discovered Devices','diagnostics'=>'Discovery & Diagnostics'] as $key=>$label): ?><a href="?tab=<?= $key ?>" <?= $tab===$key?'aria-current="page"':'' ?>><?= $label ?></a><?php endforeach; ?>
 </nav>
 <?php if($tab==='connections'): ?>
 <h2>Manual device connections</h2>
@@ -24,6 +24,15 @@ $connectionFieldHelp = static function($label,$text) { ?>
 <?php foreach($observations as $d): ?><tr data-origin="Automatic"><td><?= icct_nms_h($d['reporter'].' / '.($d['port']?:'Not specified')) ?></td><td><?= icct_nms_h($d['name'].' / '.($d['remote_port']?:'Not specified')) ?><?php if($d['address']): ?><div><?= icct_nms_h($d['address']) ?></div><?php endif; ?></td><td><?= icct_nms_h($d['protocol']) ?><div><?= icct_nms_h($d['detail']) ?></div></td><td>Automatic</td><td><span class="device-status <?= $d['status']==='Current'?'online':'other' ?>"><?= icct_nms_h($d['status']) ?></span></td><td><?= icct_nms_h($d['last_check']) ?></td><td>—</td></tr><?php endforeach; ?>
 <tr id="connectionEmpty" <?= $links||$observations?'hidden':'' ?>><td colspan="7">No matching manual connections or detected devices.</td></tr></tbody></table></div>
 <nav class="inventory-pagination" aria-label="Connection results pages"><label>Items per page: <select id="connectionSize"><option>10</option><option selected>25</option><option>50</option></select></label><span id="connectionRange" aria-live="polite"></span><div class="page-controls"><label><span class="sr-only">Page</span><select id="connectionPageNumber"></select></label><span id="connectionPageCount"></span><button type="button" id="connectionPrevious" aria-label="Previous page">‹</button><button type="button" id="connectionNext" aria-label="Next page">›</button></div></nav>
+<?php elseif($tab==='diagnostics'): ?>
+<h2>Device discovery and diagnostics</h2>
+<p>Uses each device’s saved Protocol Config and Device Diagnostics selections. LLDP/CDP provide Layer 2 adjacencies; IP-MIB provides IPv4/IPv6 neighbour observations; BRIDGE-MIB/Q-BRIDGE-MIB provide learned MAC observations.</p>
+<div class="topology-table-scroll"><table class="site-table"><thead><tr><th>Device</th><th>Discovery method / Evidence</th><th>Status / Current observations</th><th>Last Collected</th><th>Actions</th></tr></thead><tbody>
+<?php $shown=0; foreach($devices as $device): $id=(int)$device['id']; $summary=$deviceDiscovery[$id]; $diagnostics=$deviceDiagnostics[$id]; if(!$summary&&!$diagnostics)continue; $shown++; ?>
+<tr id="discovery-device-<?= $id ?>"><td><?= icct_nms_h($device['description']) ?><div><?= icct_nms_h($device['hostname']) ?></div></td><td><?php foreach($summary as $row): ?><div><?= icct_nms_h($row['label']) ?> — <?= icct_nms_h($row['evidence']) ?></div><?php endforeach; ?><?php if(!$summary): ?>No discovery methods selected<?php endif; ?></td><td><?php foreach($summary as $row): ?><div><span class="device-status <?= $row['status']==='Current'?'online':($row['status']==='Failed'?'offline':($row['status']==='Disabled'?'disabled':'other')) ?>"><?= icct_nms_h($row['status']) ?></span> <?= $row['count']===null?'—':(int)$row['count'] ?></div><?php endforeach; ?></td><td><?php foreach($summary as $row): ?><div><?= icct_nms_h($row['last_check']?:'—') ?></div><?php endforeach; ?></td><td>
+<?php if($management): ?><a class="button" href="device.php?id=<?= $id ?>#protocol">Device Configuration</a><?php if(array_filter($summary,fn($row)=>$row['status']!=='Disabled')): ?><form method="post" class="topology-inline-form"><?php icct_nms_token(); ?><input type="hidden" name="action" value="discover_device"><input type="hidden" name="host_id" value="<?= $id ?>"><button class="button">Discover Now</button></form><?php endif; ?><?php endif; ?>
+<?php if($diagnostics): ?><a class="button" href="diagnostics.php?host_id=<?= $id ?>">Diagnostics</a><div><?= icct_nms_h(implode(', ',array_values($diagnostics))) ?></div><?php endif; ?>
+</td></tr><?php endforeach; ?><?php if(!$shown): ?><tr><td colspan="5">No device discovery or diagnostics selected. Configure them in Add/Edit Device.</td></tr><?php endif; ?></tbody></table></div>
 <?php elseif($tab==='networks'): ?>
 <?php if(!$automation): ?><p>Your account does not have Cacti Automation permission.</p><?php else: ?>
 <?php if($networkEdit!==null): require __DIR__.'/network_configuration.php'; else: ?>
