@@ -2510,9 +2510,6 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 #type-upload-preview[hidden],#type-remove-image[hidden] { display:none; }
 .type-visibility { margin-top:24px; font-size:13px; color:#555; }
 .type-visibility .form-grid { margin-top:12px; grid-template-columns:repeat(3,minmax(0,1fr)); }
-.device-type-info { display:flex; align-items:center; gap:12px; min-height:56px; }
-.device-type-info small { display:block; color:#777; margin-top:4px; }
-#assigned-type-image { width:72px; height:48px; object-fit:contain; }
 @media(max-width:900px) { .device-type-editor .form-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:600px) { .device-type-editor .form-grid,.type-visibility .form-grid { grid-template-columns:1fr; } .type-editor-heading { gap:12px; flex-wrap:wrap; } }
 .type-editor-active .presets-heading { display:none; }

@@ -836,36 +836,21 @@ document
     window.addEventListener("resize", () => closeTemplates());
   });
 
-// Saved presets populate the device type choices and read-only appearance details.
+// Saved presets populate device type choices for the selected segment.
 const typeProfileData = document.querySelector('#device-type-profiles');
 if (typeProfileData) {
   const profiles = JSON.parse(typeProfileData.textContent);
   const segment = document.querySelector('#device-form [name="category_id"]');
   const type = document.querySelector('#device-form [name="device_type"]');
-  const info = document.querySelector('#device-type-info');
-  const details = () => {
-    const profile = profiles.find(p => String(p.category_id) === segment.value && p.name === type.value);
-    info.hidden = !profile;
-    if (!profile) return;
-    document.querySelector('#assigned-type-name').textContent = profile.name;
-    document.querySelector('#assigned-type-ports').textContent = profile.physical_ports ?? 'Not set';
-    document.querySelector('#assigned-type-icon').src = profile.icon_asset;
-    const image = document.querySelector('#assigned-type-image');
-    image.hidden = !profile.image_asset;
-    if (profile.image_asset) image.src = profile.image_asset; else image.removeAttribute('src');
-  };
   const updateTypes = () => {
     const saved = type.value;
     type.replaceChildren(new Option('None',''));
     for (const profile of profiles.filter(p => String(p.category_id) === segment.value)) type.add(new Option(profile.name,profile.name));
     if (saved && [...type.options].some(option => option.value === saved)) type.value = saved;
     else if (type.options.length === 2) type.selectedIndex = 1;
-    details();
   };
   segment.addEventListener('change',updateTypes);
-  type.addEventListener('change',details);
-  // Preserve an existing selection, including explicit None, on the first render.
-  details();
+  // Server-rendered choices preserve the saved selection on first render.
 }
 
 // A changed endpoint cannot keep auto-observed identity belonging to the previous IP.
