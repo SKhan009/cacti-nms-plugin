@@ -1428,3 +1428,19 @@ if (protocolDefaultData) {
 
 // Close the protocol picker after opening the shared diagnostic dialog.
 document.addEventListener("click", event => { const link=event.target.closest(".device-diagnostic-menu a[data-tool]"); if(link)link.closest("details").open=false; });
+
+// Filter only ACL-authorized graphs already rendered for the selected device.
+(() => {
+  const grid=document.querySelector('#device-view-graphs');
+  if(!grid)return;
+  const search=document.querySelector('#device-graph-search'),columns=document.querySelector('#device-graph-columns');
+  const graphs=[...grid.querySelectorAll('figure')];
+  const update=()=>{
+    const query=search.value.trim().toLowerCase();let visible=0;
+    graphs.forEach(graph=>{graph.hidden=!graph.querySelector('figcaption').textContent.toLowerCase().includes(query);if(!graph.hidden)visible++;});
+    grid.dataset.columns=columns.value==='3'?'3':'2';
+    document.querySelector('#device-graph-count').textContent=`${visible} of ${graphs.length} graphs`;
+    document.querySelector('#device-graph-empty').hidden=!graphs.length||visible>0;
+  };
+  search.addEventListener('input',update);columns.addEventListener('change',update);update();
+})();

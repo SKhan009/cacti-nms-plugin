@@ -2732,3 +2732,7 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 .device-panel>.table-wrap:has(#mibFiles){overflow-x:auto;max-width:100%}#mibFiles{table-layout:auto;min-width:980px}#mibFiles th:last-child,#mibFiles td:last-child{width:330px}#mibFiles td{vertical-align:middle}
 
 .device-diagnostic-menu .device-tool{position:relative}.device-diagnostic-menu summary::-webkit-details-marker{display:none}.device-tool-caret{position:absolute;right:2px;bottom:1px;font-size:11px;line-height:1}.device-diagnostic-menu[open]>.device-tool{background:#155cff}
+
+.device-graph-filters{display:grid;grid-template-columns:minmax(0,1fr) 180px;gap:24px;align-items:end;margin-bottom:16px}.device-graph-filters .field{margin:0}
+.device-view-graphs[data-columns="2"]{grid-template-columns:repeat(2,minmax(0,1fr))}.device-view-graphs[data-columns="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}.device-view-graphs figure[hidden]{display:none}.device-view-graphs img{width:100%;height:auto}.device-view-graphs figure{min-width:0}.device-view-graphs figcaption{overflow-wrap:anywhere}
+@media(max-width:800px){.device-view-graphs[data-columns="3"]{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:550px){.device-graph-filters{grid-template-columns:1fr}.device-view-graphs[data-columns]{grid-template-columns:1fr}}
