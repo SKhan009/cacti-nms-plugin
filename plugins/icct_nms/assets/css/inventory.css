@@ -2649,7 +2649,7 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 
 .device-shape-symbol { display:inline-block; flex-shrink:0; width:24px; height:16px; border:1px solid currentColor; border-radius:2px; background:#a2d39f; vertical-align:middle; box-sizing:border-box; }
 .device-shape-symbol.shape-square { width:22px; height:22px; }
-.device-shape-symbol.shape-wide { width:38px; height:16px; }
+.device-shape-symbol.shape-wide { width:46px; height:13px; }
 .device-shape-symbol.shape-tall { width:16px; height:30px; }
 .type-shape-options { display:flex; flex-wrap:wrap; gap:16px; border:0; padding:0; margin:0; }
 .type-shape-choice { display:flex; align-items:center; gap:12px; min-width:190px; padding:16px; border:1px solid #c6c6c6; cursor:pointer; }
@@ -2659,7 +2659,7 @@ body.icct-inventory:has(.protocol-form) { background: #fff; }
 .device-type-shape-preview { margin-top:8px; font-size:12px; color:#525252; }
 .rack-device .device-shape-symbol { width:16px; height:12px; background:transparent; margin-right:6px; }
 .rack-device .device-shape-symbol.shape-square { width:14px; height:14px; }
-.rack-device .device-shape-symbol.shape-wide { width:22px; height:10px; }
+.rack-device .device-shape-symbol.shape-wide { width:28px; height:8px; }
 .rack-device .device-shape-symbol.shape-tall { width:10px; height:18px; }
 .icct-map-device-name .device-shape-symbol { margin-right:8px; }
 

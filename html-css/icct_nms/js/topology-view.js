@@ -4,8 +4,8 @@ const source=document.querySelector('#topologyData');if(!source)return;
 const data=JSON.parse(source.textContent),stage=document.querySelector('#topologyStage'),canvas=document.querySelector('#topologyCanvas'),cards=document.querySelector('#topologyDevices'),svg=document.querySelector('#topologyLinks'),panel=document.querySelector('#icct-panel-topology'),save=document.querySelector('#topologySave'),message=document.querySelector('#topologyMessage'),dialog=document.querySelector('#topologyDraftDialog');
 let editing=false,busy=false,scale=1,dirty=false,pending=null,bypass=false,drag=null;
 const devices=data.devices,positions={},core=devices.find(d=>Number(d.id)===Number(data.core_id));
-const others=devices.filter(d=>d!==core),cols=Math.max(4,Math.ceil(Math.sqrt(others.length*1.7))),rows=Math.ceil(others.length/cols);
-others.forEach((d,i)=>{const row=Math.floor(i/cols),col=i%cols;positions[d.id]=[.08+col*.84/Math.max(1,cols-1),row<Math.ceil(rows/2)? .12+row*.16/Math.max(1,Math.ceil(rows/2)-1):.70+(row-Math.ceil(rows/2))*.20/Math.max(1,rows-Math.ceil(rows/2)-1)];});
+const others=devices.filter(d=>d!==core),cols=Math.max(4,Math.ceil(Math.sqrt(others.length*1.15))),rows=Math.ceil(others.length/cols);
+others.forEach((d,i)=>{const row=Math.floor(i/cols),col=i%cols;positions[d.id]=[.08+col*.84/Math.max(1,cols-1),row<Math.ceil(rows/2)? .08+row*.32/Math.max(1,Math.ceil(rows/2)-1):.60+(row-Math.ceil(rows/2))*.32/Math.max(1,rows-Math.ceil(rows/2)-1)];});
 if(core)positions[core.id]=[.5,.5];
 Object.entries(data.layout).forEach(([id,p])=>{if(positions[id]&&Number(id)!==Number(core?.id))positions[id]=p;});
 let saved=structuredClone(positions);
@@ -24,6 +24,13 @@ function showDevice(d){
 function render(){
  cards.replaceChildren();canvas.style.transform='scale('+scale+')';canvas.style.width='100%';canvas.style.height='100%';
  const w=canvas.clientWidth,h=canvas.clientHeight;
+ // Fit dense inventories without changing the saved device coordinates.
+ const sizes={square:[52,52],rectangle:[72,52],wide:[156,44],tall:[44,72]};
+ const dimensions=devices.map(d=>sizes[d.shape]||sizes[d===core?'wide':'rectangle']);
+ const maxWidth=Math.max(1,...dimensions.map(s=>s[0])),maxHeight=Math.max(1,...dimensions.map(s=>s[1]));
+ const halfRows=Math.ceil(rows/2),rowGap=halfRows>1?h*.32/(halfRows-1):h*.20;
+ const densityScale=devices.length>20?Math.min(1,(w*.84/Math.max(1,cols-1)-8)/maxWidth,(rowGap-8)/maxHeight):1;
+ canvas.style.setProperty('--topology-node-scale',String(Math.max(.15,densityScale)));
  devices.forEach(d=>{const card=el('div','topology-device '+window.icctStatusClass(d.status)+' shape-'+(['square','rectangle','wide','tall'].includes(d.shape)?d.shape:(d===core?'wide':'rectangle')));card.dataset.deviceId=d.id;card.classList.toggle('fixed-core',d===core);card.tabIndex=0;card.setAttribute('role','button');card.setAttribute('aria-label',d.name+' · '+d.status);card.title=d.name+' · '+d.status;card.style.left=(positions[d.id][0]*100)+'%';card.style.top=(positions[d.id][1]*100)+'%';const heading=el('div','topology-device-heading');if(d.network_asset){const icon=el('img','topology-device-icon');icon.src=d.network_asset;icon.alt='';icon.draggable=false;heading.append(icon);}heading.append(el('strong','',d.short_name||d.name));card.append(heading);const badge=el('span','topology-alarm',String(d.fault_count||0));badge.style.background=d.alarm?severityColors[d.alarm.severity]||'#aaa':'white';badge.title=d.alarm?d.alarm.severity+': '+d.alarm.message:'No active fault';card.append(badge);
  card.addEventListener('click',()=>{if(!editing&&!busy)showDevice(d);});
  card.addEventListener('pointerdown',e=>{if(!editing||busy||d===core||e.button!==0)return;e.preventDefault();drag={id:d.id,card};card.setPointerCapture(e.pointerId);card.classList.add('dragging');});
