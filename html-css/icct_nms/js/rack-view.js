@@ -2,25 +2,23 @@
 (() => {
   'use strict';
   const source=document.querySelector('#rackViewData');if(!source)return;
-  let data=JSON.parse(source.textContent),editing=false,busy=false,scale=1,rackOffset=0;
-  const node=document.querySelector('#rackViewNode'),cabinets=document.querySelector('#rackCabinets'),pool=document.querySelector('#rackDevicePool'),message=document.querySelector('#rackViewMessage'),manual=document.querySelector('#rackManualPlacement');
-  const deviceSelect=document.querySelector('#rackMoveDevice'),rackSelect=document.querySelector('#rackMoveRack'),startInput=document.querySelector('#rackMoveStart'),heightInput=document.querySelector('#rackMoveHeight');
+  let data=JSON.parse(source.textContent),editing=false,busy=false,scale=1,rackOffset=0,savedData=structuredClone(data),changes=new Map(),selectedNode='',leavePending=false,bypassLeave=false;
+  const node=document.querySelector('#rackViewNode'),cabinets=document.querySelector('#rackCabinets'),pool=document.querySelector('#rackDevicePool'),message=document.querySelector('#rackViewMessage'),actions=document.querySelector('#rackEditActions');
+  const saveButton=document.querySelector('#rackSaveDraft'),dialog=document.querySelector('#rackDraftDialog');
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
   function currentNode(){return data.nodes.find(n=>String(n.id)===node.value);}
   function nodeDevices(){const selected=currentNode();return selected?data.devices.filter(d=>Number(d.site_id)===Number(selected.site_id)&&(!d.node_id||Number(d.node_id)===Number(selected.id))):[];}
   function populateNodes(){const selected=node.value;node.replaceChildren(new Option('Select node',''));data.nodes.forEach(n=>node.add(new Option(n.name+' — '+n.site_name,String(n.id))));node.value=data.nodes.some(n=>String(n.id)===selected)?selected:data.nodes.length?String(data.nodes[0].id):'';}
-  function card(device){const n=el('div','rack-device '+(device.status==='Up'?'online':device.status==='Down'?'offline':'other'));n.dataset.deviceId=device.id;n.draggable=editing;n.tabIndex=0;const link=el('a','',device.name);link.href='device.php?id='+device.id;n.append(link,el('small','',device.status));n.title=device.name+' · '+device.status;n.addEventListener('dragstart',event=>{if(!editing||busy){event.preventDefault();return;}event.dataTransfer.setData('text/plain',String(device.id));deviceSelect.value=String(device.id);heightInput.value=device.height||1;});return n;}
-  function droppable(target,rackId,unit,peripheral=false){target.addEventListener('dragover',event=>{if(editing&&!busy){event.preventDefault();target.classList.add('drag-over');}});target.addEventListener('dragleave',()=>target.classList.remove('drag-over'));target.addEventListener('drop',event=>{event.preventDefault();target.classList.remove('drag-over');const id=Number(event.dataTransfer.getData('text/plain'));if(editing&&nodeDevices().some(d=>d.id===id))save(id,rackId,unit,Number(heightInput.value),peripheral);});}
+  function card(device){const n=el('div','rack-device '+(device.status==='Up'?'online':device.status==='Down'?'offline':'other'));n.dataset.deviceId=device.id;n.draggable=editing;n.tabIndex=0;const link=el('a','',device.name);link.href='device.php?id='+device.id;n.append(link,el('small','',device.status));n.title=device.name+' · '+device.status;n.addEventListener('dragstart',event=>{if(!editing||busy){event.preventDefault();return;}event.dataTransfer.setData('text/plain',String(device.id));});return n;}
+  function droppable(target,rackId,unit,peripheral=false){target.addEventListener('dragover',event=>{if(editing&&!busy){event.preventDefault();target.classList.add('drag-over');}});target.addEventListener('dragleave',()=>target.classList.remove('drag-over'));target.addEventListener('drop',event=>{event.preventDefault();target.classList.remove('drag-over');const id=Number(event.dataTransfer.getData('text/plain'));if(editing&&nodeDevices().some(d=>d.id===id))stage(id,rackId,unit,peripheral);});}
   function render(){
     const selected=currentNode(),racks=data.racks.filter(r=>String(r.node_id)===node.value),devices=nodeDevices();
     rackOffset=Math.min(rackOffset,Math.max(0,Math.floor((racks.length-1)/3)*3));
     const previous=document.querySelector('#rackPrevious'),next=document.querySelector('#rackNext');
     previous.hidden=next.hidden=racks.length<=3;previous.disabled=rackOffset===0;next.disabled=rackOffset+3>=racks.length;
     document.querySelector('#rackPageStatus').textContent=racks.length>3?'Racks '+(rackOffset+1)+'–'+Math.min(rackOffset+3,racks.length)+' of '+racks.length:'';
-    cabinets.replaceChildren();pool.hidden=!editing;manual.hidden=!editing;document.querySelector('#rackViewEdit').hidden=!data.management;
+    cabinets.replaceChildren();pool.hidden=!editing;actions.hidden=!editing;saveButton.disabled=busy||!changes.size;node.disabled=busy;document.querySelector('#rackViewEdit').hidden=!data.management;
     document.querySelector('#rackViewEdit').setAttribute('aria-pressed',String(editing));
-    const oldDevice=deviceSelect.value;deviceSelect.replaceChildren(new Option('Select device',''));devices.forEach(d=>deviceSelect.add(new Option(d.name,String(d.id))));if(devices.some(d=>String(d.id)===oldDevice))deviceSelect.value=oldDevice;
-    rackSelect.replaceChildren(new Option('Unassigned','0'));racks.forEach(r=>rackSelect.add(new Option(r.name+' — Rack '+r.rack_number,String(r.id))));
     const list=document.querySelector('#rackDeviceList');list.replaceChildren();devices.forEach(d=>list.append(card(d)));droppableOncePool();
     if(!selected){cabinets.append(el('p','','Add a node and rack configuration in Presets to get started.'));return;}
     if(!racks.length)cabinets.append(el('p','','This node has no racks. Select its rack configuration in Presets.'));
@@ -35,18 +33,58 @@
     });
   }
   let poolBound=false;function droppableOncePool(){if(!poolBound){droppable(pool,0,0);poolBound=true;}}
-  async function refresh(){const response=await fetch('rack_placement.php',{credentials:'same-origin',cache:'no-store'});const result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||'Unable to refresh racks.');data=result.data;populateNodes();render();}
-  async function save(id,rackId,start,height,peripheral=false){
-    if(busy)return;const device=data.devices.find(d=>d.id===id);if(!device){message.textContent='Select a device.';return;}
-    if(rackId&&!peripheral&&(!Number.isInteger(start)||!Number.isInteger(height)||start<1||height<1||height>100)){message.textContent='Enter valid start unit and device height.';return;}
-    const body=new FormData(document.querySelector('#rackViewToken'));body.set('host_id',id);body.set('rack_id',rackId);body.set('revision',device.revision);body.set('peripheral',peripheral?'1':'0');if(rackId&&!peripheral)for(let u=start;u<start+height;u++)body.append('units[]',String(u));
-    busy=true;message.textContent='Saving placement…';
-    try{const response=await fetch('rack_placement.php',{method:'POST',credentials:'same-origin',body});const result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||'Placement was not saved.');data=result.data;populateNodes();render();message.textContent='Placement saved. Add/Edit Device uses this same placement.';}catch(error){message.textContent=error.message;try{await refresh();}catch(refreshError){message.textContent+=' '+refreshError.message;}}finally{busy=false;}
+  async function refresh(){const response=await fetch('rack_placement.php',{credentials:'same-origin',cache:'no-store'});const result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||'Unable to refresh racks.');data=result.data;savedData=structuredClone(data);populateNodes();render();}
+  function placement(d){return [d.rack_id,d.start,d.peripheral,d.node_id];}
+  function stage(id,rackId,start,peripheral){
+    const device=data.devices.find(d=>d.id===id),rack=data.racks.find(r=>Number(r.id)===rackId);if(!device||busy)return;
+    const height=device.height||1;
+    if(rackId&&!peripheral){
+      if(start+height-1>Number(rack.unit_count)){message.textContent='The device extends beyond the rack capacity.';return;}
+      const end=start+height-1;
+      const collision=(rack.blocked||[]).some(u=>Number(u)>=start&&Number(u)<=end)||data.devices.some(d=>d.id!==id&&d.rack_id===rackId&&!d.peripheral&&d.start<=end&&d.start+d.height-1>=start);
+      if(collision){message.textContent='These rack units are already occupied.';return;}
+    }
+    Object.assign(device,{rack_id:rackId,start:rackId&&!peripheral?start:0,peripheral:!!(rackId&&peripheral),node_id:rackId?Number(rack.node_id):0});
+    const original=savedData.devices.find(d=>d.id===id);
+    if(JSON.stringify(placement(device))===JSON.stringify(placement(original)))changes.delete(id);
+    else changes.set(id,{host_id:id,rack_id:rackId,units:rackId&&!peripheral?Array.from({length:height},(_,i)=>start+i):[],peripheral:device.peripheral,revision:original.revision});
+    message.textContent='';render();
   }
-  node.addEventListener('change',()=>{rackOffset=0;message.textContent='';render();});
-  document.querySelector('#rackViewEdit').addEventListener('click',()=>{editing=!editing;render();message.textContent=editing?'Drag devices to consecutive rack units or a peripheral slot. Changes save when dropped.':'';});
-  deviceSelect.addEventListener('change',()=>{const d=data.devices.find(d=>String(d.id)===deviceSelect.value);if(d)heightInput.value=d.height||1;});
-  document.querySelector('#rackMoveSave').addEventListener('click',()=>save(Number(deviceSelect.value),Number(rackSelect.value),Number(startInput.value),Number(heightInput.value)));
+  async function saveDraft(){
+    if(busy)return false;if(!changes.size)return true;
+    const body=new FormData(document.querySelector('#rackViewToken'));body.set('moves',JSON.stringify([...changes.values()]));busy=true;render();message.textContent='Saving…';
+    try{const response=await fetch('rack_placement.php',{method:'POST',credentials:'same-origin',body});const result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||'Changes could not be saved.');data=result.data;savedData=structuredClone(data);changes.clear();populateNodes();message.textContent='';return true;}
+    catch(error){message.textContent=error.message;return false;}
+    finally{busy=false;render();}
+  }
+  function discard(){data=structuredClone(savedData);changes.clear();message.textContent='';render();}
+  async function leave(action){
+    if(busy||leavePending)return;
+    if(!changes.size){action();return;}
+    leavePending=true;dialog.returnValue='cancel';dialog.showModal();
+    const choice=await new Promise(resolve=>{dialog.addEventListener('close',()=>resolve(dialog.returnValue||'cancel'),{once:true});});
+    leavePending=false;
+    if(choice==='discard'){discard();action();}
+    else if(choice==='save'&&await saveDraft())action();
+  }
+  dialog.querySelectorAll('[data-rack-choice]').forEach(button=>button.addEventListener('click',()=>dialog.close(button.dataset.rackChoice)));
+  node.addEventListener('change',()=>{const requested=node.value;node.value=selectedNode;leave(()=>{node.value=requested;selectedNode=requested;rackOffset=0;message.textContent='';render();});});
+  document.querySelector('#rackViewEdit').addEventListener('click',()=>{if(editing)leave(()=>{editing=false;render();});else{editing=true;selectedNode=node.value;render();}});
+  saveButton.addEventListener('click',saveDraft);
+  document.addEventListener('click',event=>{
+    if(bypassLeave||!editing)return;
+    const target=event.target.closest('a[href],.icct-view-tabs [role="tab"]');
+    if(!target||target.dataset.view==='rack'||target.getAttribute('href')?.startsWith('#'))return;
+    if(busy||changes.size){event.preventDefault();event.stopImmediatePropagation();leave(()=>{editing=false;render();bypassLeave=true;target.click();bypassLeave=false;});}
+    else{editing=false;render();}
+  },true);
+  document.addEventListener('icct:before-view-change',event=>{
+    if(bypassLeave||!editing||event.detail.tab.dataset.view==='rack')return;
+    if(busy||changes.size){event.preventDefault();leave(()=>{editing=false;render();bypassLeave=true;event.detail.tab.click();bypassLeave=false;});}
+    else{editing=false;render();}
+  });
+  // Browser reload/close uses the native unsaved-changes warning.
+  window.addEventListener('beforeunload',event=>{if(changes.size||busy){event.preventDefault();event.returnValue='';}});
   function zoom(){cabinets.style.setProperty('--rack-scale',scale);}
   document.querySelector('#rackPrevious').addEventListener('click',()=>{rackOffset=Math.max(0,rackOffset-3);render();});
   document.querySelector('#rackNext').addEventListener('click',()=>{rackOffset+=3;render();});
@@ -54,5 +92,5 @@
   document.querySelector('#rackViewZoomOut').addEventListener('click',()=>{scale=Math.max(.6,scale-.1);zoom();});
   document.querySelector('#rackViewFit').addEventListener('click',()=>{scale=1;zoom();document.querySelector('#icct-panel-rack').scrollTop=0;});
   document.querySelector('#rackViewFullscreen').addEventListener('click',()=>{if(document.fullscreenElement)document.exitFullscreen();else document.querySelector('.icct-map-panel').requestFullscreen().catch(()=>message.textContent='Fullscreen is unavailable.');});
-  populateNodes();render();setInterval(()=>{if(!editing&&!busy&&!document.querySelector('#icct-panel-rack').hidden)refresh().catch(error=>message.textContent=error.message);},30000);
+  populateNodes();selectedNode=node.value;render();setInterval(()=>{if(!editing&&!busy&&!document.querySelector('#icct-panel-rack').hidden)refresh().catch(error=>message.textContent=error.message);},30000);
 })();

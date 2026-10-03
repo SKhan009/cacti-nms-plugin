@@ -151,7 +151,7 @@ Map View now draws only the locally served India state boundaries on white. The 
 
 ### Rack placement
 
-Dashboard Rack View displays numbered rack cabinets from node/rack presets. Select a node and use the pencil control to drag devices into consecutive units, peripheral slots, or the device list to unassign them. Unassigned devices at the node site remain available in the list. A manual placement form provides an alternative to dragging.
+Dashboard Rack View displays numbered rack cabinets from node/rack presets. Select a node and use the pencil control to drag devices into consecutive units, peripheral slots, or the device list to unassign them. Unassigned devices at the node site remain available in the list. Dragging stages a draft without changing saved placements. Click Save to persist all moves together. Leaving edit mode, changing node or switching views prompts Save, Discard or Keep editing; reloading or closing the page uses the browser unsaved-changes warning.
 
 Add/Edit Device uses Rack Name, Rack Number and a multi-unit picker. Occupied units are disabled; a device must occupy consecutive units. Both surfaces share a locked, transactional placement service with native management/device permissions, capacity and overlap checks, and stale-move detection. Numbered placements use the existing rack_devices table; peripheral placement uses plugin-owned metadata. Placement edits enter the device configuration history.
 

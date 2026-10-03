@@ -21,6 +21,8 @@ function db_fetch_cell_prepared($sql,$args){
  return 0;
 }
 function icct_backend_category_execute($sql,$args=[]){
+ if($sql==='START TRANSACTION')$GLOBALS['snapshot']=[$GLOBALS['placements'],$GLOBALS['meta']];
+ if($sql==='ROLLBACK')[$GLOBALS['placements'],$GLOBALS['meta']]=$GLOBALS['snapshot'];
  if(str_contains($sql,'INSERT INTO plugin_icct_nms_rack_devices'))$GLOBALS['placements'][$args[0]]=['rack_id'=>$args[1],'start_unit'=>$args[2],'unit_height'=>$args[3],'updated_at'=>'now'];
  elseif(str_contains($sql,'DELETE FROM plugin_icct_nms_rack_devices'))unset($GLOBALS['placements'][$args[0]]);
  elseif(str_contains($sql,'INSERT INTO plugin_icct_nms_meta'))$GLOBALS['meta'][$args[0]]=$args[1];
@@ -47,6 +49,17 @@ icct_nms_rack_place(3,6,0,[]);
 if(isset($placements[3])||isset($meta['rack_peripheral_3'])||isset($meta['device_node_id_3']))throw new LogicException('Unassignment failed');
 $meta['device_node_id_3']='2';icct_nms_rack_place(3,6,0,[]);if($meta['device_node_id_3']!=='2')throw new LogicException('Manual save erased direct node membership');
 reject(fn()=>icct_nms_rack_place(3,6,1,['1']));icct_nms_rack_place(3,6,0,[],false,null,true);if(isset($meta['device_node_id_3']))throw new LogicException('Explicit unassignment failed');
+// Draft saves are atomic and reject stale or duplicate moves before changing slots.
+$placements=[];$meta=[];
+$move=fn($id,$units,$revision)=>['host_id'=>$id,'rack_id'=>1,'units'=>$units,'revision'=>$revision];
+$draft=[$move(3,['2'],icct_nms_rack_revision(3)),$move(4,['4','5'],icct_nms_rack_revision(4))];
+if(icct_nms_rack_save_draft($draft)!==[3,4]||$placements[4]['unit_height']!==2)throw new LogicException('Batch save failed');
+$before=[$placements,$meta];
+reject(fn()=>icct_nms_rack_save_draft($draft));
+$valid=$move(3,['6'],icct_nms_rack_revision(3));
+reject(fn()=>icct_nms_rack_save_draft([$valid,$valid]));
+reject(fn()=>icct_nms_rack_save_draft([$valid,$move(4,['24','25'],icct_nms_rack_revision(4))]));
+if([$placements,$meta]!==$before)throw new LogicException('Failed batch changed saved placements');
 $denied=true;try{icct_nms_rack_place(3,6,1,['1']);throw new LogicException('Access bypass');}catch(RuntimeException $expected){}
 if(!in_array('ROLLBACK',$transactions,true))throw new LogicException('Failed moves did not rollback');
 echo "Rack units, overlap, capacity, stale edits, site, permissions, peripheral transitions and unassignment passed.\n";

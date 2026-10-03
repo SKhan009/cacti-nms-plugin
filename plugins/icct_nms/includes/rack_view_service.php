@@ -14,11 +14,11 @@ function icct_nms_rack_revision($id) {
     $peripheral=(string)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['rack_peripheral_'.$id]);
     return hash('sha256',json_encode([$row,$peripheral]));
 }
-function icct_nms_rack_place($id,$site,$rack,$units,$peripheral=false,$revision=null,$unassignNode=false) {
+function icct_nms_rack_place($id,$site,$rack,$units,$peripheral=false,$revision=null,$unassignNode=false,$ownTransaction=true) {
     icct_backend_require_management(3); icct_backend_require_device_access($id);
     $lock='icct_backend_racks_'.substr(hash('sha256',(string)db_fetch_cell('SELECT DATABASE()')),0,32);
-    if ((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',[$lock])!==1) throw new RuntimeException('Rack configuration is busy. Retry shortly.');
-    icct_backend_category_execute('START TRANSACTION');
+    if ($ownTransaction && (int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',[$lock])!==1) throw new RuntimeException('Rack configuration is busy. Retry shortly.');
+    if ($ownTransaction) icct_backend_category_execute('START TRANSACTION');
     try {
         $host=db_fetch_row_prepared("SELECT site_id FROM host WHERE id=? AND deleted='' FOR UPDATE",[$id]);
         if (!$host || (int)$host['site_id']!==$site) throw new InvalidArgumentException('Device site changed. Reload the page.');
@@ -39,9 +39,9 @@ function icct_nms_rack_place($id,$site,$rack,$units,$peripheral=false,$revision=
         else icct_backend_category_execute('DELETE FROM plugin_icct_nms_meta WHERE meta_key=?',['rack_peripheral_'.$id]);
         if ($rack) icct_backend_category_execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',['device_node_id_'.$id,(string)$record['node_id']]);
         elseif ($previousPlacement || $previousPeripheral || $unassignNode) icct_backend_category_execute('DELETE FROM plugin_icct_nms_meta WHERE meta_key=?',['device_node_id_'.$id]);
-        icct_backend_category_execute('COMMIT');
-    } catch (Throwable $error) {icct_backend_category_execute('ROLLBACK');throw $error;}
-    finally {db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]);}
+        if ($ownTransaction) icct_backend_category_execute('COMMIT');
+    } catch (Throwable $error) {if ($ownTransaction) icct_backend_category_execute('ROLLBACK');throw $error;}
+    finally {if ($ownTransaction) db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]);}
 }
 function icct_nms_rack_view_data() {
     $devices=icct_nms_inventory(); $allowed=[]; $out=[];
@@ -58,4 +58,42 @@ function icct_nms_rack_view_data() {
         foreach (db_fetch_assoc_prepared('SELECT host_id,start_unit,unit_height FROM plugin_icct_nms_rack_devices WHERE rack_id=?',[(int)$rack['id']]) as $placement) if (!isset($allowed[(int)$placement['host_id']])) for ($u=(int)$placement['start_unit'];$u<(int)$placement['start_unit']+(int)$placement['unit_height'];$u++) $rack['blocked'][]=$u;
     } unset($rack);
     return ['nodes'=>db_fetch_assoc('SELECT n.*,s.name AS site_name FROM plugin_icct_nms_rack_nodes n JOIN sites s ON s.id=n.site_id ORDER BY n.name'),'racks'=>$racks,'devices'=>$out,'management'=>is_realm_allowed(3)];
+}
+
+/** Save a whole drag draft atomically, including swaps between occupied units. */
+function icct_nms_rack_save_draft($moves) {
+    icct_backend_require_management(3);
+    if (!is_array($moves) || !$moves || count($moves)>200) throw new InvalidArgumentException('Select between 1 and 200 device moves.');
+    $lock='icct_backend_racks_'.substr(hash('sha256',(string)db_fetch_cell('SELECT DATABASE()')),0,32);
+    if ((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',[$lock])!==1) throw new RuntimeException('Rack configuration is busy. Retry shortly.');
+    icct_backend_category_execute('START TRANSACTION');
+    try {
+        $checked=[];
+        foreach ($moves as $move) {
+            if (!is_array($move)) throw new InvalidArgumentException('Invalid device move.');
+            $id=icct_backend_topology_integer($move['host_id'] ?? 0,1,16777215,'Device ID');
+            if (isset($checked[$id])) throw new InvalidArgumentException('Duplicate device move.');
+            icct_backend_require_device_access($id);
+            $host=db_fetch_row_prepared("SELECT site_id FROM host WHERE id=? AND deleted='' FOR UPDATE",[$id]);
+            if (!$host) throw new InvalidArgumentException('Device no longer exists.');
+            $revision=$move['revision'] ?? '';
+            if (!is_string($revision) || !hash_equals(icct_nms_rack_revision($id),$revision)) throw new InvalidArgumentException('A device placement changed in another page. Discard this draft and reload before editing.');
+            $rack=icct_backend_topology_integer($move['rack_id'] ?? 0,0,2147483647,'Rack');
+            if ($rack) {
+                $record=db_fetch_row_prepared('SELECT r.*,n.site_id FROM plugin_icct_nms_racks r JOIN plugin_icct_nms_rack_nodes n ON n.id=r.node_id WHERE r.id=? FOR UPDATE',[$rack]);
+                if (!$record || (int)$record['site_id']!==(int)$host['site_id']) throw new InvalidArgumentException('Select a rack at the device site.');
+                icct_nms_validate_device_node($id,(int)$record['node_id']);
+            }
+            $checked[$id]=['site'=>(int)$host['site_id'],'rack'=>$rack,'units'=>$move['units'] ?? [],'peripheral'=>($move['peripheral'] ?? false)===true];
+        }
+        // All original memberships and revisions are checked before freeing draft slots.
+        foreach ($checked as $id=>$move) {
+            icct_backend_category_execute('DELETE FROM plugin_icct_nms_rack_devices WHERE host_id=?',[$id]);
+            icct_backend_category_execute('DELETE FROM plugin_icct_nms_meta WHERE meta_key=?',['rack_peripheral_'.$id]);
+        }
+        foreach ($checked as $id=>$move) icct_nms_rack_place($id,$move['site'],$move['rack'],$move['units'],$move['peripheral'],null,$move['rack']===0,false);
+        icct_backend_category_execute('COMMIT');
+        return array_keys($checked);
+    } catch (Throwable $error) {icct_backend_category_execute('ROLLBACK');throw $error;}
+    finally {db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]);}
 }

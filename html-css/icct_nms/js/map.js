@@ -148,6 +148,7 @@
     document.getElementById('icctMapFullscreen').addEventListener('click', function () { if (document.fullscreenElement) document.exitFullscreen(); else document.querySelector('.icct-map-panel').requestFullscreen().catch(function () { status.textContent = 'Fullscreen is unavailable in this browser.'; }); });
     var tabs = Array.from(document.querySelectorAll('.icct-view-tabs [role="tab"]'));
     function selectView(tab) {
+        if (!document.dispatchEvent(new CustomEvent('icct:before-view-change', {cancelable: true, detail: {tab: tab}}))) return;
         tabs.forEach(function (item) { var selected = item === tab; item.setAttribute('aria-selected', String(selected)); item.tabIndex = selected ? 0 : -1; document.getElementById(item.getAttribute('aria-controls')).hidden = !selected; });
         status.hidden = tab.dataset.view !== 'map';
         document.querySelector('.icct-map-credits').hidden = tab.dataset.view !== 'map';
