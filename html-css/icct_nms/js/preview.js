@@ -1,7 +1,7 @@
 "use strict";
 // Preview feedback describes the local action without claiming a live device save.
 document.querySelectorAll('form[data-static-preview]').forEach(form => {
-    if (form.hasAttribute('data-delete-segment') || form.hasAttribute('data-delete-type') || form.hasAttribute('data-remove-graph-template') || form.hasAttribute('data-remove-data-query')) return;
+    if (form.hasAttribute('data-delete-segment') || form.hasAttribute('data-delete-type') || form.hasAttribute('data-delete-connection') || form.hasAttribute('data-remove-graph-template') || form.hasAttribute('data-remove-data-query')) return;
     form.addEventListener('submit', event => {
         event.preventDefault();
         const value = name => form.elements.namedItem(name)?.value || '';

@@ -1,14 +1,14 @@
 <div class="presets-heading">
-    <div><nav class="presets-breadcrumb" aria-label="Breadcrumb"><a href="<?= icct_nms_h($config['url_path']) ?>index.php">Dashboard</a> / <a href="presets.php">Presets</a> / <span><?= $activePreset === 'device-type' ? 'Device Type' : 'Segment' ?></span></nav><h1>Presets</h1></div>
-    <?php if ($management): ?><button class="button primary" type="button" id="<?= $activePreset === 'device-type' ? 'add-device-type' : 'add-segment' ?>">Add</button><?php endif; ?>
+    <div><nav class="presets-breadcrumb" aria-label="Breadcrumb"><a href="<?= icct_nms_h($config['url_path']) ?>index.php">Dashboard</a> / <a href="presets.php">Presets</a> / <span><?= $presetTabs[$activePreset] ?></span></nav><h1>Presets</h1></div>
+    <?php if ($management): ?><button class="button primary" type="button" id="<?= 'add-'.$activePreset ?>">Add</button><?php endif; ?>
 </div>
 <div class="presets-content">
 <nav class="presets-tabs" aria-label="Preset sections">
 <?php foreach (['Node','Site','Segment','Device Type','Network Connections','Protocols'] as $tab): ?>
-<?php if (in_array($tab,['Segment','Device Type'],true)): $key=$tab==='Segment'?'segment':'device-type'; ?><a href="<?= $key==='segment'?'presets.php#segment':'presets.php?tab=device-type' ?>" <?= $activePreset===$key?'aria-current="page"':'' ?>><?= icct_nms_h($tab) ?></a><?php else: ?><button type="button" disabled><?= icct_nms_h($tab) ?></button><?php endif; ?>
+<?php $key=array_search($tab,$presetTabs,true); if ($key!==false): ?><a href="presets.php?tab=<?= $key ?>" <?= $activePreset===$key?'aria-current="page"':'' ?>><?= icct_nms_h($tab) ?></a><?php else: ?><button type="button" disabled><?= icct_nms_h($tab) ?></button><?php endif; ?>
 <?php endforeach; ?>
 </nav>
-<?php if ($activePreset === 'device-type'): require __DIR__.'/device_types.php'; else: ?>
+<?php if ($activePreset === 'device-type'): require __DIR__.'/device_types.php'; elseif ($activePreset === 'network-connections'): require __DIR__.'/connections.php'; else: ?>
 <?php if ($management): ?>
 <form method="post" class="segment-editor" id="segment-editor" <?= $editing ? '' : 'hidden' ?>>
     <?php icct_nms_token(); ?><input type="hidden" name="action" value="save_segment"><input type="hidden" name="segment_id" value="<?= (int)$segmentId ?>">

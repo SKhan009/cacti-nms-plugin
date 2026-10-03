@@ -3,8 +3,12 @@ require __DIR__ . '/../../include/auth.php';
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/segment_service.php';
 require_once __DIR__ . '/includes/device_type_service.php';
-$activePreset = ($_GET['tab'] ?? '') === 'device-type' || in_array($_POST['action'] ?? '', ['save_type','delete_type'], true) ? 'device-type' : 'segment';
-$typeEditing = false; $typeValues = [];
+require_once __DIR__.'/includes/connection_service.php';
+$presetTabs = ['segment'=>'Segment','device-type'=>'Device Type','network-connections'=>'Network Connections'];
+$actionTabs = ['save_segment'=>'segment','delete_segment'=>'segment','save_type'=>'device-type','delete_type'=>'device-type','save_connection'=>'network-connections','delete_connection'=>'network-connections'];
+$requestedTab = $_GET['tab'] ?? 'segment';
+$activePreset = $actionTabs[is_string($_POST['action'] ?? null) ? $_POST['action'] : ''] ?? (is_string($requestedTab) && isset($presetTabs[$requestedTab]) ? $requestedTab : 'segment');
+$typeEditing = false; $typeValues = []; $connectionEditing = false; $connectionValues = [];
 $error = ''; $editing = false; $segmentId = 0; $segmentName = '';
 try {
     icct_nms_backend();
@@ -15,15 +19,22 @@ try {
         $editing = $activePreset === 'segment' && ($_POST['action'] ?? '') !== 'delete_segment';
         $typeEditing = $activePreset === 'device-type' && ($_POST['action'] ?? '') !== 'delete_type';
         $typeValues = $_POST;
+        $connectionValues = $_POST;
+        $connectionEditing = $activePreset === 'network-connections' && ($_POST['action'] ?? '') !== 'delete_connection';
         try {
             icct_nms_post();
-            if (!in_array($_POST['action'] ?? '', ['save_segment','delete_segment','save_type','delete_type'],true)) throw new InvalidArgumentException('Choose a valid preset action.');
-            $_SESSION['icct_nms_notice'] = $activePreset === 'device-type' ? icct_nms_save_device_type($_POST, $_FILES['device_image'] ?? null) : icct_nms_save_segment($_POST);
-            icct_nms_redirect($activePreset === 'device-type' ? 'presets.php?tab=device-type' : 'presets.php#segment');
+            if (!in_array($_POST['action'] ?? '', array_keys($actionTabs),true)) throw new InvalidArgumentException('Choose a valid preset action.');
+            if ($activePreset === 'device-type') $message = icct_nms_save_device_type($_POST, $_FILES['device_image'] ?? null);
+            elseif ($activePreset === 'network-connections') $message = icct_nms_save_connection($_POST);
+            else $message = icct_nms_save_segment($_POST);
+            $_SESSION['icct_nms_notice'] = $message;
+            icct_nms_redirect('presets.php?tab='.$activePreset);
+
         } catch (Throwable $failure) { $error = $failure->getMessage(); }
     }
     $segments = db_fetch_assoc('SELECT id,name FROM plugin_icct_nms_categories ORDER BY sort_order,name,id');
     $deviceTypes = icct_nms_device_types();
+    $connections = icct_nms_connections();
 } catch (Throwable $failure) { icct_nms_failure($failure); }
 $title = 'Presets';
 $notice = $_SESSION['icct_nms_notice'] ?? ''; unset($_SESSION['icct_nms_notice']);
