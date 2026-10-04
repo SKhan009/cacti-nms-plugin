@@ -9,11 +9,28 @@ function svg(tag,attributes,text){const e=document.createElementNS('http://www.w
 function widgets(){return preferences.dashboards[preferences.selected].widgets;}
 async function save(){if(saving){saveAgain=true;return;}saving=true;status.textContent='Saving…';do{saveAgain=false;const body=new FormData(document.querySelector('#dashboardToken'));body.set('dashboard_preferences',JSON.stringify(preferences));try{const r=await fetch('topology.php',{method:'POST',body,credentials:'same-origin'});if(!r.ok)throw Error();status.textContent='Layout saved';}catch(e){status.textContent='Layout could not be saved. Click to retry.';}}while(saveAgain);saving=false;}
 status.addEventListener('click',save);
+// Pack cards into short grid rows so tall cards do not stretch their neighbours.
+let packFrame=0;
+function packCards(){
+ cancelAnimationFrame(packFrame);packFrame=requestAnimationFrame(()=>{
+  if(extras.hidden)return;
+  const columns=extras.clientWidth>=1100?3:extras.clientWidth>=600?2:1;
+  extras.style.gridTemplateColumns='repeat('+columns+', minmax(0, 1fr))';
+  extras.querySelectorAll('.dashboard-card').forEach(card=>{
+   card.style.gridColumn='span 1';
+   if(!card.hidden&&!card.classList.contains('widget-expanded'))card.style.gridRowEnd='span '+Math.ceil(card.getBoundingClientRect().height+12);
+  });
+ });
+}
+const packingObserver=new ResizeObserver(packCards);
+packingObserver.observe(extras);
+document.querySelectorAll('.dashboard-card').forEach(card=>packingObserver.observe(card));
+window.addEventListener('resize',packCards);
 function layout(){
  select.replaceChildren();preferences.dashboards.forEach((d,i)=>{const option=element('option','Dashboard #'+(i+1));option.value=i;select.append(option);});select.value=preferences.selected;document.querySelector('#dashboardAdd').disabled=preferences.dashboards.length>=5;
  document.querySelectorAll('[data-widget]').forEach(card=>card.hidden=!widgets().includes(card.dataset.widget));
- const cards=widgets().filter(key=>key!=='topology');cards.forEach((key,index)=>(index<2?side:extras).append(document.querySelector('[data-widget="'+key+'"]')));
- side.hidden=cards.length===0;extras.hidden=cards.length<=2;grid.classList.toggle('dashboard-no-side',side.hidden);
+ const cards=widgets().filter(key=>key!=='topology');cards.forEach(key=>extras.append(document.querySelector('[data-widget="'+key+'"]')));
+ side.hidden=true;extras.hidden=cards.length===0;grid.classList.toggle('dashboard-no-side',side.hidden);
  let empty=document.querySelector('#dashboardEmpty');if(!empty){empty=element('p','This dashboard is empty. Use Add Widget to add a card.');empty.id='dashboardEmpty';grid.append(empty);}empty.hidden=widgets().length!==0;
  window.dispatchEvent(new Event('resize'));
 }
@@ -57,8 +74,8 @@ function paintDrop(){
 }
 function dragScroll(){
  if(!cardDrag?.active)return;
- const r=grid.getBoundingClientRect(),delta=cardDrag.y>r.bottom-55?18:cardDrag.y<r.top+55?-18:0;
- if(delta){grid.scrollTop+=delta;paintDrop();}dragFrame=requestAnimationFrame(dragScroll);
+ const delta=cardDrag.y>window.innerHeight-55?18:cardDrag.y<70?-18:0;
+ if(delta){window.scrollBy(0,delta);paintDrop();}dragFrame=requestAnimationFrame(dragScroll);
 }
 function endCardDrag(commit){
  if(!cardDrag)return;const state=cardDrag;cardDrag=null;cancelAnimationFrame(dragFrame);state.preview?.remove();state.card.classList.remove('card-dragging');document.body.classList.remove('dashboard-dragging');

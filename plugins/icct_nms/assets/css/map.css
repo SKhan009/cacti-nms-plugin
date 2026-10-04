@@ -189,3 +189,12 @@
 .problematic-total{padding:14px 0;border-bottom:1px solid #ddd}.problematic-total>span{color:#777}.problematic-total p{margin:10px 0 0}.problematic-total strong{font-size:36px;line-height:1.2;font-weight:400}.problematic-total p span{font-size:16px}
 .problematic-content h3{font-size:16px;font-weight:600;margin:16px 0 8px}.problematic-table{width:100%;border-collapse:separate;border-spacing:0 10px;font-size:15px}.problematic-table td{padding:6px 10px}.problematic-table td:last-child{width:16%;border-left:1px solid #ddd;font-variant-numeric:tabular-nums}.problematic-table a{color:#333;text-decoration:none}.problematic-table a:hover{color:#155cff;text-decoration:underline}.problematic-table td[colspan]{border-left:0;width:auto;color:#777;font-size:14px}.widget-expanded .problematic-content{max-height:none;flex:1}
 @media(max-width:600px){.dashboard-extra-widgets [data-widget=problematic]{grid-column:1}}
+
+/* The dashboard uses one page scrollbar, with independently sized packed cards. */
+.icct-map-page:has(.dashboard-grid){height:auto;min-height:0;flex:none}
+.dashboard-grid{flex:none;overflow:visible;align-items:start;align-content:start;grid-template-rows:auto auto}
+.dashboard-grid>.icct-map-panel{align-self:stretch;width:100%}
+.dashboard-grid .topology-layout{height:clamp(380px,calc(100dvh - 250px),650px)}
+.dashboard-extra-widgets{grid-auto-rows:1px;row-gap:0;column-gap:12px;grid-auto-flow:row dense;align-items:start}
+.dashboard-extra-widgets>.dashboard-card{align-self:start;width:100%;height:auto;margin:0;box-sizing:border-box}
+@media(max-width:900px){.dashboard-grid{grid-template-columns:minmax(0,1fr)}.dashboard-widgets{grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))}.dashboard-grid>.icct-map-panel,.dashboard-widgets,.dashboard-extra-widgets{grid-column:1;min-width:0}}
