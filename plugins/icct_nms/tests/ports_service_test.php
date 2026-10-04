@@ -24,3 +24,8 @@ expectPorts(!icct_backend_ports_view($host)['fresh'],'Disabled protocol reported
 $enabled=true;$snapshot['error']='Interface discovery failed.';
 expectPorts(!icct_backend_ports_view($host)['fresh'],'Failed collection reported live');
 echo "Port parsing, link states, physical connectors, stale observations and device isolation passed.\n";
+
+$extended=icct_backend_ports_parse(['index'=>['7'=>'7'],'name'=>['7'=>'Gi1/0/7'],'last_change'=>['7'=>'Timeticks: (12345) 0:02:03.45'],'bridge_ifindex'=>['2'=>'7'],'pvid'=>['2'=>'49'],'high_speed_mbps'=>['7'=>'10000']]);
+if($extended[0]['last_change_ticks']!==12345||$extended[0]['bridge_port']!==2||$extended[0]['vlan_id']!==49||$extended[0]['high_speed_mbps']!==10000)throw new RuntimeException('Extended interface parsing failed.');
+if(icct_backend_ports_ticks('1 day, 01:02:03.45')!==9012345||icct_backend_ports_ticks('unavailable')!==null)throw new RuntimeException('TimeTicks parsing failed.');
+echo "Interface speeds, bridge mapping, PVID and last-change TimeTicks passed.\n";

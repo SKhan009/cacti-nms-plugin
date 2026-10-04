@@ -28,6 +28,9 @@
         0,
         12,
     ) ?>" defer></script>
+<?php if (!empty($deviceViewPage)): ?>
+<script src="assets/js/device-view-ports.js?v=<?= substr(hash_file('sha256',__DIR__.'/../assets/js/device-view-ports.js'),0,12) ?>" defer></script>
+<?php endif; ?>
 <?php if (!empty($wizard)): ?>
     <dialog id="unsaved-dialog" aria-labelledby="unsaved-title">
         <div class="message-heading"><h2 id="unsaved-title">Unsaved changes</h2><button type="button" data-draft-choice="cancel" aria-label="Close unsaved changes">×</button></div>

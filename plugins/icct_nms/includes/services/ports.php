@@ -13,6 +13,13 @@ function icct_backend_ports_integer($value) {
     // Cacti strips the numeric suffix from named Net-SNMP enumerations.
     return ['up'=>1,'down'=>2,'testing'=>3,'unknown'=>4,'dormant'=>5,'notpresent'=>6,'lowerlayerdown'=>7,'true'=>1,'false'=>2][strtolower($value)] ?? null;
 }
+function icct_backend_ports_ticks($value) {
+    $value=trim((string)$value);
+    if(preg_match('/^\d+$/D',$value))return (int)$value;
+    if(preg_match('/\((\d+)\)/',$value,$match))return (int)$match[1];
+    if(preg_match('/^(?:(\d+)\s+days?,?\s*)?(\d+):(\d+):(\d+)(?:\.(\d+))?$/i',$value,$match))return ((int)($match[1]??0)*86400+(int)$match[2]*3600+(int)$match[3]*60+(int)$match[4])*100+(int)str_pad(substr($match[5]??'',0,2),2,'0');
+    return null;
+}
 function icct_backend_ports_parse($columns) {
     $ports=[];
     foreach ($columns['index'] ?? [] as $index=>$value) {
@@ -20,6 +27,9 @@ function icct_backend_ports_parse($columns) {
         $port=['index'=>(int)$index];
         foreach (['name','description','alias'] as $field) $port[$field]=trim((string)($columns[$field][$index] ?? '')," \t\r\n\"");
         foreach (['admin','oper','connector','type','speed_bps','high_speed_mbps'] as $field) $port[$field]=icct_backend_ports_integer($columns[$field][$index] ?? '');
+        $port['last_change_ticks']=icct_backend_ports_ticks($columns['last_change'][$index] ?? '');
+        $port['bridge_port']=null;$port['vlan_id']=null;
+        foreach($columns['bridge_ifindex'] ?? [] as $bridge=>$mapped)if(icct_backend_ports_integer($mapped)===(int)$index){$port['bridge_port']=(int)$bridge;$port['vlan_id']=icct_backend_ports_integer($columns['pvid'][$bridge] ?? '');break;}
         if (!$port['name']) $port['name']=$port['description'] ?: 'ifIndex '.$index;
         $ports[]=$port;
     }
@@ -35,7 +45,7 @@ function icct_backend_collect_ports() {
         $snapshot=['signature'=>icct_backend_ports_signature($host),'time'=>time(),'source'=>'SNMP IF-MIB / IF-X-MIB','ports'=>[],'error'=>''];
         try {
             $columns=[];
-            foreach (['index'=>'1.3.6.1.2.1.2.2.1.1','description'=>'1.3.6.1.2.1.2.2.1.2','type'=>'1.3.6.1.2.1.2.2.1.3','speed_bps'=>'1.3.6.1.2.1.2.2.1.5','high_speed_mbps'=>'1.3.6.1.2.1.31.1.1.1.15','admin'=>'1.3.6.1.2.1.2.2.1.7','oper'=>'1.3.6.1.2.1.2.2.1.8','name'=>'1.3.6.1.2.1.31.1.1.1.1','connector'=>'1.3.6.1.2.1.31.1.1.1.17','alias'=>'1.3.6.1.2.1.31.1.1.1.18'] as $field=>$oid) {
+            foreach (['index'=>'1.3.6.1.2.1.2.2.1.1','description'=>'1.3.6.1.2.1.2.2.1.2','type'=>'1.3.6.1.2.1.2.2.1.3','speed_bps'=>'1.3.6.1.2.1.2.2.1.5','high_speed_mbps'=>'1.3.6.1.2.1.31.1.1.1.15','admin'=>'1.3.6.1.2.1.2.2.1.7','oper'=>'1.3.6.1.2.1.2.2.1.8','name'=>'1.3.6.1.2.1.31.1.1.1.1','connector'=>'1.3.6.1.2.1.31.1.1.1.17','alias'=>'1.3.6.1.2.1.31.1.1.1.18','last_change'=>'1.3.6.1.2.1.2.2.1.9','uptime'=>'1.3.6.1.2.1.1.3','bridge_ifindex'=>'1.3.6.1.2.1.17.1.4.1.2','pvid'=>'1.3.6.1.2.1.17.7.1.4.5.1.1'] as $field=>$oid) {
                 $rows=cacti_snmp_walk($host['hostname'],$host['snmp_community'],'.'.$oid,$host['snmp_version'],$host['snmp_username'],$host['snmp_password'],$host['snmp_auth_protocol'],$host['snmp_priv_passphrase'],$host['snmp_priv_protocol'],$host['snmp_context'],$host['snmp_port'],$host['snmp_timeout'],(int)read_config_option('snmp_retries'),(int)$host['max_oids'],'ICCT Ports',$host['snmp_engine_id']);
                 foreach (is_array($rows)?$rows:[] as $row) {
                     $returned=ltrim((string)($row['oid'] ?? ''),'.'); $prefix=$oid.'.';
@@ -43,6 +53,7 @@ function icct_backend_collect_ports() {
                 }
                 if ($field==='index' && empty($columns['index'])) throw new RuntimeException('No interfaces reported. Check saved SNMP settings and IF-MIB access.');
             }
+            $snapshot['uptime_ticks']=icct_backend_ports_ticks($columns['uptime']['0'] ?? '');
             $snapshot['ports']=icct_backend_ports_parse($columns);
             if (!$snapshot['ports']) throw new RuntimeException('The device did not report valid interface indexes.');
         } catch (Throwable $error) { $snapshot['error']='Interface discovery failed. Check saved SNMP settings and device IF-MIB access.'; }
@@ -65,5 +76,24 @@ function icct_backend_ports_view($host) {
     $ports=$same && is_array($snapshot['ports'] ?? null)?$snapshot['ports']:[];
     foreach ($ports as &$port) $port['status']=icct_backend_ports_status($port,$fresh);
     unset($port);
-    return ['ports'=>$ports,'fresh'=>$fresh,'collected'=>$same?(int)($snapshot['time'] ?? 0):0,'source'=>'SNMP IF-MIB / IF-X-MIB','message'=>$fresh?'Port status from the latest collector observation.':($same && !empty($snapshot['error'])?$snapshot['error']:'Waiting for a current observation. Save SNMP settings; the assigned Cacti poller discovers interfaces automatically.')];
+    return ['ports'=>$ports,'fresh'=>$fresh,'collected'=>$same?(int)($snapshot['time'] ?? 0):0,'uptime_ticks'=>$same?($snapshot['uptime_ticks'] ?? null):null,'source'=>'SNMP IF-MIB / IF-X-MIB','message'=>$fresh?'Port status from the latest collector observation.':($same && !empty($snapshot['error'])?$snapshot['error']:'Waiting for a current observation. Save SNMP settings; the assigned Cacti poller discovers interfaces automatically.')];
+}
+
+/** Current neighbour reports from this authorized device, matched by ifIndex or name. */
+function icct_nms_port_connections($id,$ports) {
+    require_once __DIR__.'/../topology_configuration_service.php';
+    $hosts=array_column(icct_backend_nd_hosts(),null,'id');$host=$hosts[$id]??null;$connections=[];
+    foreach(db_fetch_assoc_prepared("SELECT protocol,status,succeeded_at,config_hash,data_json FROM plugin_icct_nms_discovery_snapshots WHERE host_id=? AND protocol IN ('lldp','cdp')",[$id]) as $snapshot){
+        if(!icct_nms_discovery_current($snapshot,$host))continue;
+        $payload=json_decode($snapshot['data_json'],true)??[];
+        foreach($payload['neighbors']??[] as $peer){
+            if(isset($peer['present'])&&!$peer['present'])continue;
+            foreach($ports as $port){
+                if(!empty($peer['local_ifindex'])?(int)$peer['local_ifindex']!==(int)$port['index']:strcasecmp(trim($peer['local_port']??''),$port['name'])!==0)continue;
+                $connections[$port['index']]['names'][]=$peer['remote_name']??($peer['peer_label']??'');
+                foreach($peer['management_addresses']??[] as $address)if(is_string($address))$connections[$port['index']]['addresses'][]=$address;
+            }
+        }
+    }
+    return $connections;
 }
