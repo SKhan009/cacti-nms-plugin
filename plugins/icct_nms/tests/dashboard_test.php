@@ -38,3 +38,10 @@ $map['unlocated'][0]['ports']=['fresh'=>true,'collected'=>100,'items'=>[['name'=
 verify(icct_nms_dashboard_readings($map)['ports'][0]['ports']['items'][0]['name']==='eth0');
 verify(count(icct_nms_dashboard_validate(['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms','ack','escalation','frequent','recent','ports']]]])['dashboards'][0]['widgets'])===8);
 echo "Observed ports and eight-card layouts passed\n";
+
+$affected=icct_nms_dashboard_readings($map)['problematic'];
+verify($affected['total_devices']===2&&count($affected['devices'])===2);
+verify($affected['devices'][0]['id']===2&&$affected['devices'][0]['counts']['Major']===2);
+verify(icct_nms_dashboard_readings(['unlocated'=>[],'sites'=>[]])['problematic']===['total_devices'=>0,'devices'=>[]]);
+verify(count(icct_nms_dashboard_validate(['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms','ack','escalation','frequent','recent','ports','problematic']]]])['dashboards'][0]['widgets'])===9);
+echo "Problematic device severity counts, device association and nine-card layouts passed\n";

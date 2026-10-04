@@ -2,7 +2,7 @@
 'use strict';
 const dataElement=document.querySelector('#dashboardData');if(!dataElement)return;
 const data=JSON.parse(dataElement.textContent);let preferences=data.preferences,readings=data.readings,mode='severity',saving=false,saveAgain=false;
-const names={topology:'Topology / Rack / Image / Map',birds:'Birds Eye View',alarms:'Alarm Overview',ack:'Ack Overview',escalation:'Escalation Overview',frequent:'Top 10 Frequent Alarms by Count',recent:'Recent Alarms (25)',ports:'Device Interface (Ports) Overview'},colors={Critical:'#ff4148',Major:'#ff7226',Minor:'#ff9b17',Warning:'#43aa91',Information:'#277f9b'},palette=['#737eff','#6bce95','#ffb14e','#03cfeb','#a585ff','#2499ff','#ff8585','#34bbcc'];
+const names={topology:'Topology / Rack / Image / Map',birds:'Birds Eye View',alarms:'Alarm Overview',ack:'Ack Overview',escalation:'Escalation Overview',frequent:'Top 10 Frequent Alarms by Count',recent:'Recent Alarms (25)',ports:'Device Interface (Ports) Overview',problematic:'Problematic Devices by Active Alarms Count'},colors={Critical:'#ff4148',Major:'#ff7226',Minor:'#ff9b17',Warning:'#43aa91',Information:'#277f9b'},palette=['#737eff','#6bce95','#ffb14e','#03cfeb','#a585ff','#2499ff','#ff8585','#34bbcc'];
 const select=document.querySelector('#dashboardSelect'),picker=document.querySelector('.dashboard-widget-picker'),status=document.querySelector('#dashboardSaveStatus'),side=document.querySelector('#dashboardWidgets'),extras=document.querySelector('#dashboardExtraWidgets'),grid=document.querySelector('.dashboard-grid');
 function element(tag,text){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;}
 function svg(tag,attributes,text){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attributes).forEach(([k,v])=>e.setAttribute(k,v));if(text!==undefined)e.textContent=text;return e;}
@@ -30,7 +30,7 @@ addWidget.addEventListener('click',()=>{
 });
 document.addEventListener('click',e=>{if(!picker.contains(e.target))closePicker();});
 picker.addEventListener('keydown',e=>{if(e.key==='Escape'){closePicker();addWidget.focus();}});
-document.querySelectorAll('[data-remove-widget]').forEach(button=>button.addEventListener('click',()=>{preferences.dashboards[preferences.selected].widgets=widgets().filter(w=>w!==button.dataset.removeWidget);if(button.dataset.removeWidget==='recent')collapseRecent();if(button.dataset.removeWidget==='ports')collapsePorts();layout();save();}));
+document.querySelectorAll('[data-remove-widget]').forEach(button=>button.addEventListener('click',()=>{preferences.dashboards[preferences.selected].widgets=widgets().filter(w=>w!==button.dataset.removeWidget);if(button.dataset.removeWidget==='recent')collapseRecent();if(button.dataset.removeWidget==='ports')collapsePorts();if(button.dataset.removeWidget==='problematic')collapseProblematic();layout();save();}));
 function move(key,target,after){
  const list=widgets(),old=list.indexOf(key),to=list.indexOf(target);
  if(key==='topology'||target==='topology'||old<0||to<0||old===to)return;
@@ -114,6 +114,19 @@ function frequentAlarms(){
  for(const alarm of readings.frequent||[]){const row=element('tr'),name=element('td',alarm.name),severity=element('td'),badge=element('span',({Warning:'Warn',Information:'Info'})[alarm.severity]||alarm.severity),count=element('td',String(alarm.count));badge.className='frequent-severity';badge.style.background=colors[alarm.severity]||'#ddd';severity.append(badge);row.append(name,severity,count);body.append(row);}
  if(!body.children.length){const row=element('tr'),cell=element('td','No active alarms.');cell.colSpan=3;row.append(cell);body.append(row);}
 }
+function problematicDevices(){
+ const selected=Array.from(document.querySelectorAll('[data-problematic-severity]:checked')).map(input=>input.dataset.problematicSeverity),source=readings.problematic||{devices:[],total_devices:0};
+ const devices=source.devices.map(device=>({...device,count:selected.reduce((sum,key)=>sum+Number(device.counts[key]||0),0)})).filter(device=>device.count>0).sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name));
+ document.querySelector('#problematicCount').textContent=devices.length;document.querySelector('#problematicDeviceTotal').textContent='/'+source.total_devices;
+ const body=document.querySelector('#problematicDevices');body.replaceChildren();
+ for(const device of devices){const row=element('tr'),name=element('td'),link=element('a',device.name);link.href='device.php?id='+device.id+'&view=1#view-fcaps';name.append(link);row.append(name,element('td',String(device.count)));body.append(row);}
+ if(!devices.length){const row=element('tr'),cell=element('td',selected.length?'No devices with active alarms at the selected severities.':'Select a severity to show affected devices.');cell.colSpan=2;row.append(cell);body.append(row);}
+}
+document.querySelectorAll('[data-problematic-severity]').forEach(input=>input.addEventListener('change',problematicDevices));
+const problematicCard=document.querySelector('[data-widget=problematic]'),problematicExpand=document.querySelector('#problematicExpand');
+function collapseProblematic(){problematicCard.classList.remove('widget-expanded');problematicExpand.setAttribute('aria-pressed','false');problematicExpand.setAttribute('aria-label','Expand Problematic Devices');}
+problematicExpand.addEventListener('click',()=>{const expanded=problematicCard.classList.toggle('widget-expanded');problematicExpand.setAttribute('aria-pressed',String(expanded));problematicExpand.setAttribute('aria-label',expanded?'Collapse Problematic Devices':'Expand Problematic Devices');});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')collapseProblematic();});
 function recentAlarms(){
  const root=document.querySelector('#recentAlarms');root.replaceChildren();
  for(const alarm of readings.recent||[]){
@@ -151,6 +164,6 @@ function workflowCharts(){
  }
 }
 document.querySelectorAll('[data-alarm-mode]').forEach(button=>button.addEventListener('click',()=>{mode=button.dataset.alarmMode;document.querySelectorAll('[data-alarm-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));alarms();}));
-document.querySelector('#birdsRefresh').addEventListener('click',async function(){this.disabled=true;try{const response=await fetch('topology.php?dashboard_readings=1',{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw Error();readings=await response.json();radar();alarms();workflowCharts();frequentAlarms();recentAlarms();portsOverview();status.textContent='Widgets updated '+new Date().toLocaleTimeString();}catch(e){status.textContent='Widget refresh failed. Try again.';}finally{this.disabled=false;}});
-layout();radar();alarms();workflowCharts();frequentAlarms();recentAlarms();portsOverview();
+document.querySelector('#birdsRefresh').addEventListener('click',async function(){this.disabled=true;try{const response=await fetch('topology.php?dashboard_readings=1',{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw Error();readings=await response.json();radar();alarms();workflowCharts();frequentAlarms();recentAlarms();portsOverview();problematicDevices();status.textContent='Widgets updated '+new Date().toLocaleTimeString();}catch(e){status.textContent='Widget refresh failed. Try again.';}finally{this.disabled=false;}});
+layout();radar();alarms();workflowCharts();frequentAlarms();recentAlarms();portsOverview();problematicDevices();
 })();
