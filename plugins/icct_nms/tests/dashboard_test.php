@@ -11,3 +11,9 @@ verify($result['ack']['Ack']===null&&$result['escalation']['Not_Esc']===null);
 $empty=icct_nms_dashboard_readings(['unlocated'=>[],'sites'=>[]]);verify($empty['ack']['Ack']===0&&$empty['escalation']['Esc']===0);
 $expanded=['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms','ack','escalation']]]];verify(icct_nms_dashboard_validate($expanded)===$expanded);
 echo "Dashboard layout limits, known widgets, alarm aggregation and empty states passed\n";
+
+$hosts=[['id'=>2,'description'=>'Cacti server','hostname'=>'127.0.0.1','snmp_sysName'=>'cacti-rhel9.local','site_id'=>3,'status_label'=>'Up'],['id'=>3,'description'=>'Demo','hostname'=>'127.0.0.1','snmp_sysName'=>'sim-router','site_id'=>4,'status_label'=>'Up']];
+$center=icct_nms_dashboard_server_center($hosts,['name'=>'Main Poller','hostname'=>'cacti-rhel9.local']);verify($center['device_id']===2&&$center['site_id']===3&&$center['coordinates']===null);
+verify(icct_nms_dashboard_server_center($hosts,['name'=>'Main Poller','hostname'=>'127.0.0.1'])['device_id']===null);
+verify(icct_nms_dashboard_server_center([],['name'=>'Main Poller','hostname'=>'cacti-rhel9.local'])['coordinates']===null);
+echo "Server center identity and ambiguous or unavailable locations passed\n";

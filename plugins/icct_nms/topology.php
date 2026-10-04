@@ -46,6 +46,7 @@ try {
     }
     $mapData=icct_nms_map_data();
     $dashboardReadings=icct_nms_dashboard_readings($mapData);
+    $dashboardReadings['center']=icct_nms_dashboard_server();
     if(isset($_GET['dashboard_readings'])){header('Content-Type: application/json');header('Cache-Control: no-store');echo json_encode($dashboardReadings,JSON_THROW_ON_ERROR);exit;}
     $dashboardPreferences=icct_nms_dashboard_preferences();
     if(isset($_GET['node_summary'])) {

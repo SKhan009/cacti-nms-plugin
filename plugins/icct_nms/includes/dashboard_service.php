@@ -33,3 +33,25 @@ function icct_nms_dashboard_readings($mapData) {
     $unknown=$total>0?null:0;
     return ['ack'=>['Ack'=>$unknown,'Not_Ack'=>$unknown],'escalation'=>['Esc'=>$unknown,'Not_Esc'=>$unknown],'nodes'=>$nodes,'severity'=>$severities,'segments'=>$segments,'total'=>array_sum($severities),'updated'=>date(DATE_ATOM)];
 }
+
+/** Resolve the server by the native poller identity, never an arbitrary demo site. */
+function icct_nms_dashboard_server_center($hosts, $poller) {
+    $hostname=strtolower(trim($poller['hostname'] ?? ''));
+    $matches=array_values(array_filter($hosts,static function($host)use($hostname){
+        return $hostname!=='' && (strtolower(trim($host['hostname'] ?? ''))===$hostname || strtolower(trim($host['snmp_sysName'] ?? ''))===$hostname);
+    }));
+    $center=['name'=>$poller['name'] ?? 'Cacti server','status'=>'Unknown','device_id'=>null,'site_id'=>null,'coordinates'=>null];
+    if(count($matches)!==1)return $center;
+    $host=$matches[0];
+    return array_replace($center,['name'=>$host['description'],'device_id'=>(int)$host['id'],'site_id'=>(int)$host['site_id'],'status'=>['Up'=>'Online','Down'=>'Offline','Disabled'=>'Disabled'][$host['status_label']] ?? 'Unknown']);
+}
+function icct_nms_dashboard_server() {
+    global $config;
+    $poller=db_fetch_row_prepared('SELECT name,hostname FROM poller WHERE id=?',[(int)($config['poller_id'] ?? 1)]);
+    $center=icct_nms_dashboard_server_center(icct_nms_inventory(),$poller ?: []);
+    if($center['site_id']){
+        $site=db_fetch_row_prepared('SELECT latitude,longitude FROM sites WHERE id=?',[$center['site_id']]);
+        $center['coordinates']=icct_nms_map_coordinates($site['latitude'] ?? null,$site['longitude'] ?? null);
+    }
+    return $center;
+}
