@@ -17,3 +17,9 @@ $center=icct_nms_dashboard_server_center($hosts,['name'=>'Main Poller','hostname
 verify(icct_nms_dashboard_server_center($hosts,['name'=>'Main Poller','hostname'=>'127.0.0.1'])['device_id']===null);
 verify(icct_nms_dashboard_server_center([],['name'=>'Main Poller','hostname'=>'cacti-rhel9.local'])['coordinates']===null);
 echo "Server center identity and ambiguous or unavailable locations passed\n";
+
+$map['unlocated'][0]['fault_alarms']=[['name'=>'Link down','severity'=>'Critical'],['name'=>'Link down','severity'=>'Critical'],['name'=>'CPU','severity'=>'Warning']];
+$top=icct_nms_dashboard_readings($map)['frequent'];verify($top[0]['name']==='Link down'&&$top[0]['count']===2&&count($top)===2);
+verify(icct_nms_dashboard_readings(['unlocated'=>[],'sites'=>[]])['frequent']===[]);
+verify(count(icct_nms_dashboard_validate(['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms','ack','escalation','frequent']]]])['dashboards'][0]['widgets'])===6);
+echo "Frequent alarm grouping, counts and empty state passed\n";

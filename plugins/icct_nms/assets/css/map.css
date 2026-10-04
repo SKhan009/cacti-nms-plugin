@@ -149,3 +149,7 @@
 #dashboardWidgetChoices button{display:block;width:100%;text-align:left;border:0;background:#fff;color:#222;padding:11px 12px;font:inherit;font-size:13px;cursor:pointer}
 #dashboardWidgetChoices button:hover:not(:disabled),#dashboardWidgetChoices button:focus-visible{background:#f0f4ff}
 #dashboardWidgetChoices button:disabled{color:#777;cursor:default}
+
+.dashboard-extra-widgets [data-widget=frequent]{grid-column:span 2}
+.frequent-content{padding:12px 18px}.frequent-table{width:100%;border-collapse:separate;border-spacing:0 10px;font-size:15px}.frequent-table td{padding:3px 12px;vertical-align:middle}.frequent-table td:first-child{padding-left:0;width:65%}.frequent-table td+td{border-left:1px solid #d5d5d5}.frequent-table td:last-child{width:15%;font-variant-numeric:tabular-nums}.frequent-severity{display:inline-block;padding:4px 10px;border:1px solid #333;border-radius:20px;white-space:nowrap;color:#222}.frequent-content p{font-size:11px;color:#777;margin:10px 0}.frequent-severity[style*="277f9b"]{color:white}
+@media(max-width:600px){.dashboard-extra-widgets [data-widget=frequent]{grid-column:1}.frequent-table{font-size:12px}.frequent-table td{padding:3px 6px}}

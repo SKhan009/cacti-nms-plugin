@@ -76,7 +76,13 @@ function icct_nms_map_data() {
         $device['fault_counts']=array_fill_keys(['Critical','Major','Minor','Warning','Information'],0);
         $faults=icct_nms_fault_observations($row);
         foreach($faults as $fault)if(isset($device['fault_counts'][$fault['state']]))$device['fault_counts'][$fault['state']]++;
-        $rules=icct_nms_fault_rules($id); $rank=['Information'=>1,'Minor'=>2,'Warning'=>3,'Major'=>4,'Critical'=>5]; $highest=0;
+        $rules=icct_nms_fault_rules($id);
+        $device['fault_alarms']=[];
+        foreach($faults as $fault)if(isset($device['fault_counts'][$fault['state']])){
+            $rule=$rules[(int)$fault['rule']] ?? [];
+            $device['fault_alarms'][]=['name'=>trim($rule['name'] ?? '') ?: ($fault['graph'] ?? 'Fault threshold exceeded'),'severity'=>$fault['state']];
+        }
+        $rank=['Information'=>1,'Minor'=>2,'Warning'=>3,'Major'=>4,'Critical'=>5]; $highest=0;
         foreach ($faults as $fault) if (($rank[$fault['state']] ?? 0)>$highest) {
             $highest=$rank[$fault['state']]; $rule=$rules[$fault['rule']] ?? [];
             $device['alarm']=['severity'=>$fault['state'],'message'=>(($rule['name'] ?? '') ?: $fault['graph']).' — '.$fault['value']];
