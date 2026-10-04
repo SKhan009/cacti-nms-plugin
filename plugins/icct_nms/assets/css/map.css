@@ -222,3 +222,13 @@
 
 .dashboard-toolbar .dashboard-inline-name{box-sizing:border-box;width:240px;min-height:36px;padding:6px 12px;background:#f4f4f4;border:0;border-bottom:2px solid #0f62fe;font:inherit;font-size:13px;outline:none}
 .dashboard-toolbar [hidden]{display:none!important}
+
+/* Keep the topology legend at the card edge and the fullscreen viewport edge. */
+.dashboard-grid #icct-panel-topology{display:flex;flex-direction:column;overflow:hidden;flex:1}
+.dashboard-grid #icct-panel-topology[hidden]{display:none}
+.dashboard-grid #icct-panel-topology .topology-layout{flex:1 0 auto}
+.dashboard-grid #topologyAlarms{flex:none;align-self:stretch;margin:0;padding:8px 14px}
+.dashboard-grid>.icct-map-panel:fullscreen{height:100dvh;max-height:100dvh;padding:12px;overflow:hidden}
+.dashboard-grid .icct-map-panel:fullscreen #icct-panel-topology{min-height:0}
+.dashboard-grid .icct-map-panel:fullscreen .topology-layout{flex:1 1 0;height:auto;min-height:0}
+.dashboard-grid .icct-map-panel:fullscreen #topologyCanvas{min-height:0}
