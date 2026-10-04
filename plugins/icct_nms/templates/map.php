@@ -35,12 +35,13 @@
 <details class="icct-map-credits" hidden><summary title="Map credits" aria-label="Map credits">ⓘ</summary><span>Leaflet. State boundaries: geoBoundaries / DataMeet (CC BY 2.5 IN).</span></details>
 </section>
 <aside class="dashboard-widgets" id="dashboardWidgets">
-<?php foreach(['birds'=>'Birds Eye View','alarms'=>'Alarm Overview'] as $key=>$label): ?>
+<?php foreach(['birds'=>'Birds Eye View','alarms'=>'Alarm Overview','ack'=>'Ack Overview','escalation'=>'Escalation Overview'] as $key=>$label): ?>
 <section class="dashboard-card" data-widget="<?= $key ?>"><header><button type="button" class="widget-grip" draggable="true" aria-label="Move <?= $label ?> widget" title="Drag to reorder; use arrow keys to move">⠿</button><h2><?= $label ?></h2><?php if($key==='birds'): ?><button type="button" class="widget-icon" id="birdsRefresh" aria-label="Refresh Birds Eye View" title="Refresh">↻</button><?php endif; ?><button type="button" class="widget-icon" data-remove-widget="<?= $key ?>" aria-label="Remove <?= $label ?> widget" title="Remove widget"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 9v9M14 9v9"/></svg></button></header>
 <?php if($key==='birds'): ?><div class="birds-content"><svg id="birdsRadar" viewBox="0 0 320 280" aria-label="Node bearings from the selected center"></svg><label class="birds-center">Center node<select id="birdsCenter"></select></label><p id="birdsNote"></p></div>
+<?php elseif($key==='ack'||$key==='escalation'): ?><div class="alarm-content workflow-content"><div class="alarm-chart"><svg id="<?= $key ?>Donut" viewBox="0 0 180 180" role="img" aria-label="<?= $label ?>"></svg><ul id="<?= $key ?>Legend"></ul></div><p id="<?= $key ?>Note"></p></div>
 <?php else: ?><div class="alarm-content"><div class="alarm-mode" role="group" aria-label="Alarm grouping"><button type="button" data-alarm-mode="severity" aria-pressed="true">Severity</button><button type="button" data-alarm-mode="segments" aria-pressed="false">Segment</button></div><div class="alarm-chart"><svg id="alarmDonut" viewBox="0 0 180 180" role="img" aria-label="Active alarms"></svg><ul id="alarmLegend"></ul></div><p id="alarmNote"></p></div><?php endif; ?></section>
 <?php endforeach; ?>
-</aside></div>
+</aside><div class="dashboard-extra-widgets" id="dashboardExtraWidgets"></div></div>
 <dialog id="dashboardWidgetDialog" aria-labelledby="dashboardWidgetTitle"><div class="message-heading"><h2 id="dashboardWidgetTitle">Add Widget</h2><form method="dialog"><button type="submit" aria-label="Close widget picker">×</button></form></div><div id="dashboardWidgetChoices"></div></dialog>
 <form id="dashboardToken" hidden><?php icct_nms_token(); ?></form>
 <script type="application/json" id="dashboardData"><?= json_encode(['preferences'=>$dashboardPreferences,'readings'=>$dashboardReadings,'user'=>icct_backend_current_user_id()],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
