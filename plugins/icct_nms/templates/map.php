@@ -1,7 +1,7 @@
 <?php /** Same local Leaflet / GeoServer map stack as NMS; native Cacti locations. */ ?>
 <section class="icct-map-page">
 
-<div class="dashboard-toolbar"><label class="sr-only" for="dashboardSelect">Dashboard</label><select id="dashboardSelect"></select><button type="button" class="dashboard-add-widget" id="dashboardAddWidget">+ Add Widget</button><p id="dashboardSaveStatus" role="status"></p><button type="button" class="button primary" id="dashboardAdd">Add Dashboard (Max 5)</button></div>
+<div class="dashboard-toolbar"><label class="sr-only" for="dashboardSelect">Dashboard</label><select id="dashboardSelect"></select><div class="dashboard-widget-picker"><button type="button" class="dashboard-add-widget" id="dashboardAddWidget" aria-expanded="false" aria-controls="dashboardWidgetChoices">+ Add Widget <span aria-hidden="true">▾</span></button><div id="dashboardWidgetChoices" aria-label="Available dashboard cards" hidden></div></div><p id="dashboardSaveStatus" role="status"></p><button type="button" class="button primary" id="dashboardAdd">Add Dashboard (Max 5)</button></div>
 <div class="dashboard-grid"><section class="icct-map-panel" data-widget="topology">
 <div class="icct-map-toolbar"><button class="widget-remove topology-widget-remove" type="button" data-remove-widget="topology" aria-label="Remove topology widget" title="Remove topology widget">×</button>
 <div class="icct-view-tabs" role="tablist" aria-label="Dashboard views">
@@ -42,7 +42,7 @@
 <?php else: ?><div class="alarm-content"><div class="alarm-mode" role="group" aria-label="Alarm grouping"><button type="button" data-alarm-mode="severity" aria-pressed="true">Severity</button><button type="button" data-alarm-mode="segments" aria-pressed="false">Segment</button></div><div class="alarm-chart"><svg id="alarmDonut" viewBox="0 0 180 180" role="img" aria-label="Active alarms"></svg><ul id="alarmLegend"></ul></div><p id="alarmNote"></p></div><?php endif; ?></section>
 <?php endforeach; ?>
 </aside><div class="dashboard-extra-widgets" id="dashboardExtraWidgets"></div></div>
-<dialog id="dashboardWidgetDialog" aria-labelledby="dashboardWidgetTitle"><div class="message-heading"><h2 id="dashboardWidgetTitle">Add Widget</h2><form method="dialog"><button type="submit" aria-label="Close widget picker">×</button></form></div><div id="dashboardWidgetChoices"></div></dialog>
+
 <form id="dashboardToken" hidden><?php icct_nms_token(); ?></form>
 <script type="application/json" id="dashboardData"><?= json_encode(['preferences'=>$dashboardPreferences,'readings'=>$dashboardReadings,'user'=>icct_backend_current_user_id()],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
 <dialog id="mapNodeDialog" class="topology-device-dialog map-node-dialog" aria-labelledby="mapNodeTitle">

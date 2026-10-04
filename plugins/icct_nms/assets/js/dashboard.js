@@ -3,7 +3,7 @@
 const dataElement=document.querySelector('#dashboardData');if(!dataElement)return;
 const data=JSON.parse(dataElement.textContent);let preferences=data.preferences,readings=data.readings,mode='severity',saving=false,saveAgain=false,dragWidget=null;
 const names={topology:'Topology / Rack / Image / Map',birds:'Birds Eye View',alarms:'Alarm Overview',ack:'Ack Overview',escalation:'Escalation Overview'},colors={Critical:'#ff4148',Major:'#ff7226',Minor:'#ff9b17',Warning:'#43aa91',Information:'#277f9b'},palette=['#737eff','#6bce95','#ffb14e','#03cfeb','#a585ff','#2499ff','#ff8585','#34bbcc'];
-const select=document.querySelector('#dashboardSelect'),picker=document.querySelector('#dashboardWidgetDialog'),status=document.querySelector('#dashboardSaveStatus'),side=document.querySelector('#dashboardWidgets'),extras=document.querySelector('#dashboardExtraWidgets'),grid=document.querySelector('.dashboard-grid');
+const select=document.querySelector('#dashboardSelect'),picker=document.querySelector('.dashboard-widget-picker'),status=document.querySelector('#dashboardSaveStatus'),side=document.querySelector('#dashboardWidgets'),extras=document.querySelector('#dashboardExtraWidgets'),grid=document.querySelector('.dashboard-grid');
 function element(tag,text){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;}
 function svg(tag,attributes,text){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attributes).forEach(([k,v])=>e.setAttribute(k,v));if(text!==undefined)e.textContent=text;return e;}
 function widgets(){return preferences.dashboards[preferences.selected].widgets;}
@@ -19,7 +19,17 @@ function layout(){
 }
 select.addEventListener('change',()=>{preferences.selected=Number(select.value);layout();save();});
 document.querySelector('#dashboardAdd').addEventListener('click',()=>{if(preferences.dashboards.length>=5)return;preferences.dashboards.push({widgets:[]});preferences.selected=preferences.dashboards.length-1;layout();save();});
-document.querySelector('#dashboardAddWidget').addEventListener('click',()=>{const choices=document.querySelector('#dashboardWidgetChoices');choices.replaceChildren();Object.entries(names).forEach(([key,name])=>{const button=element('button',name+(widgets().includes(key)?' — Added':''));button.type='button';button.className='button';button.disabled=widgets().includes(key);button.addEventListener('click',()=>{widgets().push(key);layout();save();picker.close();});choices.append(button);});picker.showModal();});
+const addWidget=document.querySelector('#dashboardAddWidget'),choices=document.querySelector('#dashboardWidgetChoices');
+function closePicker(){choices.hidden=true;addWidget.setAttribute('aria-expanded','false');}
+addWidget.addEventListener('click',()=>{
+ if(!choices.hidden){closePicker();return;}
+ choices.replaceChildren();Object.entries(names).forEach(([key,name])=>{
+  const button=element('button',name+(widgets().includes(key)?' — Added':''));button.type='button';button.disabled=widgets().includes(key);
+  button.addEventListener('click',()=>{widgets().push(key);layout();save();closePicker();addWidget.focus();});choices.append(button);
+ });choices.hidden=false;addWidget.setAttribute('aria-expanded','true');
+});
+document.addEventListener('click',e=>{if(!picker.contains(e.target))closePicker();});
+picker.addEventListener('keydown',e=>{if(e.key==='Escape'){closePicker();addWidget.focus();}});
 document.querySelectorAll('[data-remove-widget]').forEach(button=>button.addEventListener('click',()=>{preferences.dashboards[preferences.selected].widgets=widgets().filter(w=>w!==button.dataset.removeWidget);layout();save();}));
 function move(key,target){const list=widgets(),old=list.indexOf(key),to=list.indexOf(target);if(old<0||to<0||old===to)return;list.splice(old,1);list.splice(to,0,key);layout();save();}
 document.querySelectorAll('.widget-grip').forEach(grip=>{const key=grip.closest('[data-widget]').dataset.widget;grip.addEventListener('dragstart',e=>{dragWidget=key;e.dataTransfer.setData('text/plain',key);});grip.addEventListener('dragend',()=>{dragWidget=null;});grip.addEventListener('keydown',e=>{if(!['ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const list=widgets().filter(w=>w!=='topology'&&(['ack','escalation'].includes(w)===['ack','escalation'].includes(key))),target=list[list.indexOf(key)+(e.key==='ArrowUp'?-1:1)];if(target){move(key,target);grip.focus();}});});
