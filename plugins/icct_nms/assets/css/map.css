@@ -135,7 +135,8 @@
 
 #topologyLinks path.topology-link-hit.active-link{stroke:rgba(20,95,255,.18)!important}
 
-.dashboard-extra-widgets{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,310px));gap:12px;align-content:start}.dashboard-extra-widgets .dashboard-card{min-height:230px}.workflow-content .alarm-chart{margin-top:0}.workflow-content .alarm-chart svg{max-height:160px;width:57%;stroke:none;stroke-width:0}.workflow-content .alarm-chart li{font-size:12px;margin:13px 0}.workflow-content .alarm-content p{font-size:11px}
+.dashboard-extra-widgets{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,310px));gap:12px;align-content:start;align-items:start}.dashboard-extra-widgets .dashboard-card{min-height:230px}.workflow-content .alarm-chart{margin-top:0}.workflow-content .alarm-chart svg{max-height:160px;width:57%;stroke:none;stroke-width:0}.workflow-content .alarm-chart li{font-size:12px;margin:13px 0}.workflow-content .alarm-content p{font-size:11px}
+.dashboard-widgets{align-items:stretch}.dashboard-widgets>.dashboard-card{align-self:start;width:100%;box-sizing:border-box}
 
 /* Square radar fills its card; controls and explanatory footer are omitted. */
 .birds-content{padding:12px 6px}
