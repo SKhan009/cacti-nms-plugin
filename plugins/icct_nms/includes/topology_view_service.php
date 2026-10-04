@@ -58,10 +58,10 @@ function icct_nms_topology_data($mapData) {
             $candidates=array_values(array_unique(array_diff($candidates,[$id])));
         }
         if(count($candidates)!==1)continue;
-        $pair=[$id,$candidates[0]];sort($pair);$links[implode('-',$pair)]=['source'=>$id,'target'=>$candidates[0],'protocol'=>$row['protocol'],'label'=>strtoupper($row['protocol']).' · '.($neighbor['local_port']??'?').' / '.($neighbor['remote_port']??'?')];
+        $pair=[$id,$candidates[0]];sort($pair);$links[implode('-',$pair)]=['source'=>$id,'target'=>$candidates[0],'protocol'=>$row['protocol'],'source_port'=>$neighbor['local_port']??'','source_ifindex'=>$neighbor['local_ifindex']??0,'target_port'=>$neighbor['remote_port']??'','label'=>strtoupper($row['protocol']).' · '.($neighbor['local_port']??'?').' / '.($neighbor['remote_port']??'?')];
     }
     $profiles=icct_nms_connections();$allowed=array_column($devices,null,'id');
-    foreach(icct_nms_manual_links() as $key=>$link)if(isset($allowed[$link['source']],$allowed[$link['target']])){$pair=[$link['source'],$link['target']];sort($pair);$links[implode('-',$pair)]=['source'=>$link['source'],'target'=>$link['target'],'protocol'=>'manual','color'=>$profiles[$link['profile']]['color']??'#555','label'=>($profiles[$link['profile']]['name']??'Manual').' · '.($link['source_port']?:'?').' / '.($link['target_port']?:'?')];}
+    foreach(icct_nms_manual_links() as $key=>$link)if(isset($allowed[$link['source']],$allowed[$link['target']])){$pair=[$link['source'],$link['target']];sort($pair);$links[implode('-',$pair)]=['source'=>$link['source'],'target'=>$link['target'],'protocol'=>'manual','source_port'=>$link['source_port'],'target_port'=>$link['target_port'],'color'=>$profiles[$link['profile']]['color']??'#555','label'=>($profiles[$link['profile']]['name']??'Manual').' · '.($link['source_port']?:'?').' / '.($link['target_port']?:'?')];}
     $layout=icct_nms_topology_layout();
     return ['core_id'=>icct_nms_topology_core_id(array_values($inventory)),'devices'=>$devices,'links'=>array_values($links),'layout'=>$layout,'revision'=>hash('sha256',json_encode($layout)),'management'=>is_realm_allowed(3)];
 }

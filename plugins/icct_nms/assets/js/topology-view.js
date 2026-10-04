@@ -44,7 +44,32 @@ function render(){
  card.addEventListener('keydown',e=>{if(!editing&&['Enter',' '].includes(e.key)){e.preventDefault();showDevice(d);return;}if(!editing||busy||d===core||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const p=positions[d.id];p[0]=Math.max(.05,Math.min(.95,p[0]+(e.key==='ArrowLeft'?-.01:e.key==='ArrowRight'?.01:0)));p[1]=Math.max(.07,Math.min(.93,p[1]+(e.key==='ArrowUp'?-.01:e.key==='ArrowDown'?.01:0)));dirty=true;render();cards.querySelector('[data-device-id="'+d.id+'"]').focus();});cards.append(card);});
  svg.setAttribute('viewBox','0 0 '+w+' '+h);lines();controls();
 }
-function lines(){svg.replaceChildren();const w=canvas.clientWidth,h=canvas.clientHeight;data.links.forEach(link=>{const a=positions[link.source],b=positions[link.target];if(!a||!b)return;const path=document.createElementNS('http://www.w3.org/2000/svg','path');const x=a[0]*w,y=a[1]*h,X=b[0]*w,Y=b[1]*h,mid=(y+Y)/2;path.setAttribute('d',`M${x} ${y} V${mid} H${X} V${Y}`);const title=document.createElementNS('http://www.w3.org/2000/svg','title');title.textContent=link.label||link.protocol.toUpperCase();if(link.color)path.style.stroke=link.color;path.append(title);svg.append(path);});}
+const linkTip=el('div','topology-link-tooltip');linkTip.id='topologyLinkTooltip';linkTip.setAttribute('role','tooltip');linkTip.hidden=true;panel.append(linkTip);
+let activeLink=null,linkRequest=0;
+function hideLink(){linkRequest++;activeLink=null;linkTip.hidden=true;}
+function bandwidth(value){if(value===null||value===undefined)return 'Unavailable';const units=['bps','Kbps','Mbps','Gbps','Tbps'];let n=Number(value),i=0;while(n>=1000&&i<4){n/=1000;i++;}return n.toLocaleString(undefined,{maximumFractionDigits:2})+' '+units[i];}
+function showLink(link,anchor,event){
+ if(editing)return;const request=++linkRequest;activeLink=anchor;linkTip.replaceChildren();linkTip.append(el('strong','',link.label||'Network link'));
+ const rect=anchor.getBoundingClientRect();const left=event?.clientX??(rect.left+rect.width/2),top=event?.clientY??rect.top;
+ linkTip.hidden=false;linkTip.style.left=Math.max(8,Math.min(left+14,window.innerWidth-350))+'px';linkTip.style.top=Math.max(8,Math.min(top+14,window.innerHeight-300))+'px';
+ const loading=el('p','','Loading bandwidth…');linkTip.append(loading);
+ fetch('topology.php?link_source='+encodeURIComponent(link.source)+'&link_target='+encodeURIComponent(link.target),{credentials:'same-origin',cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json();}).then(fresh=>{
+  if(activeLink!==anchor||request!==linkRequest)return;loading.remove();
+  (fresh.readings||[]).forEach((reading,i)=>{const device=devices.find(d=>Number(d.id)===Number(i?link.target:link.source));const section=el('section','');section.append(el('b','',(device?.name||'Device')+' · '+reading.port));
+   if(!reading.available)section.append(el('p','','Bandwidth unavailable — no current matching interface reading.'));
+   else {const rows=el('dl','');const values={'Link status':reading.status,'Capacity':bandwidth(reading.capacity_bps),'Inbound':bandwidth(reading.in_bps),'Outbound':bandwidth(reading.out_bps),'Updated':reading.collected};
+    if(reading.capacity_bps>0){for(const dir of ['in','out'])if(reading[dir+'_bps']!==null)values[dir==='in'?'Inbound utilization':'Outbound utilization']=(reading[dir+'_bps']/reading.capacity_bps*100).toFixed(1)+'%';}
+    Object.entries(values).forEach(([name,value])=>{rows.append(el('dt','',name),el('dd','',value));});section.append(rows);if(reading.sample_seconds)section.append(el('small','','Traffic averaged over '+reading.sample_seconds+' seconds.'));}
+   linkTip.append(section);
+  });
+  linkTip.style.top=Math.max(8,Math.min(top+14,window.innerHeight-linkTip.offsetHeight-8))+'px';
+ }).catch(()=>{if(activeLink===anchor&&request===linkRequest)loading.textContent='Bandwidth information is currently unavailable.';});
+}
+function lines(){hideLink();svg.replaceChildren();const w=canvas.clientWidth,h=canvas.clientHeight;data.links.forEach(link=>{const a=positions[link.source],b=positions[link.target];if(!a||!b)return;const path=document.createElementNS('http://www.w3.org/2000/svg','path');const x=a[0]*w,y=a[1]*h,X=b[0]*w,Y=b[1]*h,mid=(y+Y)/2;path.setAttribute('d',`M${x} ${y} V${mid} H${X} V${Y}`);if(link.color)path.style.stroke=link.color;svg.append(path);
+ const hit=path.cloneNode();hit.classList.add('topology-link-hit');hit.style.stroke='transparent';hit.setAttribute('tabindex','0');hit.setAttribute('aria-label','Link bandwidth: '+link.label);hit.setAttribute('aria-describedby',linkTip.id);
+ hit.addEventListener('pointerenter',e=>showLink(link,hit,e));hit.addEventListener('pointerleave',hideLink);hit.addEventListener('focus',()=>showLink(link,hit));hit.addEventListener('blur',hideLink);hit.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();showLink(link,hit);}});hit.addEventListener('click',e=>showLink(link,hit,e));svg.append(hit);
+});}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')hideLink();});window.addEventListener('scroll',hideLink,true);document.addEventListener('icct:before-view-change',hideLink);
 function controls(){save.disabled=!dirty||busy;document.querySelector('#topologyDiscard').disabled=busy;document.querySelector('.topology-actions').hidden=!editing;document.querySelector('#topologyEdit').hidden=!data.management;document.querySelector('#topologyEdit').setAttribute('aria-pressed',String(editing));cards.classList.toggle('editing',editing);}
 function discard(){if(busy)return;Object.assign(positions,structuredClone(saved));dirty=false;editing=false;drag=null;message.textContent='';render();}
 async function persist(){if(busy)return false;if(!dirty)return true;busy=true;controls();const body=new FormData(document.querySelector('#topologyToken'));body.set('topology_positions',JSON.stringify(positions));body.set('revision',data.revision);try{const response=await fetch('topology.php',{method:'POST',body,credentials:'same-origin'}),result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||'Unable to save layout.');data.revision=result.revision;saved=structuredClone(positions);dirty=false;message.textContent='';return true;}catch(e){message.textContent=e.message;return false;}finally{busy=false;controls();}}

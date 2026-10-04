@@ -9,6 +9,7 @@ require_once __DIR__.'/includes/map_service.php';
 require_once __DIR__.'/includes/rack_view_service.php';
 require_once __DIR__.'/includes/topology_view_service.php';
 require_once __DIR__.'/includes/topology_summary_service.php';
+require_once __DIR__.'/includes/topology_link_service.php';
 try {
     icct_nms_backend();
     if (isset($_GET['map_tile'])) { icct_nms_map_tile(); exit; }
@@ -17,6 +18,16 @@ try {
         try {icct_nms_post();icct_nms_topology_save(json_decode($_POST['topology_positions'],true,512,JSON_THROW_ON_ERROR),$_POST['revision'] ?? '');echo json_encode(['ok'=>true,'revision'=>hash('sha256',json_encode(icct_nms_topology_layout()))]);}
         catch(Throwable $error){http_response_code(400);echo json_encode(['ok'=>false,'error'=>$error->getMessage()]);}
         exit;
+    }
+    if(isset($_GET['link_source'],$_GET['link_target'])) {
+        $a=icct_nms_id($_GET['link_source']);$b=icct_nms_id($_GET['link_target']);
+        icct_backend_require_device_access($a);icct_backend_require_device_access($b);
+        $fresh=icct_nms_topology_data(icct_nms_map_data());$selected=null;
+        foreach($fresh['links'] as $link)if((int)$link['source']===$a && (int)$link['target']===$b){$selected=$link;break;}
+        header('Content-Type: application/json');header('Cache-Control: no-store');
+        if(!$selected){http_response_code(404);echo json_encode(['error'=>'Link unavailable.']);exit;}
+        $selected['readings']=[icct_nms_link_reading($a,$selected['source_port']??'',(int)($selected['source_ifindex']??0)),icct_nms_link_reading($b,$selected['target_port']??'')];
+        echo json_encode($selected,JSON_THROW_ON_ERROR);exit;
     }
     if (isset($_GET['device_summary'])) {
         $summaryId=icct_nms_id($_GET['device_summary']);
