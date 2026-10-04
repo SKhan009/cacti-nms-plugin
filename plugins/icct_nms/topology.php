@@ -49,6 +49,9 @@ try {
     $mapData=icct_nms_map_data();
     $dashboardPreferences=icct_nms_dashboard_preferences();
     $dashboardNodes=icct_nms_dashboard_nodes($mapData);
+    $defaultNode=$dashboardNodes[0]['id'] ?? 0;
+    $availableNodeIds=array_column($dashboardNodes,'id');
+    foreach($dashboardPreferences['dashboards'] as &$dashboard)if(!in_array($dashboard['node_id'] ?? 0,$availableNodeIds,true))$dashboard['node_id']=$defaultNode;unset($dashboard);
     if(isset($_GET['node_summary'])) {
         $siteId=icct_nms_id($_GET['node_summary']);$node=null;
         foreach($mapData['sites'] as $site)if((int)$site['id']===$siteId){$node=icct_nms_map_node_summary($site);break;}
@@ -57,8 +60,8 @@ try {
     }
     $savedNode=$dashboardPreferences['dashboards'][$dashboardPreferences['selected']]['node_id'] ?? 0;
     $dashboardNodeId=isset($_GET['node_id'])?icct_backend_topology_integer($_GET['node_id'],0,4294967295,'Node ID'):(isset($_GET['site_id'])?0:$savedNode);
-    // Removed or newly inaccessible saved nodes fall back to the authorized overview.
-    if(!isset($_GET['node_id'])&&!isset($_GET['site_id'])&&$dashboardNodeId&&!in_array($dashboardNodeId,array_column($dashboardNodes,'id'),true))$dashboardNodeId=0;
+    // Existing overview URLs default to the first configured node.
+    if(!$dashboardNodeId&&!isset($_GET['site_id']))$dashboardNodeId=$defaultNode;
     $mapData=icct_nms_dashboard_scope($mapData,$dashboardNodeId);
     if(isset($_GET['site_id'])&&!isset($_GET['node_id'])){
         $siteId=icct_nms_id($_GET['site_id']);
