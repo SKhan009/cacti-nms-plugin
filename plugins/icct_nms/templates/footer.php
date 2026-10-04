@@ -45,6 +45,7 @@
     <script src="assets/js/node-configuration.js?v=<?= substr(hash_file('sha256',__DIR__.'/../assets/js/node-configuration.js'),0,12) ?>" defer></script>
 <?php endif; ?>
 <?php if (!empty($mapPage)): ?>
+    <script src="assets/js/dashboard.js?v=<?= substr(hash_file('sha256',__DIR__.'/../assets/js/dashboard.js'),0,12) ?>" defer></script>
     <script src="assets/vendor/leaflet/leaflet.js" defer></script>
     <script src="assets/js/rack-view.js?v=<?= substr(hash_file('sha256',__DIR__.'/../assets/js/rack-view.js'),0,12) ?>" defer></script>
     <script src="assets/js/topology-view.js?v=<?= substr(hash_file('sha256',__DIR__.'/../assets/js/topology-view.js'),0,12) ?>" defer></script>

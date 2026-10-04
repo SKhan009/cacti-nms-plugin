@@ -10,8 +10,12 @@ require_once __DIR__.'/includes/rack_view_service.php';
 require_once __DIR__.'/includes/topology_view_service.php';
 require_once __DIR__.'/includes/topology_summary_service.php';
 require_once __DIR__.'/includes/topology_link_service.php';
+require_once __DIR__.'/includes/dashboard_service.php';
 try {
     icct_nms_backend();
+    if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['dashboard_preferences'])){
+        header('Content-Type: application/json');try{icct_nms_post();echo json_encode(icct_nms_dashboard_save(json_decode($_POST['dashboard_preferences'],true,512,JSON_THROW_ON_ERROR)));}catch(Throwable $e){http_response_code(400);echo json_encode(['error'=>'Unable to save dashboard layout.']);}exit;
+    }
     if (isset($_GET['map_tile'])) { icct_nms_map_tile(); exit; }
     if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['topology_positions'])) {
         header('Content-Type: application/json; charset=utf-8');
@@ -41,6 +45,9 @@ try {
         echo json_encode(array_intersect_key($selected,array_flip(['name','address','status','network_asset','summary','capacity','fault_counts'])),JSON_THROW_ON_ERROR);exit;
     }
     $mapData=icct_nms_map_data();
+    $dashboardReadings=icct_nms_dashboard_readings($mapData);
+    if(isset($_GET['dashboard_readings'])){header('Content-Type: application/json');header('Cache-Control: no-store');echo json_encode($dashboardReadings,JSON_THROW_ON_ERROR);exit;}
+    $dashboardPreferences=icct_nms_dashboard_preferences();
     if(isset($_GET['node_summary'])) {
         $siteId=icct_nms_id($_GET['node_summary']);$node=null;
         foreach($mapData['sites'] as $site)if((int)$site['id']===$siteId){$node=icct_nms_map_node_summary($site);break;}

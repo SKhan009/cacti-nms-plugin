@@ -108,6 +108,7 @@
         nodeDialog.dataset.summaryState='loading';
         fetch(endpoint+'?node_summary='+encodeURIComponent(site.id),{credentials:'same-origin',cache:'no-store'}).then(response=>{if(!response.ok)throw new Error('Node unavailable');return response.json();}).then(node=>{if(nodeDialog.open&&nodeDialog.dataset.nodeId===String(node.id)){renderNode(node);nodeDialog.dataset.summaryState='current';}}).catch(()=>{if(nodeDialog.dataset.nodeId===String(site.id))nodeDialog.dataset.summaryState='unavailable';});
     }
+    document.addEventListener('icct:show-node',event=>{const site=data.sites.find(s=>Number(s.id)===Number(event.detail));if(site)showNode(site);});
     var markers = {};
     data.sites.forEach(function (site) {
         var down = site.devices.some(function (d) { return d.status === 'Down'; });
