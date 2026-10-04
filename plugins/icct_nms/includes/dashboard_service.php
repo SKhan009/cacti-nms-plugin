@@ -12,7 +12,9 @@ function icct_nms_dashboard_validate($value) {
         if(!is_string($name)||trim($name)===''||mb_strlen(trim($name))>60)throw new InvalidArgumentException('Enter a dashboard name of 1 to 60 characters.');
         $columns=$dashboard['columns'] ?? 'auto';
         if(!in_array($columns,['auto',2,3],true))throw new InvalidArgumentException('Choose automatic, two or three columns.');
-        $clean['dashboards'][]=['name'=>trim($name),'columns'=>$columns,'widgets'=>array_merge(['topology'],array_values(array_diff($widgets,['topology'])))];
+        $nodeId=$dashboard['node_id'] ?? 0;
+        if(!is_int($nodeId)||$nodeId<0||$nodeId>4294967295)throw new InvalidArgumentException('Choose a valid node.');
+        $clean['dashboards'][]=['name'=>trim($name),'columns'=>$columns,'node_id'=>$nodeId,'widgets'=>array_merge(['topology'],array_values(array_diff($widgets,['topology'])))];
     }
     if($clean['selected']<0||$clean['selected']>=count($clean['dashboards']))throw new InvalidArgumentException('Dashboard unavailable.');
     if(isset($value['deleted'])){
@@ -71,4 +73,22 @@ function icct_nms_dashboard_server() {
         $center['coordinates']=icct_nms_map_coordinates($site['latitude'] ?? null,$site['longitude'] ?? null);
     }
     return $center;
+}
+
+/** Node choices and totals are derived only from authorized device inventory. */
+function icct_nms_dashboard_nodes($map){
+    $nodes=[];
+    foreach($map['sites'] as $site)$nodes[(int)$site['id']]=['id'=>(int)$site['id'],'name'=>$site['name']];
+    foreach($map['unlocated'] as $device){$id=(int)($device['site_id'] ?? 0);if($id>0)$nodes[$id]=['id'=>$id,'name'=>$device['site'] ?? 'Node '.$id];}
+    $nodes=array_values($nodes);usort($nodes,static fn($a,$b)=>strnatcasecmp($a['name'],$b['name']));return $nodes;
+}
+function icct_nms_dashboard_scope($map,$nodeId){
+    if($nodeId===0)return $map;
+    if(!in_array($nodeId,array_column(icct_nms_dashboard_nodes($map),'id'),true))throw new RuntimeException('Node unavailable.');
+    $map['sites']=array_values(array_filter($map['sites'],static fn($site)=>(int)$site['id']===$nodeId));
+    $map['unlocated']=array_values(array_filter($map['unlocated'],static fn($device)=>(int)($device['site_id'] ?? 0)===$nodeId));
+    $devices=$map['unlocated'];foreach($map['sites'] as $site)$devices=array_merge($devices,$site['devices']);
+    $map['counts']=['total'=>count($devices),'online'=>0,'offline'=>0,'other'=>0];
+    foreach($devices as $device)$map['counts'][$device['status']==='Up'?'online':($device['status']==='Down'?'offline':'other')]++;
+    return $map;
 }

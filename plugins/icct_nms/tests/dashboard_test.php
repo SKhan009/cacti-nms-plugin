@@ -1,7 +1,7 @@
 <?php
 require __DIR__.'/../includes/dashboard_service.php';
 function verify($condition){if(!$condition)throw new RuntimeException('Dashboard assertion failed.');}
-$valid=['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms']]]];verify(icct_nms_dashboard_validate($valid)['dashboards'][0]===['name'=>'Dashboard #1','columns'=>'auto','widgets'=>$valid['dashboards'][0]['widgets']]);
+$valid=['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms']]]];verify(icct_nms_dashboard_validate($valid)['dashboards'][0]===['name'=>'Dashboard #1','columns'=>'auto','node_id'=>0,'widgets'=>$valid['dashboards'][0]['widgets']]);
 foreach([['selected'=>0,'dashboards'=>[]],['selected'=>1,'dashboards'=>[['widgets'=>[]]]],['selected'=>0,'dashboards'=>array_fill(0,6,['widgets'=>[]])],['selected'=>0,'dashboards'=>[['widgets'=>['birds','birds']]]],['selected'=>0,'dashboards'=>[['widgets'=>['unknown']]]],['selected'=>0,'dashboards'=>[['widgets'=>[[]]]]]] as $bad){try{icct_nms_dashboard_validate($bad);throw new RuntimeException('Invalid layout accepted');}catch(InvalidArgumentException $e){}}
 function icct_nms_map_node_summary($site){return ['status'=>'Online'];}
 $map=['unlocated'=>[['category'=>'Network','fault_counts'=>['Major'=>2,'Information'=>1]]],'sites'=>[['id'=>4,'name'=>'Node A','coordinates'=>[12,77],'devices'=>[['category'=>'Computers','fault_counts'=>['Critical'=>1]]]]]];
@@ -53,7 +53,17 @@ foreach(['',str_repeat('x',61),[]] as $name){$bad=$named;$bad['dashboards'][0]['
 foreach([1,4,'3'] as $columns){$bad=$named;$bad['dashboards'][0]['columns']=$columns;try{icct_nms_dashboard_validate($bad);throw new RuntimeException('Invalid columns accepted');}catch(InvalidArgumentException $e){}}
 echo "Named dashboard migration, name validation, column selection and saved card order passed\n";
 
-$removed=['selected'=>0,'dashboards'=>[['name'=>'Main','columns'=>2,'widgets'=>['topology']]],'deleted'=>['index'=>1,'dashboard'=>['name'=>'Operations','columns'=>3,'widgets'=>['topology','recent','ack']]]];
+$removed=['selected'=>0,'dashboards'=>[['name'=>'Main','columns'=>2,'widgets'=>['topology']]],'deleted'=>['index'=>1,'dashboard'=>['name'=>'Operations','columns'=>3,'node_id'=>7,'widgets'=>['topology','recent','ack']]]];
 $restorable=icct_nms_dashboard_validate($removed);verify($restorable['deleted']===$removed['deleted']);
 foreach([['index'=>-1,'dashboard'=>$removed['deleted']['dashboard']],['index'=>1,'dashboard'=>['widgets'=>['unknown']]],['index'=>'1','dashboard'=>$removed['deleted']['dashboard']]] as $deleted){$bad=$removed;$bad['deleted']=$deleted;try{icct_nms_dashboard_validate($bad);throw new RuntimeException('Invalid recovery accepted');}catch(InvalidArgumentException $e){}}
 echo "Deleted dashboard recovery preserves names, cards and columns and rejects invalid recovery data\n";
+
+$scopeMap=['sites'=>[['id'=>7,'name'=>'Node A','coordinates'=>[12,77],'devices'=>[['id'=>1,'name'=>'Device A','status'=>'Up','category'=>'Network','fault_counts'=>['Critical'=>2],'fault_alarms'=>[['name'=>'Link down','severity'=>'Critical','time'=>10]],'ports'=>['items'=>[['name'=>'eth0']]]]]]],'unlocated'=>[['id'=>2,'site_id'=>8,'site'=>'Node B','name'=>'Device B','status'=>'Down','category'=>'Computers','fault_counts'=>['Major'=>1]],['id'=>3,'site_id'=>7,'site'=>'Node A','name'=>'Device C','status'=>'Disabled','fault_counts'=>[]]],'counts'=>['total'=>3,'online'=>1,'offline'=>1,'other'=>1]];
+verify(count(icct_nms_dashboard_nodes($scopeMap))===2);
+$filtered=icct_nms_dashboard_scope($scopeMap,7);verify($filtered['counts']===['total'=>2,'online'=>1,'offline'=>0,'other'=>1]);
+$scopedReadings=icct_nms_dashboard_readings($filtered);verify($scopedReadings['total']===2&&$scopedReadings['severity']['Major']===0&&$scopedReadings['problematic']['total_devices']===2&&$scopedReadings['recent'][0]['device_id']===1&&$scopedReadings['ports'][0]['id']===1);
+$unmapped=icct_nms_dashboard_scope($scopeMap,8);verify($unmapped['sites']===[]&&$unmapped['counts']['total']===1&&icct_nms_dashboard_readings($unmapped)['total']===1);
+verify(icct_nms_dashboard_scope($scopeMap,0)===$scopeMap);
+try{icct_nms_dashboard_scope($scopeMap,9);throw new RuntimeException('Unknown node accepted');}catch(RuntimeException $e){verify($e->getMessage()==='Node unavailable.');}
+foreach([-1,'7',[]] as $node){$bad=$named;$bad['dashboards'][0]['node_id']=$node;try{icct_nms_dashboard_validate($bad);throw new RuntimeException('Invalid node accepted');}catch(InvalidArgumentException $e){}}
+echo "Node-scoped topology counts, alarms, recent faults, ports, unmapped devices and invalid nodes passed\n";

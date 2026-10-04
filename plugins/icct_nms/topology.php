@@ -47,23 +47,23 @@ try {
         echo json_encode(array_intersect_key($selected,array_flip(['name','address','status','network_asset','summary','capacity','fault_counts'])),JSON_THROW_ON_ERROR);exit;
     }
     $mapData=icct_nms_map_data();
-    $dashboardReadings=icct_nms_dashboard_readings($mapData);
-    $dashboardReadings['center']=icct_nms_dashboard_server();
-    if(isset($_GET['dashboard_readings'])){header('Content-Type: application/json');header('Cache-Control: no-store');echo json_encode($dashboardReadings,JSON_THROW_ON_ERROR);exit;}
     $dashboardPreferences=icct_nms_dashboard_preferences();
+    $dashboardNodes=icct_nms_dashboard_nodes($mapData);
     if(isset($_GET['node_summary'])) {
         $siteId=icct_nms_id($_GET['node_summary']);$node=null;
         foreach($mapData['sites'] as $site)if((int)$site['id']===$siteId){$node=icct_nms_map_node_summary($site);break;}
         if(!$node)throw new RuntimeException('Node unavailable.');
         header('Content-Type: application/json');header('Cache-Control: no-store');echo json_encode($node,JSON_THROW_ON_ERROR);exit;
     }
-    if(isset($_GET['site_id'])) {
-        $siteId=icct_nms_id($_GET['site_id']);
-        $mapData['sites']=array_values(array_filter($mapData['sites'],static fn($site)=>(int)$site['id']===$siteId));
-        if(!$mapData['sites'])throw new RuntimeException('Node unavailable.');
-        $node=icct_nms_map_node_summary($mapData['sites'][0]);
-        $mapData['unlocated']=[];$mapData['counts']=['total'=>$node['counts']['total'],'online'=>$node['counts']['online'],'offline'=>$node['counts']['offline'],'other'=>$node['counts']['disabled']+$node['counts']['other']];
-    }
+    $savedNode=$dashboardPreferences['dashboards'][$dashboardPreferences['selected']]['node_id'] ?? 0;
+    $dashboardNodeId=isset($_GET['node_id'])?icct_backend_topology_integer($_GET['node_id'],0,4294967295,'Node ID'):(isset($_GET['site_id'])?icct_nms_id($_GET['site_id']):$savedNode);
+    // Removed or newly inaccessible saved nodes fall back to the authorized overview.
+    if(!isset($_GET['node_id'])&&!isset($_GET['site_id'])&&$dashboardNodeId&&!in_array($dashboardNodeId,array_column($dashboardNodes,'id'),true))$dashboardNodeId=0;
+    $mapData=icct_nms_dashboard_scope($mapData,$dashboardNodeId);
+    $dashboardPreferences['dashboards'][$dashboardPreferences['selected']]['node_id']=$dashboardNodeId;
+    $dashboardReadings=icct_nms_dashboard_readings($mapData);
+    $dashboardReadings['center']=icct_nms_dashboard_server();
+    if(isset($_GET['dashboard_readings'])){header('Content-Type: application/json');header('Cache-Control: no-store');echo json_encode($dashboardReadings,JSON_THROW_ON_ERROR);exit;}
     $mapConfigured=!empty($config['nms_geoserver_wms_url']) && !empty($config['nms_geoserver_layer']);
 } catch (Throwable $error) { icct_nms_failure($error); }
 $dashboardView=in_array($_GET['view']??'', ['topology','rack','image','map'],true)?$_GET['view']:'topology';
