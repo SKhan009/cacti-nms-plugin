@@ -33,18 +33,37 @@ function layout(){
  const cards=widgets().filter(key=>key!=='topology');cards.forEach((key,index)=>(index<2?side:extras).append(document.querySelector('[data-widget="'+key+'"]')));
  side.hidden=cards.length===0;extras.hidden=cards.length<=2;grid.classList.toggle('dashboard-no-side',side.hidden);
  let empty=document.querySelector('#dashboardEmpty');if(!empty){empty=element('p','This dashboard is empty. Use Add Widget to add a card.');empty.id='dashboardEmpty';grid.append(empty);}empty.hidden=widgets().length!==0;
+ document.querySelector('#dashboardDelete').disabled=preferences.dashboards.length===1;
+ document.querySelector('#dashboardUndo').hidden=!preferences.deleted||preferences.dashboards.length>=5;
  document.querySelector('#dashboardColumns').value=preferences.dashboards[preferences.selected].columns ?? 'auto';
  window.dispatchEvent(new Event('resize'));
 }
 select.addEventListener('change',()=>{preferences.selected=Number(select.value);layout();save();});
-const nameDialog=document.querySelector('#dashboardNameDialog'),nameInput=document.querySelector('#dashboardName');
+const nameDialog=document.querySelector('#dashboardNameDialog'),nameInput=document.querySelector('#dashboardName');let nameMode='create';
+function openDashboardName(mode){
+ nameMode=mode;nameInput.setCustomValidity('');nameInput.value=mode==='rename'?(preferences.dashboards[preferences.selected].name||'Dashboard #'+(preferences.selected+1)):'';
+ document.querySelector('#dashboardNameTitle').textContent=mode==='rename'?'Rename dashboard':'Save dashboard view';
+ document.querySelector('#dashboardNameHelp').textContent=mode==='rename'?'Update the name of the selected dashboard.':'Save the current cards, their order and column layout as a new dashboard.';
+ document.querySelector('#dashboardNameSubmit').textContent=mode==='rename'?'Save Name':'Save Dashboard';nameDialog.showModal();nameInput.focus();if(mode==='rename')nameInput.select();
+}
+document.querySelector('#dashboardSave').addEventListener('click',save);
+document.querySelector('#dashboardRename').addEventListener('click',()=>openDashboardName('rename'));
+document.querySelector('#dashboardDelete').addEventListener('click',()=>{
+ if(preferences.dashboards.length<=1)return;
+ const index=preferences.selected;preferences.deleted={index,dashboard:preferences.dashboards[index]};preferences.dashboards.splice(index,1);preferences.selected=Math.min(index,preferences.dashboards.length-1);layout();save();
+});
+document.querySelector('#dashboardUndo').addEventListener('click',()=>{
+ if(!preferences.deleted||preferences.dashboards.length>=5)return;
+ const {index,dashboard}=preferences.deleted;const position=Math.min(index,preferences.dashboards.length);preferences.dashboards.splice(position,0,dashboard);preferences.selected=position;delete preferences.deleted;layout();save();
+});
 document.querySelector('#dashboardColumns').addEventListener('change',e=>{preferences.dashboards[preferences.selected].columns=e.target.value==='auto'?'auto':Number(e.target.value);packCards();save();});
-document.querySelector('#dashboardAdd').addEventListener('click',()=>{if(preferences.dashboards.length>=5)return;nameInput.value='';nameDialog.showModal();nameInput.focus();});
+document.querySelector('#dashboardAdd').addEventListener('click',()=>{if(preferences.dashboards.length>=5)return;openDashboardName('create');});
 document.querySelector('#dashboardNameCancel').addEventListener('click',()=>nameDialog.close());
 document.querySelector('#dashboardNameForm').addEventListener('submit',e=>{
  e.preventDefault();const name=nameInput.value.trim();if(!name){nameInput.setCustomValidity('Enter a dashboard name.');nameInput.reportValidity();return;}
- if(preferences.dashboards.length>=5)return;
- const current=preferences.dashboards[preferences.selected];preferences.dashboards.push({name,columns:current.columns ?? 'auto',widgets:[...current.widgets]});preferences.selected=preferences.dashboards.length-1;nameDialog.close();layout();save();
+ if(nameMode==='rename'){preferences.dashboards[preferences.selected].name=name;}
+ else{if(preferences.dashboards.length>=5)return;const current=preferences.dashboards[preferences.selected];preferences.dashboards.push({name,columns:current.columns ?? 'auto',widgets:[...current.widgets]});preferences.selected=preferences.dashboards.length-1;}
+ nameDialog.close();layout();save();
 });
 nameInput.addEventListener('input',()=>nameInput.setCustomValidity(''));
 const addWidget=document.querySelector('#dashboardAddWidget'),choices=document.querySelector('#dashboardWidgetChoices');

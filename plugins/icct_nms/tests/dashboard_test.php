@@ -52,3 +52,8 @@ foreach(['auto',2,3] as $columns){$named['dashboards'][0]['columns']=$columns;ve
 foreach(['',str_repeat('x',61),[]] as $name){$bad=$named;$bad['dashboards'][0]['name']=$name;try{icct_nms_dashboard_validate($bad);throw new RuntimeException('Invalid name accepted');}catch(InvalidArgumentException $e){}}
 foreach([1,4,'3'] as $columns){$bad=$named;$bad['dashboards'][0]['columns']=$columns;try{icct_nms_dashboard_validate($bad);throw new RuntimeException('Invalid columns accepted');}catch(InvalidArgumentException $e){}}
 echo "Named dashboard migration, name validation, column selection and saved card order passed\n";
+
+$removed=['selected'=>0,'dashboards'=>[['name'=>'Main','columns'=>2,'widgets'=>['topology']]],'deleted'=>['index'=>1,'dashboard'=>['name'=>'Operations','columns'=>3,'widgets'=>['topology','recent','ack']]]];
+$restorable=icct_nms_dashboard_validate($removed);verify($restorable['deleted']===$removed['deleted']);
+foreach([['index'=>-1,'dashboard'=>$removed['deleted']['dashboard']],['index'=>1,'dashboard'=>['widgets'=>['unknown']]],['index'=>'1','dashboard'=>$removed['deleted']['dashboard']]] as $deleted){$bad=$removed;$bad['deleted']=$deleted;try{icct_nms_dashboard_validate($bad);throw new RuntimeException('Invalid recovery accepted');}catch(InvalidArgumentException $e){}}
+echo "Deleted dashboard recovery preserves names, cards and columns and rejects invalid recovery data\n";

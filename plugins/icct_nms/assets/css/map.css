@@ -209,3 +209,11 @@
 #dashboardNameDialog input{width:100%;padding:10px;border:1px solid #aaa}
 #dashboardNameDialog p{color:#666;font-size:13px;margin:12px 0 20px}
 #dashboardNameDialog form>div{display:flex;justify-content:flex-end;gap:12px}
+
+.dashboard-actions{display:flex;align-items:center;gap:4px;flex:none}
+.dashboard-action{position:relative;display:grid;place-items:center;width:34px;height:34px;padding:6px;border:0;background:transparent;border-radius:4px;color:#333}
+.dashboard-action svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6}
+.dashboard-action:hover:not(:disabled){background:#eef2f9}.dashboard-action:disabled{opacity:.4;cursor:not-allowed}
+.dashboard-action-tip{position:absolute;top:calc(100% + 7px);left:50%;transform:translateX(-50%);z-index:1400;white-space:nowrap;background:#333;color:white;padding:5px 8px;border-radius:3px;font-size:12px;line-height:16px;opacity:0;pointer-events:none;transition:opacity .12s}
+.dashboard-action:hover .dashboard-action-tip,.dashboard-action:focus-visible .dashboard-action-tip{opacity:1}
+.dashboard-undo{border:0;background:transparent;color:#2468f5;padding:6px;font-size:12px;white-space:nowrap}

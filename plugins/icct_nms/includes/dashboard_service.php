@@ -15,6 +15,12 @@ function icct_nms_dashboard_validate($value) {
         $clean['dashboards'][]=['name'=>trim($name),'columns'=>$columns,'widgets'=>array_merge(['topology'],array_values(array_diff($widgets,['topology'])))];
     }
     if($clean['selected']<0||$clean['selected']>=count($clean['dashboards']))throw new InvalidArgumentException('Dashboard unavailable.');
+    if(isset($value['deleted'])){
+        $deleted=$value['deleted'];
+        if(!is_array($deleted)||!isset($deleted['index'],$deleted['dashboard'])||!is_int($deleted['index'])||$deleted['index']<0||$deleted['index']>4)throw new InvalidArgumentException('Invalid deleted dashboard.');
+        $restored=icct_nms_dashboard_validate(['selected'=>0,'dashboards'=>[$deleted['dashboard']]]);
+        $clean['deleted']=['index'=>$deleted['index'],'dashboard'=>$restored['dashboards'][0]];
+    }
     return $clean;
 }
 function icct_nms_dashboard_preferences() {
