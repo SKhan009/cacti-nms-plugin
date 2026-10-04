@@ -198,3 +198,14 @@
 .dashboard-extra-widgets{grid-auto-rows:1px;row-gap:0;column-gap:12px;grid-auto-flow:row dense;align-items:start}
 .dashboard-extra-widgets>.dashboard-card{align-self:start;width:100%;height:auto;margin:0;box-sizing:border-box}
 @media(max-width:900px){.dashboard-grid{grid-template-columns:minmax(0,1fr)}.dashboard-widgets{grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))}.dashboard-grid>.icct-map-panel,.dashboard-widgets,.dashboard-extra-widgets{grid-column:1;min-width:0}}
+
+/* Topology and its neighbouring cards remain a two-column section. */
+@media(min-width:901px){.dashboard-grid{grid-template-columns:minmax(0,2fr) minmax(280px,1fr)}.dashboard-grid.dashboard-no-side{grid-template-columns:minmax(0,1fr)}}
+.dashboard-toolbar #dashboardColumns{width:140px}
+#dashboardNameDialog{width:420px;max-width:calc(100vw - 32px);border:1px solid #ddd;padding:24px;background:white;color:#202020;box-shadow:0 8px 32px #0003}
+#dashboardNameDialog::backdrop{background:#0005}
+#dashboardNameDialog h2{font-size:22px;font-weight:500;margin:0 0 20px}
+#dashboardNameDialog label{display:block;margin-bottom:8px}
+#dashboardNameDialog input{width:100%;padding:10px;border:1px solid #aaa}
+#dashboardNameDialog p{color:#666;font-size:13px;margin:12px 0 20px}
+#dashboardNameDialog form>div{display:flex;justify-content:flex-end;gap:12px}

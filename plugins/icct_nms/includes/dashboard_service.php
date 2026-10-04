@@ -3,12 +3,16 @@
 function icct_nms_dashboard_validate($value) {
     if(!is_array($value)||!isset($value['dashboards'],$value['selected'])||!is_array($value['dashboards'])||count($value['dashboards'])<1||count($value['dashboards'])>5)throw new InvalidArgumentException('Choose one to five dashboards.');
     $clean=['selected'=>(int)$value['selected'],'dashboards'=>[]];
-    foreach(array_values($value['dashboards']) as $dashboard){
+    foreach(array_values($value['dashboards']) as $index=>$dashboard){
         if(!is_array($dashboard)||!isset($dashboard['widgets'])||!is_array($dashboard['widgets'])||count($dashboard['widgets'])>9)throw new InvalidArgumentException('Invalid dashboard widgets.');
         $widgets=array_values($dashboard['widgets']);
         foreach($widgets as $widget)if(!is_string($widget))throw new InvalidArgumentException('Invalid widget.');
         if(count(array_unique($widgets))!==count($widgets)||array_diff($widgets,['topology','birds','alarms','ack','escalation','frequent','recent','ports','problematic']))throw new InvalidArgumentException('Unknown or duplicate widget.');
-        $clean['dashboards'][]=['widgets'=>array_merge(['topology'],array_values(array_diff($widgets,['topology'])))];
+        $name=$dashboard['name'] ?? 'Dashboard #'.($index+1);
+        if(!is_string($name)||trim($name)===''||mb_strlen(trim($name))>60)throw new InvalidArgumentException('Enter a dashboard name of 1 to 60 characters.');
+        $columns=$dashboard['columns'] ?? 'auto';
+        if(!in_array($columns,['auto',2,3],true))throw new InvalidArgumentException('Choose automatic, two or three columns.');
+        $clean['dashboards'][]=['name'=>trim($name),'columns'=>$columns,'widgets'=>array_merge(['topology'],array_values(array_diff($widgets,['topology'])))];
     }
     if($clean['selected']<0||$clean['selected']>=count($clean['dashboards']))throw new InvalidArgumentException('Dashboard unavailable.');
     return $clean;

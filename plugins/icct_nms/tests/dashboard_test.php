@@ -1,7 +1,7 @@
 <?php
 require __DIR__.'/../includes/dashboard_service.php';
 function verify($condition){if(!$condition)throw new RuntimeException('Dashboard assertion failed.');}
-$valid=['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms']]]];verify(icct_nms_dashboard_validate($valid)===$valid);
+$valid=['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms']]]];verify(icct_nms_dashboard_validate($valid)['dashboards'][0]===['name'=>'Dashboard #1','columns'=>'auto','widgets'=>$valid['dashboards'][0]['widgets']]);
 foreach([['selected'=>0,'dashboards'=>[]],['selected'=>1,'dashboards'=>[['widgets'=>[]]]],['selected'=>0,'dashboards'=>array_fill(0,6,['widgets'=>[]])],['selected'=>0,'dashboards'=>[['widgets'=>['birds','birds']]]],['selected'=>0,'dashboards'=>[['widgets'=>['unknown']]]],['selected'=>0,'dashboards'=>[['widgets'=>[[]]]]]] as $bad){try{icct_nms_dashboard_validate($bad);throw new RuntimeException('Invalid layout accepted');}catch(InvalidArgumentException $e){}}
 function icct_nms_map_node_summary($site){return ['status'=>'Online'];}
 $map=['unlocated'=>[['category'=>'Network','fault_counts'=>['Major'=>2,'Information'=>1]]],'sites'=>[['id'=>4,'name'=>'Node A','coordinates'=>[12,77],'devices'=>[['category'=>'Computers','fault_counts'=>['Critical'=>1]]]]]];
@@ -9,7 +9,7 @@ $result=icct_nms_dashboard_readings($map);verify($result['total']===4&&$result['
 verify(icct_nms_dashboard_readings(['unlocated'=>[],'sites'=>[]])['total']===0);
 verify($result['ack']['Ack']===null&&$result['escalation']['Not_Esc']===null);
 $empty=icct_nms_dashboard_readings(['unlocated'=>[],'sites'=>[]]);verify($empty['ack']['Ack']===0&&$empty['escalation']['Esc']===0);
-$expanded=['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms','ack','escalation']]]];verify(icct_nms_dashboard_validate($expanded)===$expanded);
+$expanded=['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms','ack','escalation']]]];verify(icct_nms_dashboard_validate($expanded)['dashboards'][0]['widgets']===$expanded['dashboards'][0]['widgets']);
 echo "Dashboard layout limits, known widgets, alarm aggregation and empty states passed\n";
 
 $hosts=[['id'=>2,'description'=>'Cacti server','hostname'=>'127.0.0.1','snmp_sysName'=>'cacti-rhel9.local','site_id'=>3,'status_label'=>'Up'],['id'=>3,'description'=>'Demo','hostname'=>'127.0.0.1','snmp_sysName'=>'sim-router','site_id'=>4,'status_label'=>'Up']];
@@ -45,3 +45,10 @@ verify($affected['devices'][0]['id']===2&&$affected['devices'][0]['counts']['Maj
 verify(icct_nms_dashboard_readings(['unlocated'=>[],'sites'=>[]])['problematic']===['total_devices'=>0,'devices'=>[]]);
 verify(count(icct_nms_dashboard_validate(['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms','ack','escalation','frequent','recent','ports','problematic']]]])['dashboards'][0]['widgets'])===9);
 echo "Problematic device severity counts, device association and nine-card layouts passed\n";
+
+$named=['selected'=>0,'dashboards'=>[['name'=>'  Operations  ','columns'=>3,'widgets'=>['topology','recent','ack']]]];
+$clean=icct_nms_dashboard_validate($named);verify($clean['dashboards'][0]['name']==='Operations'&&$clean['dashboards'][0]['columns']===3&&$clean['dashboards'][0]['widgets']===$named['dashboards'][0]['widgets']);
+foreach(['auto',2,3] as $columns){$named['dashboards'][0]['columns']=$columns;verify(icct_nms_dashboard_validate($named)['dashboards'][0]['columns']===$columns);}
+foreach(['',str_repeat('x',61),[]] as $name){$bad=$named;$bad['dashboards'][0]['name']=$name;try{icct_nms_dashboard_validate($bad);throw new RuntimeException('Invalid name accepted');}catch(InvalidArgumentException $e){}}
+foreach([1,4,'3'] as $columns){$bad=$named;$bad['dashboards'][0]['columns']=$columns;try{icct_nms_dashboard_validate($bad);throw new RuntimeException('Invalid columns accepted');}catch(InvalidArgumentException $e){}}
+echo "Named dashboard migration, name validation, column selection and saved card order passed\n";

@@ -14,7 +14,8 @@ let packFrame=0;
 function packCards(){
  cancelAnimationFrame(packFrame);packFrame=requestAnimationFrame(()=>{
   if(extras.hidden)return;
-  const columns=extras.clientWidth>=1100?3:extras.clientWidth>=600?2:1;
+  const requested=preferences.dashboards[preferences.selected].columns ?? 'auto';
+  const columns=extras.clientWidth<600?1:requested==='auto'?(extras.clientWidth>=1100?3:2):Math.min(Number(requested),extras.clientWidth>=900?3:2);
   extras.style.gridTemplateColumns='repeat('+columns+', minmax(0, 1fr))';
   extras.querySelectorAll('.dashboard-card').forEach(card=>{
    card.style.gridColumn='span 1';
@@ -27,15 +28,25 @@ packingObserver.observe(extras);
 document.querySelectorAll('.dashboard-card').forEach(card=>packingObserver.observe(card));
 window.addEventListener('resize',packCards);
 function layout(){
- select.replaceChildren();preferences.dashboards.forEach((d,i)=>{const option=element('option','Dashboard #'+(i+1));option.value=i;select.append(option);});select.value=preferences.selected;document.querySelector('#dashboardAdd').disabled=preferences.dashboards.length>=5;
+ select.replaceChildren();preferences.dashboards.forEach((d,i)=>{const option=element('option',d.name||'Dashboard #'+(i+1));option.value=i;select.append(option);});select.value=preferences.selected;document.querySelector('#dashboardAdd').disabled=preferences.dashboards.length>=5;
  document.querySelectorAll('[data-widget]').forEach(card=>card.hidden=!widgets().includes(card.dataset.widget));
- const cards=widgets().filter(key=>key!=='topology');cards.forEach(key=>extras.append(document.querySelector('[data-widget="'+key+'"]')));
- side.hidden=true;extras.hidden=cards.length===0;grid.classList.toggle('dashboard-no-side',side.hidden);
+ const cards=widgets().filter(key=>key!=='topology');cards.forEach((key,index)=>(index<2?side:extras).append(document.querySelector('[data-widget="'+key+'"]')));
+ side.hidden=cards.length===0;extras.hidden=cards.length<=2;grid.classList.toggle('dashboard-no-side',side.hidden);
  let empty=document.querySelector('#dashboardEmpty');if(!empty){empty=element('p','This dashboard is empty. Use Add Widget to add a card.');empty.id='dashboardEmpty';grid.append(empty);}empty.hidden=widgets().length!==0;
+ document.querySelector('#dashboardColumns').value=preferences.dashboards[preferences.selected].columns ?? 'auto';
  window.dispatchEvent(new Event('resize'));
 }
 select.addEventListener('change',()=>{preferences.selected=Number(select.value);layout();save();});
-document.querySelector('#dashboardAdd').addEventListener('click',()=>{if(preferences.dashboards.length>=5)return;preferences.dashboards.push({widgets:['topology']});preferences.selected=preferences.dashboards.length-1;layout();save();});
+const nameDialog=document.querySelector('#dashboardNameDialog'),nameInput=document.querySelector('#dashboardName');
+document.querySelector('#dashboardColumns').addEventListener('change',e=>{preferences.dashboards[preferences.selected].columns=e.target.value==='auto'?'auto':Number(e.target.value);packCards();save();});
+document.querySelector('#dashboardAdd').addEventListener('click',()=>{if(preferences.dashboards.length>=5)return;nameInput.value='';nameDialog.showModal();nameInput.focus();});
+document.querySelector('#dashboardNameCancel').addEventListener('click',()=>nameDialog.close());
+document.querySelector('#dashboardNameForm').addEventListener('submit',e=>{
+ e.preventDefault();const name=nameInput.value.trim();if(!name){nameInput.setCustomValidity('Enter a dashboard name.');nameInput.reportValidity();return;}
+ if(preferences.dashboards.length>=5)return;
+ const current=preferences.dashboards[preferences.selected];preferences.dashboards.push({name,columns:current.columns ?? 'auto',widgets:[...current.widgets]});preferences.selected=preferences.dashboards.length-1;nameDialog.close();layout();save();
+});
+nameInput.addEventListener('input',()=>nameInput.setCustomValidity(''));
 const addWidget=document.querySelector('#dashboardAddWidget'),choices=document.querySelector('#dashboardWidgetChoices');
 function closePicker(){choices.hidden=true;addWidget.setAttribute('aria-expanded','false');}
 addWidget.addEventListener('click',()=>{
