@@ -170,3 +170,12 @@
 
 .dashboard-extra-widgets [data-widget=ports]{grid-column:span 2}.ports-overview-content{padding:12px 18px;max-height:420px;overflow:auto}.ports-device-row{display:grid;grid-template-columns:35% minmax(0,1fr);align-items:center;padding:12px 0;gap:12px}.ports-device-row>a{color:#333;text-decoration:none;font-size:14px;overflow-wrap:anywhere}.port-dots{display:flex;flex-wrap:wrap;gap:6px;border-left:1px solid #ddd;padding-left:12px}.port-dot{width:14px;height:14px;min-width:14px;min-height:14px;padding:0;border:0;border-radius:50%;cursor:help;flex:none}.port-dot:focus-visible{outline:2px solid #222;outline-offset:2px}.dashboard-port-tooltip{position:fixed;z-index:1700;width:390px;max-width:calc(100vw - 24px);background:#fff;border:1px solid #ddd;box-shadow:0 4px 16px #0002;border-radius:3px;padding:12px;box-sizing:border-box;pointer-events:auto;font-size:14px;line-height:18px}.dashboard-port-tooltip[hidden]{display:none}.dashboard-port-tooltip dl{margin:0;display:grid;grid-template-columns:40% minmax(0,1fr);gap:8px 12px}.dashboard-port-tooltip dt{color:#555}.dashboard-port-tooltip dd{margin:0;border-left:1px solid #ddd;padding-left:10px;overflow-wrap:anywhere}.widget-expanded .ports-overview-content{flex:1;max-height:none}
 @media(max-width:600px){.dashboard-extra-widgets [data-widget=ports]{grid-column:1}}
+
+/* Reorder from the header, with a visible insertion edge and floating label. */
+.dashboard-card>header { touch-action:none; cursor:grab; }
+.dashboard-card>header button:not(.widget-grip) { cursor:pointer; }
+.dashboard-dragging, .dashboard-dragging * { cursor:grabbing!important; user-select:none!important; }
+.dashboard-card.card-dragging { opacity:.45; }
+.dashboard-card.drag-before { box-shadow:inset 0 4px #0f62fe; }
+.dashboard-card.drag-after { box-shadow:inset 0 -4px #0f62fe; }
+.widget-drag-preview { position:fixed; z-index:2000; pointer-events:none; max-width:300px; padding:10px 14px; border:1px solid #0f62fe; border-radius:4px; background:white; color:#222; box-shadow:0 4px 16px #0003; font-size:14px; }

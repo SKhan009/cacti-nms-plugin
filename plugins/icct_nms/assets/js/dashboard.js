@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 const dataElement=document.querySelector('#dashboardData');if(!dataElement)return;
-const data=JSON.parse(dataElement.textContent);let preferences=data.preferences,readings=data.readings,mode='severity',saving=false,saveAgain=false,dragWidget=null;
+const data=JSON.parse(dataElement.textContent);let preferences=data.preferences,readings=data.readings,mode='severity',saving=false,saveAgain=false;
 const names={topology:'Topology / Rack / Image / Map',birds:'Birds Eye View',alarms:'Alarm Overview',ack:'Ack Overview',escalation:'Escalation Overview',frequent:'Top 10 Frequent Alarms by Count',recent:'Recent Alarms (25)',ports:'Device Interface (Ports) Overview'},colors={Critical:'#ff4148',Major:'#ff7226',Minor:'#ff9b17',Warning:'#43aa91',Information:'#277f9b'},palette=['#737eff','#6bce95','#ffb14e','#03cfeb','#a585ff','#2499ff','#ff8585','#34bbcc'];
 const select=document.querySelector('#dashboardSelect'),picker=document.querySelector('.dashboard-widget-picker'),status=document.querySelector('#dashboardSaveStatus'),side=document.querySelector('#dashboardWidgets'),extras=document.querySelector('#dashboardExtraWidgets'),grid=document.querySelector('.dashboard-grid');
 function element(tag,text){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;}
@@ -31,15 +31,57 @@ addWidget.addEventListener('click',()=>{
 document.addEventListener('click',e=>{if(!picker.contains(e.target))closePicker();});
 picker.addEventListener('keydown',e=>{if(e.key==='Escape'){closePicker();addWidget.focus();}});
 document.querySelectorAll('[data-remove-widget]').forEach(button=>button.addEventListener('click',()=>{preferences.dashboards[preferences.selected].widgets=widgets().filter(w=>w!==button.dataset.removeWidget);if(button.dataset.removeWidget==='recent')collapseRecent();if(button.dataset.removeWidget==='ports')collapsePorts();layout();save();}));
-function move(key,target){const list=widgets(),old=list.indexOf(key),to=list.indexOf(target);if(key==='topology'||target==='topology'||old<0||to<0||old===to)return;list.splice(old,1);list.splice(to,0,key);layout();save();}
-document.querySelectorAll('.widget-grip').forEach(grip=>{
- const key=grip.closest('[data-widget]').dataset.widget;grip.draggable=false;let start=null,target=null;
- function clear(){document.querySelectorAll('.drag-target').forEach(card=>card.classList.remove('drag-target'));start=null;target=null;dragWidget=null;}
- grip.addEventListener('pointerdown',e=>{if(e.button!==0)return;start={x:e.clientX,y:e.clientY};grip.setPointerCapture(e.pointerId);});
- grip.addEventListener('pointermove',e=>{if(!start||Math.hypot(e.clientX-start.x,e.clientY-start.y)<5)return;dragWidget=key;document.querySelectorAll('.drag-target').forEach(card=>card.classList.remove('drag-target'));const card=document.elementFromPoint(e.clientX,e.clientY)?.closest('.dashboard-card');target=card&&card.dataset.widget!==key?card.dataset.widget:null;if(target)card.classList.add('drag-target');const bounds=grid.getBoundingClientRect();if(e.clientY>bounds.bottom-30)grid.scrollTop+=12;else if(e.clientY<bounds.top+30)grid.scrollTop-=12;});
- grip.addEventListener('pointerup',()=>{const destination=target;clear();if(destination)move(key,destination);});grip.addEventListener('pointercancel',clear);
+function move(key,target,after){
+ const list=widgets(),old=list.indexOf(key),to=list.indexOf(target);
+ if(key==='topology'||target==='topology'||old<0||to<0||old===to)return;
+ list.splice(old,1);list.splice(after===undefined?to:list.indexOf(target)+(after?1:0),0,key);layout();save();
+}
+// Pointer dragging supports both card headers and the gaps between cards.
+let cardDrag=null,dragFrame=0;
+function dropPosition(x,y){
+ const bounds=grid.getBoundingClientRect();if(x<bounds.left||x>bounds.right||y<bounds.top||y>bounds.bottom)return null;
+ const sideBounds=side.getBoundingClientRect(),zone=!side.hidden&&x>=sideBounds.left&&x<=sideBounds.right&&y>=sideBounds.top&&y<=sideBounds.bottom?side:extras;
+ const zoneBounds=zone.getBoundingClientRect();if(zone.hidden||x<zoneBounds.left||x>zoneBounds.right||y<zoneBounds.top||y>zoneBounds.bottom)return null;
+ const cards=Array.from(zone.querySelectorAll('.dashboard-card:not([hidden])')).filter(card=>card.dataset.widget!==cardDrag.key);
+ let closest=null,distance=Infinity;
+ for(const card of cards){const r=card.getBoundingClientRect(),dx=Math.max(r.left-x,0,x-r.right),dy=Math.max(r.top-y,0,y-r.bottom),score=dx*dx+dy*dy;if(score<distance){distance=score;closest=card;}}
+ if(!closest)return null;
+ const r=closest.getBoundingClientRect(),after=zone===side?y>r.top+r.height/2:y>=r.bottom||(y>=r.top&&x>r.left+r.width/2);
+ return {card:closest,after};
+}
+function paintDrop(){
+ document.querySelectorAll('.drag-target,.drag-before,.drag-after').forEach(card=>card.classList.remove('drag-target','drag-before','drag-after'));
+ cardDrag.destination=dropPosition(cardDrag.x,cardDrag.y);
+ if(cardDrag.destination){const {card,after}=cardDrag.destination;card.classList.add('drag-target',after?'drag-after':'drag-before');}
+ cardDrag.preview.style.left=(cardDrag.x+12)+'px';cardDrag.preview.style.top=(cardDrag.y+12)+'px';
+}
+function dragScroll(){
+ if(!cardDrag?.active)return;
+ const r=grid.getBoundingClientRect(),delta=cardDrag.y>r.bottom-55?18:cardDrag.y<r.top+55?-18:0;
+ if(delta){grid.scrollTop+=delta;paintDrop();}dragFrame=requestAnimationFrame(dragScroll);
+}
+function endCardDrag(commit){
+ if(!cardDrag)return;const state=cardDrag;cardDrag=null;cancelAnimationFrame(dragFrame);state.preview?.remove();state.card.classList.remove('card-dragging');document.body.classList.remove('dashboard-dragging');
+ document.querySelectorAll('.drag-target,.drag-before,.drag-after').forEach(card=>card.classList.remove('drag-target','drag-before','drag-after'));
+ if(commit&&state.destination)move(state.key,state.destination.card.dataset.widget,state.destination.after);
+}
+document.querySelectorAll('.dashboard-card header').forEach(header=>{
+ const card=header.closest('[data-widget]'),grip=header.querySelector('.widget-grip'),key=card.dataset.widget;grip.draggable=false;
+ header.addEventListener('pointerdown',e=>{
+  if(e.button!==0||card.classList.contains('widget-expanded')||e.target.closest('button:not(.widget-grip),a,input,select'))return;
+  e.preventDefault();grip.focus();cardDrag={key,card,id:e.pointerId,startX:e.clientX,startY:e.clientY,x:e.clientX,y:e.clientY,active:false};header.setPointerCapture(e.pointerId);
+ });
  grip.addEventListener('keydown',e=>{if(!['ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const list=widgets().filter(w=>w!=='topology'),destination=list[list.indexOf(key)+(e.key==='ArrowUp'?-1:1)];if(destination){move(key,destination);grip.focus();}});
 });
+document.addEventListener('pointermove',e=>{
+ if(!cardDrag||e.pointerId!==cardDrag.id)return;cardDrag.x=e.clientX;cardDrag.y=e.clientY;
+ if(!cardDrag.active){if(Math.hypot(e.clientX-cardDrag.startX,e.clientY-cardDrag.startY)<5)return;cardDrag.active=true;cardDrag.card.classList.add('card-dragging');document.body.classList.add('dashboard-dragging');cardDrag.preview=element('div',names[cardDrag.key]);cardDrag.preview.className='widget-drag-preview';document.body.append(cardDrag.preview);dragFrame=requestAnimationFrame(dragScroll);}
+ e.preventDefault();paintDrop();
+},{passive:false});
+document.addEventListener('pointerup',e=>{if(cardDrag&&e.pointerId===cardDrag.id)endCardDrag(true);});
+document.addEventListener('pointercancel',()=>endCardDrag(false));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')endCardDrag(false);});
+window.addEventListener('blur',()=>endCardDrag(false));
 function radar(){
  const radar=document.querySelector('#birdsRadar'),origin=readings.center||{name:'Cacti server',status:'Unknown',coordinates:null},nodes=readings.nodes.filter(node=>Number(node.id)!==Number(origin.site_id));radar.replaceChildren();
  const cx=160,cy=160,r=115,geographic=Array.isArray(origin.coordinates);
