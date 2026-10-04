@@ -49,39 +49,34 @@ let activeLink=null,linkRequest=0,linkTimer=null;
 function hideLink(){clearTimeout(linkTimer);linkRequest++;activeLink?.classList.remove('active-link');activeLink=null;linkTip.hidden=true;}
 function bandwidth(value){if(value===null||value===undefined)return 'Unavailable';const units=['bps','Kbps','Mbps','Gbps','Tbps'];let n=Number(value),i=0;while(n>=1000&&i<4){n/=1000;i++;}return n.toLocaleString(undefined,{maximumFractionDigits:2})+' '+units[i];}
 function mtrReadings(section,reports){
- section.append(el('b','mtr-heading','MTR path readings'));
- if(!reports.length){section.append(el('p','','No saved MTR report for this device and account. Run MTR from Device Details → Records.'));return;}
- const ms=v=>v===null||v===undefined?'Unavailable':Number(v).toLocaleString(undefined,{maximumFractionDigits:3})+' ms';
- reports.forEach((report,index)=>{
-  const details=el('details','mtr-report');details.open=index===0;details.append(el('summary','',report.method+' · '+report.collected));
-  details.append(el('p','',report.collector+' → '+report.target),el('small','','Saved diagnostic report · '+report.status+(report.timed_out?' · Timed out':'')+(report.truncated?' · Output truncated':'')));
-  const final=report.hops.at(-1);
-  if(final){
-   const rows=el('dl','');Object.entries({'Final reported hop':final.address,'Packet loss':final.loss_percent+'%','Packets sent':final.sent,'Last latency':ms(final.last_ms),'Average latency':ms(final.avg_ms),'Best latency':ms(final.best_ms),'Worst latency':ms(final.worst_ms),'Latency deviation':ms(final.stdev_ms)}).forEach(([k,v])=>rows.append(el('dt','',k),el('dd','',String(v))));details.append(rows);
-   const scroll=el('div','mtr-hop-scroll'),table=el('table','mtr-hop-table');table.append(el('caption','','All hops · latency in ms'));const header=el('tr','');['Hop','Address','Loss %','Sent','Last','Avg','Best','Worst','StDev'].forEach(k=>header.append(el('th','',k)));table.append(header);
-   report.hops.forEach(hop=>{const row=el('tr','');[hop.hop,hop.address,hop.loss_percent,hop.sent,hop.last_ms,hop.avg_ms,hop.best_ms,hop.worst_ms,hop.stdev_ms].forEach(v=>row.append(el('td','',v===null?'—':String(v))));table.append(row);});scroll.append(table);details.append(scroll);
-  }else details.append(el('p','','No hop measurements were returned.'));
-  const raw=el('details','');raw.append(el('summary','','Full MTR report'),el('pre','',report.output));details.append(raw);section.append(details);
- });
- section.append(el('small','','MTR measures the collector-to-device path, not this individual network link. Hop loss can reflect ICMP reply limiting. Checks for new saved readings every 10 seconds.'));
+ if(!reports.length){section.append(el('small','mtr-empty','MTR: no reading'));return;}
+ const report=[...reports].sort((a,b)=>(b.collected||'').localeCompare(a.collected||''))[0],final=report.hops.at(-1);
+ section.append(el('b','mtr-heading',report.method),el('small','mtr-path',report.collector+' → '+report.target));
+ const ms=v=>v===null||v===undefined?'Unavailable':Number(v).toLocaleString(undefined,{maximumFractionDigits:2})+' ms';
+ const values={'Latency (avg)':ms(final?.avg_ms),'Packet loss':final?final.loss_percent+'%':'Unavailable','Measured':report.collected};
+ if(final&&final.address!==report.target)values['Final hop']=final.address==='???'?'No reply':final.address;
+ const rows=el('dl','');Object.entries(values).forEach(([k,v])=>rows.append(el('dt','',k),el('dd','',String(v))));section.append(rows);
+ if(report.timed_out||report.status!=='complete')section.append(el('p','mtr-issue',report.timed_out?'MTR timed out':'MTR failed'));
+ else if(final?.loss_percent>0)section.append(el('p','mtr-issue','Hop '+final.hop+' · '+final.address+' reports '+final.loss_percent+'% reply loss'));
 }
+
 function showLink(link,anchor,event){
  if(editing)return;clearTimeout(linkTimer);const request=++linkRequest;activeLink?.classList.remove('active-link');activeLink=anchor;anchor.classList.add('active-link');linkTip.replaceChildren();linkTip.append(el('strong','',link.label||'Network link'));
  const rect=anchor.getBoundingClientRect();const left=event?.clientX??(rect.left+rect.width/2),top=event?.clientY??rect.top;
  linkTip.hidden=false;linkTip.style.left=Math.max(8,Math.min(left+14,window.innerWidth-350))+'px';linkTip.style.top=Math.max(8,Math.min(top+14,window.innerHeight-300))+'px';
  const loading=el('p','','Loading link and MTR readings…');linkTip.append(loading);
  function refresh(){fetch('topology.php?link_source='+encodeURIComponent(link.source)+'&link_target='+encodeURIComponent(link.target),{credentials:'same-origin',cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json();}).then(fresh=>{
-  if(activeLink!==anchor||request!==linkRequest)return;const open=Array.from(linkTip.querySelectorAll('details')).map(d=>d.open),scrollTop=linkTip.scrollTop;linkTip.replaceChildren(el('strong','',link.label||'Network link'));
-  (fresh.readings||[]).forEach((reading,i)=>{const device=devices.find(d=>Number(d.id)===Number(i?link.target:link.source));const section=el('section','');section.append(el('b','',(device?.name||'Device')+' · '+reading.port));
-   if(!reading.available)section.append(el('p','','Bandwidth unavailable — no current matching interface reading.'));
+  if(activeLink!==anchor||request!==linkRequest)return;const scrollTop=linkTip.scrollTop;linkTip.replaceChildren(el('strong','',link.label||'Network link'));
+  (fresh.readings||[]).forEach((reading,i)=>{const device=devices.find(d=>Number(d.id)===Number(i?link.target:link.source));const section=el('section','');section.append(el('b','',(device?.name||'Device')+(reading.port==='Not specified'?'':' · '+reading.port)));
+   if(!reading.available)section.append(el('p','','Bandwidth: unavailable'));
    else {const rows=el('dl','');const values={'Link status':reading.status,'Capacity':bandwidth(reading.capacity_bps),'Inbound':bandwidth(reading.in_bps),'Outbound':bandwidth(reading.out_bps),'Updated':reading.collected};
     if(reading.capacity_bps>0){for(const dir of ['in','out'])if(reading[dir+'_bps']!==null)values[dir==='in'?'Inbound utilization':'Outbound utilization']=(reading[dir+'_bps']/reading.capacity_bps*100).toFixed(1)+'%';}
-    Object.entries(values).forEach(([name,value])=>{rows.append(el('dt','',name),el('dd','',value));});section.append(rows);if(reading.sample_seconds)section.append(el('small','','Traffic averaged over '+reading.sample_seconds+' seconds.'));}
+    Object.entries(values).forEach(([name,value])=>{rows.append(el('dt','',name),el('dd','',value));});section.append(rows);}
    mtrReadings(section,fresh.mtr?.[i]||[]);linkTip.append(section);
   });
-  linkTip.querySelectorAll('details').forEach((d,i)=>{if(open[i]!==undefined)d.open=open[i];});linkTip.scrollTop=scrollTop;
+  linkTip.scrollTop=scrollTop;
   linkTip.style.top=Math.max(8,Math.min(top+14,window.innerHeight-linkTip.offsetHeight-8))+'px';
- }).catch(()=>{if(activeLink===anchor&&request===linkRequest){linkTip.replaceChildren(el('p','','Link readings could not be refreshed. Retrying in 10 seconds.'));}}).finally(()=>{if(activeLink===anchor&&request===linkRequest)linkTimer=setTimeout(refresh,10000);});}refresh();
+ }).catch(()=>{if(activeLink===anchor&&request===linkRequest){linkTip.replaceChildren(el('p','','Readings unavailable'));}}).finally(()=>{if(activeLink===anchor&&request===linkRequest)linkTimer=setTimeout(refresh,10000);});}refresh();
 }
 function lines(){hideLink();svg.replaceChildren();const w=canvas.clientWidth,h=canvas.clientHeight;data.links.forEach(link=>{const a=positions[link.source],b=positions[link.target];if(!a||!b)return;const path=document.createElementNS('http://www.w3.org/2000/svg','path');const x=a[0]*w,y=a[1]*h,X=b[0]*w,Y=b[1]*h,mid=(y+Y)/2;path.setAttribute('d',`M${x} ${y} V${mid} H${X} V${Y}`);if(link.color)path.style.stroke=link.color;svg.append(path);
  const hit=path.cloneNode();hit.classList.add('topology-link-hit');hit.style.stroke='transparent';hit.setAttribute('tabindex','0');hit.setAttribute('aria-label','Link bandwidth and MTR: '+link.label);hit.setAttribute('aria-describedby',linkTip.id);
