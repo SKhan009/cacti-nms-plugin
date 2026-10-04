@@ -116,6 +116,8 @@ svg {
   flex-shrink: 0;
   height: 34px;
 }
+.brand-home { display: inline-flex; align-items: center; }
+.brand-home:focus-visible { outline: 2px solid #0f62fe; outline-offset: 3px; }
 .brand-logo-drdo { width: 34px; margin-right: 9px; }
 .brand-logo-bel { width: 128px; }
 .station {
