@@ -27,3 +27,9 @@ echo "Frequent alarm grouping, counts and empty state passed\n";
 verify(icct_nms_dashboard_validate(['selected'=>0,'dashboards'=>[['widgets'=>['ack','birds']]]])['dashboards'][0]['widgets']===['topology','ack','birds']);
 verify(icct_nms_dashboard_validate(['selected'=>0,'dashboards'=>[['widgets'=>[]]]])['dashboards'][0]['widgets']===['topology']);
 echo "Fixed topology restored in existing and new layouts passed\n";
+
+$map['unlocated'][0]['name']='Existing device';$map['unlocated'][0]['id']=2;
+$map['unlocated'][0]['fault_alarms']=[['name'=>'Older','severity'=>'Critical','time'=>100],['name'=>'Latest','severity'=>'Major','time'=>200]];
+$recent=icct_nms_dashboard_readings($map)['recent'];verify($recent[0]['name']==='Latest'&&$recent[0]['device_id']===2);
+verify(count(icct_nms_dashboard_validate(['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms','ack','escalation','frequent','recent']]]])['dashboards'][0]['widgets'])===7);
+echo "Recent alarms sorted with device association and seven-card layouts passed\n";

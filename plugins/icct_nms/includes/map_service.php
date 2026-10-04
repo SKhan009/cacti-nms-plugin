@@ -80,7 +80,7 @@ function icct_nms_map_data() {
         $device['fault_alarms']=[];
         foreach($faults as $fault)if(isset($device['fault_counts'][$fault['state']])){
             $rule=$rules[(int)$fault['rule']] ?? [];
-            $device['fault_alarms'][]=['name'=>trim($rule['name'] ?? '') ?: ($fault['graph'] ?? 'Fault threshold exceeded'),'severity'=>$fault['state']];
+            $device['fault_alarms'][]=['name'=>trim($rule['name'] ?? '') ?: ($fault['graph'] ?? 'Fault threshold exceeded'),'severity'=>$fault['state'],'time'=>(int)($fault['sample_time'] ?? 0),'value'=>$fault['value'] ?? null,'graph'=>$fault['graph'] ?? '', 'graph_id'=>(int)($fault['graph_id'] ?? 0),'corrective_action'=>$rule['corrective_action'] ?? ''];
         }
         $rank=['Information'=>1,'Minor'=>2,'Warning'=>3,'Major'=>4,'Critical'=>5]; $highest=0;
         foreach ($faults as $fault) if (($rank[$fault['state']] ?? 0)>$highest) {

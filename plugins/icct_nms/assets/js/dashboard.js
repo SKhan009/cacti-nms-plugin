@@ -2,7 +2,7 @@
 'use strict';
 const dataElement=document.querySelector('#dashboardData');if(!dataElement)return;
 const data=JSON.parse(dataElement.textContent);let preferences=data.preferences,readings=data.readings,mode='severity',saving=false,saveAgain=false,dragWidget=null;
-const names={topology:'Topology / Rack / Image / Map',birds:'Birds Eye View',alarms:'Alarm Overview',ack:'Ack Overview',escalation:'Escalation Overview',frequent:'Top 10 Frequent Alarms by Count'},colors={Critical:'#ff4148',Major:'#ff7226',Minor:'#ff9b17',Warning:'#43aa91',Information:'#277f9b'},palette=['#737eff','#6bce95','#ffb14e','#03cfeb','#a585ff','#2499ff','#ff8585','#34bbcc'];
+const names={topology:'Topology / Rack / Image / Map',birds:'Birds Eye View',alarms:'Alarm Overview',ack:'Ack Overview',escalation:'Escalation Overview',frequent:'Top 10 Frequent Alarms by Count',recent:'Recent Alarms (25)'},colors={Critical:'#ff4148',Major:'#ff7226',Minor:'#ff9b17',Warning:'#43aa91',Information:'#277f9b'},palette=['#737eff','#6bce95','#ffb14e','#03cfeb','#a585ff','#2499ff','#ff8585','#34bbcc'];
 const select=document.querySelector('#dashboardSelect'),picker=document.querySelector('.dashboard-widget-picker'),status=document.querySelector('#dashboardSaveStatus'),side=document.querySelector('#dashboardWidgets'),extras=document.querySelector('#dashboardExtraWidgets'),grid=document.querySelector('.dashboard-grid');
 function element(tag,text){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;}
 function svg(tag,attributes,text){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attributes).forEach(([k,v])=>e.setAttribute(k,v));if(text!==undefined)e.textContent=text;return e;}
@@ -30,7 +30,7 @@ addWidget.addEventListener('click',()=>{
 });
 document.addEventListener('click',e=>{if(!picker.contains(e.target))closePicker();});
 picker.addEventListener('keydown',e=>{if(e.key==='Escape'){closePicker();addWidget.focus();}});
-document.querySelectorAll('[data-remove-widget]').forEach(button=>button.addEventListener('click',()=>{preferences.dashboards[preferences.selected].widgets=widgets().filter(w=>w!==button.dataset.removeWidget);layout();save();}));
+document.querySelectorAll('[data-remove-widget]').forEach(button=>button.addEventListener('click',()=>{preferences.dashboards[preferences.selected].widgets=widgets().filter(w=>w!==button.dataset.removeWidget);if(button.dataset.removeWidget==='recent')collapseRecent();layout();save();}));
 function move(key,target){const list=widgets(),old=list.indexOf(key),to=list.indexOf(target);if(key==='topology'||target==='topology'||old<0||to<0||old===to)return;list.splice(old,1);list.splice(to,0,key);layout();save();}
 document.querySelectorAll('.widget-grip').forEach(grip=>{
  const key=grip.closest('[data-widget]').dataset.widget;grip.draggable=false;let start=null,target=null;
@@ -72,6 +72,18 @@ function frequentAlarms(){
  for(const alarm of readings.frequent||[]){const row=element('tr'),name=element('td',alarm.name),severity=element('td'),badge=element('span',({Warning:'Warn',Information:'Info'})[alarm.severity]||alarm.severity),count=element('td',String(alarm.count));badge.className='frequent-severity';badge.style.background=colors[alarm.severity]||'#ddd';severity.append(badge);row.append(name,severity,count);body.append(row);}
  if(!body.children.length){const row=element('tr'),cell=element('td','No active alarms.');cell.colSpan=3;row.append(cell);body.append(row);}
 }
+function recentAlarms(){
+ const root=document.querySelector('#recentAlarms');root.replaceChildren();
+ for(const alarm of readings.recent||[]){
+  const detail=element('details'),summary=element('summary'),dot=element('i'),heading=element('span'),name=element('strong',alarm.name),when=alarm.time?new Date(alarm.time*1000).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}):'Time unavailable',meta=element('small',when+' · '+alarm.device);dot.style.background=colors[alarm.severity]||'#999';dot.title=alarm.severity;heading.append(name,meta);summary.append(dot,heading);detail.append(summary);
+  const body=element('div');body.className='recent-detail';body.append(element('p',alarm.graph+' · Reading: '+(alarm.value===null?'Unavailable':alarm.value)+' · '+alarm.severity));if(alarm.corrective_action)body.append(element('p','Fix: '+alarm.corrective_action));const links=element('nav'),device=element('a','Device Details →');device.href='device.php?id='+alarm.device_id+'&view=1#view-fcaps';links.append(device);if(alarm.graph_id){const graph=element('a','Graph →');graph.href='device.php?id='+alarm.device_id+'&view=1#view-graphs';links.append(graph);}body.append(links);detail.append(body);root.append(detail);
+ }
+ if(!root.children.length)root.append(element('p','No active alarms.'));
+}
+const recentCard=document.querySelector('[data-widget=recent]'),expandRecent=document.querySelector('#recentExpand');
+function collapseRecent(){recentCard.classList.remove('widget-expanded');expandRecent.setAttribute('aria-pressed','false');expandRecent.setAttribute('aria-label','Expand Recent Alarms');}
+expandRecent.addEventListener('click',()=>{const expanded=recentCard.classList.toggle('widget-expanded');expandRecent.setAttribute('aria-pressed',String(expanded));expandRecent.setAttribute('aria-label',expanded?'Collapse Recent Alarms':'Expand Recent Alarms');});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')collapseRecent();});
 function workflowCharts(){
  for(const key of ['ack','escalation']){const chart=document.querySelector('#'+key+'Donut'),legend=document.querySelector('#'+key+'Legend'),values=Object.entries(readings[key]||{}),total=readings.total;chart.replaceChildren();legend.replaceChildren();
   const radius=59,circumference=2*Math.PI*radius;chart.append(svg('circle',{cx:90,cy:90,r:radius,fill:'none',stroke:total>0?'#eceef2':'#b5cdff','stroke-width':29}));let offset=0;
@@ -82,6 +94,6 @@ function workflowCharts(){
  }
 }
 document.querySelectorAll('[data-alarm-mode]').forEach(button=>button.addEventListener('click',()=>{mode=button.dataset.alarmMode;document.querySelectorAll('[data-alarm-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));alarms();}));
-document.querySelector('#birdsRefresh').addEventListener('click',async function(){this.disabled=true;try{const response=await fetch('topology.php?dashboard_readings=1',{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw Error();readings=await response.json();radar();alarms();workflowCharts();frequentAlarms();status.textContent='Widgets updated '+new Date().toLocaleTimeString();}catch(e){status.textContent='Widget refresh failed. Try again.';}finally{this.disabled=false;}});
-layout();radar();alarms();workflowCharts();frequentAlarms();
+document.querySelector('#birdsRefresh').addEventListener('click',async function(){this.disabled=true;try{const response=await fetch('topology.php?dashboard_readings=1',{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw Error();readings=await response.json();radar();alarms();workflowCharts();frequentAlarms();recentAlarms();status.textContent='Widgets updated '+new Date().toLocaleTimeString();}catch(e){status.textContent='Widget refresh failed. Try again.';}finally{this.disabled=false;}});
+layout();radar();alarms();workflowCharts();frequentAlarms();recentAlarms();
 })();
