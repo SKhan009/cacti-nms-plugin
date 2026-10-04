@@ -46,10 +46,10 @@ function render(){
 }
 const linkTip=el('div','topology-link-tooltip');linkTip.id='topologyLinkTooltip';linkTip.setAttribute('role','tooltip');linkTip.hidden=true;panel.append(linkTip);
 let activeLink=null,linkRequest=0;
-function hideLink(){linkRequest++;activeLink=null;linkTip.hidden=true;}
+function hideLink(){linkRequest++;activeLink?.classList.remove('active-link');activeLink=null;linkTip.hidden=true;}
 function bandwidth(value){if(value===null||value===undefined)return 'Unavailable';const units=['bps','Kbps','Mbps','Gbps','Tbps'];let n=Number(value),i=0;while(n>=1000&&i<4){n/=1000;i++;}return n.toLocaleString(undefined,{maximumFractionDigits:2})+' '+units[i];}
 function showLink(link,anchor,event){
- if(editing)return;const request=++linkRequest;activeLink=anchor;linkTip.replaceChildren();linkTip.append(el('strong','',link.label||'Network link'));
+ if(editing)return;const request=++linkRequest;activeLink?.classList.remove('active-link');activeLink=anchor;anchor.classList.add('active-link');linkTip.replaceChildren();linkTip.append(el('strong','',link.label||'Network link'));
  const rect=anchor.getBoundingClientRect();const left=event?.clientX??(rect.left+rect.width/2),top=event?.clientY??rect.top;
  linkTip.hidden=false;linkTip.style.left=Math.max(8,Math.min(left+14,window.innerWidth-350))+'px';linkTip.style.top=Math.max(8,Math.min(top+14,window.innerHeight-300))+'px';
  const loading=el('p','','Loading bandwidth…');linkTip.append(loading);
@@ -67,9 +67,9 @@ function showLink(link,anchor,event){
 }
 function lines(){hideLink();svg.replaceChildren();const w=canvas.clientWidth,h=canvas.clientHeight;data.links.forEach(link=>{const a=positions[link.source],b=positions[link.target];if(!a||!b)return;const path=document.createElementNS('http://www.w3.org/2000/svg','path');const x=a[0]*w,y=a[1]*h,X=b[0]*w,Y=b[1]*h,mid=(y+Y)/2;path.setAttribute('d',`M${x} ${y} V${mid} H${X} V${Y}`);if(link.color)path.style.stroke=link.color;svg.append(path);
  const hit=path.cloneNode();hit.classList.add('topology-link-hit');hit.style.stroke='transparent';hit.setAttribute('tabindex','0');hit.setAttribute('aria-label','Link bandwidth: '+link.label);hit.setAttribute('aria-describedby',linkTip.id);
- hit.addEventListener('pointerenter',e=>showLink(link,hit,e));hit.addEventListener('pointerleave',hideLink);hit.addEventListener('focus',()=>showLink(link,hit));hit.addEventListener('blur',hideLink);hit.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();showLink(link,hit);}});hit.addEventListener('click',e=>showLink(link,hit,e));svg.append(hit);
+ hit.addEventListener('pointerenter',e=>{if(!activeLink)showLink(link,hit,e);});hit.addEventListener('focus',()=>{if(!activeLink)showLink(link,hit);});hit.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();showLink(link,hit);}});hit.addEventListener('click',e=>showLink(link,hit,e));svg.append(hit);
 });}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')hideLink();});window.addEventListener('scroll',hideLink,true);document.addEventListener('icct:before-view-change',hideLink);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')hideLink();});document.addEventListener('click',e=>{if(!linkTip.contains(e.target)&&!e.target.closest('.topology-link-hit'))hideLink();});document.addEventListener('icct:before-view-change',hideLink);
 function controls(){save.disabled=!dirty||busy;document.querySelector('#topologyDiscard').disabled=busy;document.querySelector('.topology-actions').hidden=!editing;document.querySelector('#topologyEdit').hidden=!data.management;document.querySelector('#topologyEdit').setAttribute('aria-pressed',String(editing));cards.classList.toggle('editing',editing);}
 function discard(){if(busy)return;Object.assign(positions,structuredClone(saved));dirty=false;editing=false;drag=null;message.textContent='';render();}
 async function persist(){if(busy)return false;if(!dirty)return true;busy=true;controls();const body=new FormData(document.querySelector('#topologyToken'));body.set('topology_positions',JSON.stringify(positions));body.set('revision',data.revision);try{const response=await fetch('topology.php',{method:'POST',body,credentials:'same-origin'}),result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||'Unable to save layout.');data.revision=result.revision;saved=structuredClone(positions);dirty=false;message.textContent='';return true;}catch(e){message.textContent=e.message;return false;}finally{busy=false;controls();}}

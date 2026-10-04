@@ -118,7 +118,7 @@
 #topologyDevices .topology-device{pointer-events:auto}
 #topologyLinks path.topology-link-hit{stroke-width:14;pointer-events:stroke;cursor:help}
 #topologyLinks path.topology-link-hit:focus{outline:none;stroke:rgba(20,95,255,.18)!important}
-.topology-link-tooltip{position:fixed;z-index:1100;width:330px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;background:white;color:#222;border:1px solid #d5d5d5;border-radius:4px;box-shadow:0 5px 20px #0002;padding:14px;pointer-events:none;font-size:13px}
+.topology-link-tooltip{position:fixed;z-index:1100;width:330px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;background:white;color:#222;border:1px solid #d5d5d5;border-radius:4px;box-shadow:0 5px 20px #0002;padding:14px;pointer-events:auto;font-size:13px}
 .topology-link-tooltip[hidden]{display:none}
 .topology-link-tooltip section{border-top:1px solid #eee;margin-top:10px;padding-top:10px}
 .topology-link-tooltip dl{display:grid;grid-template-columns:1fr 1.3fr;gap:5px;margin:9px 0}
@@ -132,3 +132,5 @@
 #birdsRadar{height:clamp(170px,calc((100dvh - 470px)*.65),280px)}
 #birdsRadar text{font-size:10px}#birdsRadar g text{font-size:11px}
 .alarm-chart svg{max-height:120px}
+
+#topologyLinks path.topology-link-hit.active-link{stroke:rgba(20,95,255,.18)!important}
