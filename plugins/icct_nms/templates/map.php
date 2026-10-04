@@ -32,5 +32,11 @@
 <?php endforeach; ?>
 <details class="icct-map-credits" hidden><summary title="Map credits" aria-label="Map credits">ⓘ</summary><span>Leaflet. State boundaries: geoBoundaries / DataMeet (CC BY 2.5 IN).</span></details>
 </section>
-<script type="application/json" id="icctMapData"><?= json_encode($mapData+['states'=>'assets/maps/india-states.json','tiles'=>null],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
+<dialog id="mapNodeDialog" class="topology-device-dialog map-node-dialog" aria-labelledby="mapNodeTitle">
+<header class="topology-summary-heading"><div><h2 id="mapNodeTitle"></h2><p id="mapNodeCoordinates"></p></div><span id="mapNodeStatus" class="device-status"></span><form method="dialog"><button class="button" aria-label="Close node summary">×</button></form></header>
+<dl id="mapNodeCounts" class="topology-capacity map-node-counts"></dl>
+<div id="mapNodeAlarms" class="topology-summary-alarms"></div>
+<nav class="topology-summary-links map-node-links" aria-label="Node actions"><a id="mapNodeTopology" href="topology.php">View Topology <span aria-hidden="true">→</span></a><button type="button" disabled title="Node chat is not configured.">Chat <span aria-hidden="true">→</span></button></nav>
+</dialog>
+<script type="application/json" id="icctMapData" data-summary-url="topology.php"><?= json_encode($mapData+['states'=>'assets/maps/india-states.json','tiles'=>null],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
 </section>

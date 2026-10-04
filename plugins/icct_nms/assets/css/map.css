@@ -89,3 +89,12 @@
 .topology-device-dialog .topology-summary,
 .topology-device-dialog .topology-summary-alarms,
 .topology-device-dialog .topology-summary-links{background:#f4f4f4;color:#222}
+/* Map node summary uses the same compact, grey card as topology. */
+.map-node-counts>div+div{border-left:1px solid #ddd;padding-left:16px}
+.map-node-counts dd{font-size:22px}.map-node-counts dt{font-size:14px}
+.map-node-dialog .topology-summary-heading{padding:20px 16px}
+.map-node-dialog .topology-summary-heading h2{font-size:24px}
+.map-node-dialog .topology-summary-alarms{padding:16px 12px}
+.map-node-links{grid-template-columns:repeat(2,minmax(0,1fr))}
+.map-node-links a,.map-node-links button{display:flex;align-items:center;justify-content:space-between;padding:16px;font:inherit;font-size:16px}
+.map-node-links button{border:0;background:transparent;color:#777;text-align:left}

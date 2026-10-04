@@ -73,8 +73,11 @@ function icct_nms_map_data() {
         $device+=icct_nms_map_metrics(icct_nms_map_readings($id));
         $device['diagnostics']=is_realm_allowed(3)?icct_backend_diag_selected_labels($id):[];
         $device['diagnostic_measurement']=icct_nms_map_measurement($row); $device['packet_loss']=$device['diagnostic_measurement']['packet_loss'];
+        $device['fault_counts']=array_fill_keys(['Critical','Major','Minor','Warning','Information'],0);
+        $faults=icct_nms_fault_observations($row);
+        foreach($faults as $fault)if(isset($device['fault_counts'][$fault['state']]))$device['fault_counts'][$fault['state']]++;
         $rules=icct_nms_fault_rules($id); $rank=['Information'=>1,'Minor'=>2,'Warning'=>3,'Major'=>4,'Critical'=>5]; $highest=0;
-        foreach (icct_nms_fault_observations($row) as $fault) if (($rank[$fault['state']] ?? 0)>$highest) {
+        foreach ($faults as $fault) if (($rank[$fault['state']] ?? 0)>$highest) {
             $highest=$rank[$fault['state']]; $rule=$rules[$fault['rule']] ?? [];
             $device['alarm']=['severity'=>$fault['state'],'message'=>(($rule['name'] ?? '') ?: $fault['graph']).' — '.$fault['value']];
         }
@@ -131,4 +134,17 @@ function icct_nms_map_tile()
         header('Content-Type: text/plain');
         print $error instanceof InvalidArgumentException ? $error->getMessage() : 'GeoServer map unavailable.';
     }
+}
+
+/** Aggregate only the devices already permitted by the inventory access checks. */
+function icct_nms_map_node_summary($site) {
+    $counts=['total'=>0,'online'=>0,'offline'=>0,'disabled'=>0,'other'=>0];
+    $alarms=array_fill_keys(['Critical','Major','Minor','Warning','Information'],0);
+    foreach($site['devices'] as $device) {
+        $counts['total']++;
+        $counts[match($device['status']){'Up'=>'online','Down'=>'offline','Disabled'=>'disabled',default=>'other'}]++;
+        foreach($alarms as $severity=>$count)$alarms[$severity]+=(int)($device['fault_counts'][$severity]??0);
+    }
+    $state=$counts['offline']?'Offline':($counts['online']===$counts['total']&&$counts['total']?'Online':($counts['disabled']===$counts['total']&&$counts['total']?'Disabled':'Other'));
+    return ['id'=>(int)$site['id'],'name'=>$site['name'],'coordinates'=>$site['coordinates'],'counts'=>$counts,'fault_counts'=>$alarms,'status'=>$state];
 }

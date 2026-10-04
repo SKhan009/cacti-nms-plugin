@@ -82,70 +82,43 @@
     }).catch(function () {
         stateError = 'Local state boundaries unavailable.'; showStatus();
     });
+    const nodeDialog=document.querySelector('#mapNodeDialog');
+    const alarmColors={Critical:'#ff4148',Major:'#ff7226',Minor:'#ff9b17',Warning:'#43aa91',Information:'#277f9b'};
+    function labelNodeMarker(marker,name){const element=marker.getElement();if(element){element.setAttribute('role','button');element.setAttribute('tabindex','0');element.setAttribute('aria-label','Node '+name);element.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();marker.fire('click');}});}}
+    function nodeElement(tag,text){const element=document.createElement(tag);if(text!==undefined)element.textContent=text;return element;}
+    function nodeSummary(site){
+        const counts={total:site.devices.length,online:0,offline:0,disabled:0,other:0},fault_counts={};
+        Object.keys(alarmColors).forEach(severity=>fault_counts[severity]=0);
+        site.devices.forEach(device=>{counts[device.status==='Up'?'online':device.status==='Down'?'offline':device.status==='Disabled'?'disabled':'other']++;Object.keys(alarmColors).forEach(severity=>fault_counts[severity]+=Number(device.fault_counts?.[severity]||0));});
+        return {...site,counts,fault_counts,status:counts.offline?'Offline':counts.online===counts.total?'Online':counts.disabled===counts.total?'Disabled':'Other'};
+    }
+    function renderNode(node){
+        document.querySelector('#mapNodeTitle').textContent=node.name;
+        document.querySelector('#mapNodeCoordinates').textContent=node.coordinates.map((value,index)=>Math.abs(value).toFixed(4)+'° '+(index===0?(value<0?'S':'N'):(value<0?'W':'E'))).join(', ');
+        const status=document.querySelector('#mapNodeStatus');status.textContent=node.status;status.className='device-status '+(node.status==='Online'?'online':node.status==='Offline'?'offline':node.status==='Disabled'?'disabled':'other');
+        const counts=document.querySelector('#mapNodeCounts');counts.replaceChildren();
+        [['Total Devices','total'],['Online','online'],['Offline','offline'],['Disabled','disabled']].forEach(([label,key])=>{const row=nodeElement('div');row.append(nodeElement('dt',label),nodeElement('dd',String(node.counts[key])));counts.append(row);});
+        const alarms=document.querySelector('#mapNodeAlarms');alarms.replaceChildren();Object.entries(alarmColors).forEach(([severity,color])=>{const badge=nodeElement('span'),dot=nodeElement('i');dot.style.background=color;badge.append(dot,document.createTextNode((severity==='Warning'?'Warn':severity==='Information'?'Info':severity)+': '+String(node.fault_counts[severity]||0).padStart(2,'0')));alarms.append(badge);});
+        document.querySelector('#mapNodeTopology').href='topology.php?site_id='+encodeURIComponent(node.id);
+    }
+    function showNode(site){
+        if(!nodeDialog)return;
+        nodeDialog.dataset.nodeId=String(site.id);renderNode(nodeSummary(site));if(!nodeDialog.open)nodeDialog.showModal();
+        const endpoint=document.querySelector('#icctMapData').dataset.summaryUrl;if(!endpoint)return;
+        nodeDialog.dataset.summaryState='loading';
+        fetch(endpoint+'?node_summary='+encodeURIComponent(site.id),{credentials:'same-origin',cache:'no-store'}).then(response=>{if(!response.ok)throw new Error('Node unavailable');return response.json();}).then(node=>{if(nodeDialog.open&&nodeDialog.dataset.nodeId===String(node.id)){renderNode(node);nodeDialog.dataset.summaryState='current';}}).catch(()=>{if(nodeDialog.dataset.nodeId===String(site.id))nodeDialog.dataset.summaryState='unavailable';});
+    }
     var markers = {};
     data.sites.forEach(function (site) {
-        var popup = document.createElement('div');
-        popup.className = 'icct-map-popup';
-        /** Show only the selected device's requested monitoring fields. */
-        function renderDevice(device) {
-            var body = popup.querySelector('.icct-map-device');
-            if (body) body.remove();
-            body = document.createElement('div'); body.className = 'icct-map-device';
-            if (device.image) {
-                var picture = document.createElement('img'); picture.src = device.image;
-                picture.alt = device.name; picture.style.cssText = 'display:block;width:96px;height:64px;object-fit:contain;margin-bottom:8px';
-                body.appendChild(picture);
-            }
-            var title = document.createElement('strong');
-            title.className = 'icct-map-device-name'; title.textContent = device.name;
-            var shape=document.createElement('span');shape.className='device-shape-symbol shape-'+(device.shape||'rectangle');shape.setAttribute('aria-label','Device shape: '+(device.shape||'rectangle'));title.prepend(shape);
-
-            body.appendChild(title);
-            var subtitle = document.createElement('p');
-            subtitle.textContent = [device.alarm ? device.alarm.severity : device.status, device.address, device.system].filter(Boolean).join(' · ');
-            body.appendChild(subtitle);
-            var grid = document.createElement('dl'); grid.className = 'icct-map-device-grid';
-            [['Availability', device.status], ['Category', device.category],
-             ['Memory', device.memory == null ? null : device.memory + '%'], ['Serial number', device.serial],
-             ['Response time', device.response_ms == null ? null : device.response_ms + ' ms'],
-             ['Diagnostic packet loss', device.packet_loss == null ? (device.diagnostic_measurement?.state || 'Not measured') : device.packet_loss + '%'],
-             ['Diagnostic latency', device.diagnostic_measurement?.latency_ms == null ? null : device.diagnostic_measurement.latency_ms + ' ms'],
-             ['Diagnostic method / target', device.diagnostic_measurement?.method ? device.diagnostic_measurement.method + ' / ' + device.diagnostic_measurement.target : null],
-             ['Diagnostic collector', device.diagnostic_measurement?.collector_id],
-             ['Diagnostic collected', device.diagnostic_measurement?.collected_at],
-             ['CPU', device.cpu == null ? null : device.cpu + '%']].forEach(function (field) {
-                var cell = document.createElement('div');
-                var label = document.createElement('dt'); label.textContent = field[0];
-                var value = document.createElement('dd'); value.textContent = field[1] == null || field[1] === '' ? 'Not available' : field[1];
-                if(field[0]==='Availability')value.className='device-status '+window.icctStatusClass(device.status);
-                cell.append(label, value); grid.appendChild(cell);
-            });
-            body.appendChild(grid);
-            var diagnosticActions=document.createElement('div');diagnosticActions.className='message-actions';
-            Object.entries(device.diagnostics||{}).forEach(function(entry){var action=document.createElement('a');action.className='button';action.textContent=entry[1];action.href='http://127.0.0.1:8080/cacti/plugins/icct_nms/diagnostics.php?host_id='+encodeURIComponent(device.id)+'&tool='+encodeURIComponent(entry[0]);diagnosticActions.appendChild(action);});
-            body.appendChild(diagnosticActions);
-            var alarm = document.createElement('div'); alarm.className = 'icct-map-device-alarm';
-            var alarmLabel = document.createElement('strong'); alarmLabel.textContent = 'Recent alarm';
-            var alarmText = document.createElement('p');
-            alarmText.textContent = device.alarm ? (device.alarm.message || device.alarm.title) : 'No active alarms';
-            alarm.append(alarmLabel, alarmText); body.appendChild(alarm); popup.appendChild(body);
-        }
-        if (site.devices.length > 1) {
-            var picker = document.createElement('select'); picker.setAttribute('aria-label', 'Device at this site');
-            site.devices.forEach(function (device, index) {
-                var option = document.createElement('option'); option.value = index; option.textContent = device.name; picker.appendChild(option);
-            });
-            picker.addEventListener('change', function () { renderDevice(site.devices[Number(this.value)]); });
-            popup.appendChild(picker);
-        }
-        renderDevice(site.devices[0]);
         var down = site.devices.some(function (d) { return d.status === 'Down'; });
         var up = site.devices.every(function (d) { return d.status === 'Up'; });
         var label = document.createElement('span');
         label.textContent = site.name;
         markers[site.id] = L.circleMarker(site.coordinates, {radius: 10, color: '#fff', weight: 2,
             fillColor: down ? '#c83232' : up ? '#21864a' : site.devices.every(d=>d.status==='Disabled') ? '#777' : '#aa740a', fillOpacity: 1}).addTo(map)
-            .bindTooltip(label, {direction: 'top', permanent: false, className: 'icct-map-site-label', offset: [0, -10]}).bindPopup(popup, {className: 'icct-map-compact-popup', autoPan: true, autoPanPadding: [16, 16], keepInView: true, maxWidth: 260, minWidth: 220});
+            .bindTooltip(label, {direction: 'top', permanent: false, className: 'icct-map-site-label', offset: [0, -10]}).on('click',function(){ showNode(site); });
+        markers[site.id].on('add',function(){labelNodeMarker(markers[site.id],site.name);});
+        labelNodeMarker(markers[site.id],site.name);
     });
     document.getElementById('icctMapZoomIn').addEventListener('click', function () { map.zoomIn(); });
     document.getElementById('icctMapZoomOut').addEventListener('click', function () { map.zoomOut(); });

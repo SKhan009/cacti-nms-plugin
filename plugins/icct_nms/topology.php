@@ -30,6 +30,19 @@ try {
         echo json_encode(array_intersect_key($selected,array_flip(['name','address','status','network_asset','summary','capacity','fault_counts'])),JSON_THROW_ON_ERROR);exit;
     }
     $mapData=icct_nms_map_data();
+    if(isset($_GET['node_summary'])) {
+        $siteId=icct_nms_id($_GET['node_summary']);$node=null;
+        foreach($mapData['sites'] as $site)if((int)$site['id']===$siteId){$node=icct_nms_map_node_summary($site);break;}
+        if(!$node)throw new RuntimeException('Node unavailable.');
+        header('Content-Type: application/json');header('Cache-Control: no-store');echo json_encode($node,JSON_THROW_ON_ERROR);exit;
+    }
+    if(isset($_GET['site_id'])) {
+        $siteId=icct_nms_id($_GET['site_id']);
+        $mapData['sites']=array_values(array_filter($mapData['sites'],static fn($site)=>(int)$site['id']===$siteId));
+        if(!$mapData['sites'])throw new RuntimeException('Node unavailable.');
+        $node=icct_nms_map_node_summary($mapData['sites'][0]);
+        $mapData['unlocated']=[];$mapData['counts']=['total'=>$node['counts']['total'],'online'=>$node['counts']['online'],'offline'=>$node['counts']['offline'],'other'=>$node['counts']['disabled']+$node['counts']['other']];
+    }
     $mapConfigured=!empty($config['nms_geoserver_wms_url']) && !empty($config['nms_geoserver_layer']);
 } catch (Throwable $error) { icct_nms_failure($error); }
 $title='Dashboard'; $mapPage=true;
