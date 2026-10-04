@@ -23,3 +23,7 @@ $top=icct_nms_dashboard_readings($map)['frequent'];verify($top[0]['name']==='Lin
 verify(icct_nms_dashboard_readings(['unlocated'=>[],'sites'=>[]])['frequent']===[]);
 verify(count(icct_nms_dashboard_validate(['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms','ack','escalation','frequent']]]])['dashboards'][0]['widgets'])===6);
 echo "Frequent alarm grouping, counts and empty state passed\n";
+
+verify(icct_nms_dashboard_validate(['selected'=>0,'dashboards'=>[['widgets'=>['ack','birds']]]])['dashboards'][0]['widgets']===['topology','ack','birds']);
+verify(icct_nms_dashboard_validate(['selected'=>0,'dashboards'=>[['widgets'=>[]]]])['dashboards'][0]['widgets']===['topology']);
+echo "Fixed topology restored in existing and new layouts passed\n";

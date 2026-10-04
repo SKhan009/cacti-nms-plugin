@@ -8,7 +8,7 @@ function icct_nms_dashboard_validate($value) {
         $widgets=array_values($dashboard['widgets']);
         foreach($widgets as $widget)if(!is_string($widget))throw new InvalidArgumentException('Invalid widget.');
         if(count(array_unique($widgets))!==count($widgets)||array_diff($widgets,['topology','birds','alarms','ack','escalation','frequent']))throw new InvalidArgumentException('Unknown or duplicate widget.');
-        $clean['dashboards'][]=['widgets'=>$widgets];
+        $clean['dashboards'][]=['widgets'=>array_merge(['topology'],array_values(array_diff($widgets,['topology'])))];
     }
     if($clean['selected']<0||$clean['selected']>=count($clean['dashboards']))throw new InvalidArgumentException('Dashboard unavailable.');
     return $clean;

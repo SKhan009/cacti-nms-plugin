@@ -12,18 +12,18 @@ status.addEventListener('click',save);
 function layout(){
  select.replaceChildren();preferences.dashboards.forEach((d,i)=>{const option=element('option','Dashboard #'+(i+1));option.value=i;select.append(option);});select.value=preferences.selected;document.querySelector('#dashboardAdd').disabled=preferences.dashboards.length>=5;
  document.querySelectorAll('[data-widget]').forEach(card=>card.hidden=!widgets().includes(card.dataset.widget));
- widgets().filter(key=>key!=='topology').forEach(key=>(['ack','escalation','frequent'].includes(key)?extras:side).append(document.querySelector('[data-widget="'+key+'"]')));
- side.hidden=!widgets().some(key=>['birds','alarms'].includes(key));extras.hidden=!widgets().some(key=>['ack','escalation','frequent'].includes(key));grid.classList.toggle('dashboard-no-side',side.hidden);grid.classList.toggle('dashboard-no-topology',!widgets().includes('topology'));
+ const cards=widgets().filter(key=>key!=='topology');cards.forEach((key,index)=>(index<2?side:extras).append(document.querySelector('[data-widget="'+key+'"]')));
+ side.hidden=cards.length===0;extras.hidden=cards.length<=2;grid.classList.toggle('dashboard-no-side',side.hidden);
  let empty=document.querySelector('#dashboardEmpty');if(!empty){empty=element('p','This dashboard is empty. Use Add Widget to add a card.');empty.id='dashboardEmpty';grid.append(empty);}empty.hidden=widgets().length!==0;
  window.dispatchEvent(new Event('resize'));
 }
 select.addEventListener('change',()=>{preferences.selected=Number(select.value);layout();save();});
-document.querySelector('#dashboardAdd').addEventListener('click',()=>{if(preferences.dashboards.length>=5)return;preferences.dashboards.push({widgets:[]});preferences.selected=preferences.dashboards.length-1;layout();save();});
+document.querySelector('#dashboardAdd').addEventListener('click',()=>{if(preferences.dashboards.length>=5)return;preferences.dashboards.push({widgets:['topology']});preferences.selected=preferences.dashboards.length-1;layout();save();});
 const addWidget=document.querySelector('#dashboardAddWidget'),choices=document.querySelector('#dashboardWidgetChoices');
 function closePicker(){choices.hidden=true;addWidget.setAttribute('aria-expanded','false');}
 addWidget.addEventListener('click',()=>{
  if(!choices.hidden){closePicker();return;}
- choices.replaceChildren();Object.entries(names).forEach(([key,name])=>{
+ choices.replaceChildren();Object.entries(names).filter(([key])=>key!=='topology').forEach(([key,name])=>{
   const button=element('button',name+(widgets().includes(key)?' — Added':''));button.type='button';button.disabled=widgets().includes(key);
   button.addEventListener('click',()=>{widgets().push(key);layout();save();closePicker();addWidget.focus();});choices.append(button);
  });choices.hidden=false;addWidget.setAttribute('aria-expanded','true');
@@ -31,9 +31,15 @@ addWidget.addEventListener('click',()=>{
 document.addEventListener('click',e=>{if(!picker.contains(e.target))closePicker();});
 picker.addEventListener('keydown',e=>{if(e.key==='Escape'){closePicker();addWidget.focus();}});
 document.querySelectorAll('[data-remove-widget]').forEach(button=>button.addEventListener('click',()=>{preferences.dashboards[preferences.selected].widgets=widgets().filter(w=>w!==button.dataset.removeWidget);layout();save();}));
-function move(key,target){const list=widgets(),old=list.indexOf(key),to=list.indexOf(target);if(old<0||to<0||old===to)return;list.splice(old,1);list.splice(to,0,key);layout();save();}
-document.querySelectorAll('.widget-grip').forEach(grip=>{const key=grip.closest('[data-widget]').dataset.widget;grip.addEventListener('dragstart',e=>{dragWidget=key;e.dataTransfer.setData('text/plain',key);});grip.addEventListener('dragend',()=>{dragWidget=null;});grip.addEventListener('keydown',e=>{if(!['ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const list=widgets().filter(w=>w!=='topology'&&(['ack','escalation','frequent'].includes(w)===['ack','escalation','frequent'].includes(key))),target=list[list.indexOf(key)+(e.key==='ArrowUp'?-1:1)];if(target){move(key,target);grip.focus();}});});
-document.querySelectorAll('.dashboard-card').forEach(card=>{card.addEventListener('dragover',e=>{if(dragWidget)e.preventDefault();});card.addEventListener('drop',e=>{e.preventDefault();if(dragWidget&&(['ack','escalation','frequent'].includes(dragWidget)===['ack','escalation','frequent'].includes(card.dataset.widget)))move(dragWidget,card.dataset.widget);});});
+function move(key,target){const list=widgets(),old=list.indexOf(key),to=list.indexOf(target);if(key==='topology'||target==='topology'||old<0||to<0||old===to)return;list.splice(old,1);list.splice(to,0,key);layout();save();}
+document.querySelectorAll('.widget-grip').forEach(grip=>{
+ const key=grip.closest('[data-widget]').dataset.widget;grip.draggable=false;let start=null,target=null;
+ function clear(){document.querySelectorAll('.drag-target').forEach(card=>card.classList.remove('drag-target'));start=null;target=null;dragWidget=null;}
+ grip.addEventListener('pointerdown',e=>{if(e.button!==0)return;start={x:e.clientX,y:e.clientY};grip.setPointerCapture(e.pointerId);});
+ grip.addEventListener('pointermove',e=>{if(!start||Math.hypot(e.clientX-start.x,e.clientY-start.y)<5)return;dragWidget=key;document.querySelectorAll('.drag-target').forEach(card=>card.classList.remove('drag-target'));const card=document.elementFromPoint(e.clientX,e.clientY)?.closest('.dashboard-card');target=card&&card.dataset.widget!==key?card.dataset.widget:null;if(target)card.classList.add('drag-target');const bounds=grid.getBoundingClientRect();if(e.clientY>bounds.bottom-30)grid.scrollTop+=12;else if(e.clientY<bounds.top+30)grid.scrollTop-=12;});
+ grip.addEventListener('pointerup',()=>{const destination=target;clear();if(destination)move(key,destination);});grip.addEventListener('pointercancel',clear);
+ grip.addEventListener('keydown',e=>{if(!['ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const list=widgets().filter(w=>w!=='topology'),destination=list[list.indexOf(key)+(e.key==='ArrowUp'?-1:1)];if(destination){move(key,destination);grip.focus();}});
+});
 function radar(){
  const radar=document.querySelector('#birdsRadar'),origin=readings.center||{name:'Cacti server',status:'Unknown',coordinates:null},nodes=readings.nodes.filter(node=>Number(node.id)!==Number(origin.site_id));radar.replaceChildren();
  const cx=160,cy=160,r=115,geographic=Array.isArray(origin.coordinates);

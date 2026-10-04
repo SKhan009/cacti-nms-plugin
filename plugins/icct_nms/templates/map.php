@@ -3,7 +3,7 @@
 
 <div class="dashboard-toolbar"><label class="sr-only" for="dashboardSelect">Dashboard</label><select id="dashboardSelect"></select><div class="dashboard-widget-picker"><button type="button" class="dashboard-add-widget" id="dashboardAddWidget" aria-expanded="false" aria-controls="dashboardWidgetChoices">+ Add Widget <span aria-hidden="true">▾</span></button><div id="dashboardWidgetChoices" aria-label="Available dashboard cards" hidden></div></div><p id="dashboardSaveStatus" role="status"></p><button type="button" class="button primary" id="dashboardAdd">Add Dashboard (Max 5)</button></div>
 <div class="dashboard-grid"><section class="icct-map-panel" data-widget="topology">
-<div class="icct-map-toolbar"><button class="widget-remove topology-widget-remove" type="button" data-remove-widget="topology" aria-label="Remove topology widget" title="Remove topology widget">×</button>
+<div class="icct-map-toolbar">
 <div class="icct-view-tabs" role="tablist" aria-label="Dashboard views">
 <?php foreach (['topology'=>'Topology','rack'=>'Rack View','image'=>'Image View','map'=>'Map View'] as $key=>$label): ?><button type="button" role="tab" id="icct-view-<?= $key ?>" aria-controls="icct-panel-<?= $key ?>" aria-selected="<?= $key===$dashboardView?'true':'false' ?>" tabindex="<?= $key===$dashboardView?'0':'-1' ?>" data-view="<?= $key ?>"><?= $label ?></button><?php endforeach; ?>
 </div>

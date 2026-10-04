@@ -153,3 +153,14 @@
 .dashboard-extra-widgets [data-widget=frequent]{grid-column:span 2}
 .frequent-content{padding:12px 18px}.frequent-table{width:100%;border-collapse:separate;border-spacing:0 10px;font-size:15px}.frequent-table td{padding:3px 12px;vertical-align:middle}.frequent-table td:first-child{padding-left:0;width:65%}.frequent-table td+td{border-left:1px solid #d5d5d5}.frequent-table td:last-child{width:15%;font-variant-numeric:tabular-nums}.frequent-severity{display:inline-block;padding:4px 10px;border:1px solid #333;border-radius:20px;white-space:nowrap;color:#222}.frequent-content p{font-size:11px;color:#777;margin:10px 0}.frequent-severity[style*="277f9b"]{color:white}
 @media(max-width:600px){.dashboard-extra-widgets [data-widget=frequent]{grid-column:1}.frequent-table{font-size:12px}.frequent-table td{padding:3px 6px}}
+
+/* Reserve a complete control column inside the fixed topology card. */
+.dashboard-grid .topology-controls{flex:0 0 32px;width:32px;padding:8px 12px 0 0;box-sizing:content-box;align-items:center}
+.dashboard-grid .topology-controls .rack-icon{flex:none;width:30px;height:30px;box-sizing:border-box;display:grid;place-items:center;margin:0;padding:0;line-height:1}
+.dashboard-grid .topology-layout{gap:8px;max-width:100%}
+.dashboard-grid .icct-map-toolbar{box-sizing:border-box}.dashboard-grid .icct-view-tabs{flex-shrink:0}
+.dashboard-card header .widget-icon{flex:none}.dashboard-card h2{min-width:0;overflow-wrap:anywhere}
+.dashboard-widgets [data-widget=frequent] .frequent-content{padding:10px}.dashboard-widgets [data-widget=frequent] .frequent-table{font-size:11px}.dashboard-widgets [data-widget=frequent] .frequent-table td{padding:3px 4px}.dashboard-widgets [data-widget=frequent] .frequent-severity{padding:3px 5px}
+.dashboard-card.drag-target{outline:2px solid #0f62fe;outline-offset:-2px}
+
+.widget-grip{touch-action:none;user-select:none}
