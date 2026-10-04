@@ -98,3 +98,17 @@
 .map-node-links{grid-template-columns:repeat(2,minmax(0,1fr))}
 .map-node-links a,.map-node-links button{display:flex;align-items:center;justify-content:space-between;padding:16px;font:inherit;font-size:16px}
 .map-node-links button{border:0;background:transparent;color:#777;text-align:left}
+/* Compact map node popup while retaining all totals and actions. */
+.map-node-dialog{width:min(520px,calc(100vw - 32px))}
+.map-node-dialog .topology-summary-heading{padding:14px;gap:10px}
+.map-node-dialog .topology-summary-heading h2{font-size:20px;margin-bottom:6px}
+.map-node-dialog .topology-summary-heading p{font-size:13px}
+.map-node-dialog .topology-summary-heading .button{min-width:32px;min-height:32px;padding:6px 10px}
+.map-node-dialog .map-node-counts{padding:10px 14px;gap:8px}
+.map-node-counts>div+div{padding-left:10px}
+.map-node-dialog .map-node-counts dt{font-size:12px}
+.map-node-dialog .map-node-counts dd{font-size:18px;margin-top:4px}
+.map-node-dialog .topology-summary-alarms{padding:10px 8px;gap:4px}
+.map-node-dialog .topology-summary-alarms span{font-size:12px;padding:3px 6px}
+.map-node-dialog .topology-summary-alarms i{width:10px;height:10px;margin-right:4px}
+.map-node-dialog .map-node-links a,.map-node-dialog .map-node-links button{padding:12px 14px;font-size:14px}
