@@ -33,6 +33,8 @@ function icct_backend_device_activate_imported_templates($device_id, $host_templ
     if (is_array($bundle)) {
         $known = array_column($templates, 'graph_template_id');
         foreach ($bundle['rows'] as $row) {
+            // Native graph creation must collect the instance OID for reusable table templates.
+            if (!empty($row['deferred_instance'])) continue;
             $graph_id = (int) $row['graph_template_id'];
             if (
                 !in_array($graph_id, $known) &&

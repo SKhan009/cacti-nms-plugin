@@ -55,7 +55,27 @@ check(icct_mib_file($bundle,0)===file_get_contents($path),'Original uploaded MIB
 check($hosts===(int)db_fetch_cell('SELECT COUNT(*) FROM host')&&$data===(int)db_fetch_cell('SELECT COUNT(*) FROM data_local')&&$graphs===(int)db_fetch_cell('SELECT COUNT(*) FROM graph_local'),'Preparation creates no live device/data/graph instances');
 try{icct_mib_save($preview,$plan);throw new LogicException('Replay accepted');}catch(InvalidArgumentException $e){check(str_contains($e->getMessage(),'already saved'),'Duplicate confirmation cannot recreate templates');}
 $bad=$input;unset($bad['create_data']);try{icct_mib_plan($preview,$bad);throw new LogicException('Dependency accepted');}catch(InvalidArgumentException $e){check(str_contains($e->getMessage(),'require'),'Graph dependency validated');}
-foreach($preview['records'] as $i=>$r)if($r['numeric']&&$r['table']){$bad=$input;$bad['selected']=[$i=>1];$bad['records']=[$i=>['oid'=>$r['base_oid']]];try{icct_mib_plan($preview,$bad);throw new LogicException('Unindexed column accepted');}catch(InvalidArgumentException $e){check(str_contains($e->getMessage(),'instance'),'Table column without index rejected');}break;}
+$auto=['type_id'=>$type,'template_name'=>'MIB QA Auto','create_data'=>1,'create_graph'=>1,'create_device'=>1,'selected'=>[]];
+foreach($preview['records'] as $i=>$r)if($r['numeric'])$auto['selected'][$i]=1;
+$autoPlan=icct_mib_plan($preview,$auto);
+check(count($autoPlan['records'])===count($auto['selected']),'All numeric objects plan automatically from MIB defaults');
+foreach($autoPlan['records'] as $r)if($r['table']){
+ check($r['deferred_instance']&&$r['oid']===$r['base_oid'],'Table template preserves base OID without inventing an instance');
+ $pair=icct_mib_native_metric($r,$autoPlan['options']);
+ $inputRow=db_fetch_row_prepared("SELECT did.t_value,did.value FROM data_input_data did JOIN data_template_data dtd ON dtd.id=did.data_template_data_id JOIN data_input_fields dif ON dif.id=did.data_input_field_id WHERE dtd.data_template_id=? AND dtd.local_data_id=0 AND dif.data_name='oid'",[$pair['data_template_id']]);
+ check($inputRow['t_value']==='on'&&$inputRow['value']==='','Reusable table template asks for OID when applied; no invalid polling OID stored');
+ $deferredPreview=$preview;$deferredPreview['id']=bin2hex(random_bytes(16));$deferredPlan=$autoPlan;$deferredPlan['name']='MIB QA Deferred';$r['data_name'].=' Deferred';$r['graph_name'].=' Deferred';$deferredPlan['records']=[$r];
+ $deferredBundle=icct_mib_save($deferredPreview,$deferredPlan);
+ check($deferredBundle['rows'][0]['deferred_instance'],'Saved template metadata retains deferred table instance');
+ check(icct_backend_device_activate_imported_templates($qaHost,$deferredBundle['host_template_id'])===0,'Applying device template does not auto-create an unconfigured table poller');break;
+}
+$before=icct_mib_file($bundle,0);
+icct_mib_set_deleted($bundle['id'],true);
+check(!db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['mib_repository_'.$bundle['id']]),'Delete removes upload from active list');
+check(icct_mib_file($bundle,0)===$before&&db_fetch_cell_prepared('SELECT id FROM graph_templates WHERE id=?',[$graphId]),'Delete retains files and generated graph templates');
+icct_mib_set_deleted($bundle['id'],false);
+check((bool)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['mib_repository_'.$bundle['id']]),'Undo restores the upload');
+try{icct_mib_set_deleted("bad%",true);throw new LogicException('Invalid delete accepted');}catch(InvalidArgumentException $e){check(true,'Delete validates upload IDs');}
 // More than 100 selections survive a single packed field and server validation.
 $large=$preview;$large['records']=[];$bulk=$input;$bulk['selected']=[];$bulk['records']=[];
 for($i=0;$i<120;$i++){

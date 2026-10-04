@@ -122,6 +122,22 @@ function icct_mib_bounds($syntax){
     if(preg_match('/^(?:Counter32|Counter64|Unsigned32|Gauge32|TimeTicks)\b/',$syntax))return ['min'=>'0','max'=>'U'];
     return ['min'=>'U','max'=>'U'];
 }
+function icct_mib_default_name($preview){
+    return substr(implode(' / ',array_column($preview['files'],'module')),0,150);
+}
+/** Recoverable removal of an upload; native templates and file chunks are retained. */
+function icct_mib_set_deleted($id,$deleted){
+    icct_backend_require_management(3);
+    if(!is_string($id)||!preg_match('/^[a-f0-9]{32}$/D',$id))throw new InvalidArgumentException('Invalid MIB upload.');
+    $lock='icct_mib_templates';
+    if((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',[$lock])!==1)throw new RuntimeException('Repository is busy. Retry shortly.');
+    try{
+        $from=($deleted?'mib_repository_':'mib_deleted_').$id;
+        $to=($deleted?'mib_deleted_':'mib_repository_').$id;
+        if(!db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',[$from]))throw new InvalidArgumentException('MIB upload not found.');
+        icct_mib_write('UPDATE plugin_icct_nms_meta SET meta_key=?,updated_at=NOW() WHERE meta_key=?',[$to,$from]);
+    }finally{db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]);}
+}
 /** Read native device inputs and graph settings; never guess an instance index. */
 function icct_mib_device_inputs($preview,$hostId){
     icct_backend_require_management(3);$hostId=icct_backend_device_require($hostId);
@@ -207,7 +223,7 @@ function icct_mib_preview($upload,$typeId,$allowUnresolved=false){
             }
             $numeric=$kind==='OBJECT-TYPE' && in_array($access[1]??'',['read-only','read-write','read-create']) && preg_match('/^(Integer32|INTEGER|Unsigned32|Gauge32|Counter32|Counter64|TimeTicks)\b/',$syntax[1]??'');
             $counter=(bool)preg_match('/^Counter(?:32|64)\b/',$syntax[1]??'');$enum=str_contains($syntax[1]??'','{');
-            $records[]=['symbol'=>$symbol,'kind'=>$kind,'base_oid'=>$base,'oid'=>$base?($table?$base:$base.'.0'):'','syntax'=>$syntax[1]??'','access'=>$access[1]??'','description'=>trim(preg_replace('/\s+/',' ',$description[1]??'')),'units'=>$units[1]??'','table'=>$table,'numeric'=>(bool)$numeric,'enum'=>$enum,'ds_type'=>$counter?2:1,'label'=>explode('::',$symbol)[1],'min'=>icct_mib_bounds($syntax[1]??'')['min'],'max'=>icct_mib_bounds($syntax[1]??'')['max'],'reason'=>!$numeric?'Metadata / nonnumeric object':($table?'Enter the device-specific instance index':($enum?'Numeric enumeration: review state mapping':'Readable numeric scalar'))];
+            $records[]=['symbol'=>$symbol,'kind'=>$kind,'base_oid'=>$base,'oid'=>$base?($table?$base:$base.'.0'):'','syntax'=>$syntax[1]??'','access'=>$access[1]??'','description'=>trim(preg_replace('/\s+/',' ',$description[1]??'')),'units'=>$units[1]??'','table'=>$table,'numeric'=>(bool)$numeric,'enum'=>$enum,'ds_type'=>$counter?2:1,'label'=>explode('::',$symbol)[1],'min'=>icct_mib_bounds($syntax[1]??'')['min'],'max'=>icct_mib_bounds($syntax[1]??'')['max'],'reason'=>!$numeric?'Metadata / nonnumeric object':($table?'Table object':($enum?'Numeric enumeration: review state mapping':'Readable numeric scalar'))];
         }
         return ['id'=>bin2hex(random_bytes(16)),'type_id'=>$typeId,'type_name'=>$types[$typeId]['name'],'category_id'=>$types[$typeId]['category_id'],'files'=>array_values($files),'records'=>$records,'parse_error'=>$parseError,'dependencies'=>$dependencies,'created'=>time(),'owner'=>icct_backend_current_user_id()];
     }finally{foreach(glob($dir.'/*')?:[] as $file)unlink($file);rmdir($dir);}
@@ -238,7 +254,7 @@ function icct_mib_plan($preview,$input){
     foreach($preview['records'] as $i=>$record){
         if(empty($input['selected'][$i]))continue;
         if(!$record['numeric'])throw new InvalidArgumentException('Only readable numeric objects can create polling templates.');
-        $r=$input['records'][$i]??[];$oid=ltrim(trim($r['oid']??''),'.');
+        $r=$input['records'][$i]??[];$oid=ltrim(trim($r['oid']??$record['oid']),'.');
         $index=trim($r['instance_index']??'');
         if($record['table']&&$index!==''){
             if(!preg_match('/^(?:0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*))*$/D',$index))throw new InvalidArgumentException($record['symbol'].': enter a numeric instance index, such as 1 or 1001.2.');
@@ -247,12 +263,14 @@ function icct_mib_plan($preview,$input){
             $oid=$indexed;
         }
         if(!$record['table']&&$oid==='')$oid=$record['base_oid'].'.0';
-        if(!preg_match('/^'.preg_quote($record['base_oid'],'/').'\.(?:0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*))*$/D',$oid)||strlen($oid)>255||(!$record['table']&&$oid!==$record['base_oid'].'.0'))throw new InvalidArgumentException($record['symbol'].': enter a valid full instance OID. Supply the actual table index in Instance Index, or append it to the full OID. Find it using the device SNMP walk; the MIB cannot determine it.');
-        $record['oid']=$oid;$record['label']=icct_mib_name($r['label']??'');
-        $record['data_name']=icct_mib_name($r['data_name']??'',190);$record['graph_name']=icct_mib_name($r['graph_name']??'',190);
-        $record['units']=trim($r['units']??'');if(strlen($record['units'])>20)throw new InvalidArgumentException('Units must be at most 20 characters.');
-        $record['ds_type']=(int)($r['ds_type']??0);if(!in_array($record['ds_type'],[1,2,3,4],true))throw new InvalidArgumentException('Choose a data source type.');
-        foreach(['min','max'] as $limit){$v=trim($r[$limit]??'U');if($v!==''&&$v!=='U'&&(!is_numeric($v)||!is_finite((float)$v)))throw new InvalidArgumentException('Use a number or U for RRD bounds.');$record[$limit]=$v===''?'U':$v;}
+        $record['deferred_instance']=$record['table']&&$index===''&&($oid===''||$oid===$record['base_oid']);
+        if($record['deferred_instance'])$oid=$record['base_oid'];
+        if(!$record['deferred_instance']&&(!preg_match('/^'.preg_quote($record['base_oid'],'/').'\.(?:0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*))*$/D',$oid)||strlen($oid)>255||(!$record['table']&&$oid!==$record['base_oid'].'.0')))throw new InvalidArgumentException($record['symbol'].': enter a valid instance OID.');
+        $record['oid']=$oid;$record['label']=icct_mib_name($r['label']??$record['label']);
+        $record['data_name']=icct_mib_name($r['data_name']??($name.' - '.$record['label']),190);$record['graph_name']=icct_mib_name($r['graph_name']??($name.' - '.$record['label']),190);
+        $record['units']=trim($r['units']??$record['units']);if(strlen($record['units'])>20)throw new InvalidArgumentException('Units must be at most 20 characters.');
+        $record['ds_type']=(int)($r['ds_type']??$record['ds_type']);if(!in_array($record['ds_type'],[1,2,3,4],true))throw new InvalidArgumentException('Choose a data source type.');
+        foreach(['min','max'] as $limit){$v=trim($r[$limit]??$record[$limit]??'U');if($v!==''&&$v!=='U'&&(!is_numeric($v)||!is_finite((float)$v)))throw new InvalidArgumentException('Use a number or U for RRD bounds.');$record[$limit]=$v===''?'U':$v;}
         if($record['min']!=='U'&&$record['max']!=='U'&&(float)$record['min']>(float)$record['max'])throw new InvalidArgumentException('Minimum cannot exceed maximum.');
         $record['graph_type']=(int)($r['graph_type']??4);$record['cf']=(int)($r['cf']??1);
         if(!in_array($record['graph_type'],[4,5,6,7],true)||!in_array($record['cf'],[1,2,3,4],true))throw new InvalidArgumentException('Choose a valid graph item and consolidation function.');
@@ -288,7 +306,7 @@ function icct_mib_native_metric($record,$options){
     $ds=substr(trim(preg_replace('/[^a-z0-9]+/','_',strtolower($record['label'])),'_'),0,19)?:'reading';
     icct_mib_write('UPDATE data_template_data SET name=? WHERE id=?',['|host_description| - '.$record['label'],$data]);
     icct_mib_write("UPDATE data_template_rrd SET data_source_name=?,data_source_type_id=?,rrd_minimum=?,rrd_maximum=?,t_rrd_minimum='',t_rrd_maximum='' WHERE id=?",[$ds,$record['ds_type'],$record['min'],$record['max'],$rrd]);
-    icct_mib_write("UPDATE data_input_data SET t_value='',value=? WHERE data_template_data_id=? AND data_input_field_id=?",[$record['oid'],$data,$field]);
+    icct_mib_write('UPDATE data_input_data SET t_value=?,value=? WHERE data_template_data_id=? AND data_input_field_id=?',[!empty($record['deferred_instance'])?'on':'',!empty($record['deferred_instance'])?'':$record['oid'],$data,$field]);
     if(!$options['graph'])return $pair;
     $base=(int)db_fetch_cell("SELECT id FROM graph_templates WHERE name='SNMP - Generic OID Template'");
     if(!$base)throw new RuntimeException('Cacti Generic OID graph template is not installed.');
@@ -331,7 +349,7 @@ function icct_mib_save($preview,$plan){
         if(!db_execute('START TRANSACTION'))throw new RuntimeException('Cannot begin creation.');
         try{
             $hostId=0;if($plan['options']['device']){$hostId=(int)sql_save(['id'=>0,'hash'=>get_hash_host_template(0),'name'=>$plan['name']],'host_template');if(!$hostId)throw new RuntimeException('Could not create device template.');}
-            $rows=[];foreach($plan['records'] as $record){$pair=icct_mib_native_metric($record,$plan['options']);if($hostId&&$pair['graph_template_id'])icct_mib_write('INSERT INTO host_template_graph(host_template_id,graph_template_id) VALUES(?,?)',[$hostId,$pair['graph_template_id']]);$rows[]=array_merge($pair,['oid'=>$record['oid'],'name'=>$record['label']]);}
+            $rows=[];foreach($plan['records'] as $record){$pair=icct_mib_native_metric($record,$plan['options']);if($hostId&&$pair['graph_template_id'])icct_mib_write('INSERT INTO host_template_graph(host_template_id,graph_template_id) VALUES(?,?)',[$hostId,$pair['graph_template_id']]);$rows[]=array_merge($pair,['oid'=>$record['oid'],'name'=>$record['label'],'deferred_instance'=>!empty($record['deferred_instance'])]);}
             $bundle=['id'=>$id,'name'=>$plan['name'],'type_id'=>$plan['type_id'],'type_name'=>$plan['type_name'],'category_id'=>$plan['category_id'],'host_template_id'=>$hostId,'rows'=>$rows,'options'=>$plan['options'],'created_at'=>date('Y-m-d H:i:s'),'files'=>[],'records'=>$preview['records'],'parse_error'=>$preview['parse_error']??'','dependencies'=>$preview['dependencies']??[]];
             foreach($preview['files'] as $i=>$file){$parts=str_split(base64_encode($file['content']),45000);foreach($parts as $j=>$part)icct_mib_write('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['mib_file_'.$id.'_'.$i.'_'.$j,$part]);unset($file['content']);$file['parts']=count($parts);$bundle['files'][]=$file;}
             // Chunk the metadata as well: large descriptions can exceed a TEXT column.

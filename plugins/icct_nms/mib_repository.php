@@ -5,7 +5,7 @@ require_once __DIR__.'/includes/inventory.php';
 require_once __DIR__.'/includes/device_type_service.php';
 require_once __DIR__.'/includes/mib_repository_service.php';
 require_once __DIR__.'/includes/forms.php';
-$error='';$notice='';$mode='list';$preview=null;$plan=null;$reviewValues=[];$deviceInputs=[];$sourceDevices=[];
+$error='';$notice='';$mode='list';$preview=null;$plan=null;$reviewValues=[];$deletedId='';
 // Initialization failures must stop before the shared header calls backend services.
 try { icct_nms_backend(); } catch (Throwable $e) { icct_nms_failure($e); }
 try{
@@ -19,7 +19,10 @@ try{
     if($draft && ($draft['owner']!==icct_backend_current_user_id()||time()-$draft['created']>3600)){unset($_SESSION['icct_mib_draft'],$_SESSION['icct_mib_plan'],$_SESSION['icct_mib_values']);$draft=null;}
     if($_SERVER['REQUEST_METHOD']==='POST'){
         icct_nms_post();$action=$_POST['action']??'';
-        if($action==='upload'){
+        if(in_array($action,['delete','restore'],true)){
+            icct_mib_set_deleted($_POST['bundle_id']??'', $action==='delete');
+            icct_nms_redirect('mib_repository.php'.($action==='delete'?'?deleted='.rawurlencode($_POST['bundle_id']):''));
+        }elseif($action==='upload'){
             $mode='upload';$draft=icct_mib_preview($_FILES['mibs']??[], $_POST['type_id']??'',true);
             $_SESSION['icct_mib_draft']=$draft;unset($_SESSION['icct_mib_plan'],$_SESSION['icct_mib_values'],$_SESSION['icct_mib_inputs']);icct_nms_redirect('mib_repository.php?review=1');
         }elseif($action==='reparse'){
@@ -32,13 +35,6 @@ try{
             }finally{foreach($paths as $path)unlink($path);rmdir($storedDir);}
             $_SESSION['icct_mib_draft']=$draft;unset($_SESSION['icct_mib_plan'],$_SESSION['icct_mib_values'],$_SESSION['icct_mib_inputs']);icct_nms_redirect('mib_repository.php?review=1');
         }elseif($action==='discard'){unset($_SESSION['icct_mib_draft'],$_SESSION['icct_mib_plan'],$_SESSION['icct_mib_values'],$_SESSION['icct_mib_inputs']);icct_nms_redirect('mib_repository.php');
-        }elseif($action==='fetch_inputs'){
-            $mode='review';$preview=$draft;
-            if(!$draft||!hash_equals($draft['id'],(string)($_POST['draft_id']??'')))throw new InvalidArgumentException('Upload review is no longer available.');
-            $reviewValues=icct_mib_review_input($_POST);$deviceInputs=icct_mib_device_inputs($draft,icct_nms_id($_POST['source_host']??0));
-            foreach($deviceInputs as $i=>$values)if(count($values)===1)$reviewValues['records'][$i]=array_replace($reviewValues['records'][$i]??[],$values[0]);
-            $_SESSION['icct_mib_values']=$reviewValues;$_SESSION['icct_mib_inputs']=$deviceInputs;unset($_SESSION['icct_mib_plan']);
-            $notice='Loaded '.count($deviceInputs).' matching objects from saved device inputs and native Cacti graphs. Multiple instances require selection. Unconfigured objects retain MIB defaults; no instance indexes or thresholds are invented.';
         }elseif(in_array($action,['review','confirm'],true)){
             $mode=$action==='confirm'?'confirm':'review';$preview=$draft;
             if(!$draft||!hash_equals($draft['id'],(string)($_POST['draft_id']??'')))throw new InvalidArgumentException('Upload review is no longer available. Upload again.');
@@ -56,7 +52,7 @@ try{
         $inspection=null;foreach($bundles as $candidate)if($candidate['id']===$_GET['inspect'])$inspection=$candidate;
         if(!$inspection)throw new InvalidArgumentException('MIB upload not found.');$objects=icct_mib_objects($inspection);$mode='inspect';
     }elseif(isset($_GET['saved']))$notice='MIB files and selected templates saved.';
-    if($mode==='review'){ $sourceDevices=icct_nms_inventory();$deviceInputs=$deviceInputs?:($_SESSION['icct_mib_inputs']??[]); }
+    if(isset($_GET['deleted'])&&is_string($_GET['deleted'])&&preg_match('/^[a-f0-9]{32}$/D',$_GET['deleted'])&&$management)$deletedId=$_GET['deleted'];
 }catch(Throwable $e){$error=$e->getMessage();}
 $title='MIB Repository';$mibRepositoryPage=true;
 require __DIR__.'/templates/header.php';require __DIR__.'/templates/mib_repository.php';require __DIR__.'/templates/footer.php';

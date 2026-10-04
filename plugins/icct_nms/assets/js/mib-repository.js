@@ -16,17 +16,18 @@ function filterObjects(){objectPage=1;matches=objects.filter(object=>object.text
 if(pager){pager.querySelector('[data-mib-size]').addEventListener('change',()=>{objectPage=1;renderObjects();});pager.querySelector('[data-mib-page]').addEventListener('change',e=>{objectPage=Number(e.target.value);renderObjects();});pager.querySelector('[data-mib-prev]').addEventListener('click',()=>{objectPage--;renderObjects();});pager.querySelector('[data-mib-next]').addEventListener('click',()=>{objectPage++;renderObjects();});}
 objectSearch?.addEventListener('input',filterObjects);filterObjects();
 if(review){
- review.querySelectorAll('[data-mib-instance]').forEach(select=>select.addEventListener('change',()=>{
-  if(!select.value)return;const values=JSON.parse(select.value);
-  for(const [key,value] of Object.entries(values)){const input=review.querySelector(`[name="records[${select.dataset.record}][${key}]"]`);if(input){input.value=value;input.setCustomValidity('');}}
- }));
+ review.querySelectorAll('[data-mib-color]').forEach(control=>{
+  const picker=control.querySelector('[data-mib-color-picker]'),hex=control.querySelector('[data-mib-color-hex]');
+  picker.addEventListener('input',()=>{hex.value=picker.value.slice(1).toUpperCase();hex.dispatchEvent(new Event('input',{bubbles:true}));});
+  hex.addEventListener('input',()=>{if(/^[a-fA-F0-9]{6}$/.test(hex.value))picker.value='#'+hex.value;});
+ });
  const eligible=objects.filter(object=>!object.querySelector('summary input').disabled),all=review.querySelector('[data-mib-select-all]');
  function selection(){const count=eligible.filter(object=>object.querySelector('summary input').checked).length;all.checked=count>0&&count===eligible.length;all.indeterminate=count>0&&count<eligible.length;all.disabled=eligible.length===0;review.querySelector('[data-mib-selected-count]').textContent=`${count} of ${eligible.length} numeric objects selected`;}
  function toggle(object){const checked=object.querySelector('summary input').checked;object.querySelectorAll('.mib-object-body input,.mib-object-body select').forEach(input=>input.disabled=!checked);}
  objects.forEach(object=>{
   const checkbox=object.querySelector('summary input');checkbox.addEventListener('click',e=>e.stopPropagation());checkbox.addEventListener('change',()=>{toggle(object);selection();});toggle(object);
   const index=object.querySelector('[data-mib-index]'),oid=object.querySelector('[data-base-oid]');
-  index?.addEventListener('input',()=>{oid.value=index.value.trim()?oid.dataset.baseOid+'.'+index.value.trim():'';oid.setCustomValidity('');oid.removeAttribute('aria-invalid');oid.closest('.field')?.querySelector('.inline-feedback')?.remove();});
+  index?.addEventListener('input',()=>{oid.value=index.value.trim()?oid.dataset.baseOid+'.'+index.value.trim():oid.dataset.baseOid;oid.setCustomValidity('');oid.removeAttribute('aria-invalid');oid.closest('.field')?.querySelector('.inline-feedback')?.remove();});
   oid?.addEventListener('input',()=>{oid.setCustomValidity('');if(index)index.value=oid.value.startsWith(oid.dataset.baseOid+'.')?oid.value.slice(oid.dataset.baseOid.length+1):'';});
  });
  function setSelection(rows,checked){rows.forEach(object=>{object.querySelector('summary input').checked=checked;toggle(object);});selection();}
@@ -36,15 +37,15 @@ if(review){
  function reveal(object,input){objectSearch.value='';matches=objects;const limit=pager.querySelector('[data-mib-size]').value;objectPage=limit==='all'?1:Math.floor(objects.indexOf(object)/Number(limit))+1;renderObjects();object.open=true;input.reportValidity();input.focus();}
  review.addEventListener('submit',event=>{
   if(event.submitter?.value==='discard'){objects.forEach(object=>object.querySelectorAll('input,select').forEach(input=>input.disabled=true));return;}
-  if(event.submitter?.value!=='fetch_inputs')for(const object of eligible){
+  for(const object of eligible){
    if(!object.querySelector('summary input').checked)continue;
    const oid=object.querySelector('[data-base-oid]'),index=object.querySelector('[data-mib-index]');
    oid.value=oid.value.trim().replace(/^\./,'');
-   if(index&&(!oid.value.startsWith(oid.dataset.baseOid+'.')||!/^\d+(?:\.\d+)*$/.test(oid.value.slice(oid.dataset.baseOid.length+1)))){
-    event.preventDefault();oid.setCustomValidity('Enter the actual device instance index or a full instance OID.');reveal(object,oid);return;
+   if(index&&oid.value!==oid.dataset.baseOid&&oid.value!==''&&(!oid.value.startsWith(oid.dataset.baseOid+'.')||!/^\d+(?:\.\d+)*$/.test(oid.value.slice(oid.dataset.baseOid.length+1)))){
+    event.preventDefault();oid.setCustomValidity('Enter a numeric instance index or keep the base OID for a reusable template.');reveal(object,oid);return;
    }
   }
-  if(event.submitter?.value!=='fetch_inputs')for(const input of review.querySelectorAll('input,select')){
+  for(const input of review.querySelectorAll('input,select')){
    if(input.disabled||input.checkValidity())continue;
    event.preventDefault();const object=input.closest('[data-mib-object]');if(object)reveal(object,input);else{input.reportValidity();input.focus();}return;
   }
