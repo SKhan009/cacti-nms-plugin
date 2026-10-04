@@ -7,10 +7,12 @@ const select=document.querySelector('#dashboardSelect'),picker=document.querySel
 function element(tag,text){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;}
 function svg(tag,attributes,text){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attributes).forEach(([k,v])=>e.setAttribute(k,v));if(text!==undefined)e.textContent=text;return e;}
 function widgets(){return preferences.dashboards[preferences.selected].widgets;}
+preferences.dashboards.forEach(dashboard=>{dashboard.columns='auto';});
+function reportStatus(message=''){status.textContent=message;status.hidden=!message;}
 let savePromise=null;
 function save(){
  if(savePromise){saveAgain=true;return savePromise;}
- savePromise=(async()=>{let ok=true;status.textContent='Saving…';do{saveAgain=false;const body=new FormData(document.querySelector('#dashboardToken'));body.set('dashboard_preferences',JSON.stringify(preferences));try{const r=await fetch('topology.php',{method:'POST',body,credentials:'same-origin'});if(!r.ok)throw Error();status.textContent='Layout saved';}catch(e){ok=false;status.textContent='Layout could not be saved. Click to retry.';}}while(saveAgain);return ok;})().finally(()=>{savePromise=null;});return savePromise;
+ savePromise=(async()=>{let ok=true;reportStatus();do{saveAgain=false;const body=new FormData(document.querySelector('#dashboardToken'));body.set('dashboard_preferences',JSON.stringify(preferences));try{const r=await fetch('topology.php',{method:'POST',body,credentials:'same-origin'});if(!r.ok)throw Error();reportStatus();}catch(e){ok=false;reportStatus('Layout could not be saved. Click to retry.');}}while(saveAgain);return ok;})().finally(()=>{savePromise=null;});return savePromise;
 }
 function nodeUrl(id){const url=new URL(location.href);url.searchParams.delete('site_id');url.searchParams.set('node_id',id);return url;}
 status.addEventListener('click',save);
@@ -19,8 +21,7 @@ let packFrame=0;
 function packCards(){
  cancelAnimationFrame(packFrame);packFrame=requestAnimationFrame(()=>{
   if(extras.hidden)return;
-  const requested=preferences.dashboards[preferences.selected].columns ?? 'auto';
-  const columns=extras.clientWidth<600?1:requested==='auto'?(extras.clientWidth>=1100?3:2):Math.min(Number(requested),extras.clientWidth>=900?3:2);
+  const columns=extras.clientWidth<600?1:extras.clientWidth>=1100?3:2;
   extras.style.gridTemplateColumns='repeat('+columns+', minmax(0, 1fr))';
   extras.querySelectorAll('.dashboard-card').forEach(card=>{
    card.style.gridColumn='span 1';
@@ -41,7 +42,6 @@ function layout(){
  document.querySelector('#dashboardDelete').disabled=preferences.dashboards.length===1;
  document.querySelector('#dashboardUndo').hidden=!preferences.deleted||preferences.dashboards.length>=5;
  document.querySelector('#dashboardNode').value=preferences.dashboards[preferences.selected].node_id ?? 0;
- document.querySelector('#dashboardColumns').value=preferences.dashboards[preferences.selected].columns ?? 'auto';
  window.dispatchEvent(new Event('resize'));
 }
 select.addEventListener('change',async()=>{preferences.selected=Number(select.value);const node=preferences.dashboards[preferences.selected].node_id ?? 0;if(node!==data.node_id){if(await save())location.assign(nodeUrl(node));return;}layout();save();});
@@ -63,13 +63,12 @@ document.querySelector('#dashboardUndo').addEventListener('click',()=>{
  if(!preferences.deleted||preferences.dashboards.length>=5)return;
  const {index,dashboard}=preferences.deleted;const position=Math.min(index,preferences.dashboards.length);preferences.dashboards.splice(position,0,dashboard);preferences.selected=position;delete preferences.deleted;if((dashboard.node_id ?? 0)!==data.node_id){save().then(ok=>{if(ok)location.assign(nodeUrl(dashboard.node_id ?? 0));});return;}layout();save();
 });
-document.querySelector('#dashboardColumns').addEventListener('change',e=>{preferences.dashboards[preferences.selected].columns=e.target.value==='auto'?'auto':Number(e.target.value);packCards();save();});
 document.querySelector('#dashboardAdd').addEventListener('click',()=>{if(preferences.dashboards.length>=5)return;openDashboardName('create');});
 document.querySelector('#dashboardNameCancel').addEventListener('click',()=>nameDialog.close());
 document.querySelector('#dashboardNameForm').addEventListener('submit',e=>{
  e.preventDefault();const name=nameInput.value.trim();if(!name){nameInput.setCustomValidity('Enter a dashboard name.');nameInput.reportValidity();return;}
  if(nameMode==='rename'){preferences.dashboards[preferences.selected].name=name;}
- else{if(preferences.dashboards.length>=5)return;const current=preferences.dashboards[preferences.selected];preferences.dashboards.push({name,columns:current.columns ?? 'auto',node_id:current.node_id ?? 0,widgets:[...current.widgets]});preferences.selected=preferences.dashboards.length-1;}
+ else{if(preferences.dashboards.length>=5)return;const current=preferences.dashboards[preferences.selected];preferences.dashboards.push({name,columns:'auto',node_id:current.node_id ?? 0,widgets:[...current.widgets]});preferences.selected=preferences.dashboards.length-1;}
  nameDialog.close();layout();save();
 });
 nameInput.addEventListener('input',()=>nameInput.setCustomValidity(''));
@@ -218,6 +217,6 @@ function workflowCharts(){
  }
 }
 document.querySelectorAll('[data-alarm-mode]').forEach(button=>button.addEventListener('click',()=>{mode=button.dataset.alarmMode;document.querySelectorAll('[data-alarm-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));alarms();}));
-document.querySelector('#birdsRefresh').addEventListener('click',async function(){this.disabled=true;try{const url=nodeUrl(data.node_id);url.searchParams.set('dashboard_readings','1');const response=await fetch(url,{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw Error();readings=await response.json();radar();alarms();workflowCharts();frequentAlarms();recentAlarms();portsOverview();problematicDevices();status.textContent='Widgets updated '+new Date().toLocaleTimeString();}catch(e){status.textContent='Widget refresh failed. Try again.';}finally{this.disabled=false;}});
+document.querySelector('#birdsRefresh').addEventListener('click',async function(){this.disabled=true;try{const url=nodeUrl(data.node_id);url.searchParams.set('dashboard_readings','1');const response=await fetch(url,{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw Error();readings=await response.json();radar();alarms();workflowCharts();frequentAlarms();recentAlarms();portsOverview();problematicDevices();reportStatus();}catch(e){reportStatus('Widget refresh failed. Try again.');}finally{this.disabled=false;}});
 layout();radar();alarms();workflowCharts();frequentAlarms();recentAlarms();portsOverview();problematicDevices();
 })();

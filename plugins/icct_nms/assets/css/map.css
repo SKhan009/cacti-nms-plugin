@@ -201,7 +201,6 @@
 
 /* Topology and its neighbouring cards remain a two-column section. */
 @media(min-width:901px){.dashboard-grid{grid-template-columns:minmax(0,2fr) minmax(280px,1fr)}.dashboard-grid.dashboard-no-side{grid-template-columns:minmax(0,1fr)}}
-.dashboard-toolbar #dashboardColumns{width:140px}
 #dashboardNameDialog{width:420px;max-width:calc(100vw - 32px);border:1px solid #ddd;padding:24px;background:white;color:#202020;box-shadow:0 8px 32px #0003}
 #dashboardNameDialog::backdrop{background:#0005}
 #dashboardNameDialog h2{font-size:22px;font-weight:500;margin:0 0 20px}
