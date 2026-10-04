@@ -10,6 +10,7 @@ require_once __DIR__.'/includes/rack_view_service.php';
 require_once __DIR__.'/includes/topology_view_service.php';
 require_once __DIR__.'/includes/topology_summary_service.php';
 require_once __DIR__.'/includes/topology_link_service.php';
+require_once __DIR__.'/includes/topology_mtr_service.php';
 require_once __DIR__.'/includes/dashboard_service.php';
 try {
     icct_nms_backend();
@@ -31,6 +32,7 @@ try {
         header('Content-Type: application/json');header('Cache-Control: no-store');
         if(!$selected){http_response_code(404);echo json_encode(['error'=>'Link unavailable.']);exit;}
         $selected['readings']=[icct_nms_link_reading($a,$selected['source_port']??'',(int)($selected['source_ifindex']??0)),icct_nms_link_reading($b,$selected['target_port']??'')];
+        $selected['mtr']=[icct_nms_link_mtr($a),icct_nms_link_mtr($b)];
         echo json_encode($selected,JSON_THROW_ON_ERROR);exit;
     }
     if (isset($_GET['device_summary'])) {
