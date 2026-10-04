@@ -8,7 +8,6 @@
 <div class="icct-view-tabs" role="tablist" aria-label="Dashboard views">
 <?php foreach (['topology'=>'Topology','rack'=>'Rack View','image'=>'Image View','map'=>'Map View'] as $key=>$label): ?><button type="button" role="tab" id="icct-view-<?= $key ?>" aria-controls="icct-panel-<?= $key ?>" aria-selected="<?= $key===$dashboardView?'true':'false' ?>" tabindex="<?= $key===$dashboardView?'0':'-1' ?>" data-view="<?= $key ?>"><?= $label ?></button><?php endforeach; ?>
 </div>
-<?php if($dashboardNodeId>0): ?><a class="button" href="topology.php?view=topology&amp;node_id=0">All Nodes</a><?php endif; ?>
 <div class="icct-map-counts" aria-label="Device status totals"><span>Total: <?= $mapData['counts']['total'] ?></span><span class="online">Online: <?= $mapData['counts']['online'] ?></span><span class="offline">Offline: <?= $mapData['counts']['offline'] ?></span><span class="other">Other: <?= $mapData['counts']['other'] ?></span></div>
 </div>
 <p id="icctMapStatus" role="status" hidden></p>
