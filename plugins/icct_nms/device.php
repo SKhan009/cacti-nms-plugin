@@ -111,9 +111,7 @@ try {
             $_SESSION["icct_nms_notice"] = $cloneId
                 ? "Device “" . trim($_POST["description"]) . "” cloned successfully and added to Inventory."
                 : "Device “" . trim($_POST["description"]) . "” saved successfully.";
-            icct_nms_redirect(
-                $cloneId ? "inventory.php" : "protocol.php?id=" . $saved,
-            );
+            icct_nms_redirect("inventory.php");
         } catch (Throwable $e) {
             $error = $e->getMessage();
             $values = array_replace($values, array_filter($_POST, "is_scalar"));

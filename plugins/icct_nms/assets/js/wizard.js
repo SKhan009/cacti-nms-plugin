@@ -155,7 +155,7 @@
     if(!await save())return;
     const message={title:'Saved',text:basic.dataset.staticPreview ? 'Changes saved in this preview. Live device configuration is unchanged.' : 'Device changes saved successfully.'};
     if(basic.dataset.staticPreview)icctToast(message);
-    else {icctQueueToast(message);leaving=true;location.reload();}
+    else {icctQueueToast(message);leaving=true;location.href='inventory.php';}
   }
   document.querySelectorAll('[data-wizard-save]').forEach(b=>b.addEventListener('click',explicitSave));
   document.addEventListener('click',event=>{
