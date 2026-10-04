@@ -45,6 +45,7 @@ try {
     }
     $mapConfigured=!empty($config['nms_geoserver_wms_url']) && !empty($config['nms_geoserver_layer']);
 } catch (Throwable $error) { icct_nms_failure($error); }
+$dashboardView=in_array($_GET['view']??'', ['topology','rack','image','map'],true)?$_GET['view']:'topology';
 $title='Dashboard'; $mapPage=true;
 require __DIR__.'/templates/header.php';
 require __DIR__.'/templates/map.php';

@@ -99,7 +99,7 @@
         const counts=document.querySelector('#mapNodeCounts');counts.replaceChildren();
         [['Total Devices','total'],['Online','online'],['Offline','offline'],['Disabled','disabled']].forEach(([label,key])=>{const row=nodeElement('div');row.append(nodeElement('dt',label),nodeElement('dd',String(node.counts[key])));counts.append(row);});
         const alarms=document.querySelector('#mapNodeAlarms');alarms.replaceChildren();Object.entries(alarmColors).forEach(([severity,color])=>{const badge=nodeElement('span'),dot=nodeElement('i');dot.style.background=color;badge.append(dot,document.createTextNode((severity==='Warning'?'Warn':severity==='Information'?'Info':severity)+': '+String(node.fault_counts[severity]||0).padStart(2,'0')));alarms.append(badge);});
-        document.querySelector('#mapNodeTopology').href='topology.php?site_id='+encodeURIComponent(node.id);
+        document.querySelector('#mapNodeTopology').href='topology.php?site_id='+encodeURIComponent(node.id)+'&view=topology';
     }
     function showNode(site){
         if(!nodeDialog)return;
@@ -125,13 +125,21 @@
     document.getElementById('icctMapFit').addEventListener('click', function () { map.closePopup(); fitIndia(); });
     document.getElementById('icctMapFullscreen').addEventListener('click', function () { if (document.fullscreenElement) document.exitFullscreen(); else document.querySelector('.icct-map-panel').requestFullscreen().catch(function () { status.textContent = 'Fullscreen is unavailable in this browser.'; }); });
     var tabs = Array.from(document.querySelectorAll('.icct-view-tabs [role="tab"]'));
-    function selectView(tab) {
+    function selectView(tab, updateUrl=true) {
         if (!document.dispatchEvent(new CustomEvent('icct:before-view-change', {cancelable: true, detail: {tab: tab}}))) return;
+        const destination=new URL(window.location.href);
+        destination.searchParams.set('view',tab.dataset.view);
+        // Map View is the overview of every authorized node, even after a node drill-down.
+        if(destination.searchParams.has('site_id') && tab.dataset.view==='map'){destination.searchParams.delete('site_id');window.location.assign(destination.href);return;}
+        if(updateUrl && destination.href!==window.location.href)history.pushState(null,'',destination.href);
         tabs.forEach(function (item) { var selected = item === tab; item.setAttribute('aria-selected', String(selected)); item.tabIndex = selected ? 0 : -1; document.getElementById(item.getAttribute('aria-controls')).hidden = !selected; });
         status.hidden = tab.dataset.view !== 'map';
         document.querySelector('.icct-map-credits').hidden = tab.dataset.view !== 'map';
         if (tab.dataset.view === 'map') { map.invalidateSize({pan: false}); if (countryView) fitIndia(); }
     }
+    window.addEventListener('popstate',function(){const view=new URL(window.location.href).searchParams.get('view')||'topology';selectView(tabs.find(tab=>tab.dataset.view===view)||tabs[0],false);});
+    const initialView=new URL(window.location.href).searchParams.get('view')||'topology';
+    selectView(tabs.find(tab=>tab.dataset.view===initialView)||tabs[0],false);
     tabs.forEach(function (tab, index) {
         tab.addEventListener('click', function () { selectView(tab); });
         tab.addEventListener('keydown', function (event) {
