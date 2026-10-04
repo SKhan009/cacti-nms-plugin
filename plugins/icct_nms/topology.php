@@ -56,10 +56,16 @@ try {
         header('Content-Type: application/json');header('Cache-Control: no-store');echo json_encode($node,JSON_THROW_ON_ERROR);exit;
     }
     $savedNode=$dashboardPreferences['dashboards'][$dashboardPreferences['selected']]['node_id'] ?? 0;
-    $dashboardNodeId=isset($_GET['node_id'])?icct_backend_topology_integer($_GET['node_id'],0,4294967295,'Node ID'):(isset($_GET['site_id'])?icct_nms_id($_GET['site_id']):$savedNode);
+    $dashboardNodeId=isset($_GET['node_id'])?icct_backend_topology_integer($_GET['node_id'],0,4294967295,'Node ID'):(isset($_GET['site_id'])?0:$savedNode);
     // Removed or newly inaccessible saved nodes fall back to the authorized overview.
     if(!isset($_GET['node_id'])&&!isset($_GET['site_id'])&&$dashboardNodeId&&!in_array($dashboardNodeId,array_column($dashboardNodes,'id'),true))$dashboardNodeId=0;
     $mapData=icct_nms_dashboard_scope($mapData,$dashboardNodeId);
+    if(isset($_GET['site_id'])&&!isset($_GET['node_id'])){
+        $siteId=icct_nms_id($_GET['site_id']);
+        $mapData['sites']=array_values(array_filter($mapData['sites'],static fn($site)=>(int)$site['id']===$siteId));
+        $mapData['unlocated']=array_values(array_filter($mapData['unlocated'],static fn($device)=>(int)$device['site_id']===$siteId));
+        $mapData=icct_nms_dashboard_recount($mapData);
+    }
     $dashboardPreferences['dashboards'][$dashboardPreferences['selected']]['node_id']=$dashboardNodeId;
     $dashboardReadings=icct_nms_dashboard_readings($mapData);
     $dashboardReadings['center']=icct_nms_dashboard_server();

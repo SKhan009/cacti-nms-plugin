@@ -21,7 +21,7 @@
 <button id="icctMapFullscreen" type="button" aria-label="Toggle map fullscreen" title="Fullscreen">⛶</button>
 </div>
 </div>
-<?php $viewDevices=icct_nms_inventory(); if(isset($_GET['site_id']))$viewDevices=array_values(array_filter($viewDevices,static fn($device)=>(int)$device['site_id']===(int)$_GET['site_id'])); $viewTypes=icct_nms_device_types(); ?>
+<?php $scopedDeviceIds=array_column($mapData['unlocated'],'id');foreach($mapData['sites'] as $scopeSite)$scopedDeviceIds=array_merge($scopedDeviceIds,array_column($scopeSite['devices'],'id')); $viewDevices=array_values(array_filter(icct_nms_inventory(),static fn($device)=>in_array((int)$device['id'],$scopedDeviceIds,true))); $viewTypes=icct_nms_device_types(); ?>
 <?php foreach (['topology','rack','image'] as $view): ?>
 <div class="icct-view-panel icct-device-view" id="icct-panel-<?= $view ?>" role="tabpanel" aria-labelledby="icct-view-<?= $view ?>" <?= $view===$dashboardView?'':'hidden' ?>>
 <?php if ($view==='rack'): ?>

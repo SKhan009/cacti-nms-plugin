@@ -13,4 +13,4 @@
 <button type="button" class="rack-icon" id="rackViewFullscreen" aria-label="Rack fullscreen" title="Fullscreen">⛶</button>
 </div></div>
 <form id="rackViewToken" hidden><?php icct_nms_token(); ?></form>
-<script type="application/json" id="rackViewData"><?= json_encode(icct_nms_rack_view_data(),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
+<script type="application/json" id="rackViewData"><?= json_encode((static function()use($dashboardNodeId,$scopedDeviceIds){$data=icct_nms_rack_view_data();$data['devices']=array_values(array_filter($data['devices'],static fn($device)=>in_array((int)$device['id'],$scopedDeviceIds,true)));if($dashboardNodeId){$data['nodes']=array_values(array_filter($data['nodes'],static fn($node)=>(int)$node['id']===$dashboardNodeId));$data['racks']=array_values(array_filter($data['racks'],static fn($rack)=>(int)$rack['node_id']===$dashboardNodeId));}return $data;})(),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>

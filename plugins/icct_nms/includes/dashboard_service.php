@@ -2,7 +2,7 @@
 /** Personal widget layouts; only known widgets, at most five dashboards. */
 function icct_nms_dashboard_validate($value) {
     if(!is_array($value)||!isset($value['dashboards'],$value['selected'])||!is_array($value['dashboards'])||count($value['dashboards'])<1||count($value['dashboards'])>5)throw new InvalidArgumentException('Choose one to five dashboards.');
-    $clean=['selected'=>(int)$value['selected'],'dashboards'=>[]];
+    $clean=['selected'=>(int)$value['selected'],'dashboards'=>[],'node_scope'=>'preset'];
     foreach(array_values($value['dashboards']) as $index=>$dashboard){
         if(!is_array($dashboard)||!isset($dashboard['widgets'])||!is_array($dashboard['widgets'])||count($dashboard['widgets'])>9)throw new InvalidArgumentException('Invalid dashboard widgets.');
         $widgets=array_values($dashboard['widgets']);
@@ -25,9 +25,16 @@ function icct_nms_dashboard_validate($value) {
     }
     return $clean;
 }
+function icct_nms_dashboard_migrate_nodes($value,$nodes){
+    if(($value['node_scope'] ?? '')==='preset')return $value;
+    $convert=static function($dashboard)use($nodes){$site=(int)($dashboard['node_id'] ?? 0);$matches=array_values(array_filter($nodes,static fn($node)=>(int)$node['site_id']===$site));$dashboard['node_id']=$site>0&&count($matches)===1?(int)$matches[0]['id']:0;return $dashboard;};
+    $value['dashboards']=array_map($convert,$value['dashboards']);
+    if(isset($value['deleted']['dashboard']))$value['deleted']['dashboard']=$convert($value['deleted']['dashboard']);
+    $value['node_scope']='preset';return $value;
+}
 function icct_nms_dashboard_preferences() {
     $raw=db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['dashboard_user_'.icct_backend_current_user_id()]);
-    try{if($raw)return icct_nms_dashboard_validate(json_decode($raw,true,512,JSON_THROW_ON_ERROR));}catch(Throwable $e){}
+    try{if($raw){$value=json_decode($raw,true,512,JSON_THROW_ON_ERROR);icct_nms_dashboard_validate($value);return icct_nms_dashboard_validate(icct_nms_dashboard_migrate_nodes($value,icct_nms_nodes()));}}catch(Throwable $e){}
     return ['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms','ack','escalation','frequent','recent','ports','problematic']]]];
 }
 function icct_nms_dashboard_save($value) {
@@ -75,18 +82,20 @@ function icct_nms_dashboard_server() {
     return $center;
 }
 
-/** Node choices and totals are derived only from authorized device inventory. */
+/** Preset nodes are distinct from the geographic sites used by the map. */
 function icct_nms_dashboard_nodes($map){
-    $nodes=[];
-    foreach($map['sites'] as $site)$nodes[(int)$site['id']]=['id'=>(int)$site['id'],'name'=>$site['name']];
-    foreach($map['unlocated'] as $device){$id=(int)($device['site_id'] ?? 0);if($id>0)$nodes[$id]=['id'=>$id,'name'=>$device['site'] ?? 'Node '.$id];}
-    $nodes=array_values($nodes);usort($nodes,static fn($a,$b)=>strnatcasecmp($a['name'],$b['name']));return $nodes;
+    return array_map(static fn($node)=>['id'=>(int)$node['id'],'name'=>$node['name']],$map['preset_nodes'] ?? []);
 }
 function icct_nms_dashboard_scope($map,$nodeId){
     if($nodeId===0)return $map;
     if(!in_array($nodeId,array_column(icct_nms_dashboard_nodes($map),'id'),true))throw new RuntimeException('Node unavailable.');
-    $map['sites']=array_values(array_filter($map['sites'],static fn($site)=>(int)$site['id']===$nodeId));
-    $map['unlocated']=array_values(array_filter($map['unlocated'],static fn($device)=>(int)($device['site_id'] ?? 0)===$nodeId));
+    $belongs=static fn($device)=>in_array($nodeId,$device['node_ids'] ?? [],true);
+    foreach($map['sites'] as &$site)$site['devices']=array_values(array_filter($site['devices'],$belongs));unset($site);
+    $map['sites']=array_values(array_filter($map['sites'],static fn($site)=>!empty($site['devices'])));
+    $map['unlocated']=array_values(array_filter($map['unlocated'],$belongs));
+    return icct_nms_dashboard_recount($map);
+}
+function icct_nms_dashboard_recount($map){
     $devices=$map['unlocated'];foreach($map['sites'] as $site)$devices=array_merge($devices,$site['devices']);
     $map['counts']=['total'=>count($devices),'online'=>0,'offline'=>0,'other'=>0];
     foreach($devices as $device)$map['counts'][$device['status']==='Up'?'online':($device['status']==='Down'?'offline':'other')]++;
