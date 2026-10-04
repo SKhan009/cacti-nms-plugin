@@ -70,8 +70,8 @@ function workflowCharts(){
  for(const key of ['ack','escalation']){const chart=document.querySelector('#'+key+'Donut'),legend=document.querySelector('#'+key+'Legend'),values=Object.entries(readings[key]||{}),total=readings.total;chart.replaceChildren();legend.replaceChildren();
   const radius=59,circumference=2*Math.PI*radius;chart.append(svg('circle',{cx:90,cy:90,r:radius,fill:'none',stroke:total>0?'#eceef2':'#b5cdff','stroke-width':29}));let offset=0;
   values.forEach(([name,count],i)=>{const color=i===0?'#155cff':'#b5cdff';if(count>0&&total>0){const length=count/total*circumference;chart.append(svg('circle',{cx:90,cy:90,r:radius,fill:'none',stroke:color,'stroke-width':29,'stroke-dasharray':length+' '+(circumference-length),'stroke-dashoffset':-offset,transform:'rotate(-90 90 90)'}));offset+=length;}
-   const item=element('li'),dot=element('i');dot.style.background=color;item.append(dot,element('span',name),element('b',count===null?'Unknown':String(count)));legend.append(item);
-  });chart.append(svg('text',{x:90,y:98,'text-anchor':'middle','font-size':26,fill:'#222'},total));chart.setAttribute('aria-label',total+' active alarms; '+values.map(([name,count])=>name+': '+(count===null?'Unknown':count)).join(', '));
+   const item=element('li'),dot=element('i');dot.style.background=color;item.append(dot,element('span',name==='Not_Ack'?'Not Ack':name),element('b',count===null?'Unknown':String(count)));legend.append(item);
+  });chart.append(svg('text',{x:90,y:98,'text-anchor':'middle','font-size':26,fill:'#222'},total));chart.setAttribute('aria-label',total+' active alarms; '+values.map(([name,count])=>(name==='Not_Ack'?'Not Ack':name)+': '+(count===null?'Unknown':count)).join(', '));
   document.querySelector('#'+key+'Note').textContent=total>0?(key==='ack'?'Acknowledgement':'Escalation')+' status has not been recorded.':'No active alarms.';
  }
 }
