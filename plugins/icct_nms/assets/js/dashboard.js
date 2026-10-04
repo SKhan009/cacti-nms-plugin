@@ -54,7 +54,20 @@ function openDashboardName(mode){
  document.querySelector('#dashboardNameSubmit').textContent=mode==='rename'?'Save Name':'Save Dashboard';nameDialog.showModal();nameInput.focus();if(mode==='rename')nameInput.select();
 }
 document.querySelector('#dashboardSave').addEventListener('click',save);
-document.querySelector('#dashboardRename').addEventListener('click',()=>openDashboardName('rename'));
+const inlineName=document.querySelector('#dashboardInlineName');let renameIndex=null;
+function finishRename(commit){
+ if(renameIndex===null)return;
+ const name=inlineName.value.trim();
+ if(commit&&(!name||Array.from(name).length>60)){inlineName.setCustomValidity('Enter a dashboard name of 1 to 60 characters.');inlineName.reportValidity();return;}
+ const index=renameIndex;renameIndex=null;inlineName.hidden=true;select.hidden=false;
+ if(commit){preferences.dashboards[index].name=name;layout();save();}
+}
+document.querySelector('#dashboardRename').addEventListener('click',()=>{
+ renameIndex=preferences.selected;inlineName.value=preferences.dashboards[renameIndex].name||'Dashboard #'+(renameIndex+1);inlineName.setCustomValidity('');select.hidden=true;inlineName.hidden=false;inlineName.focus();inlineName.select();
+});
+inlineName.addEventListener('input',()=>inlineName.setCustomValidity(''));
+inlineName.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();finishRename(true);if(renameIndex===null)select.focus();}else if(e.key==='Escape'){e.preventDefault();finishRename(false);select.focus();}});
+inlineName.addEventListener('blur',()=>{if(!inlineName.value.trim()){finishRename(false);return;}finishRename(true);});
 document.querySelector('#dashboardDelete').addEventListener('click',()=>{
  if(preferences.dashboards.length<=1)return;
  const index=preferences.selected;preferences.deleted={index,dashboard:preferences.dashboards[index]};preferences.dashboards.splice(index,1);preferences.selected=Math.min(index,preferences.dashboards.length-1);const node=preferences.dashboards[preferences.selected].node_id ?? 0;if(node!==data.node_id){save().then(ok=>{if(ok)location.assign(nodeUrl(node));});return;}layout();save();

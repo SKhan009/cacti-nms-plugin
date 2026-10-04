@@ -219,3 +219,6 @@
 
 .dashboard-toolbar #dashboardNode{margin-left:auto;width:200px;min-width:140px}.dashboard-toolbar #dashboardNode+.primary{margin-left:0}
 @media(max-width:900px){.dashboard-toolbar #dashboardNode{margin-left:0;width:180px}}
+
+.dashboard-toolbar .dashboard-inline-name{box-sizing:border-box;width:240px;min-height:36px;padding:6px 12px;background:#f4f4f4;border:0;border-bottom:2px solid #0f62fe;font:inherit;font-size:13px;outline:none}
+.dashboard-toolbar [hidden]{display:none!important}
