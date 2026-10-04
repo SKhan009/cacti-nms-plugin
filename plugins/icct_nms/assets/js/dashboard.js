@@ -2,7 +2,7 @@
 'use strict';
 const dataElement=document.querySelector('#dashboardData');if(!dataElement)return;
 const data=JSON.parse(dataElement.textContent);let preferences=data.preferences,readings=data.readings,mode='severity',saving=false,saveAgain=false,dragWidget=null;
-const names={topology:'Topology / Rack / Image / Map',birds:'Birds Eye View',alarms:'Alarm Overview',ack:'Ack Overview',escalation:'Escalation Overview',frequent:'Top 10 Frequent Alarms by Count',recent:'Recent Alarms (25)'},colors={Critical:'#ff4148',Major:'#ff7226',Minor:'#ff9b17',Warning:'#43aa91',Information:'#277f9b'},palette=['#737eff','#6bce95','#ffb14e','#03cfeb','#a585ff','#2499ff','#ff8585','#34bbcc'];
+const names={topology:'Topology / Rack / Image / Map',birds:'Birds Eye View',alarms:'Alarm Overview',ack:'Ack Overview',escalation:'Escalation Overview',frequent:'Top 10 Frequent Alarms by Count',recent:'Recent Alarms (25)',ports:'Device Interface (Ports) Overview'},colors={Critical:'#ff4148',Major:'#ff7226',Minor:'#ff9b17',Warning:'#43aa91',Information:'#277f9b'},palette=['#737eff','#6bce95','#ffb14e','#03cfeb','#a585ff','#2499ff','#ff8585','#34bbcc'];
 const select=document.querySelector('#dashboardSelect'),picker=document.querySelector('.dashboard-widget-picker'),status=document.querySelector('#dashboardSaveStatus'),side=document.querySelector('#dashboardWidgets'),extras=document.querySelector('#dashboardExtraWidgets'),grid=document.querySelector('.dashboard-grid');
 function element(tag,text){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;}
 function svg(tag,attributes,text){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attributes).forEach(([k,v])=>e.setAttribute(k,v));if(text!==undefined)e.textContent=text;return e;}
@@ -30,7 +30,7 @@ addWidget.addEventListener('click',()=>{
 });
 document.addEventListener('click',e=>{if(!picker.contains(e.target))closePicker();});
 picker.addEventListener('keydown',e=>{if(e.key==='Escape'){closePicker();addWidget.focus();}});
-document.querySelectorAll('[data-remove-widget]').forEach(button=>button.addEventListener('click',()=>{preferences.dashboards[preferences.selected].widgets=widgets().filter(w=>w!==button.dataset.removeWidget);if(button.dataset.removeWidget==='recent')collapseRecent();layout();save();}));
+document.querySelectorAll('[data-remove-widget]').forEach(button=>button.addEventListener('click',()=>{preferences.dashboards[preferences.selected].widgets=widgets().filter(w=>w!==button.dataset.removeWidget);if(button.dataset.removeWidget==='recent')collapseRecent();if(button.dataset.removeWidget==='ports')collapsePorts();layout();save();}));
 function move(key,target){const list=widgets(),old=list.indexOf(key),to=list.indexOf(target);if(key==='topology'||target==='topology'||old<0||to<0||old===to)return;list.splice(old,1);list.splice(to,0,key);layout();save();}
 document.querySelectorAll('.widget-grip').forEach(grip=>{
  const key=grip.closest('[data-widget]').dataset.widget;grip.draggable=false;let start=null,target=null;
@@ -84,6 +84,21 @@ const recentCard=document.querySelector('[data-widget=recent]'),expandRecent=doc
 function collapseRecent(){recentCard.classList.remove('widget-expanded');expandRecent.setAttribute('aria-pressed','false');expandRecent.setAttribute('aria-label','Expand Recent Alarms');}
 expandRecent.addEventListener('click',()=>{const expanded=recentCard.classList.toggle('widget-expanded');expandRecent.setAttribute('aria-pressed',String(expanded));expandRecent.setAttribute('aria-label',expanded?'Collapse Recent Alarms':'Expand Recent Alarms');});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')collapseRecent();});
+const portTip=document.querySelector('#dashboardPortTooltip');let tipTimer=null;
+function hidePortTip(){portTip.hidden=true;clearTimeout(tipTimer);document.querySelectorAll('.port-dot[aria-describedby]').forEach(e=>e.removeAttribute('aria-describedby'));}
+function portsOverview(){
+ hidePortTip();const root=document.querySelector('#portsOverview');root.replaceChildren();
+ const states={1:'Up',2:'Down',3:'Testing',4:'Unknown',5:'Dormant',6:'Not present',7:'Lower layer down'};
+ for(const device of readings.ports||[]){const row=element('div'),name=element('a',device.name),dots=element('div');row.className='ports-device-row';name.href='device.php?id='+device.id+'&view=1#view-ports';dots.className='port-dots';
+  for(const port of device.ports.items){const fresh=device.ports.fresh,dot=element('button');dot.type='button';dot.className='port-dot';dot.style.background=!fresh?'#aaa':port.admin===2?'#ff4148':port.oper===1?'#43ae69':port.oper===2?'#155cff':'#ff9b17';dot.setAttribute('aria-label',device.name+' · '+port.name+' · '+port.status);
+   function show(){clearTimeout(tipTimer);portTip.replaceChildren();const speed=(port.high_speed_mbps||0)*1000000||(port.speed_bps||0),capacity=speed>=1e9?(speed/1e9).toLocaleString()+' Gbps':speed>=1e6?(speed/1e6).toLocaleString()+' Mbps':speed>0?speed+' bps':'Speed unavailable';const list=element('dl');for(const [label,value] of [['Interface Name',device.name+' · '+port.name+' ('+(fresh?capacity:'Speed unavailable')+')'],['Admin Status',fresh?(states[port.admin]||'Unknown'):'Unknown'],['Operational Status',fresh?(states[port.oper]||'Unknown'):'Unknown'],['Availability',port.status],['Updated',device.ports.collected?new Date(device.ports.collected*1000).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}):'Unavailable']]){const dt=element('dt',label),dd=element('dd',value);if(label.includes('Status'))dd.style.color=value==='Up'?'#26974d':value==='Down'?'#e6353e':'#777';if(label==='Availability'&&port.status==='Available (link down)')dd.style.color='#155cff';list.append(dt,dd);}portTip.append(list);portTip.hidden=false;dot.setAttribute('aria-describedby','dashboardPortTooltip');const box=dot.getBoundingClientRect(),tip=portTip.getBoundingClientRect();portTip.style.left=Math.max(8,Math.min(box.left,innerWidth-tip.width-8))+'px';portTip.style.top=(box.bottom+8+tip.height<innerHeight?box.bottom+8:Math.max(8,box.top-tip.height-8))+'px';}
+   dot.addEventListener('pointerenter',show);dot.addEventListener('focus',show);dot.addEventListener('click',show);dot.addEventListener('pointerleave',()=>{tipTimer=setTimeout(hidePortTip,180);});dot.addEventListener('blur',hidePortTip);dots.append(dot);
+  }row.append(name,dots);root.append(row);
+ }
+ if(!root.children.length)root.append(element('p','No interfaces reported for the current device configurations.'));
+}
+portTip.addEventListener('pointerenter',()=>clearTimeout(tipTimer));portTip.addEventListener('pointerleave',hidePortTip);document.addEventListener('keydown',e=>{if(e.key==='Escape')hidePortTip();});document.addEventListener('click',e=>{if(!e.target.closest('.port-dot')&&!portTip.contains(e.target))hidePortTip();});grid.addEventListener('scroll',hidePortTip);
+const portsCard=document.querySelector('[data-widget=ports]'),portsExpand=document.querySelector('#portsExpand');portsExpand.addEventListener('click',()=>{hidePortTip();const expanded=portsCard.classList.toggle('widget-expanded');portsExpand.setAttribute('aria-pressed',String(expanded));portsExpand.setAttribute('aria-label',expanded?'Collapse Ports Overview':'Expand Ports Overview');});function collapsePorts(){hidePortTip();portsCard.classList.remove('widget-expanded');portsExpand.setAttribute('aria-pressed','false');portsExpand.setAttribute('aria-label','Expand Ports Overview');}document.addEventListener('keydown',e=>{if(e.key==='Escape')collapsePorts();});
 function workflowCharts(){
  for(const key of ['ack','escalation']){const chart=document.querySelector('#'+key+'Donut'),legend=document.querySelector('#'+key+'Legend'),values=Object.entries(readings[key]||{}),total=readings.total;chart.replaceChildren();legend.replaceChildren();
   const radius=59,circumference=2*Math.PI*radius;chart.append(svg('circle',{cx:90,cy:90,r:radius,fill:'none',stroke:total>0?'#eceef2':'#b5cdff','stroke-width':29}));let offset=0;
@@ -94,6 +109,6 @@ function workflowCharts(){
  }
 }
 document.querySelectorAll('[data-alarm-mode]').forEach(button=>button.addEventListener('click',()=>{mode=button.dataset.alarmMode;document.querySelectorAll('[data-alarm-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));alarms();}));
-document.querySelector('#birdsRefresh').addEventListener('click',async function(){this.disabled=true;try{const response=await fetch('topology.php?dashboard_readings=1',{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw Error();readings=await response.json();radar();alarms();workflowCharts();frequentAlarms();recentAlarms();status.textContent='Widgets updated '+new Date().toLocaleTimeString();}catch(e){status.textContent='Widget refresh failed. Try again.';}finally{this.disabled=false;}});
-layout();radar();alarms();workflowCharts();frequentAlarms();recentAlarms();
+document.querySelector('#birdsRefresh').addEventListener('click',async function(){this.disabled=true;try{const response=await fetch('topology.php?dashboard_readings=1',{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw Error();readings=await response.json();radar();alarms();workflowCharts();frequentAlarms();recentAlarms();portsOverview();status.textContent='Widgets updated '+new Date().toLocaleTimeString();}catch(e){status.textContent='Widget refresh failed. Try again.';}finally{this.disabled=false;}});
+layout();radar();alarms();workflowCharts();frequentAlarms();recentAlarms();portsOverview();
 })();

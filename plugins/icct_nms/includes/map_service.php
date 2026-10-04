@@ -64,8 +64,10 @@ function icct_nms_map_data() {
     foreach (icct_nms_inventory() as $row) {
         $id=(int)$row['id'];
         $location=db_fetch_row_prepared('SELECT name,address1,city,state,country,latitude,longitude FROM sites WHERE id=?',[(int)$row['site_id']]);
-        $native=db_fetch_row_prepared("SELECT snmp_sysDescr,cur_time,total_polls FROM host WHERE id=? AND deleted=''",[$id]);
+        $native=db_fetch_row_prepared("SELECT * FROM host WHERE id=? AND deleted=''",[$id]);
         $device=['id'=>$id,'name'=>$row['description'],'status'=>$row['status_label'],'address'=>$row['hostname'],'system'=>$native['snmp_sysDescr'] ?? '', 'category'=>$row['segment'] ?? '', 'serial'=>$row['manual_serial_number'] ?? '', 'shape'=>icct_nms_device_shape($row['category_id'],$row['device_type'],$types),'image'=>'', 'alarm'=>null,'response_ms'=>null];
+        $portView=icct_backend_ports_view($native ?: $row);
+        $device['ports']=['fresh'=>$portView['fresh'],'collected'=>$portView['collected'],'items'=>array_map(static fn($port)=>array_intersect_key($port,array_flip(['index','name','admin','oper','status','speed_bps','high_speed_mbps'])),$portView['ports'])];
         $counts['total']++; $counts[$device['status']==='Up'?'online':($device['status']==='Down'?'offline':'other')]++;
         if (icct_backend_config_connection_status($id)===null && $device['status']==='Up' && icct_backend_parameter_is_fresh($row['last_updated']) && ($native['total_polls'] ?? 0)>0) $device['response_ms']=(float)$native['cur_time'];
         if ($device['serial']==='') $device['serial']=(string)db_fetch_cell_prepared("SELECT observed_value FROM plugin_icct_nms_device_inventory WHERE host_id=? AND inventory_key='serial_number' AND status IN ('ok','changed') AND last_success>=DATE_SUB(NOW(),INTERVAL 10 MINUTE)",[$id]);

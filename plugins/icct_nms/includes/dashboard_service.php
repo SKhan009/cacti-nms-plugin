@@ -4,10 +4,10 @@ function icct_nms_dashboard_validate($value) {
     if(!is_array($value)||!isset($value['dashboards'],$value['selected'])||!is_array($value['dashboards'])||count($value['dashboards'])<1||count($value['dashboards'])>5)throw new InvalidArgumentException('Choose one to five dashboards.');
     $clean=['selected'=>(int)$value['selected'],'dashboards'=>[]];
     foreach(array_values($value['dashboards']) as $dashboard){
-        if(!is_array($dashboard)||!isset($dashboard['widgets'])||!is_array($dashboard['widgets'])||count($dashboard['widgets'])>7)throw new InvalidArgumentException('Invalid dashboard widgets.');
+        if(!is_array($dashboard)||!isset($dashboard['widgets'])||!is_array($dashboard['widgets'])||count($dashboard['widgets'])>8)throw new InvalidArgumentException('Invalid dashboard widgets.');
         $widgets=array_values($dashboard['widgets']);
         foreach($widgets as $widget)if(!is_string($widget))throw new InvalidArgumentException('Invalid widget.');
-        if(count(array_unique($widgets))!==count($widgets)||array_diff($widgets,['topology','birds','alarms','ack','escalation','frequent','recent']))throw new InvalidArgumentException('Unknown or duplicate widget.');
+        if(count(array_unique($widgets))!==count($widgets)||array_diff($widgets,['topology','birds','alarms','ack','escalation','frequent','recent','ports']))throw new InvalidArgumentException('Unknown or duplicate widget.');
         $clean['dashboards'][]=['widgets'=>array_merge(['topology'],array_values(array_diff($widgets,['topology'])))];
     }
     if($clean['selected']<0||$clean['selected']>=count($clean['dashboards']))throw new InvalidArgumentException('Dashboard unavailable.');
@@ -16,7 +16,7 @@ function icct_nms_dashboard_validate($value) {
 function icct_nms_dashboard_preferences() {
     $raw=db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['dashboard_user_'.icct_backend_current_user_id()]);
     try{if($raw)return icct_nms_dashboard_validate(json_decode($raw,true,512,JSON_THROW_ON_ERROR));}catch(Throwable $e){}
-    return ['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms','ack','escalation','frequent','recent']]]];
+    return ['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms','ack','escalation','frequent','recent','ports']]]];
 }
 function icct_nms_dashboard_save($value) {
     $clean=icct_nms_dashboard_validate($value);
@@ -25,15 +25,16 @@ function icct_nms_dashboard_save($value) {
 }
 function icct_nms_dashboard_readings($mapData) {
     $severities=array_fill_keys(['Critical','Major','Minor','Warning','Information'],0);$segments=[];
-    $devices=$mapData['unlocated'];$nodes=[];$frequent=[];$recent=[];
+    $devices=$mapData['unlocated'];$nodes=[];$frequent=[];$recent=[];$ports=[];
     foreach($mapData['sites'] as $site){$devices=array_merge($devices,$site['devices']);$summary=icct_nms_map_node_summary($site);$nodes[]=['id'=>$site['id'],'name'=>$site['name'],'coordinates'=>$site['coordinates'],'status'=>$summary['status']];}
-    foreach($devices as $device){foreach($device['fault_alarms'] ?? [] as $alarm){$recent[]=$alarm+['device'=>$device['name'] ?? 'Device','device_id'=>(int)($device['id'] ?? 0)];$key=json_encode([$alarm['name'],$alarm['severity']]);if(!isset($frequent[$key]))$frequent[$key]=$alarm+['count'=>0];$frequent[$key]['count']++;}$total=0;foreach($device['fault_counts']??[] as $key=>$count){if(isset($severities[$key])){$severities[$key]+=(int)$count;$total+=(int)$count;}}$segment=trim($device['category']??'')?:'Unassigned';$segments[$segment]=($segments[$segment]??0)+$total;}
+    foreach($devices as $device){if(!empty($device['ports']['items']))$ports[]=['id'=>$device['id'],'name'=>$device['name'],'ports'=>$device['ports']];foreach($device['fault_alarms'] ?? [] as $alarm){$recent[]=$alarm+['device'=>$device['name'] ?? 'Device','device_id'=>(int)($device['id'] ?? 0)];$key=json_encode([$alarm['name'],$alarm['severity']]);if(!isset($frequent[$key]))$frequent[$key]=$alarm+['count'=>0];$frequent[$key]['count']++;}$total=0;foreach($device['fault_counts']??[] as $key=>$count){if(isset($severities[$key])){$severities[$key]+=(int)$count;$total+=(int)$count;}}$segment=trim($device['category']??'')?:'Unassigned';$segments[$segment]=($segments[$segment]??0)+$total;}
     arsort($segments);
     $frequent=array_values($frequent);usort($frequent,static fn($a,$b)=>($b['count']<=>$a['count']) ?: strcmp($a['name'],$b['name']) ?: strcmp($a['severity'],$b['severity']));
     usort($recent,static fn($a,$b)=>(($b['time'] ?? 0)<=>($a['time'] ?? 0)) ?: strcmp($a['name'],$b['name']));
     $total=array_sum($severities);
     $unknown=$total>0?null:0;
-    return ['recent'=>array_slice($recent,0,25),'frequent'=>array_slice($frequent,0,10),'ack'=>['Ack'=>$unknown,'Not_Ack'=>$unknown],'escalation'=>['Esc'=>$unknown,'Not_Esc'=>$unknown],'nodes'=>$nodes,'severity'=>$severities,'segments'=>$segments,'total'=>array_sum($severities),'updated'=>date(DATE_ATOM)];
+    usort($ports,static fn($a,$b)=>strnatcasecmp($a['name'],$b['name']));
+    return ['ports'=>$ports,'recent'=>array_slice($recent,0,25),'frequent'=>array_slice($frequent,0,10),'ack'=>['Ack'=>$unknown,'Not_Ack'=>$unknown],'escalation'=>['Esc'=>$unknown,'Not_Esc'=>$unknown],'nodes'=>$nodes,'severity'=>$severities,'segments'=>$segments,'total'=>array_sum($severities),'updated'=>date(DATE_ATOM)];
 }
 
 /** Resolve the server by the native poller identity, never an arbitrary demo site. */

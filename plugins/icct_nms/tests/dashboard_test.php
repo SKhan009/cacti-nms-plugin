@@ -33,3 +33,8 @@ $map['unlocated'][0]['fault_alarms']=[['name'=>'Older','severity'=>'Critical','t
 $recent=icct_nms_dashboard_readings($map)['recent'];verify($recent[0]['name']==='Latest'&&$recent[0]['device_id']===2);
 verify(count(icct_nms_dashboard_validate(['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms','ack','escalation','frequent','recent']]]])['dashboards'][0]['widgets'])===7);
 echo "Recent alarms sorted with device association and seven-card layouts passed\n";
+
+$map['unlocated'][0]['ports']=['fresh'=>true,'collected'=>100,'items'=>[['name'=>'eth0','admin'=>1,'oper'=>1,'status'=>'In use']]];
+verify(icct_nms_dashboard_readings($map)['ports'][0]['ports']['items'][0]['name']==='eth0');
+verify(count(icct_nms_dashboard_validate(['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms','ack','escalation','frequent','recent','ports']]]])['dashboards'][0]['widgets'])===8);
+echo "Observed ports and eight-card layouts passed\n";

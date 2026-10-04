@@ -19,7 +19,7 @@ function icct_backend_ports_parse($columns) {
         if (!ctype_digit((string)$index) || (int)$index!==icct_backend_ports_integer($value)) continue;
         $port=['index'=>(int)$index];
         foreach (['name','description','alias'] as $field) $port[$field]=trim((string)($columns[$field][$index] ?? '')," \t\r\n\"");
-        foreach (['admin','oper','connector','type'] as $field) $port[$field]=icct_backend_ports_integer($columns[$field][$index] ?? '');
+        foreach (['admin','oper','connector','type','speed_bps','high_speed_mbps'] as $field) $port[$field]=icct_backend_ports_integer($columns[$field][$index] ?? '');
         if (!$port['name']) $port['name']=$port['description'] ?: 'ifIndex '.$index;
         $ports[]=$port;
     }
@@ -35,7 +35,7 @@ function icct_backend_collect_ports() {
         $snapshot=['signature'=>icct_backend_ports_signature($host),'time'=>time(),'source'=>'SNMP IF-MIB / IF-X-MIB','ports'=>[],'error'=>''];
         try {
             $columns=[];
-            foreach (['index'=>'1.3.6.1.2.1.2.2.1.1','description'=>'1.3.6.1.2.1.2.2.1.2','type'=>'1.3.6.1.2.1.2.2.1.3','admin'=>'1.3.6.1.2.1.2.2.1.7','oper'=>'1.3.6.1.2.1.2.2.1.8','name'=>'1.3.6.1.2.1.31.1.1.1.1','connector'=>'1.3.6.1.2.1.31.1.1.1.17','alias'=>'1.3.6.1.2.1.31.1.1.1.18'] as $field=>$oid) {
+            foreach (['index'=>'1.3.6.1.2.1.2.2.1.1','description'=>'1.3.6.1.2.1.2.2.1.2','type'=>'1.3.6.1.2.1.2.2.1.3','speed_bps'=>'1.3.6.1.2.1.2.2.1.5','high_speed_mbps'=>'1.3.6.1.2.1.31.1.1.1.15','admin'=>'1.3.6.1.2.1.2.2.1.7','oper'=>'1.3.6.1.2.1.2.2.1.8','name'=>'1.3.6.1.2.1.31.1.1.1.1','connector'=>'1.3.6.1.2.1.31.1.1.1.17','alias'=>'1.3.6.1.2.1.31.1.1.1.18'] as $field=>$oid) {
                 $rows=cacti_snmp_walk($host['hostname'],$host['snmp_community'],'.'.$oid,$host['snmp_version'],$host['snmp_username'],$host['snmp_password'],$host['snmp_auth_protocol'],$host['snmp_priv_passphrase'],$host['snmp_priv_protocol'],$host['snmp_context'],$host['snmp_port'],$host['snmp_timeout'],(int)read_config_option('snmp_retries'),(int)$host['max_oids'],'ICCT Ports',$host['snmp_engine_id']);
                 foreach (is_array($rows)?$rows:[] as $row) {
                     $returned=ltrim((string)($row['oid'] ?? ''),'.'); $prefix=$oid.'.';
