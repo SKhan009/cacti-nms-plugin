@@ -8,7 +8,8 @@ function element(tag,text){const e=document.createElement(tag);if(text!==undefin
 function svg(tag,attributes,text){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attributes).forEach(([k,v])=>e.setAttribute(k,v));if(text!==undefined)e.textContent=text;return e;}
 function widgets(){return preferences.dashboards[preferences.selected].widgets;}
 preferences.dashboards.forEach(dashboard=>{dashboard.columns='auto';});
-function reportStatus(message=''){status.textContent=message;status.hidden=!message;}
+let statusTimer;
+function reportStatus(message='',success=false){clearTimeout(statusTimer);status.textContent=message;status.hidden=!message;status.classList.toggle('save-success',success);if(success)statusTimer=setTimeout(()=>reportStatus(),4000);}
 let savePromise=null;
 function save(){
  if(savePromise){saveAgain=true;return savePromise;}
@@ -53,7 +54,7 @@ function openDashboardName(mode){
  document.querySelector('#dashboardNameHelp').textContent=mode==='rename'?'Update the name of the selected dashboard.':'Save the selected node, current cards, their order and column layout as a new dashboard.';
  document.querySelector('#dashboardNameSubmit').textContent=mode==='rename'?'Save Name':'Save Dashboard';nameDialog.showModal();nameInput.focus();if(mode==='rename')nameInput.select();
 }
-document.querySelector('#dashboardSave').addEventListener('click',save);
+document.querySelector('#dashboardSave').addEventListener('click',async function(){this.disabled=true;try{if(await save())reportStatus('Dashboard saved successfully.',true);}finally{this.disabled=false;}});
 const inlineName=document.querySelector('#dashboardInlineName');let renameIndex=null;
 function finishRename(commit){
  if(renameIndex===null)return;
@@ -68,9 +69,16 @@ document.querySelector('#dashboardRename').addEventListener('click',()=>{
 inlineName.addEventListener('input',()=>inlineName.setCustomValidity(''));
 inlineName.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();finishRename(true);if(renameIndex===null)select.focus();}else if(e.key==='Escape'){e.preventDefault();finishRename(false);select.focus();}});
 inlineName.addEventListener('blur',()=>{if(!inlineName.value.trim()){finishRename(false);return;}finishRename(true);});
+const deleteDialog=document.querySelector('#dashboardDeleteDialog');let deleteIndex=null;
 document.querySelector('#dashboardDelete').addEventListener('click',()=>{
  if(preferences.dashboards.length<=1)return;
- const index=preferences.selected;preferences.deleted={index,dashboard:preferences.dashboards[index]};preferences.dashboards.splice(index,1);preferences.selected=Math.min(index,preferences.dashboards.length-1);const node=preferences.dashboards[preferences.selected].node_id ?? 0;if(node!==data.node_id){save().then(ok=>{if(ok)location.assign(nodeUrl(node));});return;}layout();save();
+ deleteIndex=preferences.selected;document.querySelector('#dashboardDeleteMessage').textContent='Delete “'+preferences.dashboards[deleteIndex].name+'”?';deleteDialog.showModal();document.querySelector('#dashboardDeleteCancel').focus();
+});
+document.querySelector('#dashboardDeleteCancel').addEventListener('click',()=>{deleteIndex=null;deleteDialog.close();});
+deleteDialog.addEventListener('cancel',()=>{deleteIndex=null;});
+document.querySelector('#dashboardDeleteConfirm').addEventListener('click',()=>{
+ if(deleteIndex===null||deleteIndex!==preferences.selected||preferences.dashboards.length<=1){deleteDialog.close();return;}
+ const index=deleteIndex;deleteIndex=null;deleteDialog.close();preferences.deleted={index,dashboard:preferences.dashboards[index]};preferences.dashboards.splice(index,1);preferences.selected=Math.min(index,preferences.dashboards.length-1);const node=preferences.dashboards[preferences.selected].node_id ?? 0;if(node!==data.node_id){save().then(ok=>{if(ok)location.assign(nodeUrl(node));});return;}layout();save();
 });
 document.querySelector('#dashboardUndo').addEventListener('click',()=>{
  if(!preferences.deleted||preferences.dashboards.length>=5)return;

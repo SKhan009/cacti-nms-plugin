@@ -232,3 +232,8 @@
 .dashboard-grid .icct-map-panel:fullscreen #icct-panel-topology{min-height:0}
 .dashboard-grid .icct-map-panel:fullscreen .topology-layout{flex:1 1 0;height:auto;min-height:0}
 .dashboard-grid .icct-map-panel:fullscreen #topologyCanvas{min-height:0}
+
+#dashboardSaveStatus.save-success{color:#21864a;cursor:default}
+#dashboardDeleteDialog{width:360px;max-width:calc(100vw - 32px);border:1px solid #ddd;padding:24px;background:white;color:#202020;box-shadow:0 8px 32px #0003}
+#dashboardDeleteDialog::backdrop{background:#0005}
+#dashboardDeleteDialog h2{margin:0 0 16px;font-size:20px}
