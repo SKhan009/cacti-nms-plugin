@@ -68,6 +68,28 @@ function icct_backend_ports_status($port,$fresh) {
     if (($port['admin'] ?? null)===1 && ($port['oper'] ?? null)===2) return 'Available (link down)';
     return 'Unknown';
 }
+/** Device-type capacity is a visual slot, never an invented SNMP observation. */
+function icct_nms_port_slots($ports,$count) {
+    $physical=array_values(array_filter($ports,static fn($p)=>($p['connector']??null)===1||($p['type']??null)===6));
+    if(!$physical)$physical=$ports;
+    if($count===null)return ['chassis'=>$physical,'ports'=>$ports];
+    $count=max(0,min(65535,(int)$count));$candidates=[];$mapped=[];$chassis=[];$missing=[];
+    foreach($physical as $port) {
+        // Use the front-panel suffix, not ifIndex or bridge-port numbering.
+        $number=null;
+        if(preg_match('/^(?:Gi|GigabitEthernet|Te|TenGigabitEthernet|Fa|FastEthernet|Eth|Ethernet|ge-|xe-)[\d\/.-]*[\/](\d+)$/i',$port['name']??'',$match))$number=(int)$match[1];
+        elseif(preg_match('/^(?:B|Port|Ethernet)(\d+)$/i',$port['name']??'',$match))$number=(int)$match[1];
+        if($number>0&&$number<=$count)$candidates[$number][]=$port;
+    }
+    for($number=1;$number<=$count;$number++) {
+        if(count($candidates[$number]??[])===1){$port=$candidates[$number][0];$port['panel_port']=$number;$mapped[$port['index']]=$number;}
+        else {$port=['index'=>-$number,'name'=>'Port '.$number,'panel_port'=>$number,'placeholder'=>true,'status'=>'Unknown','admin'=>null,'oper'=>null];$missing[]=$port;}
+        $chassis[]=$port;
+    }
+    foreach($physical as $port)if(!isset($mapped[$port['index']]))$chassis[]=$port;
+    foreach($ports as &$port)if(isset($mapped[$port['index']]))$port['panel_port']=$mapped[$port['index']];unset($port);
+    return ['chassis'=>$chassis,'ports'=>array_merge($ports,$missing)];
+}
 function icct_backend_ports_view($host) {
     $snapshot=json_decode((string)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['ports_snapshot_'.$host['id']]),true);
     $age=time()-(int)($snapshot['time'] ?? 0);

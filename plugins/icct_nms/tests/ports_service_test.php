@@ -29,3 +29,16 @@ $extended=icct_backend_ports_parse(['index'=>['7'=>'7'],'name'=>['7'=>'Gi1/0/7']
 if($extended[0]['last_change_ticks']!==12345||$extended[0]['bridge_port']!==2||$extended[0]['vlan_id']!==49||$extended[0]['high_speed_mbps']!==10000)throw new RuntimeException('Extended interface parsing failed.');
 if(icct_backend_ports_ticks('1 day, 01:02:03.45')!==9012345||icct_backend_ports_ticks('unavailable')!==null)throw new RuntimeException('TimeTicks parsing failed.');
 echo "Interface speeds, bridge mapping, PVID and last-change TimeTicks passed.\n";
+$slots=icct_nms_port_slots([
+ ['index'=>101,'name'=>'Gi1/0/1','type'=>6,'status'=>'In use','oper'=>1],
+ ['index'=>108,'name'=>'Gi1/0/8','type'=>6,'status'=>'Available (link down)','oper'=>2],
+ ['index'=>200,'name'=>'Vlan10','type'=>53,'status'=>'In use']
+],12);
+expectPorts(count($slots['chassis'])===12&&count($slots['ports'])===13,'Configured capacity or extra logical interface lost');
+expectPorts($slots['chassis'][0]['index']===101&&$slots['chassis'][0]['panel_port']===1,'ifIndex confused with port number');
+expectPorts($slots['chassis'][1]['placeholder']&&$slots['chassis'][1]['status']==='Unknown','Unobserved port marked available');
+expectPorts($slots['chassis'][7]['oper']===2,'Observed down state lost');
+$ambiguous=icct_nms_port_slots([['index'=>1,'name'=>'Gi1/0/1','type'=>6],['index'=>2,'name'=>'Gi2/0/1','type'=>6]],2);
+expectPorts($ambiguous['chassis'][0]['placeholder']&&count($ambiguous['chassis'])===4,'Ambiguous stacked ports incorrectly matched');
+expectPorts(count(icct_nms_port_slots($ports,null)['ports'])===2,'Unset capacity changed observed interfaces');
+echo "Configured slots, missing readings, physical numbering and ambiguous mappings passed.\n";
