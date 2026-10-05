@@ -1,0 +1,17 @@
+# ICCT NMS Syslog spool integration.
+# The installer generates the active file after detecting existing UDP/TCP listeners.
+# This example intentionally does not stop normal rsyslog processing.
+
+template(name="ICCTNMSJson" type="string"
+  string="{\"timestamp\":\"%timereported:::date-rfc3339,json%\",\"source_ip\":\"%fromhost-ip:::json%\",\"hostname\":\"%hostname:::json%\",\"input_name\":\"%inputname:::json%\",\"program\":\"%programname:::json%\",\"facility\":\"%syslogfacility-text:::json%\",\"facility_code\":\"%syslogfacility%\",\"severity\":\"%syslogseverity-text:::json%\",\"severity_code\":\"%syslogseverity%\",\"message\":\"%msg:::json%\"}\n")
+
+if (($inputname == 'icct-udp') or ($inputname == 'icct-tcp') or ($inputname == 'imudp') or ($inputname == 'imtcp')) then {
+  action(type="omfile"
+    file="/var/log/icct-nms/remote.ndjson"
+    template="ICCTNMSJson"
+    fileOwner="root"
+    fileGroup="apache"
+    fileCreateMode="0640"
+    dirCreateMode="0750"
+    createDirs="on")
+}

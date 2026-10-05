@@ -1,0 +1,272 @@
+.syslog-heading {
+  align-items: center;
+}
+.syslog-runtime {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border: 1px solid #d5d5d5;
+  background: #f4f4f4;
+  min-width: 220px;
+}
+.syslog-runtime .status-dot {
+  margin: 0;
+  background: #9a9a9a;
+}
+.syslog-runtime.online .status-dot {
+  background: #2ca24f;
+}
+.syslog-runtime.offline .status-dot {
+  background: #d33;
+}
+.syslog-runtime span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.syslog-runtime small {
+  color: var(--muted);
+}
+.syslog-dev-panel {
+  margin: 0 22px 18px;
+  padding: 16px 18px;
+  border: 1px solid #c7d5ea;
+  border-left: 4px solid #0f62fe;
+  background: #f7faff;
+}
+.syslog-dev-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.syslog-dev-title h2 {
+  margin: 0 0 5px;
+  font-size: 16px;
+}
+.syslog-dev-title p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.syslog-dev-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border: 1px solid #8aaee8;
+  background: #e8f0ff;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.syslog-dev-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 14px 0;
+  background: #d9e1ec;
+  border: 1px solid #d9e1ec;
+}
+.syslog-dev-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #fff;
+  padding: 10px 12px;
+  min-width: 0;
+}
+.syslog-dev-grid span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.syslog-dev-grid strong {
+  overflow-wrap: anywhere;
+}
+.syslog-dev-ok,
+.syslog-dev-warning {
+  margin: 10px 0;
+  padding: 10px 12px;
+  line-height: 1.45;
+}
+.syslog-dev-ok {
+  background: #defbe6;
+  color: #144627;
+}
+.syslog-dev-warning {
+  background: #fff4ce;
+  color: #5f4700;
+}
+.syslog-dev-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.syslog-dev-path {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.syslog-binding-details {
+  margin-top: 12px;
+}
+.syslog-binding-details > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.syslog-binding-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  margin-top: 8px;
+  background: white;
+}
+.syslog-binding-table th,
+.syslog-binding-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+.ack-comment {
+  max-width: 220px;
+  overflow-wrap: anywhere;
+}
+.syslog-filters {
+  grid-template-columns: 1.35fr .75fr .95fr .85fr 1.65fr auto auto;
+}
+.syslog-filters .inventory-search {
+  padding-left: 16px;
+}
+.syslog-filters .button.secondary {
+  background: #6f6f6f;
+  text-decoration: none;
+}
+.syslog-table-scroll {
+  min-height: 360px;
+}
+#syslog-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 1260px;
+  font-size: 13px;
+  background: #f4f4f4;
+  text-align: left;
+}
+#syslog-table th {
+  background: #e0e0e0;
+  padding: 12px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+#syslog-table td {
+  padding: 12px 14px;
+  vertical-align: top;
+  border-bottom: 1px solid #d4d4d4;
+}
+#syslog-table td small {
+  display: block;
+  color: #777;
+  margin-top: 4px;
+}
+.syslog-severity {
+  display: inline-block;
+  min-width: 68px;
+  padding: 3px 8px;
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+.severity-critical { background: #ffd7d9; color: #8d1117; }
+.severity-major { background: #ffe0c2; color: #8c3f00; }
+.severity-warning { background: #fff1b8; color: #6d5500; }
+.severity-info { background: #dce8ff; color: #184a9c; }
+.severity-debug { background: #e7e7e7; color: #555; }
+.syslog-message { max-width: 520px; }
+.syslog-message details summary {
+  cursor: pointer;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.syslog-message pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 8px 0 0;
+  padding: 8px;
+  background: white;
+  border: 1px solid #ddd;
+  max-height: 260px;
+  overflow: auto;
+}
+.ack-badge {
+  display: inline-block;
+  border-radius: 10px;
+  padding: 3px 7px;
+  background: #defbe6;
+  color: #144627;
+  font-size: 11px;
+}
+.inline-form { display: inline; }
+.link-button {
+  border: 0;
+  background: transparent;
+  color: #0f62fe;
+  padding: 3px 4px;
+  text-decoration: underline;
+}
+.ack-form > summary {
+  cursor: pointer;
+  color: #0f62fe;
+}
+.ack-form form {
+  display: flex;
+  gap: 6px;
+  margin-top: 7px;
+}
+.ack-form input {
+  min-width: 180px;
+  height: 32px;
+  border: 1px solid #aaa;
+  padding: 4px 7px;
+}
+.ack-form .button { height: 32px; }
+.page-controls .page-link {
+  display: grid;
+  place-items: center;
+  border-left: 1px solid #ddd;
+  min-height: 48px;
+  width: 44px;
+  text-decoration: none;
+  color: var(--text);
+  font-size: 20px;
+}
+.page-controls .page-link.disabled {
+  pointer-events: none;
+  opacity: .35;
+}
+@media (max-width: 1150px) {
+  .syslog-dev-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .syslog-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .syslog-filters .inventory-search {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 680px) {
+  .syslog-dev-title { flex-direction: column; }
+  .syslog-dev-grid { grid-template-columns: 1fr; }
+  .syslog-dev-panel { margin-left: 12px; margin-right: 12px; }
+}
+
+/* Match the shared project table design. */
+#syslog-table { font-size: 14px; background: #fff; }
+#syslog-table th, #syslog-table td { border: 1px solid #d4d4d4; background: #fff; }
+#syslog-table th { font-size: 14px; }

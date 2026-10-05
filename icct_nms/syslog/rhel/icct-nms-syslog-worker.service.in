@@ -1,0 +1,19 @@
+[Unit]
+Description=ICCT NMS Syslog ingestion worker
+After=network.target mariadb.service rsyslog.service
+Requires=rsyslog.service
+
+[Service]
+Type=simple
+User=@WEB_USER@
+Group=@WEB_GROUP@
+ExecStart=/usr/bin/php @CACTI_ROOT@/plugins/icct_nms/cli/syslog_worker.php --file=/var/log/icct-nms/remote.ndjson --follow
+Restart=always
+RestartSec=2
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

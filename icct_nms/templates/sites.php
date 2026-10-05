@@ -1,0 +1,18 @@
+<?php if ($management): ?>
+<form method="post" id="site-editor" class="site-editor" <?= $siteEditing?'':'hidden' ?>>
+<?php icct_nms_token(); ?><input type="hidden" name="action" value="save_site"><input type="hidden" name="site_id" value="<?= icct_nms_h($siteValues['site_id'] ?? '') ?>">
+<div class="type-editor-heading"><h2 id="site-editor-title"><?= empty($siteValues['site_id'])?'Add':'Edit' ?> Site</h2><div><button type="button" id="cancel-site" class="button">Cancel</button><button type="submit" class="button primary">Save</button></div></div>
+<?php foreach (['Site Information'=>['name'],'Address Information'=>['address1','address2','city','state','postal_code','country','timezone'],'Geolocation Information'=>['latitude','longitude','zoom'],'Additional Information'=>['notes','alternate_id']] as $heading=>$fields): ?>
+<section class="site-section"><h3><?= $heading ?></h3><div class="site-fields">
+<?php foreach ($fields as $field): [$label,$max]=icct_nms_site_fields()[$field]; $value=$siteValues[$field] ?? ($field==='zoom'?'12':''); ?>
+<label class="field <?= $field==='notes'?'site-notes':'' ?>"><span class="field-label"><?= $label ?><?= $field==='name'?' *':'' ?></span>
+<?php if ($field==='timezone'): ?><select name="timezone"><option value="">Select timezone</option><?php foreach (DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC) as $zone): ?><option <?= $value===$zone?'selected':'' ?> value="<?= icct_nms_h($zone) ?>"><?= icct_nms_h($zone) ?></option><?php endforeach; ?></select>
+<?php elseif ($field==='notes'): ?><textarea name="notes" maxlength="<?= $max ?>" rows="3" placeholder="Enter site notes"><?= icct_nms_h($value) ?></textarea>
+<?php else: ?><input name="<?= $field ?>" value="<?= icct_nms_h($value) ?>" <?= $field==='name'?'required':'' ?> maxlength="<?= $max ?>" placeholder="Enter <?= strtolower($label) ?>" <?php if (in_array($field,['latitude','longitude','zoom'],true)): ?>type="number" min="<?= $field==='latitude'?'-90':($field==='longitude'?'-180':'0') ?>" max="<?= $field==='latitude'?'90':($field==='longitude'?'180':'23') ?>" step="<?= $field==='zoom'?'1':'any' ?>"<?php endif; ?>><?php endif; ?>
+<?php if ($field==='latitude' || $field==='longitude' || $field==='zoom'): ?><small><?= $field==='latitude'?'−90 to 90°':($field==='longitude'?'−180 to 180°':'0–23') ?></small><?php endif; ?></label>
+<?php endforeach; ?></div></section><?php endforeach; ?>
+</form><?php endif; ?>
+<section id="site-list" aria-label="Sites"><label class="field site-search"><span class="field-label">Search sites</span><input type="search" id="site-search" placeholder="Search by site name, city or country"></label>
+<div class="site-table-wrap"><table class="action-table site-table"><thead><tr><th>Site Name</th><th>City</th><th>State</th><th>Country</th><th>Timezone</th><th>Devices</th><th>Actions</th></tr></thead><tbody>
+<?php foreach ($sites as $site): ?><tr data-site-row data-site-search="<?= icct_nms_h(mb_strtolower(implode(' ',[$site['name'],$site['city'],$site['country']]))) ?>"><td><?= icct_nms_h($site['name']) ?></td><?php foreach (['city','state','country','timezone','devices'] as $field): ?><td><?= icct_nms_h($site[$field]!=='' && $site[$field]!==null ? $site[$field] : '—') ?></td><?php endforeach; ?><td><?php if ($management): ?><button type="button" class="icon-button" data-edit-site="<?= icct_nms_h(json_encode($site,JSON_THROW_ON_ERROR)) ?>" aria-label="Edit <?= icct_nms_h($site['name']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16 12-12 4 4-12 12-5 1zM14 6l4 4"/></svg></button><?php endif; ?></td></tr><?php endforeach; ?>
+</tbody></table></div><p id="site-empty" class="empty-state" <?= $sites?'hidden':'' ?>>No sites found.</p></section>

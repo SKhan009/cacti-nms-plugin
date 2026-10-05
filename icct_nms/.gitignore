@@ -1,0 +1,11 @@
+.DS_Store
+._*
+__pycache__/
+*.py[cod]
+*.log
+config.local.json
+ssh.config.local.json
+.env
+.env.*
+*.pem
+*.key

@@ -1,0 +1,61 @@
+<?php /** Same local Leaflet / GeoServer map stack as NMS; native Cacti locations. */ ?>
+<section class="icct-map-page">
+
+<div class="dashboard-toolbar"><label class="sr-only" for="dashboardSelect">Dashboard</label><select id="dashboardSelect"></select><div class="dashboard-widget-picker"><button type="button" class="dashboard-add-widget" id="dashboardAddWidget" aria-expanded="false" aria-controls="dashboardWidgetChoices">+ Add Widget <span aria-hidden="true">▾</span></button><div id="dashboardWidgetChoices" aria-label="Available dashboard cards" hidden></div></div><div class="dashboard-actions" aria-label="Dashboard actions"><button type="button" class="dashboard-action" id="dashboardSave" aria-label="Save dashboard" aria-describedby="dashboardSaveTip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12l4 4v14H3V3z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg><span class="dashboard-action-tip" id="dashboardSaveTip" role="tooltip">Save dashboard</span></button><button type="button" class="dashboard-action" id="dashboardRename" aria-label="Rename dashboard" aria-describedby="dashboardRenameTip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-1 5 5-1L20 8l-4-4zM14 6l4 4"/></svg><span class="dashboard-action-tip" id="dashboardRenameTip" role="tooltip">Rename dashboard</span></button><button type="button" class="dashboard-action" id="dashboardDelete" aria-label="Delete dashboard" aria-describedby="dashboardDeleteTip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg><span class="dashboard-action-tip" id="dashboardDeleteTip" role="tooltip">Delete dashboard</span></button><button type="button" class="dashboard-undo" id="dashboardUndo" hidden>Undo delete</button></div><p id="dashboardSaveStatus" role="status" hidden></p><button type="button" class="button primary" id="dashboardAdd">Add Dashboard (Max 5)</button></div>
+<dialog id="dashboardNameDialog" aria-labelledby="dashboardNameTitle"><form id="dashboardNameForm"><h2 id="dashboardNameTitle">Save dashboard view</h2><label for="dashboardName">Dashboard name</label><input id="dashboardName" name="name" maxlength="60" required autocomplete="off"><p id="dashboardNameHelp">Save the selected site, current cards, their order and column layout as a new dashboard.</p><div><button type="button" class="button" id="dashboardNameCancel">Cancel</button><button type="submit" class="button primary" id="dashboardNameSubmit">Save Dashboard</button></div></form></dialog>
+<dialog id="dashboardDeleteDialog" aria-labelledby="dashboardDeleteTitle"><h2 id="dashboardDeleteTitle">Delete dashboard</h2><p id="dashboardDeleteMessage"></p><div class="message-actions"><button type="button" class="button" id="dashboardDeleteCancel">Cancel</button><button type="button" class="button primary" id="dashboardDeleteConfirm">Delete</button></div></dialog>
+<div class="dashboard-grid"><section class="icct-map-panel" data-widget="topology">
+<div class="icct-map-toolbar">
+<div class="icct-view-tabs" role="tablist" aria-label="Dashboard views">
+<?php foreach (['topology'=>'Topology','rack'=>'Rack View','image'=>'Image View','map'=>'Map View'] as $key=>$label): ?><button type="button" role="tab" id="icct-view-<?= $key ?>" aria-controls="icct-panel-<?= $key ?>" aria-selected="<?= $key===$dashboardView?'true':'false' ?>" tabindex="<?= $key===$dashboardView?'0':'-1' ?>" data-view="<?= $key ?>"><?= $label ?></button><?php endforeach; ?>
+</div>
+<div class="icct-map-counts" aria-label="Device status totals"><span>Total: <?= $mapData['counts']['total'] ?></span><span class="online">Online: <?= $mapData['counts']['online'] ?></span><span class="offline">Offline: <?= $mapData['counts']['offline'] ?></span><span class="disabled">Disabled: <?= $mapData['counts']['disabled'] ?></span></div>
+</div>
+<p id="icctMapStatus" role="status" hidden></p>
+<div class="icct-view-panel" id="icct-panel-map" role="tabpanel" aria-labelledby="icct-view-map" <?= $dashboardView==='map'?'':'hidden' ?>>
+<div id="icctSiteMap" aria-label="Map of Cacti sites"></div>
+<div class="icct-map-controls" aria-label="Map controls">
+<button id="icctMapZoomIn" type="button" aria-label="Zoom in" title="Zoom in">+</button>
+<button id="icctMapZoomOut" type="button" aria-label="Zoom out" title="Zoom out">−</button>
+<button id="icctMapFit" type="button" aria-label="Reset map view" title="Reset map view">▣</button>
+<button id="icctMapFullscreen" type="button" aria-label="Toggle map fullscreen" title="Fullscreen">⛶</button>
+</div>
+</div>
+<?php $scopedDeviceIds=array_column($mapData['unlocated'],'id');foreach($mapData['sites'] as $scopeSite)$scopedDeviceIds=array_merge($scopedDeviceIds,array_column($scopeSite['devices'],'id')); $viewDevices=array_values(array_filter(icct_nms_inventory(),static fn($device)=>in_array((int)$device['id'],$scopedDeviceIds,true))); $viewTypes=icct_nms_device_types(); ?>
+<?php foreach (['topology','rack','image'] as $view): ?>
+<div class="icct-view-panel icct-device-view" id="icct-panel-<?= $view ?>" role="tabpanel" aria-labelledby="icct-view-<?= $view ?>" <?= $view===$dashboardView?'':'hidden' ?>>
+<?php if ($view==='rack'): ?>
+<?php require __DIR__.'/rack_view.php'; ?>
+<?php elseif ($view==='topology'): require __DIR__.'/topology_view.php'; ?>
+<?php else: ?><div class="icct-device-cards">
+<?php foreach ($viewDevices as $device): $asset=''; foreach ($viewTypes as $type) if ((int)$type['category_id']===(int)$device['category_id'] && $type['name']===$device['device_type']) { $asset=icct_nms_type_asset($type,$view==='image'?'map':'network'); break; } ?>
+<a class="icct-device-card" href="device.php?id=<?= (int)$device['id'] ?>"><?php if ($asset): ?><img src="<?= icct_nms_h($asset) ?>" alt=""><?php endif; ?><strong><?= icct_nms_h($device['description']) ?></strong><span><?= icct_nms_h($device['site_name'] ?: 'Unassigned site') ?></span><span class="device-status <?= icct_nms_status_class($device['status_label']) ?>"><?= icct_nms_h($device['status_label']) ?></span></a>
+<?php endforeach; ?></div><?php endif; ?>
+</div>
+<?php endforeach; ?>
+<details class="icct-map-credits" hidden><summary title="Map credits" aria-label="Map credits">ⓘ</summary><span>Leaflet. State boundaries: geoBoundaries / DataMeet (CC BY 2.5 IN).</span></details>
+</section>
+<aside class="dashboard-widgets" id="dashboardWidgets">
+<?php foreach(['birds'=>'Birds Eye View','alarms'=>'Alarm Overview','ack'=>'Ack Overview','escalation'=>'Escalation Overview','frequent'=>'Top 10 Frequent Alarms by Count','recent'=>'Recent Alarms (25)','ports'=>'Device Interface (Ports) Overview','problematic'=>'Problematic Devices by Active Alarms Count'] as $key=>$label): ?>
+<section class="dashboard-card" data-widget="<?= $key ?>"><header><button type="button" class="widget-grip" draggable="true" aria-label="Move <?= $label ?> widget" title="Drag to reorder; use arrow keys to move">⠿</button><h2><?= $label ?></h2><?php if($key==='problematic'): ?><button type="button" class="widget-icon" id="problematicExpand" aria-label="Expand Problematic Devices" aria-pressed="false" title="Expand">⤢</button><?php endif; ?><?php if($key==='ports'): ?><button type="button" class="widget-icon" id="portsExpand" aria-label="Expand Ports Overview" aria-pressed="false" title="Expand">⤢</button><?php endif; ?><?php if($key==='recent'): ?><button type="button" class="widget-icon" id="recentExpand" aria-label="Expand Recent Alarms" aria-pressed="false" title="Expand">⤢</button><?php endif; ?><?php if($key==='birds'): ?><button type="button" class="widget-icon" id="birdsRefresh" aria-label="Refresh Birds Eye View" title="Refresh">↻</button><?php endif; ?><button type="button" class="widget-icon" data-remove-widget="<?= $key ?>" aria-label="Remove <?= $label ?> widget" title="Remove widget"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 9v9M14 9v9"/></svg></button></header>
+<?php if($key==='birds'): ?><div class="birds-content"><svg id="birdsRadar" viewBox="0 0 320 320" role="group" aria-label="Birds Eye View centered on the Cacti server"></svg></div>
+<?php elseif($key==='problematic'): ?><div class="problematic-content"><fieldset class="problematic-filters" aria-label="Problematic device severities"><?php foreach(['Critical'=>'Critical','Major'=>'Major','Minor'=>'Minor','Warning'=>'Warn','Information'=>'Info'] as $severity=>$text): ?><label><input type="checkbox" data-problematic-severity="<?= $severity ?>" <?= in_array($severity,['Critical','Major'],true)?'checked':'' ?>><?= $text ?></label><?php endforeach; ?></fieldset><div class="problematic-total"><span>Total Problematic Devices</span><p><strong id="problematicCount">0</strong><span id="problematicDeviceTotal">/0</span></p></div><h3>Devices by Active Alarm Count</h3><table class="problematic-table" aria-label="Devices by active alarm count"><thead class="sr-only"><tr><th>Device</th><th>Active alarms</th></tr></thead><tbody id="problematicDevices"></tbody></table></div>
+<?php elseif($key==='ports'): ?><div class="ports-overview-content" id="portsOverview"></div><p class="recent-note">Green: in use · Blue: link down · Red: admin down · Orange: other · Grey: unknown or stale</p>
+<?php elseif($key==='recent'): ?><div class="recent-content" id="recentAlarms"></div><p class="recent-note">Latest active fault readings, newest first.</p>
+<?php elseif($key==='frequent'): ?><div class="frequent-content"><table class="frequent-table" aria-label="Top ten alarms by active count"><thead class="sr-only"><tr><th>Alarm</th><th>Severity</th><th>Count</th></tr></thead><tbody id="frequentAlarms"></tbody></table><p>Current active counts. Historical occurrence totals are not recorded.</p></div>
+<?php elseif($key==='ack'||$key==='escalation'): ?><div class="alarm-content workflow-content"><div class="alarm-chart"><svg id="<?= $key ?>Donut" viewBox="0 0 180 180" role="img" aria-label="<?= $label ?>"></svg><ul id="<?= $key ?>Legend"></ul></div><p id="<?= $key ?>Note"></p></div>
+<?php else: ?><div class="alarm-content"><div class="alarm-mode" role="group" aria-label="Alarm grouping"><button type="button" data-alarm-mode="severity" aria-pressed="true">Severity</button><button type="button" data-alarm-mode="segments" aria-pressed="false">Segment</button></div><div class="alarm-chart"><svg id="alarmDonut" viewBox="0 0 180 180" role="img" aria-label="Active alarms"></svg><ul id="alarmLegend"></ul></div><p id="alarmNote"></p></div><?php endif; ?></section>
+<?php endforeach; ?>
+</aside><div class="dashboard-extra-widgets" id="dashboardExtraWidgets"></div></div>
+
+<div id="dashboardPortTooltip" class="dashboard-port-tooltip" role="tooltip" hidden></div>
+<form id="dashboardToken" hidden><?php icct_nms_token(); ?></form>
+<script type="application/json" id="dashboardData"><?= json_encode(['preferences'=>$dashboardPreferences,'readings'=>$dashboardReadings,'site_id'=>$dashboardSiteId,'user'=>icct_backend_current_user_id()],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
+<dialog id="mapSiteDialog" class="topology-device-dialog map-site-dialog" aria-labelledby="mapSiteTitle">
+<header class="topology-summary-heading"><div><h2 id="mapSiteTitle"></h2><p id="mapSiteCoordinates"></p></div><span id="mapSiteStatus" class="device-status"></span><form method="dialog"><button class="button" aria-label="Close site summary">×</button></form></header>
+<dl id="mapSiteCounts" class="topology-capacity map-site-counts"></dl>
+<div id="mapSiteAlarms" class="topology-summary-alarms"></div>
+<nav class="topology-summary-links map-site-links" aria-label="Site actions"><a id="mapSiteTopology" href="topology.php">View Topology <span aria-hidden="true">→</span></a><button type="button" disabled title="Site chat is not configured.">Chat <span aria-hidden="true">→</span></button></nav>
+</dialog>
+<script type="application/json" id="icctMapData" data-summary-url="topology.php"><?= json_encode($mapData+['states'=>'assets/maps/india-states.json','tiles'=>null],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
+</section>

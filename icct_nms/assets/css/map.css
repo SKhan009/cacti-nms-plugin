@@ -1,0 +1,245 @@
+.icct-map-page{height:var(--icct-map-page-height,calc(100dvh - 100px));min-height:420px;display:flex;flex-direction:column;padding:0 12px 12px;box-sizing:border-box;background:white}
+.icct-map-page .titlebar{padding:12px 8px;min-height:52px;flex:none}.icct-map-page .titlebar h1{font-size:20px;margin:0}.icct-map-page .titlebar>span{font-size:15px;color:#666}
+.icct-map-panel{display:flex;flex-direction:column;flex:1;min-height:0;background:white}.icct-map-panel:fullscreen{padding:12px;box-sizing:border-box}
+.icct-map-toolbar{display:flex;align-items:end;gap:10px;flex-wrap:wrap;padding:10px 8px}.icct-map-toolbar .field{width:230px;margin:0}.icct-map-toolbar .button{min-width:0;padding:10px 14px;min-height:40px;font-size:14px}
+.icct-map-counts{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;align-self:center;font-size:13px}.icct-map-counts span{border:1px solid #ccc;padding:5px 9px;border-radius:20px}.icct-map-counts .online{color:#21864a}.icct-map-counts .offline{color:#c83232}.icct-map-counts .other{color:#886100}
+#icctMapStatus{font-size:12px;color:#666;margin:0;padding:0 8px 8px}#icctSiteMap{flex:1;min-height:260px;width:100%;background:#fff;z-index:0}
+.icct-map-footer{position:relative;padding:6px 8px;font-size:12px}.icct-map-footer details[open]{position:absolute;bottom:0;left:0;right:0;background:white;z-index:1000;padding:12px;border:1px solid #ddd;max-height:200px;overflow:auto}.icct-map-footer summary{cursor:pointer}
+.icct-map-popup{width:236px;max-width:100%;max-height:280px;overflow:auto;font-size:12px}.icct-map-popup p{margin:6px 0;line-height:1.4}.icct-map-device-name{font-weight:700;font-size:14px}.icct-map-device-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}.icct-map-device-grid dt{color:#666}.icct-map-device-grid dd{margin:2px 0 0;font-weight:600;overflow-wrap:anywhere}.icct-map-device-alarm{padding:8px;background:#f4f4f4}.icct-map-popup select{width:100%;margin-bottom:10px}.icct-map-compact-popup .leaflet-popup-content{margin:12px;width:auto!important}
+.icct-state-label{width:max-content!important;max-width:120px;text-align:center;font:11px/1.15 var(--font-ui);color:#364348;text-shadow:0 1px 2px white,1px 0 2px white;pointer-events:none}.icct-state-label span{display:block;transform:translate(-50%,-50%)}.icct-map-site-label{font-weight:700;font-size:13px}
+#icctSiteMap svg{width:auto;height:auto;fill:initial}#icctSiteMap .leaflet-interactive:focus{outline:none}#icctSiteMap:focus-visible{outline:2px solid #0f62fe;outline-offset:-2px}
+@media(max-width:700px){.icct-map-page{min-height:580px;padding:0 4px 4px}.icct-map-toolbar{gap:6px}.icct-map-toolbar .field{width:100%}.icct-map-counts{margin-left:0;width:100%}}
+
+/* Dashboard content switcher and compact map controls. */
+.icct-map-toolbar{align-items:center;padding:12px 8px;gap:16px}
+.icct-view-tabs{display:flex;border:1px solid #444;border-radius:3px;overflow:hidden}
+.icct-view-tabs button{border:0;border-right:1px solid #ddd;background:white;color:#333;padding:7px 14px;font:inherit;font-size:13px;cursor:pointer}
+.icct-view-tabs button:last-child{border-right:0}.icct-view-tabs button[aria-selected="true"]{background:#222;color:white}
+.icct-view-tabs button:focus-visible,.icct-map-controls button:focus-visible{outline:2px solid #0f62fe;outline-offset:-2px}
+.icct-view-panel{position:relative;flex:1;min-height:0;display:flex}.icct-view-panel[hidden]{display:none}
+.icct-map-controls{position:absolute;right:12px;top:12px;z-index:600;display:flex;flex-direction:column;gap:8px}
+.icct-map-controls button{width:28px;height:28px;border:1px solid #555;border-radius:50%;background:white;color:#333;font-size:20px;line-height:1;cursor:pointer;padding:0}
+#icctMapStatus:empty{display:none}.icct-map-credits{position:relative;align-self:flex-end;font-size:11px;color:#666;margin:4px 8px 0}
+.icct-map-credits summary{cursor:pointer;list-style:none;font-size:15px}.icct-map-credits span{position:absolute;right:20px;bottom:0;background:white;border:1px solid #ddd;padding:8px;width:240px;z-index:700}
+.icct-device-view{display:block;overflow:auto;padding:12px 8px}.icct-device-view table{width:100%;border-collapse:collapse}.icct-device-view th,.icct-device-view td{text-align:left;padding:14px;border-bottom:1px solid #ddd}
+.icct-device-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:20px}.icct-device-card{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px;border:1px solid #ddd;color:#333;text-decoration:none;text-align:center}.icct-device-card img{width:64px;height:64px;object-fit:contain}.icct-device-card span{font-size:12px;color:#666}
+@media(max-width:700px){.icct-view-tabs button{padding:7px 9px}.icct-map-counts{width:auto}.icct-map-toolbar{padding:8px 4px}}
+
+.icct-map-counts .online::before,.icct-map-counts .offline::before,.icct-map-counts .other::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;background:currentColor;margin-right:5px}
+
+.rack-toolbar{display:flex;gap:10px;align-items:end;margin-bottom:10px}.rack-toolbar .field{width:280px;margin:0}.rack-icon{border:1px solid #555;border-radius:50%;width:30px;height:30px;background:white;cursor:pointer;font-size:19px}.rack-icon[aria-pressed="true"]{background:#222;color:white}.rack-layout{display:flex;gap:16px;align-items:start}#rackDevicePool{width:210px;flex:none;background:#f4f4f4;padding:10px}#rackDevicePool p{font-size:12px}#rackCabinets{--rack-unit-size:28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;flex:1}.rack-cabinet{border:1px solid #ccc;background:#f4f4f4;min-width:0}.rack-cabinet header{padding:12px;border-bottom:1px solid #ccc}.rack-cabinet h3{margin:0 0 6px;font-size:18px}.rack-cabinet small{font-size:12px}.rack-frame{margin:12px 22px;background:#333;border:10px solid #444;border-top:20px solid #111;border-bottom:20px solid #111}.rack-slots{display:grid;position:relative;padding:0 5px 0 32px;gap:3px}.rack-slot,.rack-slots>.rack-device{grid-column:1}.rack-slot{background:#ddd;border-bottom:1px solid #999;position:relative}.rack-slot.occupied{background:#888}.rack-unit-label{font-size:10px;position:absolute;left:-29px;top:6px;width:27px;text-align:center;color:white}.rack-device{padding:4px 7px;border:1px solid #555;border-radius:3px;overflow:hidden;z-index:1;margin-left:15px;display:flex;justify-content:space-between;align-items:center;gap:4px;font-size:12px}.rack-device.online{background:#a6d5a2}.rack-device.offline{background:#ff5353}.rack-device.other{background:#ffd24c}.rack-device a{color:#222;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rack-device[draggable="true"]{cursor:grab}.rack-peripherals{padding:8px 12px;min-height:60px;border-top:1px dashed #aaa}.rack-peripherals h4{margin:0 0 8px;font-size:12px}.rack-peripherals .rack-device,#rackDeviceList .rack-device{margin:5px 0;min-height:28px}.drag-over{outline:3px solid #0f62fe!important}#rackManualPlacement{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin:12px 0}#rackManualPlacement[hidden],#rackDevicePool[hidden]{display:none}#rackManualPlacement .field{width:150px;margin:0}#rackViewMessage{font-size:13px;min-height:18px}#icct-panel-rack{overflow:auto}@media(max-width:700px){.rack-layout{flex-direction:column}#rackCabinets{width:100%}#rackDevicePool{width:auto}.rack-toolbar{flex-wrap:wrap}}
+
+/* Three cabinet carousel with the reference's right-hand control rail. */
+.rack-toolbar{margin:0 0 10px}.rack-toolbar .field{width:260px}#rackViewMessage:empty{display:none}#rackViewMessage{margin:4px 0 10px;min-height:0}.rack-layout{gap:14px;position:relative}.rack-stage{position:relative;flex:1;min-width:0;padding:0 24px}.rack-controls{display:flex;flex-direction:column;gap:8px;width:30px;flex:none;position:sticky;top:0}.rack-controls #rackViewEdit{order:5}.rack-icon{padding:0;line-height:26px}.rack-icon:focus-visible,.rack-slide:focus-visible{outline:2px solid #0f62fe;outline-offset:2px}#rackCabinets{--rack-scale:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.rack-cabinet header{min-height:68px;padding:14px 12px;box-sizing:border-box}.rack-cabinet h3{font-weight:400;font-size:20px}.rack-frame{position:relative;width:76%;max-width:250px;margin:22px auto 20px;background:#343234;border:0;border-left:16px solid #49454a;border-right:9px solid #49454a;border-top:14px solid #272527;border-bottom:14px solid #252325;box-sizing:border-box;box-shadow:inset 0 0 0 3px #242224}.rack-frame::before,.rack-frame::after{content:"";position:absolute;left:-23px;right:-16px;height:16px;background:#050505}.rack-frame::before{top:-26px;box-shadow:0 7px 0 #29272a;clip-path:polygon(0 0,100% 0,100% 65%,97% 100%,3% 100%,0 65%)}.rack-frame::after{bottom:-26px;clip-path:polygon(3% 0,97% 0,100% 35%,100% 100%,0 100%,0 35%)}.rack-slots{height:calc(clamp(260px,calc(100dvh - 390px),610px)*var(--rack-scale));padding:4px 5px 4px 12px;gap:5px}.rack-slot{background:#343234;border:1px solid #4a474b}.rack-slot.occupied{background:#666}.rack-unit-label{left:-25px;top:50%;transform:translateY(-50%);width:24px;font-size:9px}.rack-slots>.rack-device{margin:0;padding:1px 6px;border:0;line-height:1;font-size:12px;border-radius:3px}.rack-slots>.rack-device small{font-size:10px}.rack-peripherals{background:#f4f4f4}.rack-slide{min-width:0;min-height:0;box-sizing:border-box;position:absolute;top:45%;z-index:3;width:24px;height:36px;padding:0;background:white;border:1px solid #aaa;border-radius:3px;font-size:28px;line-height:1;cursor:pointer}.rack-slide.previous{left:0}.rack-slide.next{right:0}.rack-slide:disabled{color:#bbb;cursor:default}.rack-slide[hidden]{display:none}#rackPageStatus{margin:8px 0;text-align:center;font-size:12px;color:#666}#rackPageStatus:empty{display:none}
+@media(max-width:700px){.rack-stage{width:100%;box-sizing:border-box}.rack-layout{flex-direction:row;flex-wrap:wrap}#rackDevicePool{width:100%;box-sizing:border-box}#rackCabinets{gap:6px}.rack-cabinet header{padding:8px 5px}.rack-cabinet h3{font-size:14px}.rack-cabinet small{font-size:10px}.rack-frame{width:80%;border-left-width:10px;border-right-width:6px}.rack-device{font-size:10px}.rack-peripherals{padding:5px}.rack-controls{width:30px}}
+#rackEditActions{display:flex;justify-content:flex-end;margin:0 44px 12px 0}#rackEditActions[hidden]{display:none}#rackDraftDialog{border:0;padding:24px;max-width:480px;box-shadow:0 8px 30px #0004}#rackDraftDialog::backdrop{background:#0005}#rackDraftDialog h2{margin:0 0 12px}.rack-draft-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:24px}.rack-draft-actions .button{min-width:0}
+
+#rackSiteToolbar[hidden]{display:none}#rackPoolSite .field{width:100%;margin:0 0 12px}#rackPoolSite select{width:100%;min-width:0}#rackPoolSite{margin-bottom:8px}
+
+.rack-device-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rack-device.reserved{background:#aaa;color:#222;border:1px dashed #666}
+
+.rack-device[draggable="true"]{user-select:none}
+/* Diagram layout follows the dashboard reference; cards stay inside the canvas. */
+#icct-panel-topology{padding:0;min-height:480px}.topology-layout{display:flex;gap:12px;min-height:460px;height:calc(var(--icct-map-page-height,700px) - 150px)}.topology-stage{flex:1;min-width:0;position:relative;overflow:auto}.topology-controls{padding-top:8px}.topology-controls #topologyEdit{order:5}#topologyCanvas{position:relative;transform-origin:top left;width:100%;height:100%;min-height:440px}#topologyDevices,#topologyLinks{position:absolute;inset:0;width:100%;height:100%}#topologyLinks{pointer-events:none;overflow:visible}#topologyLinks path{fill:none;stroke:#555;stroke-width:1}.topology-device{position:absolute;transform:translate(-50%,-50%) scale(var(--topology-device-scale,1));width:72px;height:52px;box-sizing:border-box;padding:3px 4px;border:1px solid #ddd;border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;user-select:none;touch-action:none}.topology-device strong{font-size:10px;line-height:1.1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.topology-device.online{background:#a2d39f}.topology-device.offline{background:#ff999e}.topology-device.other{background:#ccc}.topology-device.core{width:156px;height:44px}.topology-alarm{border:1px solid #777;border-radius:50%;width:16px;height:16px;flex-shrink:0;display:grid;place-items:center;color:#111;font-size:10px}.editing .topology-device{cursor:grab}.topology-device.dragging{cursor:grabbing;z-index:2;outline:2px solid #0f62fe}.topology-device:focus-visible{outline:2px solid #0f62fe}.topology-actions{display:flex;gap:8px;justify-content:flex-end;margin:0 44px 8px 0}.topology-actions[hidden]{display:none}#topologyMessage:empty{display:none}#topologyAlarms{justify-content:flex-end;padding:8px 40px 8px 0}#topologyAlarms i{display:inline-block;width:14px;height:14px;border-radius:50%;vertical-align:middle;margin-right:5px}#topologyAlarms span{font-size:12px}@media(max-width:700px){.topology-device{width:65px}.topology-device strong{font-size:9px}.topology-device.core{width:100px}#topologyAlarms{flex-wrap:wrap}}
+.rack-device.disabled,.topology-device.disabled{background:#ccc;color:#444}.topology-device.other{background:#ffd24c}
+
+/* Card dimensions come from the shared Device Type shape preset. */
+.topology-device.shape-square { width:52px; height:52px; }
+.topology-device.shape-rectangle { width:72px; height:52px; }
+.topology-device.shape-wide { width:156px; height:44px; }
+.topology-device.shape-tall { width:44px; height:72px; }
+
+
+.topology-device-heading{display:flex;align-items:center;justify-content:center;gap:5px;max-width:100%}.topology-device-heading strong{min-width:0}
+.topology-device-icon{width:12px;height:12px;object-fit:contain;flex-shrink:0;pointer-events:none}
+
+.topology-device-heading{flex-direction:column;width:100%;gap:2px}.topology-device-icon{display:block;margin:0 auto}.editing .topology-device.fixed-core{cursor:default}
+
+.topology-device-dialog{width:min(760px,calc(100vw - 48px));max-height:85vh;padding:24px;border:1px solid #d6d6d6;overflow:auto}.topology-device-dialog::backdrop{background:rgba(0,0,0,.3)}.topology-device-dialog .message-actions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}.topology-device-dialog form{margin-top:20px}
+
+/* Keep wide switch cards slim while retaining the centered icon and short code. */
+.topology-device.shape-wide .topology-device-heading{flex-direction:row;gap:4px}
+.topology-device.shape-wide .topology-device-icon{margin:0}
+
+/* Reference card order: short name, centered device artwork, alarm count. */
+.topology-device-heading{gap:1px}
+.topology-device-icon{width:14px;height:14px}
+.topology-device-icon[hidden]{display:none}
+.topology-device.has-device-image:not(.shape-wide){height:76px}
+.topology-device.has-device-image.shape-tall{height:92px}
+.topology-device.has-device-image .topology-device-icon{width:calc(100% - 4px);height:36px;object-fit:contain}
+.topology-device.has-device-image.shape-tall .topology-device-icon{height:50px}
+.topology-device.has-device-image.shape-wide .topology-device-icon{width:36px;height:20px}
+.topology-device.shape-wide .topology-device-heading{gap:5px}
+.topology-alarm{border-color:#333}
+
+/* Device summary matches the topology reference card. */
+.topology-device-dialog{width:min(660px,calc(100vw - 40px));padding:0;background:#f4f4f4;border:1px solid #ccc}
+.topology-summary-heading{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #ccc}
+.topology-summary-heading>div{flex:1}.topology-summary-heading h2{margin:0 0 8px;font-size:20px;font-weight:500}.topology-summary-heading p{margin:0;color:#666}
+.topology-summary-heading img{width:90px;height:48px;object-fit:contain}.topology-summary-heading img[hidden]{display:none}.topology-summary-heading form{margin:0}
+.topology-capacity{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:12px 16px;margin:0;border-bottom:1px solid #ccc}
+.topology-capacity dt{font-size:12px;color:#666}.topology-capacity dd{margin:6px 0 0;font-size:18px}
+.topology-summary{padding:12px 16px;margin:0}.topology-summary>div{display:grid;grid-template-columns:1fr 1fr;padding:6px 0;font-size:14px}.topology-summary dt{padding-right:16px}.topology-summary dd{margin:0;border-left:1px solid #ccc;padding-left:16px;overflow-wrap:anywhere}
+.topology-summary-alarms{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;padding:12px;border-top:1px solid #ccc}.topology-summary-alarms span{border:1px solid #555;border-radius:20px;padding:4px 8px;font-size:13px;white-space:nowrap}.topology-summary-alarms i{display:inline-block;width:13px;height:13px;border-radius:50%;vertical-align:middle;margin-right:5px}
+.topology-summary-links{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #0f62fe}.topology-summary-links a{padding:12px 16px;color:#0f62fe;text-decoration:none;border-right:1px solid #0f62fe}.topology-summary-links a:last-child{border-right:0}
+@media(max-width:600px){.topology-capacity{grid-template-columns:repeat(2,1fr)}.topology-summary-heading{flex-wrap:wrap}.topology-summary-links a{font-size:12px;padding:12px}}
+.topology-device-dialog .topology-summary-heading,
+.topology-device-dialog .topology-capacity,
+.topology-device-dialog .topology-summary,
+.topology-device-dialog .topology-summary-alarms,
+.topology-device-dialog .topology-summary-links{background:#f4f4f4;color:#222}
+/* Map site summary uses the same compact, grey card as topology. */
+.map-site-counts>div+div{border-left:1px solid #ddd;padding-left:16px}
+.map-site-counts dd{font-size:22px}.map-site-counts dt{font-size:14px}
+.map-site-dialog .topology-summary-heading{padding:20px 16px}
+.map-site-dialog .topology-summary-heading h2{font-size:24px}
+.map-site-dialog .topology-summary-alarms{padding:16px 12px}
+.map-site-links{grid-template-columns:repeat(2,minmax(0,1fr))}
+.map-site-links a,.map-site-links button{display:flex;align-items:center;justify-content:space-between;padding:16px;font:inherit;font-size:16px}
+.map-site-links button{border:0;background:transparent;color:#777;text-align:left}
+/* Compact map site popup while retaining all totals and actions. */
+.map-site-dialog{width:min(520px,calc(100vw - 32px))}
+.map-site-dialog .topology-summary-heading{padding:14px;gap:10px}
+.map-site-dialog .topology-summary-heading h2{font-size:20px;margin-bottom:6px}
+.map-site-dialog .topology-summary-heading p{font-size:13px}
+.map-site-dialog .topology-summary-heading .button{min-width:32px;min-height:32px;padding:6px 10px}
+.map-site-dialog .map-site-counts{padding:10px 14px;gap:8px}
+.map-site-counts>div+div{padding-left:10px}
+.map-site-dialog .map-site-counts dt{font-size:12px}
+.map-site-dialog .map-site-counts dd{font-size:18px;margin-top:4px}
+.map-site-dialog .topology-summary-alarms{padding:10px 8px;gap:4px}
+.map-site-dialog .topology-summary-alarms span{font-size:12px;padding:3px 6px}
+.map-site-dialog .topology-summary-alarms i{width:10px;height:10px;margin-right:4px}
+.map-site-dialog .map-site-links a,.map-site-dialog .map-site-links button{padding:12px 14px;font-size:14px}
+
+/* Broad link hit areas remain behind interactive device cards. */
+#topologyDevices{pointer-events:none}
+#topologyDevices .topology-device{pointer-events:auto}
+#topologyLinks path.topology-link-hit{stroke-width:14;pointer-events:stroke;cursor:help}
+#topologyLinks path.topology-link-hit:focus{outline:none;stroke:rgba(20,95,255,.18)!important}
+.topology-link-tooltip{position:fixed;z-index:1100;width:330px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;background:white;color:#222;border:1px solid #d5d5d5;border-radius:4px;box-shadow:0 5px 20px #0002;padding:14px;pointer-events:auto;font-size:13px}
+.topology-link-tooltip[hidden]{display:none}
+.topology-link-tooltip section{border-top:1px solid #eee;margin-top:10px;padding-top:10px}
+.topology-link-tooltip dl{display:grid;grid-template-columns:1fr 1.3fr;gap:5px;margin:9px 0}
+.topology-link-tooltip dt{color:#666}.topology-link-tooltip dd{margin:0;overflow-wrap:anywhere}.topology-link-tooltip small{color:#666}
+.topology-link-tooltip .mtr-heading{display:block;margin-top:10px}.topology-link-tooltip .mtr-path{display:block;overflow-wrap:anywhere;margin-top:4px}.topology-link-tooltip .mtr-empty{display:block;margin-top:8px}.topology-link-tooltip .mtr-issue{color:#b45309;margin:6px 0}.topology-link-tooltip{box-sizing:border-box}
+/* Personal dashboards match the white workspace and compact reference cards. */
+.dashboard-toolbar{display:flex;align-items:center;gap:12px;padding:10px 4px;background:white;flex:none}.dashboard-toolbar select{width:240px;min-height:36px;padding:6px 12px;background:#f4f4f4;border:0;border-bottom:1px solid #aaa;font:inherit;font-size:13px}.dashboard-add-widget{border:0;border-radius:24px;background:#e0e3e7;padding:9px 16px;cursor:pointer}.dashboard-toolbar>.primary{margin-left:auto;min-height:36px;min-width:0;padding:8px 15px;font-size:13px}#dashboardSaveStatus{margin:0;font-size:12px;color:#666;cursor:pointer}.dashboard-grid{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:12px;background:#e1e6f2;padding:10px;flex:1;min-height:0;overflow:auto}.dashboard-grid>.icct-map-panel{min-width:0}.dashboard-widgets{display:flex;flex-direction:column;gap:12px;min-width:0}.dashboard-card{background:white;flex:1;min-height:250px;min-width:0}.dashboard-card header{display:flex;align-items:center;gap:6px;background:#f4f4f4;border-bottom:1px solid #e5e5e5;padding:12px 10px}.dashboard-card h2{font-weight:400;font-size:20px;margin:0;flex:1}.widget-grip,.widget-icon,.widget-remove{background:transparent;border:0;cursor:pointer;padding:3px;min-width:20px;color:#333;font-size:20px}.widget-grip{cursor:grab}.widget-grip:focus-visible,.widget-icon:focus-visible{outline:2px solid #0f62fe}.widget-icon svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.6}.topology-widget-remove{order:3;font-size:17px}.dashboard-grid .icct-map-toolbar{padding:10px;gap:6px}.dashboard-grid .icct-view-tabs button{padding:7px 9px;font-size:12px}.dashboard-grid .icct-map-counts{gap:4px;font-size:11px}.dashboard-grid .icct-map-counts span{padding:4px 6px}.dashboard-grid #icct-panel-topology{min-height:400px}.dashboard-grid .topology-layout{height:calc(var(--icct-map-page-height,700px) - 210px);min-height:380px}.dashboard-grid #topologyCanvas{min-height:380px}.dashboard-grid #topologyAlarms{padding:8px 14px;flex-wrap:wrap}.birds-content{padding:8px 12px}.birds-content svg{width:100%;height:auto;display:block}.birds-content g[role=button]{cursor:pointer}.birds-content g:focus-visible{outline:2px solid #0f62fe}.birds-center{display:flex;gap:8px;align-items:center;color:#666;font-size:11px}.birds-center select{min-width:0;width:100%;font-size:11px;padding:4px;border:0;background:#f4f4f4}.birds-content p,.alarm-content p{margin:8px 0;font-size:11px;color:#777}.alarm-content{padding:12px}.alarm-mode{display:inline-flex;border:1px solid #555;border-radius:3px;overflow:hidden}.alarm-mode button{padding:7px 14px;background:white;border:0;font-size:12px;cursor:pointer}.alarm-mode button[aria-pressed=true]{background:#222;color:white}.alarm-chart{display:flex;align-items:center;gap:5px;margin-top:14px}.alarm-chart svg{width:52%;flex:none;height:auto}.alarm-chart ul{list-style:none;margin:0;padding:0;flex:1;min-width:0;max-height:180px;overflow:auto}.alarm-chart li{display:flex;align-items:center;gap:6px;font-size:11px;margin:9px 0}.alarm-chart li i{width:7px;height:7px;border-radius:50%;flex:none}.alarm-chart li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.alarm-chart li b{margin-left:auto;font-weight:400}.dashboard-no-side{grid-template-columns:1fr}.dashboard-no-topology{grid-template-columns:1fr}.dashboard-no-topology .dashboard-widgets{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-content:start}.dashboard-grid [hidden]{display:none!important}#dashboardEmpty{padding:30px;background:white;text-align:center}
+@media(max-width:900px){.dashboard-grid{grid-template-columns:1fr}.dashboard-widgets{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}.dashboard-toolbar{flex-wrap:wrap}.dashboard-toolbar select{width:180px}.dashboard-grid .topology-layout{height:500px}.dashboard-card{flex:none}.dashboard-toolbar>.primary{margin-left:0}}
+#birdsRadar,#alarmDonut{stroke:none;stroke-width:0}
+#birdsRadar{height:clamp(175px,calc((100dvh - 420px)*.65),280px)}
+.dashboard-card{flex:none;min-height:0}.birds-center{white-space:nowrap}.birds-content p{font-size:10px}.alarm-chart svg{max-height:150px}.alarm-content p{font-size:10px}
+#birdsRadar{height:clamp(170px,calc((100dvh - 470px)*.65),280px)}
+#birdsRadar text{font-size:10px}#birdsRadar g text{font-size:11px}
+.alarm-chart svg{max-height:120px}
+
+#topologyLinks path.topology-link-hit.active-link{stroke:rgba(20,95,255,.18)!important}
+
+.dashboard-extra-widgets{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,310px));gap:12px;align-content:start;align-items:start}.dashboard-extra-widgets .dashboard-card{min-height:230px}.workflow-content .alarm-chart{margin-top:0}.workflow-content .alarm-chart svg{max-height:160px;width:57%;stroke:none;stroke-width:0}.workflow-content .alarm-chart li{font-size:12px;margin:13px 0}.workflow-content .alarm-content p{font-size:11px}
+.dashboard-widgets{align-items:stretch}.dashboard-widgets>.dashboard-card{align-self:start;width:100%;box-sizing:border-box}
+
+/* Square radar fills its card; controls and explanatory footer are omitted. */
+.birds-content{padding:12px 6px}
+#birdsRadar{height:auto;aspect-ratio:1;overflow:visible}
+#birdsRadar text{font-size:8px}
+#birdsRadar g text{font-size:10px}
+
+.dashboard-widget-picker{position:relative;flex:none}
+#dashboardWidgetChoices{position:absolute;z-index:1200;top:calc(100% + 6px);left:0;width:260px;max-width:calc(100vw - 40px);background:#fff;border:1px solid #ddd;border-radius:4px;box-shadow:0 5px 18px #0002;padding:5px}
+#dashboardWidgetChoices[hidden]{display:none}
+#dashboardWidgetChoices button{display:block;width:100%;text-align:left;border:0;background:#fff;color:#222;padding:11px 12px;font:inherit;font-size:13px;cursor:pointer}
+#dashboardWidgetChoices button:hover:not(:disabled),#dashboardWidgetChoices button:focus-visible{background:#f0f4ff}
+#dashboardWidgetChoices button:disabled{color:#777;cursor:default}
+
+.dashboard-extra-widgets [data-widget=frequent]{grid-column:span 2}
+.frequent-content{padding:12px 18px}.frequent-table{width:100%;border-collapse:separate;border-spacing:0 10px;font-size:15px}.frequent-table td{padding:3px 12px;vertical-align:middle}.frequent-table td:first-child{padding-left:0;width:65%}.frequent-table td+td{border-left:1px solid #d5d5d5}.frequent-table td:last-child{width:15%;font-variant-numeric:tabular-nums}.frequent-severity{display:inline-block;padding:4px 10px;border:1px solid #333;border-radius:20px;white-space:nowrap;color:#222}.frequent-content p{font-size:11px;color:#777;margin:10px 0}.frequent-severity[style*="277f9b"]{color:white}
+@media(max-width:600px){.dashboard-extra-widgets [data-widget=frequent]{grid-column:1}.frequent-table{font-size:12px}.frequent-table td{padding:3px 6px}}
+
+/* Reserve a complete control column inside the fixed topology card. */
+.dashboard-grid .topology-controls{flex:0 0 32px;width:32px;padding:8px 12px 0 0;box-sizing:content-box;align-items:center}
+.dashboard-grid .topology-controls .rack-icon{flex:none;width:30px;height:30px;box-sizing:border-box;display:grid;place-items:center;margin:0;padding:0;line-height:1}
+.dashboard-grid .topology-layout{gap:8px;max-width:100%}
+.dashboard-grid .icct-map-toolbar{box-sizing:border-box}.dashboard-grid .icct-view-tabs{flex-shrink:0}
+.dashboard-card header .widget-icon{flex:none}.dashboard-card h2{min-width:0;overflow-wrap:anywhere}
+.dashboard-widgets [data-widget=frequent] .frequent-content{padding:10px}.dashboard-widgets [data-widget=frequent] .frequent-table{font-size:11px}.dashboard-widgets [data-widget=frequent] .frequent-table td{padding:3px 4px}.dashboard-widgets [data-widget=frequent] .frequent-severity{padding:3px 5px}
+.dashboard-card.drag-target{outline:2px solid #0f62fe;outline-offset:-2px}
+
+.widget-grip{touch-action:none;user-select:none}
+
+.dashboard-extra-widgets [data-widget=recent]{grid-column:span 2}.recent-content{max-height:420px;overflow:auto;padding:4px 16px}.recent-content details{border-bottom:1px solid #e4e4e4}.recent-content summary{cursor:pointer;display:flex;align-items:center;gap:10px;padding:14px 0;list-style:none}.recent-content summary::before{content:'▸';color:#333}.recent-content details[open]>summary::before{content:'▾'}.recent-content summary i{width:14px;height:14px;border-radius:50%;flex:none}.recent-content summary span{min-width:0}.recent-content strong{font-size:15px;font-weight:400;display:block;overflow-wrap:anywhere}.recent-content small{display:block;font-size:12px;color:#777;margin-top:5px}.recent-detail{padding:0 0 12px 28px;font-size:13px;overflow-wrap:anywhere}.recent-detail p{margin:0 0 8px}.recent-detail nav{display:flex;gap:16px}.recent-detail a{color:#155cff}.recent-note{font-size:11px;color:#777;padding:0 16px 10px}.dashboard-card.widget-expanded{position:fixed;inset:80px 10%;z-index:1500;box-shadow:0 0 0 100vmax #0005;display:flex;flex-direction:column}.widget-expanded .recent-content{max-height:none;flex:1}.widget-expanded header{flex:none}
+@media(max-width:600px){.dashboard-extra-widgets [data-widget=recent]{grid-column:1}.dashboard-card.widget-expanded{inset:65px 12px}}
+
+.dashboard-extra-widgets [data-widget=ports]{grid-column:span 2}.ports-overview-content{padding:12px 18px;max-height:420px;overflow:auto}.ports-device-row{display:grid;grid-template-columns:35% minmax(0,1fr);align-items:center;padding:12px 0;gap:12px}.ports-device-row>a{color:#333;text-decoration:none;font-size:14px;overflow-wrap:anywhere}.port-dots{display:flex;flex-wrap:wrap;gap:6px;border-left:1px solid #ddd;padding-left:12px}.port-dot{width:14px;height:14px;min-width:14px;min-height:14px;padding:0;border:0;border-radius:50%;cursor:help;flex:none}.port-dot:focus-visible{outline:2px solid #222;outline-offset:2px}.dashboard-port-tooltip{position:fixed;z-index:1700;width:390px;max-width:calc(100vw - 24px);background:#fff;border:1px solid #ddd;box-shadow:0 4px 16px #0002;border-radius:3px;padding:12px;box-sizing:border-box;pointer-events:auto;font-size:14px;line-height:18px}.dashboard-port-tooltip[hidden]{display:none}.dashboard-port-tooltip dl{margin:0;display:grid;grid-template-columns:40% minmax(0,1fr);gap:8px 12px}.dashboard-port-tooltip dt{color:#555}.dashboard-port-tooltip dd{margin:0;border-left:1px solid #ddd;padding-left:10px;overflow-wrap:anywhere}.widget-expanded .ports-overview-content{flex:1;max-height:none}
+@media(max-width:600px){.dashboard-extra-widgets [data-widget=ports]{grid-column:1}}
+
+/* Reorder from the header, with a visible insertion edge and floating label. */
+.dashboard-card>header { touch-action:none; cursor:grab; }
+.dashboard-card>header button:not(.widget-grip) { cursor:pointer; }
+.dashboard-dragging, .dashboard-dragging * { cursor:grabbing!important; user-select:none!important; }
+.dashboard-card.card-dragging { opacity:.45; }
+.dashboard-card.drag-before { box-shadow:inset 0 4px #0f62fe; }
+.dashboard-card.drag-after { box-shadow:inset 0 -4px #0f62fe; }
+.widget-drag-preview { position:fixed; z-index:2000; pointer-events:none; max-width:300px; padding:10px 14px; border:1px solid #0f62fe; border-radius:4px; background:white; color:#222; box-shadow:0 4px 16px #0003; font-size:14px; }
+
+.dashboard-extra-widgets [data-widget=problematic]{grid-column:span 2}
+.problematic-content{padding:0 16px 16px;max-height:480px;overflow:auto}
+.problematic-filters{display:flex;flex-wrap:wrap;gap:12px 18px;border:0;border-bottom:1px solid #ddd;padding:16px 0;margin:0;position:sticky;top:0;background:white;z-index:1}
+.problematic-filters label{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer}.problematic-filters input{width:16px;height:16px;margin:0;accent-color:#222}
+.problematic-total{padding:14px 0;border-bottom:1px solid #ddd}.problematic-total>span{color:#777}.problematic-total p{margin:10px 0 0}.problematic-total strong{font-size:36px;line-height:1.2;font-weight:400}.problematic-total p span{font-size:16px}
+.problematic-content h3{font-size:16px;font-weight:600;margin:16px 0 8px}.problematic-table{width:100%;border-collapse:separate;border-spacing:0 10px;font-size:15px}.problematic-table td{padding:6px 10px}.problematic-table td:last-child{width:16%;border-left:1px solid #ddd;font-variant-numeric:tabular-nums}.problematic-table a{color:#333;text-decoration:none}.problematic-table a:hover{color:#155cff;text-decoration:underline}.problematic-table td[colspan]{border-left:0;width:auto;color:#777;font-size:14px}.widget-expanded .problematic-content{max-height:none;flex:1}
+@media(max-width:600px){.dashboard-extra-widgets [data-widget=problematic]{grid-column:1}}
+
+/* The dashboard uses one page scrollbar, with independently sized packed cards. */
+.icct-map-page:has(.dashboard-grid){height:auto;min-height:0;flex:none}
+.dashboard-grid{flex:none;overflow:visible;align-items:start;align-content:start;grid-template-rows:auto auto}
+.dashboard-grid>.icct-map-panel{align-self:stretch;width:100%}
+.dashboard-grid .topology-layout{height:clamp(380px,calc(100dvh - 250px),650px)}
+.dashboard-extra-widgets{grid-auto-rows:1px;row-gap:0;column-gap:12px;grid-auto-flow:row dense;align-items:start}
+.dashboard-extra-widgets>.dashboard-card{align-self:start;width:100%;height:auto;margin:0;box-sizing:border-box}
+@media(max-width:900px){.dashboard-grid{grid-template-columns:minmax(0,1fr)}.dashboard-widgets{grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))}.dashboard-grid>.icct-map-panel,.dashboard-widgets,.dashboard-extra-widgets{grid-column:1;min-width:0}}
+
+/* Topology and its neighbouring cards remain a two-column section. */
+@media(min-width:901px){.dashboard-grid{grid-template-columns:minmax(0,1fr) clamp(280px,22vw,340px)}.dashboard-grid.dashboard-no-side{grid-template-columns:minmax(0,1fr)}}
+.dashboard-card{flex:none;min-height:0}
+.dashboard-extra-widgets .dashboard-card{min-height:0}
+.dashboard-card header{padding:10px}
+.dashboard-card h2{font-size:18px}
+.birds-content{padding:10px 12px}
+#birdsRadar{width:100%;max-width:280px;margin:auto}
+.icct-map-counts .disabled{color:#666}
+.icct-map-counts .disabled::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;background:#ccc;margin-right:5px}
+#dashboardNameDialog{width:420px;max-width:calc(100vw - 32px);border:1px solid #ddd;padding:24px;background:white;color:#202020;box-shadow:0 8px 32px #0003}
+#dashboardNameDialog::backdrop{background:#0005}
+#dashboardNameDialog h2{font-size:22px;font-weight:500;margin:0 0 20px}
+#dashboardNameDialog label{display:block;margin-bottom:8px}
+#dashboardNameDialog input{width:100%;padding:10px;border:1px solid #aaa}
+#dashboardNameDialog p{color:#666;font-size:13px;margin:12px 0 20px}
+#dashboardNameDialog form>div{display:flex;justify-content:flex-end;gap:12px}
+
+.dashboard-actions{display:flex;align-items:center;gap:4px;flex:none}
+.dashboard-action{position:relative;display:grid;place-items:center;width:34px;height:34px;padding:6px;border:0;background:transparent;border-radius:4px;color:#333}
+.dashboard-action svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6}
+.dashboard-action:hover:not(:disabled){background:#eef2f9}.dashboard-action:disabled{opacity:.4;cursor:not-allowed}
+.dashboard-action-tip{position:absolute;top:calc(100% + 7px);left:50%;transform:translateX(-50%);z-index:1400;white-space:nowrap;background:#333;color:white;padding:5px 8px;border-radius:3px;font-size:12px;line-height:16px;opacity:0;pointer-events:none;transition:opacity .12s}
+.dashboard-action:hover .dashboard-action-tip,.dashboard-action:focus-visible .dashboard-action-tip{opacity:1}
+.dashboard-undo{border:0;background:transparent;color:#2468f5;padding:6px;font-size:12px;white-space:nowrap}
+
+
+.dashboard-toolbar .dashboard-inline-name{box-sizing:border-box;width:240px;min-height:36px;padding:6px 12px;background:#f4f4f4;border:0;border-bottom:2px solid #0f62fe;font:inherit;font-size:13px;outline:none}
+.dashboard-toolbar [hidden]{display:none!important}
+
+/* Keep the topology legend at the card edge and the fullscreen viewport edge. */
+.dashboard-grid #icct-panel-topology{display:flex;flex-direction:column;overflow:hidden;flex:1}
+.dashboard-grid #icct-panel-topology[hidden]{display:none}
+.dashboard-grid #icct-panel-topology .topology-layout{flex:1 0 auto}
+.dashboard-grid #topologyAlarms{flex:none;align-self:stretch;margin:0;padding:8px 14px}
+.dashboard-grid>.icct-map-panel:fullscreen{height:100dvh;max-height:100dvh;padding:12px;overflow:hidden}
+.dashboard-grid .icct-map-panel:fullscreen #icct-panel-topology{min-height:0}
+.dashboard-grid .icct-map-panel:fullscreen .topology-layout{flex:1 1 0;height:auto;min-height:0}
+.dashboard-grid .icct-map-panel:fullscreen #topologyCanvas{min-height:0}
+
+#dashboardSaveStatus.save-success{color:#21864a;cursor:default}
+#dashboardDeleteDialog{width:360px;max-width:calc(100vw - 32px);border:1px solid #ddd;padding:24px;background:white;color:#202020;box-shadow:0 8px 32px #0003}
+#dashboardDeleteDialog::backdrop{background:#0005}
+#dashboardDeleteDialog h2{margin:0 0 16px;font-size:20px}
