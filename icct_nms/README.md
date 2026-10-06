@@ -246,4 +246,4 @@ Feature folders own their CSS, JavaScript, templates, and services. Cross-featur
 
 The root contains only `setup.php`, `INFO`, `README.md` and the feature folders: `protocols/`, `dashboard/`, `inventory/`, `graphs/`, `ports/`, `fcaps/`, `presets/`, `configuration/` and `shared/`. Feature controllers are the HTTP routes; CLI workers live with their feature. Shared assets, database schema, deployment files and regression tests live under `shared/`.
 
-After upgrading from the earlier layout, use the menu to reopen pages at their feature URLs. The old root PHP wrappers have been removed.
+The old root PHP wrappers have been removed. The root `.htaccess` internally maps existing page URLs to feature controllers, preserving query strings, fragments and POST bodies. On Apache installations with `AllowOverride None`, install `shared/deployment/apache-routes.conf` in Apache’s `conf.d` directory (adjust its plugin path if needed), validate with `httpd -t`, and reload Apache. The live RHEL instance uses this configuration.

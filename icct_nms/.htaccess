@@ -1,0 +1,16 @@
+# Existing bookmarks and cached forms retain their query strings and POST bodies.
+RewriteEngine On
+RewriteRule ^topology\.php$ dashboard/controllers/topology.php [END]
+RewriteRule ^topology_configuration\.php$ dashboard/topology/controllers/topology_configuration.php [END]
+RewriteRule ^inventory\.php$ inventory/controllers/inventory.php [END]
+RewriteRule ^device\.php$ inventory/controllers/device.php [END]
+RewriteRule ^export\.php$ inventory/controllers/export.php [END]
+RewriteRule ^wizard_save\.php$ inventory/controllers/wizard_save.php [END]
+RewriteRule ^wizard_templates\.php$ inventory/controllers/wizard_templates.php [END]
+RewriteRule ^diagnostics\.php$ inventory/diagnostics/controllers/diagnostics.php [END]
+RewriteRule ^protocol\.php$ protocols/shared/controllers/protocol.php [END]
+RewriteRule ^syslog\.php$ protocols/syslog/controllers/syslog.php [END]
+RewriteRule ^mib_repository\.php$ protocols/snmp/mibs/controllers/mib_repository.php [END]
+RewriteRule ^presets\.php$ presets/controllers/presets.php [END]
+RewriteRule ^rack_placement\.php$ presets/controllers/rack_placement.php [END]
+RewriteRule ^ports\.php$ ports/controllers/ports.php [END]

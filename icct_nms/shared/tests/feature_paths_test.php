@@ -23,3 +23,13 @@ foreach (['inventory/diagnostics/cli/diagnostic_listener.php', 'inventory/diagno
     if (!is_file($root . '/' . $path)) throw new RuntimeException('Missing runtime dependency: ' . $path);
 }
 echo "PASS: clean feature root, $count static page dependencies, CLI workers, schema and protected MIB storage.\n";
+
+$rules = file_get_contents($root . '/.htaccess');
+$config = file_get_contents($root . '/shared/deployment/apache-routes.conf');
+if (strpos($config, $rules) === false) throw new RuntimeException('Apache and .htaccess routes must stay synchronized.');
+preg_match_all('~^RewriteRule \^([a-z_]+)\\\.php\$ ([a-z/_]+\.php) \[END\]$~m', $rules, $routes, PREG_SET_ORDER);
+if (count($routes) !== 14) throw new RuntimeException('Every previous HTTP endpoint needs a compatibility route.');
+foreach ($routes as $route) {
+    if (!is_file($root . '/' . $route[2])) throw new RuntimeException('Legacy URL has no controller: ' . $route[1]);
+}
+echo "PASS: all 14 legacy HTTP endpoints map to existing feature controllers.\n";
