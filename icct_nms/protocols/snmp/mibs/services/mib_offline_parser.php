@@ -118,14 +118,14 @@ final class IcctMibOfflineParser {
             $body=$def['body'];$oid=$this->oid($module,$name);$syntax=$this->clause($body,'SYNTAX');
             if($syntax)$syntax=$this->syntax($module,$syntax);
             $access=$this->clause($body,'MAX-ACCESS')?:$this->clause($body,'ACCESS');
-            $table=false;
+            $table=false;$indexDescription='OID instance suffix';
             foreach($this->modules as $owner=>$mod)foreach($mod['defs'] as $parent=>$p){
                 if($p['kind']!=='OBJECT-TYPE'||(!in_array('INDEX',$p['body'],true)&&!in_array('AUGMENTS',$p['body'],true)))continue;
-                if($this->oid($owner,$parent)===preg_replace('/\.[0-9]+$/','',$oid)){$table=true;break 2;}
+                if($this->oid($owner,$parent)===preg_replace('/\.[0-9]+$/','',$oid)){$table=true;$indexDescription=$this->clause($p['body'],'INDEX')?:('Augments '.$this->clause($p['body'],'AUGMENTS'));break 2;}
             }
             $numeric=$def['kind']==='OBJECT-TYPE'&&in_array($access,['read-only','read-write','read-create'],true)&&preg_match('/^(INTEGER|Integer32|Unsigned32|Gauge32|Counter32|Counter64|TimeTicks)\b/',$syntax);
             $enum=str_contains($syntax,'{');$counter=(bool)preg_match('/^Counter(?:32|64)\b/',$syntax);
-            $records[]=['symbol'=>$module.'::'.$name,'kind'=>$def['kind'],'base_oid'=>$oid,'oid'=>$table?$oid:$oid.'.0','syntax'=>$syntax,'access'=>$access,'description'=>trim(preg_replace('/\s+/',' ',$this->clause($body,'DESCRIPTION'))),'units'=>$this->clause($body,'UNITS'),'table'=>$table,'numeric'=>(bool)$numeric,'enum'=>$enum,'ds_type'=>$counter?2:1,'label'=>$name]+icct_mib_bounds($syntax)+['reason'=>!$numeric?'Metadata / nonnumeric object':($table?'Table object':($enum?'Numeric enumeration: review state mapping':'Readable numeric scalar'))];
+            $records[]=['symbol'=>$module.'::'.$name,'kind'=>$def['kind'],'base_oid'=>$oid,'oid'=>$table?$oid:$oid.'.0','syntax'=>$syntax,'access'=>$access,'description'=>trim(preg_replace('/\s+/',' ',$this->clause($body,'DESCRIPTION'))),'units'=>$this->clause($body,'UNITS'),'table'=>$table,'index_description'=>$table?$indexDescription:'Scalar instance .0','numeric'=>(bool)$numeric,'enum'=>$enum,'ds_type'=>$counter?2:1,'label'=>$name]+icct_mib_bounds($syntax)+['reason'=>!$numeric?'Metadata / nonnumeric object':($table?'Table object':($enum?'Numeric enumeration: review state mapping':'Readable numeric scalar'))];
         }
         return $records;
     }

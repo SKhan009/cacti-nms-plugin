@@ -6,6 +6,7 @@ function icct_backend_device_activate_imported_templates($device_id, $host_templ
 {
     $device_id = icct_backend_device_require($device_id);
     $host_template_id = (int) $host_template_id;
+    $indexedCreated = 0;
     $templates = db_fetch_assoc_prepared(
         "SELECT DISTINCT o.graph_template_id
 		FROM plugin_icct_nms_snmprec_imports AS i
@@ -33,7 +34,23 @@ function icct_backend_device_activate_imported_templates($device_id, $host_templ
     if (is_array($bundle)) {
         $known = array_column($templates, 'graph_template_id');
         foreach ($bundle['rows'] as $row) {
-            // Native graph creation must collect the instance OID for reusable table templates.
+            // Indexed MIB graphs use Cacti's discovered cache and native poller lifecycle.
+            if (!empty($row['snmp_query_id']) && !empty($row['snmp_query_graph_id'])) {
+                $queryId = (int)$row['snmp_query_id'];
+                db_execute_prepared('REPLACE INTO host_snmp_query(host_id,snmp_query_id,reindex_method) VALUES(?,?,?)',[$device_id,$queryId,2]);
+                if (!db_fetch_cell_prepared('SELECT COUNT(*) FROM host_snmp_cache WHERE host_id=? AND snmp_query_id=?',[$device_id,$queryId])) run_data_query($device_id,$queryId);
+                foreach (db_fetch_assoc_prepared("SELECT DISTINCT snmp_index FROM host_snmp_cache WHERE host_id=? AND snmp_query_id=? AND field_name='oidIndex'",[$device_id,$queryId]) as $instance) {
+                    if (db_fetch_cell_prepared('SELECT id FROM graph_local WHERE host_id=? AND graph_template_id=? AND snmp_query_id=? AND snmp_index=?',[$device_id,$row['graph_template_id'],$queryId,$instance['snmp_index']])) continue;
+                    $query = ['snmp_query_id'=>$queryId,'snmp_query_graph_id'=>(int)$row['snmp_query_graph_id'],'snmp_index_on'=>'oidIndex','snmp_index'=>$instance['snmp_index']];
+                    $suggested = [];
+                    $result = create_complete_graph_from_template((int)$row['graph_template_id'],$device_id,$query,$suggested);
+                    if (!is_array($result)||empty($result['local_graph_id'])) throw new RuntimeException('Cacti could not activate indexed MIB graph.');
+                    foreach ((array)($result['local_data_id']??[]) as $localId) if((int)$localId>0) push_out_host($device_id,(int)$localId);
+                    $indexedCreated++;
+                }
+                continue;
+            }
+            // Legacy unconfigured GET templates still require an explicit instance.
             if (!empty($row['deferred_instance'])) continue;
             $graph_id = (int) $row['graph_template_id'];
             if (
@@ -48,7 +65,7 @@ function icct_backend_device_activate_imported_templates($device_id, $host_templ
             }
         }
     }
-    $created = 0;
+    $created = $indexedCreated;
 
     foreach ($templates as $template) {
         $graph_template_id = (int) $template['graph_template_id'];

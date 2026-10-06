@@ -4,7 +4,7 @@ function plugin_icct_nms_version()
 {
     return [
         'name' => 'icct_nms',
-        'version' => '1.2.8',
+        'version' => '1.2.9',
         'longname' => 'ICCT NMS Inventory',
         'author' => 'NMS Project',
         'homepage' => 'https://www.cacti.net/',

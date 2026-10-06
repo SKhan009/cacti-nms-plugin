@@ -3141,3 +3141,8 @@ h1, h2, h3, h4, h5, h6 { line-height: 1.25; }
 .diagnostic-monitor-report { margin: 12px 0; }
 .diagnostic-monitor-report pre { overflow: auto; max-height: 300px; }
 @media (max-width: 700px) { .diagnostic-monitor { grid-column: 1 / -1; } }
+
+#mibFiles .mib-row-actions{display:grid;grid-template-columns:repeat(2,minmax(140px,1fr)) 36px;gap:8px;max-width:none;min-width:350px;align-items:stretch}
+#mibFiles .mib-row-actions>a:nth-of-type(1){grid-column:1}#mibFiles .mib-row-actions>a:nth-of-type(2){grid-column:2}#mibFiles .mib-row-actions>a:nth-of-type(3){grid-column:1;grid-row:2}
+#mibFiles .mib-row-actions form{display:flex;align-items:stretch;margin:0}#mibFiles .mib-row-actions form:first-of-type{grid-column:2;grid-row:2}#mibFiles .mib-row-actions form:last-of-type{grid-column:3;grid-row:2;align-items:center}
+#mibFiles .mib-row-actions .button{width:100%;min-height:36px}#mibFiles .mib-row-actions .icon-button{margin:0;width:36px;height:36px}

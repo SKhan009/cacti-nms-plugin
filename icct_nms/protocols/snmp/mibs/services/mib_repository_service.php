@@ -289,6 +289,17 @@ function icct_mib_review_input($input){
     if(!is_array($values)||!is_array($values['selected']??null)||!is_array($values['records']??null)||count($values['records'])>512)throw new InvalidArgumentException('Invalid review payload.');
     return array_replace($input,['selected'=>$values['selected'],'records'=>$values['records']]);
 }
+/** Resolve collection independently from the RRD storage type. */
+function icct_mib_collection($record,$values){
+    $method=$values['collection_method']??'auto';
+    if(!in_array($method,['auto','get','indexed'],true))throw new InvalidArgumentException('Choose Auto, SNMP GET or Indexed SNMP.');
+    if(empty($record['numeric'])||($record['kind']??'')!=='OBJECT-TYPE')throw new InvalidArgumentException('Only readable numeric OBJECT-TYPE objects can create data sources; notifications are events.');
+    if($method==='indexed'&&empty($record['table']))throw new InvalidArgumentException($record['symbol'].': scalar objects use SNMP GET.');
+    // Preserve an explicitly supplied instance when upgrading an older review.
+    if($method==='auto')$method=!empty($record['table'])&&empty($values['instance_index'])&&empty($values['oid_override'])&&(!isset($values['oid'])||ltrim(trim($values['oid']),'.')===$record['base_oid'])?'indexed':'get';
+    return $method;
+}
+function icct_mib_profiles(){return db_fetch_assoc('SELECT id,name,step,heartbeat FROM data_source_profiles ORDER BY step DESC,id')?:[];}
 function icct_mib_plan($preview,$input){
     $types=icct_nms_device_types();$type=$input['type_id']??'';
     if(!is_string($type)||!isset($types[$type]))throw new InvalidArgumentException('Select an existing device type.');
@@ -300,8 +311,14 @@ function icct_mib_plan($preview,$input){
         $record+=icct_mib_bounds($record['syntax']??'');
         if(empty($input['selected'][$i]))continue;
         if(!$record['numeric'])throw new InvalidArgumentException('Only readable numeric objects can create polling templates.');
-        $r=$input['records'][$i]??[];$oid=ltrim(trim($r['oid']??$record['oid']),'.');
+        $r=$input['records'][$i]??[];$record['collection_method']=$r['collection_method']??'auto';$record['resolved_method']=icct_mib_collection($record,$r);$oid=ltrim(trim($r['oid']??$record['oid']),'.');
         $index=trim($r['instance_index']??'');
+        if($record['resolved_method']==='indexed'&&($index!==''||($oid!==''&&$oid!==$record['base_oid'])))throw new InvalidArgumentException($record['symbol'].': Indexed SNMP uses the base OID; choose Specific Instance GET for an instance.');
+        if($record['resolved_method']==='get'&&$record['table']&&$index===''&&($oid===''||$oid===$record['base_oid']))throw new InvalidArgumentException($record['symbol'].': Specific Instance GET requires a full instance OID or index.');
+        $profiles=icct_mib_profiles();$profileId=(int)($r['profile_id']??($profiles[0]['id']??0));$profile=null;
+        foreach($profiles as $candidate)if((int)$candidate['id']===$profileId)$profile=$candidate;
+        if(!$profile)throw new InvalidArgumentException('Choose an existing Cacti polling profile.');
+        $record['profile_id']=$profileId;$record['polling_interval']=(int)$profile['step'];$record['heartbeat']=(int)$profile['heartbeat'];
         if($record['table']&&$index!==''){
             if(!preg_match('/^(?:0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*))*$/D',$index))throw new InvalidArgumentException($record['symbol'].': enter a numeric instance index, such as 1 or 1001.2.');
             $indexed=$record['base_oid'].'.'.$index;
@@ -309,7 +326,7 @@ function icct_mib_plan($preview,$input){
             $oid=$indexed;
         }
         if(!$record['table']&&$oid==='')$oid=$record['base_oid'].'.0';
-        $record['deferred_instance']=$record['table']&&$index===''&&($oid===''||$oid===$record['base_oid']);
+        $record['deferred_instance']=$record['resolved_method']==='indexed';
         if($record['deferred_instance'])$oid=$record['base_oid'];
         if(!$record['deferred_instance']&&(!preg_match('/^'.preg_quote($record['base_oid'],'/').'\.(?:0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*))*$/D',$oid)||strlen($oid)>255||(!$record['table']&&$oid!==$record['base_oid'].'.0')))throw new InvalidArgumentException($record['symbol'].': enter a valid instance OID.');
         $record['oid']=$oid;$record['label']=icct_mib_name($r['label']??$record['label']);
@@ -332,14 +349,57 @@ function icct_mib_plan($preview,$input){
     }
     if(count($records)>512)throw new InvalidArgumentException('Select at most 512 metrics per creation.');
     if(($options['data']||$options['graph'])&&!$records)throw new InvalidArgumentException('Select at least one numeric metric.');
-    if(count(array_unique(array_column($records,'oid')))!==count($records))throw new InvalidArgumentException('Each instance OID must be unique.');
+    if(count(array_unique(array_map(fn($r)=>$r['resolved_method'].':'.$r['oid'],$records)))!==count($records))throw new InvalidArgumentException('Each instance OID must be unique.');
     return ['name'=>$name,'type_id'=>$type,'type_name'=>$types[$type]['name'],'category_id'=>$types[$type]['category_id'],'options'=>$options,'records'=>$records];
 }
 function icct_mib_write($sql,$args=[]){if(!db_execute_prepared($sql,$args))throw new RuntimeException('Could not save MIB templates.');}
+/** Native Cacti data query: discover complete OID suffixes, including composite indexes. */
+function icct_mib_query_xml($record){
+    $escape=fn($v)=>htmlspecialchars((string)$v,ENT_XML1|ENT_QUOTES,'UTF-8');
+    $oid=$escape($record['base_oid']);$name=$escape($record['label']);
+    $regex=$escape('^\\.?'.preg_quote($record['base_oid'],'/').'\\.([0-9]+(?:\\.[0-9]+)*)$');
+    return '<?xml version="1.0" encoding="UTF-8"?>'."\n".'<query><name>'.$name.'</name><description>MIB indexed collection</description><oid_index>.'.$oid.'</oid_index><oid_index_parse>OID/REGEXP:'.$regex.'</oid_index_parse><index_order>oidIndex</index_order><index_order_type>numeric</index_order_type><index_title_format>|chosen_order_field|</index_title_format><fields><oidIndex><name>Instance index</name><method>walk</method><source>OID/REGEXP:'.$regex.'</source><direction>input</direction><oid>.'.$oid.'</oid></oidIndex><reading><name>'.$name.'</name><method>walk</method><source>value</source><direction>output</direction><oid>.'.$oid.'</oid></reading></fields></query>';
+}
+function icct_mib_native_query($record,$inputId){
+    global $config;
+    $xml=icct_mib_query_xml($record);$file=hash('sha256',$xml).'.xml';$directory=__DIR__.'/../queries';
+    if(!is_dir($directory)&&!mkdir($directory,0755,true)&&!is_dir($directory))throw new RuntimeException('The plugin MIB queries directory must be writable by the Cacti service account.');
+    $path=$directory.'/'.$file;
+    if(!is_file($path)&&file_put_contents($path,$xml,LOCK_EX)!==strlen($xml))throw new RuntimeException('Could not save the plugin SNMP query definition.');
+    // Cacti validates data query paths under resource; keep plugin source and export natively.
+    $nativeDirectory=$config['base_path'].'/resource/snmp_queries/icct_nms';
+    if(!is_dir($nativeDirectory)&&!mkdir($nativeDirectory,0755,true)&&!is_dir($nativeDirectory))throw new RuntimeException('Cacti resource/snmp_queries/icct_nms must be writable by the Cacti service account.');
+    $nativePath=$nativeDirectory.'/'.$file;
+    if(!is_file($nativePath)&&file_put_contents($nativePath,$xml,LOCK_EX)!==strlen($xml))throw new RuntimeException('Could not export the native Cacti SNMP query.');
+    $relative='<path_cacti>/resource/snmp_queries/icct_nms/'.$file;
+    $id=(int)db_fetch_cell_prepared('SELECT id FROM snmp_query WHERE xml_path=?',[$relative]);
+    if(!$id)$id=(int)sql_save(['id'=>0,'hash'=>bin2hex(random_bytes(16)),'name'=>substr('MIB - '.$record['symbol'],0,100),'description'=>'Indexed instances of '.$record['base_oid'],'xml_path'=>$relative,'data_input_id'=>$inputId],'snmp_query');
+    if(!$id)throw new RuntimeException('Could not register native Cacti SNMP query.');
+    return $id;
+}
+/** Prevent another upload from creating the same polling definition under a new name. */
+function icct_mib_validate_duplicates($records){
+    $known=[];
+    foreach(icct_mib_list() as $bundle)foreach($bundle['rows'] as $row){
+        $settings=$row['settings']??[];$method=$settings['resolved_method']??'get';
+        if(!empty($row['data_template_id'])&&db_fetch_cell_prepared('SELECT id FROM data_template WHERE id=?',[$row['data_template_id']]))$known[$method.':'.$row['oid']]=$bundle['name'];
+    }
+    foreach($records as $record){
+        $key=$record['resolved_method'].':'.$record['oid'];
+        if(isset($known[$key]))throw new InvalidArgumentException('Data source for '.$record['oid'].' already exists in '.$known[$key].'. Use the saved template.');
+        if($record['resolved_method']==='get'){
+            $name=db_fetch_cell_prepared("SELECT dt.name FROM data_template dt JOIN data_template_data dtd ON dtd.data_template_id=dt.id AND dtd.local_data_id=0 JOIN data_input_data did ON did.data_template_data_id=dtd.id JOIN data_input_fields f ON f.id=did.data_input_field_id WHERE f.data_name='oid' AND TRIM(LEADING '.' FROM did.value)=? LIMIT 1",[$record['oid']]);
+            if($name)throw new InvalidArgumentException('Data source for '.$record['oid'].' already exists: '.$name.'. Use the saved template.');
+        }else{
+            $path='<path_cacti>/resource/snmp_queries/icct_nms/'.hash('sha256',icct_mib_query_xml($record)).'.xml';
+            if(db_fetch_cell_prepared('SELECT sq.id FROM snmp_query sq JOIN snmp_query_graph sqg ON sqg.snmp_query_id=sq.id WHERE sq.xml_path=? LIMIT 1',[$path]))throw new InvalidArgumentException('Indexed data source for '.$record['oid'].' already exists. Use the saved query.');
+        }
+    }
+}
 function icct_mib_native_metric($record,$options,$existing=[]){
     global $config;
     require_once $config['base_path'].'/lib/api_data_source.php';require_once $config['base_path'].'/lib/api_graph.php';require_once $config['base_path'].'/lib/template.php';
-    $pair=array_replace(['data_template_id'=>0,'graph_template_id'=>0],$existing);
+    $pair=array_replace(['data_template_id'=>0,'graph_template_id'=>0,'snmp_query_id'=>0,'snmp_query_graph_id'=>0],$existing);
     if(!$options['data'])return $pair;
     if(!$pair['data_template_id']){
     $base=(int)db_fetch_cell("SELECT id FROM data_template WHERE name='SNMP - Generic OID Template'");
@@ -352,9 +412,21 @@ function icct_mib_native_metric($record,$options,$existing=[]){
     $field=(int)db_fetch_cell("SELECT id FROM data_input_fields WHERE data_input_id=1 AND data_name='oid'");
     if(!$data||!$rrd||!$field)throw new RuntimeException('The duplicated data template is incomplete.');
     $ds=substr(trim(preg_replace('/[^a-z0-9]+/','_',strtolower($record['label'])),'_'),0,19)?:'reading';
-    icct_mib_write('UPDATE data_template_data SET name=? WHERE id=?',['|host_description| - '.$record['label'],$data]);
+    icct_mib_write("UPDATE data_template_data SET name=?,data_source_profile_id=?,rrd_step=?,t_data_source_profile_id='',t_rrd_step='' WHERE id=?",['|host_description| - '.$record['label'],$record['profile_id'],$record['polling_interval'],$data]);
+    icct_mib_write("UPDATE data_template_rrd SET rrd_heartbeat=?,t_rrd_heartbeat='' WHERE id=?",[$record['heartbeat'],$rrd]);
     icct_mib_write("UPDATE data_template_rrd SET data_source_name=?,data_source_type_id=?,rrd_minimum=?,rrd_maximum=?,t_rrd_minimum='',t_rrd_maximum='' WHERE id=?",[$ds,$record['ds_type'],$record['min'],$record['max'],$rrd]);
-    icct_mib_write('UPDATE data_input_data SET t_value=?,value=? WHERE data_template_data_id=? AND data_input_field_id=?',[!empty($record['deferred_instance'])?'on':'',!empty($record['deferred_instance'])?'':$record['oid'],$data,$field]);
+    if(($record['resolved_method']??'get')==='indexed'){
+        $inputId=(int)db_fetch_cell('SELECT id FROM data_input WHERE type_id=3 ORDER BY id LIMIT 1');
+        if(!$inputId)throw new RuntimeException('Cacti indexed SNMP input method is not installed.');
+        icct_mib_write('UPDATE data_template_data SET data_input_id=? WHERE id=?',[$inputId,$data]);
+        icct_mib_write('UPDATE data_template_rrd SET data_input_field_id=0 WHERE id=?',[$rrd]);
+        icct_mib_write('DELETE FROM data_input_data WHERE data_template_data_id=?',[$data]);
+        foreach(db_fetch_assoc_prepared("SELECT id,type_code FROM data_input_fields WHERE data_input_id=? AND input_output='in'",[$inputId]) as $f){
+            $instance=in_array($f['type_code'],['index_type','index_value','output_type'],true);
+            icct_mib_write('INSERT INTO data_input_data(data_input_field_id,data_template_data_id,t_value,value) VALUES(?,?,?,?)',[$f['id'],$data,$instance?'on':'','']);
+        }
+        $pair['snmp_query_id']=icct_mib_native_query($record,$inputId);
+    }else icct_mib_write('REPLACE INTO data_input_data(data_input_field_id,data_template_data_id,t_value,value) VALUES(?,?,?,?)',[$field,$data,'',$record['oid']]);
     if(!$options['graph'])return $pair;
     $base=(int)db_fetch_cell("SELECT id FROM graph_templates WHERE name='SNMP - Generic OID Template'");
     if(!$base)throw new RuntimeException('Cacti Generic OID graph template is not installed.');
@@ -378,6 +450,11 @@ function icct_mib_native_metric($record,$options,$existing=[]){
         icct_mib_write('INSERT INTO graph_templates_item (hash,graph_template_id,graph_type_id,color_id,alpha,text_format,value,sequence) VALUES (?,?,?,?,?,?,?,?)',[bin2hex(random_bytes(16)),$graphId,2,$red,'FF',$label,$record[$key],++$sequence]);
     }
     if(!(int)db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates_item WHERE graph_template_id=? AND task_item_id=?',[$pair['graph_template_id'],$rrd]))throw new RuntimeException('Graph template has no linked data source.');
+    if($pair['snmp_query_id']){
+        $queryGraph=(int)sql_save(['id'=>0,'hash'=>bin2hex(random_bytes(16)),'snmp_query_id'=>$pair['snmp_query_id'],'name'=>substr($record['graph_name'],0,100),'graph_template_id'=>$graphId],'snmp_query_graph');
+        if(!$queryGraph)throw new RuntimeException('Could not link indexed graph template.');
+        icct_mib_write('INSERT INTO snmp_query_graph_rrd(snmp_query_graph_id,data_template_id,data_template_rrd_id,snmp_field_name) VALUES(?,?,?,?)',[$queryGraph,$pair['data_template_id'],$rrd,'reading']);$pair['snmp_query_graph_id']=$queryGraph;
+    }
     return $pair;
 }
 function icct_mib_save($preview,$plan){
@@ -393,11 +470,12 @@ function icct_mib_save($preview,$plan){
         $names=['data_template'=>[],'graph_templates'=>[],'host_template'=>[]];
         if($plan['options']['device'])$names['host_template'][]=$plan['name'];
         foreach($plan['records'] as $record){if($plan['options']['data'])$names['data_template'][]=$record['data_name'];if($plan['options']['graph'])$names['graph_templates'][]=$record['graph_name'];}
-        foreach($names as $table=>$values){if(count($values)!==count(array_unique($values)))throw new InvalidArgumentException('Template names must be unique within each template type.');foreach($values as $name)if(db_fetch_cell_prepared('SELECT id FROM '.$table.' WHERE name=?',[$name]))throw new InvalidArgumentException('Template already exists: '.$name.'. Edit the name in review.');}
+        foreach($names as $table=>$values){if(count($values)!==count(array_unique(array_map('strtolower',$values))))throw new InvalidArgumentException('Template names must be unique within each template type.');foreach($values as $name)if(db_fetch_cell_prepared('SELECT id FROM '.$table.' WHERE name=?',[$name]))throw new InvalidArgumentException('Template already exists: '.$name.'. Edit the name in review.');}
+        if($plan['options']['data'])icct_mib_validate_duplicates($plan['records']);
         if(!db_execute('START TRANSACTION'))throw new RuntimeException('Cannot begin creation.');
         try{
             $hostId=0;if($plan['options']['device']){$hostId=(int)sql_save(['id'=>0,'hash'=>get_hash_host_template(0),'name'=>$plan['name']],'host_template');if(!$hostId)throw new RuntimeException('Could not create device template.');}
-            $rows=[];foreach($plan['records'] as $record){$pair=icct_mib_native_metric($record,$plan['options']);if($hostId&&$pair['graph_template_id'])icct_mib_write('INSERT INTO host_template_graph(host_template_id,graph_template_id) VALUES(?,?)',[$hostId,$pair['graph_template_id']]);$rows[]=array_merge($pair,['oid'=>$record['oid'],'name'=>$record['label'],'deferred_instance'=>!empty($record['deferred_instance'])]);}
+            $rows=[];foreach($plan['records'] as $record){$pair=icct_mib_native_metric($record,$plan['options']);if($hostId&&$pair['snmp_query_id'])icct_mib_write('REPLACE INTO host_template_snmp_query(host_template_id,snmp_query_id) VALUES(?,?)',[$hostId,$pair['snmp_query_id']]);elseif($hostId&&$pair['graph_template_id'])icct_mib_write('INSERT INTO host_template_graph(host_template_id,graph_template_id) VALUES(?,?)',[$hostId,$pair['graph_template_id']]);$rows[]=array_merge($pair,['oid'=>$record['oid'],'name'=>$record['label'],'deferred_instance'=>!empty($record['deferred_instance'])]);}
             $bundle=['id'=>$id,'name'=>$plan['name'],'type_id'=>$plan['type_id'],'type_name'=>$plan['type_name'],'category_id'=>$plan['category_id'],'host_template_id'=>$hostId,'rows'=>$rows,'options'=>$plan['options'],'created_at'=>date('Y-m-d H:i:s'),'files'=>[],'records'=>$preview['records'],'parse_error'=>$preview['parse_error']??'','dependencies'=>$preview['dependencies']??[]];
             foreach($preview['files'] as $i=>$file){$parts=str_split(base64_encode($file['content']),45000);foreach($parts as $j=>$part)icct_mib_write('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['mib_file_'.$id.'_'.$i.'_'.$j,$part]);unset($file['content']);$file['parts']=count($parts);$bundle['files'][]=$file;}
             // Chunk the metadata as well: large descriptions can exceed a TEXT column.
@@ -458,9 +536,10 @@ function icct_mib_wizard_save($id,$input){
         $values['create_data']=1;$values['create_graph']=$step>=2?1:0;$values['create_device']=$step===3?1:0;
         $plan=icct_mib_plan(['records'=>$objects,'parse_error'=>$bundle['parse_error']??''],$values);
         $names=$step===1?array_column($plan['records'],'data_name'):($step===2?array_column($plan['records'],'graph_name'):[$plan['name']]);
-        if(count($names)!==count(array_unique($names)))throw new InvalidArgumentException('Template names must be unique.');
+        if(count($names)!==count(array_unique(array_map('strtolower',$names))))throw new InvalidArgumentException('Template names must be unique.');
         $table=[1=>'data_template',2=>'graph_templates',3=>'host_template'][$step];
         foreach($names as $name)if(db_fetch_cell_prepared('SELECT id FROM '.$table.' WHERE name=?',[$name]))throw new InvalidArgumentException('Template already exists: '.$name.'. Choose another name.');
+        if($step===1)icct_mib_validate_duplicates($plan['records']);
         if(!db_execute('START TRANSACTION'))throw new RuntimeException('Cannot begin saving this step.');
         try{
             if($step<3){
@@ -475,7 +554,10 @@ function icct_mib_wizard_save($id,$input){
                 require_once $config['base_path'].'/lib/template.php';
                 $hostId=(int)sql_save(['id'=>0,'hash'=>get_hash_host_template(0),'name'=>$plan['name']],'host_template');
                 if(!$hostId)throw new RuntimeException('Could not create device template.');
-                foreach($bundle['rows'] as $row)icct_mib_write('INSERT INTO host_template_graph(host_template_id,graph_template_id) VALUES(?,?)',[$hostId,$row['graph_template_id']]);
+                foreach($bundle['rows'] as $row){
+                    if(!empty($row['snmp_query_id']))icct_mib_write('REPLACE INTO host_template_snmp_query(host_template_id,snmp_query_id) VALUES(?,?)',[$hostId,$row['snmp_query_id']]);
+                    else icct_mib_write('INSERT INTO host_template_graph(host_template_id,graph_template_id) VALUES(?,?)',[$hostId,$row['graph_template_id']]);
+                }
                 $bundle['host_template_id']=$hostId;
             }
             foreach(['name','type_id','type_name','category_id','options'] as $key)$bundle[$key]=$plan[$key];
