@@ -10,4 +10,4 @@
 <button type="button" class="rack-icon" id="rackViewFullscreen" aria-label="Rack fullscreen" title="Fullscreen">⛶</button>
 </div></div>
 <form id="rackViewToken" hidden><?php icct_nms_token(); ?></form>
-<script type="application/json" id="rackViewData"><?= json_encode((static function()use($dashboardSiteId,$scopedDeviceIds){$data=icct_nms_rack_view_data();$data['devices']=array_values(array_filter($data['devices'],static fn($device)=>in_array((int)$device['id'],$scopedDeviceIds,true)));if($dashboardSiteId){$data['sites']=array_values(array_filter($data['sites'],static fn($site)=>(int)$site['id']===$dashboardSiteId));$data['racks']=array_values(array_filter($data['racks'],static fn($rack)=>(int)$rack['site_id']===$dashboardSiteId));}return $data;})(),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
+<script type="application/json" id="rackViewData"><?= json_encode(icct_nms_rack_view_data(),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>

@@ -89,7 +89,7 @@ function icct_nms_save_device($id, $old, $input)
             'SELECT r.* FROM plugin_icct_nms_racks r WHERE r.id=?',
             [$rack]
         );
-        if (!$r || (int) $r['site_id'] !== (int) $values['site_id']) {
+        if (!$r || ((int) $r['site_id'] !== 0 && (int) $r['site_id'] !== (int) $values['site_id'])) {
             throw new InvalidArgumentException('Select a saved rack at the device site.');
         }
         $position = explode(':', (string) ($input['rack_position'] ?? ''));

@@ -8,7 +8,7 @@ function icct_backend_topology_config_apply($action, $site_id, $input)
     $user = icct_backend_current_user_id();
     $rack_id = icct_backend_topology_integer($input['rack_id'], 1, PHP_INT_MAX, 'Rack ID');
     $rack = db_fetch_row_prepared(
-        'SELECT r.* FROM plugin_icct_nms_racks r WHERE r.id = ? AND r.site_id = ?',
+        'SELECT r.* FROM plugin_icct_nms_racks r WHERE r.id = ? AND (r.site_id = 0 OR r.site_id = ?)',
         [$rack_id, $site_id]
     );
     if (!$rack) {

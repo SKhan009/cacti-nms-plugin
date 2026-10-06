@@ -2,6 +2,7 @@
 require dirname(__DIR__, 2) . '/../../include/auth.php';
 require_once dirname(__DIR__, 2) . '/shared/services/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/inventory/services/inventory.php';
+require_once dirname(__DIR__, 2) . '/presets/services/device_type_service.php';
 require_once dirname(__DIR__, 2) . '/configuration/services/configuration_history.php';
 require_once dirname(__DIR__, 2) . '/graphs/services/graph_service.php';
 require_once dirname(__DIR__, 2) . '/protocols/shared/services/protocol_service.php';

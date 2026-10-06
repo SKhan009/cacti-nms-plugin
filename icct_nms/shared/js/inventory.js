@@ -261,8 +261,7 @@ if (rackData) {
   const racks=JSON.parse(rackData.textContent), site=document.querySelector('[name="site_id"]'), rack=document.querySelector('[name="rack_id"]'), position=document.querySelector('[name="rack_position"]'), picker=document.querySelector('#rack-unit-picker');
   let initial=true;
   function updateRacks() {
-    const selected=rack.value, saved=racks.filter(r=>String(r.site_id)===site.value), profiles=new Set(saved.map(r=>r.profile_id));
-    const choices=saved.concat(site.value && site.value!=='0'?racks.filter(r=>Number(r.site_id)===0&&!profiles.has(r.profile_id)):[]);
+    const selected=rack.value, choices=racks;
     rack.replaceChildren(new Option('Unassigned','0'));
     choices.forEach(r=>rack.add(new Option(r.name,String(r.id))));
     rack.value=[...rack.options].some(o=>o.value===selected)?selected:'0';

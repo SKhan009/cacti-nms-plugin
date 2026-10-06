@@ -8,7 +8,7 @@
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
   const dashboardSource=document.querySelector('#dashboardData');
   const scopeSite=dashboardSource?Number(JSON.parse(dashboardSource.textContent).site_id||0):0;
-  function scopedData(value){if(!scopeSite)return value;return {...value,sites:value.sites.filter(site=>Number(site.id)===scopeSite),racks:value.racks.filter(rack=>Number(rack.site_id)===scopeSite),devices:value.devices.filter(device=>Number(device.site_id)===scopeSite)};}
+  function scopedData(value){if(!scopeSite)return value;return {...value,sites:value.sites.filter(site=>Number(site.id)===scopeSite),racks:value.racks,devices:value.devices};}
   function siteDevices(){return data.devices;}
   function card(device){const n=el('div','rack-device '+window.icctStatusClass(device.status));n.dataset.deviceId=device.id;n.draggable=editing;n.tabIndex=0;const link=el('span','rack-device-name',device.name);const shape=el('span','device-shape-symbol shape-'+(device.shape||'rectangle'));shape.setAttribute('aria-label','Device shape: '+(device.shape||'rectangle'));n.append(shape,link,el('small','',device.status));n.title=device.name+' · '+device.status;n.addEventListener('dragstart',event=>{if(!editing||busy){event.preventDefault();return;}event.dataTransfer.setData('text/plain',String(device.id));});return n;}
   function droppable(target,rackId,unit,peripheral=false){target.addEventListener('dragover',event=>{if(editing&&!busy){event.preventDefault();target.classList.add('drag-over');}});target.addEventListener('dragleave',()=>target.classList.remove('drag-over'));target.addEventListener('drop',event=>{event.preventDefault();target.classList.remove('drag-over');const value=event.dataTransfer.getData('text/plain'),id=Number(value);if(editing&&value.startsWith('reserve:'))stageReservation(value,rackId,unit);else if(editing&&siteDevices().some(d=>d.id===id))stage(id,rackId,unit,peripheral);});}
@@ -21,9 +21,9 @@
     cabinets.replaceChildren();pool.hidden=!editing;actions.hidden=!editing;saveButton.disabled=busy||!(changes.size||reservedChanges.size);document.querySelector('#rackViewEdit').hidden=!data.management;
     document.querySelector('#rackViewEdit').setAttribute('aria-pressed',String(editing));
     const list=document.querySelector('#rackDeviceList');list.replaceChildren();if(editing)list.append(reservationCard('reserve:new'));devices.forEach(d=>list.append(card(d)));droppableOncePool();
-    if(!racks.length)cabinets.append(el('p','','No racks available. Choose a rack preset in Add/Edit Device.'));
+    if(!racks.length)cabinets.append(el('p','','No racks configured. Add a rack in Presets → Rack Config.'));
     racks.slice(rackOffset,rackOffset+3).forEach(rack=>{
-      const shell=el('section','rack-cabinet'),heading=el('header','');heading.append(el('h3','',rack.name),el('small','',(data.sites.find(site=>Number(site.id)===Number(rack.site_id))?.name||'Site')+' · '+rack.unit_count+' U'));shell.append(heading);
+      const shell=el('section','rack-cabinet'),heading=el('header','');heading.append(el('h3','',rack.name),el('small','',rack.unit_count+' U'));shell.append(heading);
       const frame=el('div','rack-frame'),slots=el('div','rack-slots');slots.style.gridTemplateRows='repeat('+rack.unit_count+',minmax(0,1fr))';
       const occupied=new Set(rack.blocked.map(Number));(rack.reservations||[]).forEach(item=>{for(let u=item.start;u<item.start+item.height;u++)occupied.add(u);});devices.filter(d=>d.rack_id===Number(rack.id)&&!d.peripheral).forEach(d=>{for(let u=d.start;u<d.start+d.height;u++)occupied.add(u);});
       for(let u=1;u<=Number(rack.unit_count);u++){const slot=el('div','rack-slot'+(occupied.has(u)?' occupied':''));slot.style.gridRow=String(u);slot.append(el('span','rack-unit-label',u+'U'));slot.title=occupied.has(u)?u+'U — In use':u+'U — Available';droppable(slot,Number(rack.id),u);slots.append(slot);}
@@ -53,7 +53,7 @@
       const collision=(rack.blocked||[]).some(u=>Number(u)>=start&&Number(u)<=end)||(rack.reservations||[]).some(item=>item.start<=end&&item.start+item.height-1>=start)||data.devices.some(d=>d.id!==id&&d.rack_id===rackId&&!d.peripheral&&d.start<=end&&d.start+d.height-1>=start);
       if(collision){message.textContent='These rack units are already occupied.';return;}
     }
-    Object.assign(device,{rack_id:rackId,start:rackId&&!peripheral?start:0,peripheral:!!(rackId&&peripheral),site_id:rackId?Number(rack.site_id):0});
+    Object.assign(device,{rack_id:rackId,start:rackId&&!peripheral?start:0,peripheral:!!(rackId&&peripheral),site_id:device.site_id});
     const original=savedData.devices.find(d=>d.id===id);
     if(JSON.stringify(placement(device))===JSON.stringify(placement(original)))changes.delete(id);
     else changes.set(id,{host_id:id,rack_id:rackId,units:rackId&&!peripheral?Array.from({length:height},(_,i)=>start+i):[],peripheral:device.peripheral,revision:original.revision});

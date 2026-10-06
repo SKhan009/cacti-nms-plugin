@@ -17,6 +17,7 @@ function icct_nms_schema_install()
         }
     }
     icct_nms_schema_sites_migration();
+    icct_nms_schema_rack_catalogue_migration();
     if (
         !db_execute_prepared(
             'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
@@ -51,3 +52,55 @@ function icct_nms_schema_sites_migration() {
     icct_nms_schema_execute('DROP TABLE plugin_icct_nms_rack_nodes');
 }
 function icct_nms_schema_execute($sql){if(!db_execute($sql))throw new RuntimeException('Site/rack migration failed. Check the Cacti database log.');}
+
+/** Convert legacy site/group copies to one catalogue row per physical rack.
+ * Keep occupied rack IDs, reservations and placements; remove only empty copies.
+ */
+function icct_nms_schema_rack_catalogue_migration() {
+    if(db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['rack_catalogue_v1']))return;
+    $lock='icct_backend_racks_'.substr(hash('sha256',(string)db_fetch_cell('SELECT DATABASE()')),0,32);
+    if((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',[$lock])!==1)throw new RuntimeException('Rack upgrade is busy. Retry shortly.');
+    $execute=static function($sql,$args=[]) { if(!db_execute_prepared($sql,$args))throw new RuntimeException('Rack catalogue upgrade failed.'); };
+    try {
+        $execute('START TRANSACTION');
+        $raw=(string)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['rack_profiles']);
+        $profiles=$raw!==''?json_decode($raw,true,512,JSON_THROW_ON_ERROR):[];
+        $racks=db_fetch_assoc('SELECT * FROM plugin_icct_nms_racks ORDER BY id');
+        $execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['rack_catalogue_backup',json_encode(['profiles'=>$profiles,'racks'=>$racks],JSON_THROW_ON_ERROR)]);
+        $groups=[];
+        foreach($racks as $rack)$groups[$rack['profile_id']][]=$rack;
+        $names=array_map(static fn($p)=>strtolower($p['name']),$profiles);
+        foreach($groups as $key=>$copies) {
+            $occupied=[];
+            foreach($copies as $rack) {
+                $used=(int)db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_icct_nms_rack_devices WHERE rack_id=?',[$rack['id']]) || (int)db_fetch_cell_prepared("SELECT COUNT(*) FROM plugin_icct_nms_meta WHERE (meta_key LIKE 'rack_peripheral_%' AND meta_value=?) OR (meta_key=? AND meta_value!='[]')",[(string)$rack['id'],'rack_reserved_'.$rack['id']]);
+                if($used)$occupied[]=$rack;
+            }
+            $keep=$occupied ?: [$copies[0]];
+            $kept=array_column($keep,'id');
+            foreach($copies as $rack)if(!in_array($rack['id'],$kept,true)) {
+                $execute('DELETE FROM plugin_icct_nms_meta WHERE meta_key=?',['rack_reserved_'.$rack['id']]);
+                $execute('DELETE FROM plugin_icct_nms_racks WHERE id=?',[$rack['id']]);
+            }
+            foreach($keep as $number=>$rack) {
+                $profileKey=$number===0&&isset($profiles[$key])?$key:bin2hex(random_bytes(8));
+                $base=$profiles[$key]['name'] ?? $rack['name']; $name=$base;
+                if($profileKey!==$key) {
+                    $suffix=2;
+                    while(in_array(strtolower($name),$names,true))$name=mb_substr($base,0,135).' '.$suffix++;
+                    $names[] = strtolower($name);
+                }
+                $profiles[$profileKey]=['name'=>$name,'rack_count'=>1,'unit_count'=>(int)($profiles[$key]['unit_count'] ?? $rack['unit_count'])];
+                $execute('UPDATE plugin_icct_nms_racks SET site_id=0,profile_id=?,rack_number=1,name=?,unit_count=? WHERE id=?',[$profileKey,$name,$profiles[$profileKey]['unit_count'],$rack['id']]);
+            }
+        }
+        foreach($profiles as $key=>&$profile) {
+            $profile['rack_count']=1;
+            if(!db_fetch_cell_prepared('SELECT id FROM plugin_icct_nms_racks WHERE profile_id=? LIMIT 1',[$key]))$execute('INSERT INTO plugin_icct_nms_racks(site_id,profile_id,rack_number,name,unit_count,updated_by,updated_at) VALUES(0,?,1,?,?,0,NOW())',[$key,$profile['name'],$profile['unit_count']]);
+        } unset($profile);
+        $execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',['rack_profiles',json_encode($profiles,JSON_THROW_ON_ERROR)]);
+        $execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['rack_catalogue_v1','1']);
+        $execute('COMMIT');
+    } catch(Throwable $failure) {$execute('ROLLBACK');throw $failure;}
+    finally {db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]);}
+}

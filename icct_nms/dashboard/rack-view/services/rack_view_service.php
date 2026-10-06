@@ -27,7 +27,7 @@ function icct_nms_rack_place($id,$site,$rack,$units,$peripheral=false,$revision=
         $previousPeripheral=(int)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['rack_peripheral_'.$id]);
         if ($rack) {
             $record=db_fetch_row_prepared('SELECT r.* FROM plugin_icct_nms_racks r WHERE r.id=? FOR UPDATE',[$rack]);
-            if (!$record || (int)$record['site_id']!==$site) throw new InvalidArgumentException('Select a rack at the device site.');
+            if (!$record || ((int)$record['site_id']!==0 && (int)$record['site_id']!==$site)) throw new InvalidArgumentException('Select a rack at the device site.');
             if (!$peripheral) {
                 [$start,$height]=icct_nms_rack_units($units,(int)$record['unit_count']);
                 icct_backend_topology_config_apply('place_device',$site,['rack_id'=>$rack,'host_id'=>$id,'start_unit'=>$start,'unit_height'=>$height]);
@@ -48,7 +48,7 @@ function icct_nms_rack_view_data() {
         $rackId=(int)($device['rack_id'] ?: $peripheral);
         $out[]=['shape'=>icct_nms_device_shape($device['category_id'],$device['device_type'],$types),'id'=>$id,'name'=>$device['description'],'site_id'=>(int)$device['site_id'],'status'=>$device['status_label'],'rack_id'=>(int)($device['rack_id'] ?: $peripheral),'start'=>(int)$device['start_unit'],'height'=>(int)($device['unit_height'] ?: 1),'peripheral'=>(bool)$peripheral,'revision'=>icct_nms_rack_revision($id)];
     }
-    $racks=db_fetch_assoc('SELECT r.*,s.name AS site_name FROM plugin_icct_nms_racks r JOIN sites s ON s.id=r.site_id ORDER BY s.name,r.rack_number,r.id');
+    $racks=db_fetch_assoc('SELECT r.*,s.name AS site_name FROM plugin_icct_nms_racks r LEFT JOIN sites s ON s.id=r.site_id ORDER BY s.name,r.rack_number,r.id');
     foreach ($racks as &$rack) {
         $rack['blocked']=[];
         $rack['reservations']=icct_nms_rack_reservations((int)$rack['id']);
@@ -79,7 +79,7 @@ function icct_nms_rack_save_draft($moves,$reservations=[]) {
             $rack=icct_backend_topology_integer($move['rack_id'] ?? 0,0,2147483647,'Rack');
             if ($rack) {
                 $record=db_fetch_row_prepared('SELECT r.* FROM plugin_icct_nms_racks r WHERE r.id=? FOR UPDATE',[$rack]);
-                if (!$record || (int)$record['site_id']!==(int)$host['site_id']) throw new InvalidArgumentException('Select a rack at the device site.');
+                if (!$record || ((int)$record['site_id']!==0 && (int)$record['site_id']!==(int)$host['site_id'])) throw new InvalidArgumentException('Select a rack at the device site.');
             }
             $checked[$id]=['site'=>(int)$host['site_id'],'rack'=>$rack,'units'=>$move['units'] ?? [],'peripheral'=>($move['peripheral'] ?? false)===true];
         }
