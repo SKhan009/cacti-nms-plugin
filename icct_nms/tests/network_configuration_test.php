@@ -1,7 +1,7 @@
 <?php
 if(!in_array('--integration',$argv,true)){echo "Run with --integration on a Cacti installation; test writes are rolled back.\n";exit;}
 chdir(dirname(__DIR__,3));require 'include/global.php';$_SESSION['sess_user_id']=1;
-require 'plugins/icct_nms/includes/bootstrap.php';icct_nms_backend();require 'plugins/icct_nms/includes/network_configuration_service.php';
+require 'plugins/icct_nms/shared/services/bootstrap.php';icct_nms_backend();require 'plugins/icct_nms/configuration/services/network_configuration_service.php';
 $options=icct_nms_network_options();$input=icct_nms_network_defaults($options)+['network_id'=>0];$input['name']='ICCT network validation transaction';$input['subnet_range']='192.0.2.0/30';$input['enabled']=0;$input['ping_port']=22;$input['ping_timeout']=400;$input['ping_retries']=1;
 function check($ok,$message){if(!$ok)throw new RuntimeException($message);}
 function reject($input,$message){try{icct_nms_network_save($input);}catch(InvalidArgumentException $e){echo $message." passed.\n";return;}throw new RuntimeException($message.' not rejected');}

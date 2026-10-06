@@ -1,17 +1,17 @@
 <?php
 /** Dashboard geographic topology; Cacti controls page and per-device authorization. */
-require __DIR__.'/../../include/auth.php';
-require_once __DIR__.'/includes/bootstrap.php';
-require_once __DIR__.'/includes/inventory.php';
-require_once __DIR__.'/includes/device_type_service.php';
-require_once __DIR__.'/includes/graph_service.php';
-require_once __DIR__.'/includes/map_service.php';
-require_once __DIR__.'/includes/rack_view_service.php';
-require_once __DIR__.'/includes/topology_view_service.php';
-require_once __DIR__.'/includes/topology_summary_service.php';
-require_once __DIR__.'/includes/topology_link_service.php';
-require_once __DIR__.'/includes/topology_mtr_service.php';
-require_once __DIR__.'/includes/dashboard_service.php';
+require __DIR__ . '/../../include/auth.php';
+require_once __DIR__ . '/shared/services/bootstrap.php';
+require_once __DIR__ . '/inventory/services/inventory.php';
+require_once __DIR__ . '/presets/services/device_type_service.php';
+require_once __DIR__ . '/graphs/services/graph_service.php';
+require_once __DIR__ . '/dashboard/map/services/map_service.php';
+require_once __DIR__ . '/dashboard/rack-view/services/rack_view_service.php';
+require_once __DIR__ . '/dashboard/topology/services/topology_view_service.php';
+require_once __DIR__ . '/dashboard/topology/services/topology_summary_service.php';
+require_once __DIR__ . '/dashboard/topology/services/topology_link_service.php';
+require_once __DIR__ . '/dashboard/topology/services/topology_mtr_service.php';
+require_once __DIR__ . '/dashboard/widgets/services/dashboard_service.php';
 try {
     icct_nms_backend();
     if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['dashboard_preferences'])){
@@ -68,6 +68,6 @@ try {
 } catch (Throwable $error) { icct_nms_failure($error); }
 $dashboardView=in_array($_GET['view']??'', ['topology','rack','image','map'],true)?$_GET['view']:'topology';
 $title='Dashboard'; $mapPage=true;
-require __DIR__.'/templates/header.php';
-require __DIR__.'/templates/map.php';
-require __DIR__.'/templates/footer.php';
+require __DIR__ . '/shared/templates/header.php';
+require __DIR__ . '/dashboard/map/templates/map.php';
+require __DIR__ . '/shared/templates/footer.php';

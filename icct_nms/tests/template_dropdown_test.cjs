@@ -1,6 +1,6 @@
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
-const source=fs.readFileSync(require('path').join(__dirname,'../assets/js/inventory.js'),'utf8');
-const code=source.slice(source.indexOf('// Search the installed core templates'),source.indexOf('// Segment determines'));
+const source=fs.readFileSync(require('path').join(__dirname,'../shared/js/inventory.js'),'utf8');
+const code=source.slice(source.indexOf('// Search the installed core templates'),source.indexOf('const typeProfileData'));
 for(const mode of ['legacy','modern','broken-api']) {
  let document,changes=0,showCalls=0;
  class Element {

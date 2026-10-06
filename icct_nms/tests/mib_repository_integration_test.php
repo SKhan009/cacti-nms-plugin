@@ -2,13 +2,13 @@
 /** Native parser/template QA in connection-local temporary tables. No persistent templates or hosts. */
 if(PHP_SAPI!=='cli')exit(1);
 define('IN_CACTI_INSTALL',true);require '/var/www/html/cacti/include/cli_check.php';api_plugin_load_realms();require_once $config['base_path'].'/lib/auth.php';
-require_once __DIR__.'/../includes/bootstrap.php';icct_nms_backend();require_once __DIR__.'/../includes/device_type_service.php';require_once __DIR__.'/../includes/mib_repository_service.php';
+require_once __DIR__ . '/../shared/services/bootstrap.php';icct_nms_backend();require_once __DIR__ . '/../presets/services/device_type_service.php';require_once __DIR__ . '/../protocols/snmp/mibs/services/mib_repository_service.php';
 $_SESSION=['sess_user_id'=>1];
 function check($ok,$message){if(!$ok)throw new RuntimeException($message);echo "PASS: $message\n";}
 foreach(['data_local','graph_local','host_template','host_template_graph','data_template','data_template_data','data_template_rrd','data_input_data','graph_templates','graph_templates_graph','graph_templates_item','graph_template_input','graph_template_input_defs','plugin_icct_nms_meta','settings','colors'] as $table){
  if(!db_execute("CREATE TEMPORARY TABLE qa_mib_copy LIKE `$table`"))throw new RuntimeException('Isolation failed');db_execute("INSERT INTO qa_mib_copy SELECT * FROM `$table`");db_execute("CREATE TEMPORARY TABLE `$table` LIKE qa_mib_copy");db_execute("INSERT INTO `$table` SELECT * FROM qa_mib_copy");db_execute('DROP TEMPORARY TABLE qa_mib_copy');
 }
-$types=icct_nms_device_types();$type=array_key_first($types);$path=__DIR__.'/../assets/mibs/IF-MIB.txt';
+$types=icct_nms_device_types();$type=array_key_first($types);$path=__DIR__ . '/../assets/mibs/IF-MIB.txt';
 $preview=icct_mib_preview(['name'=>['IF-MIB.txt'],'tmp_name'=>[$path],'error'=>[UPLOAD_ERR_OK]],$type);
 check(count($preview['records'])>30,'IF-MIB parses multiple full object definitions');
 check((bool)array_filter($preview['records'],fn($r)=>$r['description']&&$r['syntax']&&$r['access']),'Syntax, access and descriptions retained');
@@ -110,7 +110,7 @@ try{
  $resolved=icct_mib_preview($upload,$type);
  check(in_array('QA-REPO-BASE-MIB',$resolved['dependencies'],true)&&count($resolved['records'])===1&&$resolved['records'][0]['base_oid']==='1.3.6.1.4.1.999998.1','Saved database import resolves OIDs without reuploading dependency');
  foreach(['IF-MIB','IP-MIB','BRIDGE-MIB','CISCO-ENTITY-SENSOR-MIB'] as $module){
-  $args=[read_config_option('path_snmptranslate')?:'snmptranslate','-M',__DIR__.'/../assets/mibs','-m',$module,'-Tz'];
+  $args=[read_config_option('path_snmptranslate')?:'snmptranslate','-M',__DIR__ . '/../assets/mibs','-m',$module,'-Tz'];
   check(icct_mib_command($args)!=='',$module.' and all its imports resolve using only the plugin folder');
  }
 }finally{foreach(glob($fixtureDir.'/*')?:[] as $file)unlink($file);rmdir($fixtureDir);}

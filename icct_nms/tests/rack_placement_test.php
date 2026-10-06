@@ -1,6 +1,6 @@
 <?php
-require __DIR__.'/../includes/services/topology_config.php';
-require __DIR__.'/../includes/rack_view_service.php';
+require __DIR__ . '/../dashboard/topology/services/backend/topology_config.php';
+require __DIR__ . '/../dashboard/rack-view/services/rack_view_service.php';
 $placements=[];$meta=[];$denied=false;$overlap=false;$transactions=[];
 function icct_backend_current_user_id(){return 1;}
 function icct_backend_require_management($realm){if($realm!==3)throw new RuntimeException('Wrong realm');}

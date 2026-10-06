@@ -26,7 +26,7 @@ function plugin_icct_nms_upgrade()
 }
 function plugin_icct_nms_check_config()
 {
-    require_once __DIR__ . '/includes/schema.php';
+    require_once __DIR__ . '/shared/services/schema.php';
     icct_nms_schema_install();
     icct_nms_setup_registration();
     return true;
@@ -42,13 +42,13 @@ function icct_nms_setup_registration()
         'icct_nms',
         'config_arrays',
         'icct_nms_navigation',
-        'includes/navigation.php'
+        'shared/services/navigation.php'
     );
     api_plugin_register_hook(
         'icct_nms',
         'poller_bottom',
         'icct_nms_poller_bottom',
-        'includes/polling.php'
+        'shared/services/polling.php'
     );
     api_plugin_register_realm(
         'icct_nms',

@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/rack_preset_service.php';
+require __DIR__ . '/../presets/services/rack_preset_service.php';
 $profileKey='0123456789abcdef';$calls=[];$capacity=24;
 function icct_backend_require_management($realm) { if ($realm!==3) throw new RuntimeException('Wrong management realm'); }
 function db_fetch_cell($query) { return 'fixture'; }

@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/fcaps_service.php';
+require __DIR__ . '/../fcaps/services/fcaps_service.php';
 function icct_nms_id($value){if(!is_scalar($value)||!ctype_digit((string)$value))throw new InvalidArgumentException('Invalid ID');return (int)$value;}
 function checkFault($value,$message){if(!$value)throw new Exception($message);}
 function rejectFault($rule,$catalogue,$associated){try{icct_nms_fault_validate([$rule],$catalogue,$associated);}catch(InvalidArgumentException $e){return;}throw new Exception('Invalid threshold accepted');}

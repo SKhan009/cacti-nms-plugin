@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/map_service.php';
+require __DIR__ . '/../dashboard/map/services/map_service.php';
 $site=['id'=>7,'name'=>'Test siteSummary','coordinates'=>[12.9716,77.5946],'devices'=>[
  ['status'=>'Up','fault_counts'=>['Critical'=>2,'Warning'=>3]],
  ['status'=>'Down','fault_counts'=>['Critical'=>1,'Major'=>4]],

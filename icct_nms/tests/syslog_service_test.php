@@ -5,7 +5,7 @@ function db_fetch_assoc_prepared($sql,$args){return [array_replace(['host_id'=>2
 function db_fetch_cell_prepared($sql,$args){return $GLOBALS['presetJson'] ?? null;}
 function db_fetch_row_prepared($sql,$args){return $GLOBALS['existing'] ? ['id'=>1] : [];}
 function db_execute_prepared($sql,$args){$GLOBALS['writes'][]=[$sql,$args];return !$GLOBALS['failWrite'];}
-require __DIR__.'/../includes/services/syslog.php';
+require __DIR__ . '/../protocols/syslog/services/backend/syslog.php';
 function check($condition,$message){if(!$condition)throw new RuntimeException($message);}
 $r=['source_ip'=>'192.0.2.10','hostname'=>'test','input_name'=>'icct-udp','severity_code'=>3,'facility_code'=>1,'message'=>'test message','timestamp'=>'2026-10-05T12:30:00Z'];
 check(icct_backend_syslog_ingest($r,$reason)==='inserted','Valid mapped event');

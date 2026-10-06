@@ -1,8 +1,8 @@
 <?php
 /** Authenticated Syslog event console. */
 require __DIR__ . '/../../include/auth.php';
-require_once __DIR__ . '/includes/bootstrap.php';
-require_once __DIR__ . '/includes/inventory.php';
+require_once __DIR__ . '/shared/services/bootstrap.php';
+require_once __DIR__ . '/inventory/services/inventory.php';
 
 function icct_nms_is_windows_runtime()
 {
@@ -143,7 +143,7 @@ try {
     $notice = $_SESSION['icct_nms_notice'] ?? '';
     unset($_SESSION['icct_nms_notice']);
     $title = 'Syslog Console';
-    require __DIR__ . '/templates/header.php';
+    require __DIR__ . '/shared/templates/header.php';
 } catch (Throwable $e) {
     icct_nms_failure($e);
 }
@@ -365,4 +365,4 @@ function icct_nms_syslog_query(array $replace = [])
         <a class="page-link <?= $page >= $pages ? 'disabled' : '' ?>" href="<?= $page >= $pages ? '#' : 'syslog.php?' . icct_nms_h(icct_nms_syslog_query(['page' => $page + 1])) ?>">›</a>
     </div>
 </div>
-<?php require __DIR__ . '/templates/footer.php'; ?>
+<?php require __DIR__ . '/shared/templates/footer.php'; ?>

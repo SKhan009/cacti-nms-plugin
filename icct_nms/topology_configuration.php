@@ -1,11 +1,11 @@
 <?php
-require __DIR__.'/../../include/auth.php';
-require_once __DIR__.'/includes/bootstrap.php';
-require_once __DIR__.'/includes/inventory.php';
-require_once __DIR__.'/includes/connection_service.php';
-require_once __DIR__.'/includes/protocol_service.php';
-require_once __DIR__.'/includes/topology_configuration_service.php';
-require_once __DIR__.'/includes/network_configuration_service.php';
+require __DIR__ . '/../../include/auth.php';
+require_once __DIR__ . '/shared/services/bootstrap.php';
+require_once __DIR__ . '/inventory/services/inventory.php';
+require_once __DIR__ . '/presets/services/connection_service.php';
+require_once __DIR__ . '/protocols/shared/services/protocol_service.php';
+require_once __DIR__ . '/dashboard/topology/services/topology_configuration_service.php';
+require_once __DIR__ . '/configuration/services/network_configuration_service.php';
 $error='';$tab=$_GET['tab']??'connections';if(!in_array($tab,['connections','networks','discovered'],true))$tab='connections';
 try{
     icct_nms_backend();if($_SERVER['REQUEST_METHOD']==='GET'&&($_GET['tab']??'')==='diagnostics')icct_nms_redirect('topology_configuration.php?tab=connections');$management=is_realm_allowed(3);$automation=is_realm_allowed(23);
@@ -46,4 +46,4 @@ try{
     $edit=$links[$_GET['edit']??'']??[];if($error && ($_POST['action']??'')==='save_link')$edit=$_POST;
 }catch(Throwable $failure){icct_nms_failure($failure);}
 $title='Topology Configuration';$notice=$_SESSION['icct_nms_notice']??'';unset($_SESSION['icct_nms_notice']);$topologyConfigurationPage=true;
-require __DIR__.'/templates/header.php';require __DIR__.'/templates/topology_configuration.php';require __DIR__.'/templates/footer.php';
+require __DIR__ . '/shared/templates/header.php';require __DIR__ . '/dashboard/topology/templates/topology_configuration.php';require __DIR__ . '/shared/templates/footer.php';

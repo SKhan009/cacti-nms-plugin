@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/topology_mtr_service.php';
+require __DIR__ . '/../dashboard/topology/services/topology_mtr_service.php';
 function check($ok){if(!$ok)throw new RuntimeException('MTR check failed');}
 $report="HOST: collector Loss% Snt Last Avg Best Wrst StDev\n 1.|-- 127.0.0.1 0.0% 4 0.0 0.2 0.0 0.3 0.1\n 2.|-- ??? 100.0% 4 0.0 0.0 0.0 0.0 0.0\n 3.|-- 2001:db8::1 25.0% 4 1.0 2.0 1.0 3.0 0.5\n";
 $hops=icct_nms_mtr_hops($report);check(count($hops)===3);check($hops[0]['last_ms']===0.0);check($hops[1]['avg_ms']===null);check($hops[2]['address']==='2001:db8::1'&&$hops[2]['loss_percent']===25.0);

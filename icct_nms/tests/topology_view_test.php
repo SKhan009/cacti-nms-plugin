@@ -1,6 +1,6 @@
 <?php
-require __DIR__.'/../includes/topology_view_service.php';
-require __DIR__.'/../includes/services/device_metadata.php';
+require __DIR__ . '/../dashboard/topology/services/topology_view_service.php';
+require __DIR__ . '/../inventory/services/backend/device_metadata.php';
 $stored=[];$allowed=true;
 function icct_backend_require_management($r){if(!$GLOBALS['allowed'])throw new RuntimeException('Denied');}
 function icct_backend_require_device_access($id){if($id>5)throw new RuntimeException('Denied device');}

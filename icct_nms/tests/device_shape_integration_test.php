@@ -1,8 +1,13 @@
 <?php
 if(!in_array('--integration',$argv,true)){echo "Run with --integration on Cacti; all test writes are rolled back.\n";exit;}
 chdir(dirname(__DIR__,3));require 'include/global.php';$_SESSION['sess_user_id']=1;
-require 'plugins/icct_nms/includes/bootstrap.php';icct_nms_backend();
-foreach(['inventory','device_type_service','graph_service','map_service','rack_view_service','topology_view_service'] as $file)require_once 'plugins/icct_nms/includes/'.$file.'.php';
+require 'plugins/icct_nms/shared/services/bootstrap.php';icct_nms_backend();
+require_once 'plugins/icct_nms/inventory/services/inventory.php';
+require_once 'plugins/icct_nms/presets/services/device_type_service.php';
+require_once 'plugins/icct_nms/graphs/services/graph_service.php';
+require_once 'plugins/icct_nms/dashboard/map/services/map_service.php';
+require_once 'plugins/icct_nms/dashboard/rack-view/services/rack_view_service.php';
+require_once 'plugins/icct_nms/dashboard/topology/services/topology_view_service.php';
 $types=icct_nms_device_types();$profile=null;$id=null;$host=null;
 foreach(icct_nms_inventory() as $device)foreach($types as $key=>$type)if($type['physical_ports']!==null && (int)$type['category_id']===(int)$device['category_id'] && $type['name']===$device['device_type']){$profile=$type;$id=$key;$host=$device;break 2;}
 if(!$profile)throw new RuntimeException('Integration test needs an assigned device type with a port count.');

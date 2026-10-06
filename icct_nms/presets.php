@@ -1,18 +1,18 @@
 <?php
 require __DIR__ . '/../../include/auth.php';
-require_once __DIR__ . '/includes/bootstrap.php';
-require_once __DIR__ . '/includes/segment_service.php';
-require_once __DIR__ . '/includes/device_type_service.php';
-require_once __DIR__.'/includes/connection_service.php';
-require_once __DIR__.'/includes/site_service.php';
-require_once __DIR__.'/includes/rack_preset_service.php';
+require_once __DIR__ . '/shared/services/bootstrap.php';
+require_once __DIR__ . '/presets/services/segment_service.php';
+require_once __DIR__ . '/presets/services/device_type_service.php';
+require_once __DIR__ . '/presets/services/connection_service.php';
+require_once __DIR__ . '/presets/services/site_service.php';
+require_once __DIR__ . '/presets/services/rack_preset_service.php';
 require_once $config['base_path'].'/include/global_form.php';
-require_once __DIR__.'/includes/forms.php';
-require_once __DIR__.'/includes/inventory.php';
-require_once __DIR__.'/includes/device_service.php';
-require_once __DIR__.'/includes/protocol_service.php';
-require_once __DIR__.'/includes/serial_service.php';
-require_once __DIR__.'/includes/protocol_preset_service.php';
+require_once __DIR__ . '/shared/services/forms.php';
+require_once __DIR__ . '/inventory/services/inventory.php';
+require_once __DIR__ . '/inventory/services/device_service.php';
+require_once __DIR__ . '/protocols/shared/services/protocol_service.php';
+require_once __DIR__ . '/protocols/serial/services/serial_service.php';
+require_once __DIR__ . '/protocols/shared/services/protocol_preset_service.php';
 $presetTabs = ['rack-config'=>'Rack Config','protocols'=>'Protocols','site'=>'Site','segment'=>'Segment','device-type'=>'Device Type','network-connections'=>'Network Connections'];
 $actionTabs = ['save_rack_profile'=>'rack-config','delete_rack_profile'=>'rack-config','save_protocol_defaults'=>'protocols','save_site'=>'site','save_segment'=>'segment','delete_segment'=>'segment','save_type'=>'device-type','delete_type'=>'device-type','save_connection'=>'network-connections','delete_connection'=>'network-connections'];
 $requestedTab = $_GET['tab'] ?? 'segment';
@@ -56,7 +56,7 @@ try {
 } catch (Throwable $failure) { icct_nms_failure($failure); }
 $title = 'Presets';
 $notice = $_SESSION['icct_nms_notice'] ?? ''; unset($_SESSION['icct_nms_notice']);
-require __DIR__.'/templates/header.php';
-require __DIR__.'/templates/presets.php';
+require __DIR__ . '/shared/templates/header.php';
+require __DIR__ . '/presets/templates/presets.php';
 $presetsPage = true;
-require __DIR__.'/templates/footer.php';
+require __DIR__ . '/shared/templates/footer.php';

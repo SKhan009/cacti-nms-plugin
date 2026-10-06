@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/dashboard_service.php';
+require __DIR__ . '/../dashboard/widgets/services/dashboard_service.php';
 function verify($condition){if(!$condition)throw new RuntimeException('Dashboard assertion failed.');}
 $valid=['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms']]]];verify(icct_nms_dashboard_validate($valid)['dashboards'][0]===['name'=>'Dashboard #1','columns'=>'auto','site_id'=>0,'widgets'=>$valid['dashboards'][0]['widgets']]);
 foreach([['selected'=>0,'dashboards'=>[]],['selected'=>1,'dashboards'=>[['widgets'=>[]]]],['selected'=>0,'dashboards'=>array_fill(0,6,['widgets'=>[]])],['selected'=>0,'dashboards'=>[['widgets'=>['birds','birds']]]],['selected'=>0,'dashboards'=>[['widgets'=>['unknown']]]],['selected'=>0,'dashboards'=>[['widgets'=>[[]]]]]] as $bad){try{icct_nms_dashboard_validate($bad);throw new RuntimeException('Invalid layout accepted');}catch(InvalidArgumentException $e){}}

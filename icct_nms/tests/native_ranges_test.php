@@ -1,6 +1,6 @@
 <?php
-require __DIR__.'/../includes/device_service.php';
-require __DIR__.'/../includes/services/topology_config.php';
+require __DIR__ . '/../inventory/services/device_service.php';
+require __DIR__ . '/../dashboard/topology/services/backend/topology_config.php';
 $old=['snmp_port'=>161,'snmp_timeout'=>500,'ping_timeout'=>400,'ping_retries'=>1,'snmp_engine_id'=>'','external_id'=>'','location'=>'','ping_port'=>23];
 foreach(icct_nms_native_ranges() as $field=>[$min,$max]) {
     foreach([$min,$max] as $value) { $values=$old;$values[$field]=$value; $result=icct_nms_native_values($values,[],[]);if($result[$field]!==$value)throw new RuntimeException('Boundary rejected'); }

@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/topology_summary_service.php';
+require __DIR__ . '/../dashboard/topology/services/topology_summary_service.php';
 foreach ([
  ['Core - Switching Capacity','Gbps',['Switching Capacity (Tbps)',0.001]],
  ['Core - Forwarding Rate','Mpps',['Forwarding Rate (Bpps)',0.001]],

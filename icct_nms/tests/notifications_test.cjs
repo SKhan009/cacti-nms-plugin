@@ -17,8 +17,8 @@ class Element {
 }
 const body = new Element(), main = new Element(), dialog = new Element();
 const ids = Object.fromEntries(['message-title','message-text','message-confirm','message-cancel'].map(id => [id,new Element()]));
-const context = vm.createContext({ document: { body, createElement: tag => new Element(tag), querySelector: selector => selector === '#message-dialog' ? dialog : ids[selector.slice(1)] || (selector === 'main' ? main : body.children.find(node => '#'+node.id === selector)) }, setTimeout: () => 1, clearTimeout() {}, sessionStorage: { setItem() {} } });
-const source = fs.readFileSync('plugins/icct_nms/assets/js/inventory.js','utf8').split('if (messageDialog) {')[0];
+const context = vm.createContext({ window: {}, document: { body, createElement: tag => new Element(tag), querySelector: selector => selector === '#message-dialog' ? dialog : ids[selector.slice(1)] || (selector === 'main' ? main : body.children.find(node => '#'+node.id === selector)) }, setTimeout: () => 1, clearTimeout() {}, sessionStorage: { setItem() {} } });
+const source = fs.readFileSync('plugins/icct_nms/shared/js/inventory.js','utf8').split('if (messageDialog) {')[0];
 vm.runInContext(source, context);
 (async () => {
   await vm.runInContext("icctShowMessage({title:'Saved',text:'Device changes saved successfully.'})",context);

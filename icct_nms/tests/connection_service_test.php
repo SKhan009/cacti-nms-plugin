@@ -1,6 +1,6 @@
 <?php
-require __DIR__.'/../includes/services/categories.php';
-require __DIR__.'/../includes/connection_service.php';
+require __DIR__ . '/../presets/services/backend/categories.php';
+require __DIR__ . '/../presets/services/connection_service.php';
 $stored=null; $writes=0;
 function db_fetch_cell($sql) { return 'test'; }
 function db_fetch_cell_prepared($sql,$args) { global $stored; return str_contains($sql,'meta_value') ? $stored : 1; }

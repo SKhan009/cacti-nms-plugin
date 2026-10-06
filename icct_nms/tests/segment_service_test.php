@@ -1,7 +1,7 @@
 <?php
-require_once __DIR__.'/../includes/services/categories.php';
-require_once __DIR__.'/../includes/services/topology_config.php';
-require_once __DIR__.'/../includes/segment_service.php';
+require_once __DIR__ . '/../presets/services/backend/categories.php';
+require_once __DIR__ . '/../dashboard/topology/services/backend/topology_config.php';
+require_once __DIR__ . '/../presets/services/segment_service.php';
 function icct_backend_current_user_id() { return 7; }
 $exists = true; $duplicate = false; $references = 0; $writes = [];
 function db_fetch_cell_prepared($sql,$params) {

@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/services/diagnostics_redis.php';
+require __DIR__ . '/../inventory/diagnostics/services/backend/diagnostics_redis.php';
 $config=['base_path'=>'icct-redis-test-'.bin2hex(random_bytes(8))];
 if(icct_backend_diag_redis(['PING'])!=='PONG')throw new Exception('Local Redis unavailable');
 $key=icct_backend_diag_redis_key('test');

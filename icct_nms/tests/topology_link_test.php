@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/topology_link_service.php';
+require __DIR__ . '/../dashboard/topology/services/topology_link_service.php';
 function check($ok){if(!$ok)throw new RuntimeException('Link reading check failed');}
 function icct_backend_nd_hosts(){return [['id'=>2,'enabled'=>1,'collection_enabled'=>1,'stale_seconds'=>600]];}
 function icct_backend_nd_hash($host){return 'current';}

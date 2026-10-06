@@ -1,8 +1,8 @@
 <?php
-require __DIR__.'/../includes/services/categories.php';
-require __DIR__.'/../includes/services/configuration_validation.php';
-require __DIR__.'/../includes/services/configuration_service.php';
-require __DIR__.'/../includes/serial_service.php';
+require __DIR__ . '/../presets/services/backend/categories.php';
+require __DIR__ . '/../configuration/services/backend/configuration_validation.php';
+require __DIR__ . '/../configuration/services/backend/configuration_service.php';
+require __DIR__ . '/../protocols/serial/services/serial_service.php';
 $meta=[]; $connection=['id'=>5,'poller_id'=>1,'enabled'=>1,'transport'=>'direct','revision'=>1,'settings'=>['protocol'=>'modbus_rtu','interface'=>'rs485','baud_rate'=>9600,'data_bits'=>8,'parity'=>'even','stop_bits'=>1,'flow_control'=>'none','timeout_ms'=>3000,'retries'=>2]];
 $connection['settings_json']=json_encode($connection['settings']);
 function db_fetch_cell($sql) {return 'test';}

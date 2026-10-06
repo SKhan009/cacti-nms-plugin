@@ -1,7 +1,7 @@
 <?php
-require __DIR__.'/../includes/services/categories.php';
-require __DIR__.'/../includes/services/topology_config.php';
-require __DIR__.'/../includes/device_type_service.php';
+require __DIR__ . '/../presets/services/backend/categories.php';
+require __DIR__ . '/../dashboard/topology/services/backend/topology_config.php';
+require __DIR__ . '/../presets/services/device_type_service.php';
 $catalogue=['0123456789abcdef'=>['name'=>'Switch','category_id'=>4,'icon'=>'switch','physical_ports'=>16,'image'=>'','display_modes'=>['network'=>'icon','rack'=>'none','map'=>'icon']]]; $writes=[]; $assigned=false; $reclassifications=[]; $denied=false;
 function db_fetch_cell($sql) { return 'test'; }
 function db_fetch_assoc($sql) { return []; }
@@ -30,7 +30,7 @@ if(icct_nms_type_asset(['icon'=>'../../etc','display_modes'=>['network'=>'icon']
 if(icct_nms_type_asset(['display_modes'=>['rack'=>'none']],'rack')!=='') throw new RuntimeException('None visibility failed');
 if(icct_nms_resolve_device_type(4,'Switch')!=='Switch') throw new RuntimeException('Saved type not resolved');
 try { icct_nms_resolve_device_type(7,'Switch'); throw new RuntimeException('Cross-segment type accepted'); } catch(InvalidArgumentException $e) {}
-$folder=__DIR__.'/../assets/images/icons'; if(!is_dir($folder)) mkdir($folder);
+$folder=__DIR__ . '/../assets/images/icons'; if(!is_dir($folder)) mkdir($folder);
 $files=['test-discovery.svg','Office Switch.PNG','office-switch.jpg','office-switch.jpeg','office-switch.gif','office-switch.webp','office-switch.bmp','office-switch.ico','office-switch.avif','Upper.SVG','ignored.txt'];
 try {
     foreach($files as $filename) file_put_contents($folder.'/'.$filename,'fixture');

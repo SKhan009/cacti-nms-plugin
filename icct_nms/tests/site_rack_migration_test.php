@@ -2,7 +2,7 @@
 /** Native migration checks confined to connection-local temporary tables. */
 if(PHP_SAPI!=='cli')exit(1);
 include '/var/www/html/cacti/include/cli_check.php';
-require __DIR__.'/../includes/schema.php';
+require __DIR__ . '/../shared/services/schema.php';
 if(!db_execute('CREATE TEMPORARY TABLE qa_copy LIKE plugin_icct_nms_meta')||!db_execute('CREATE TEMPORARY TABLE plugin_icct_nms_meta LIKE qa_copy')||!db_execute('DROP TEMPORARY TABLE qa_copy'))throw new RuntimeException('Isolation failed');
 if(!db_execute("CREATE TEMPORARY TABLE plugin_icct_nms_rack_nodes(id INT UNSIGNED PRIMARY KEY,site_id INT UNSIGNED,name VARCHAR(150),node_kind VARCHAR(16),updated_by INT,updated_at DATETIME)")||!db_execute("CREATE TEMPORARY TABLE plugin_icct_nms_racks(id INT UNSIGNED PRIMARY KEY,node_id INT UNSIGNED,rack_number INT,name VARCHAR(150),unit_count INT,updated_by INT,updated_at DATETIME,UNIQUE KEY node_rack(node_id,rack_number))"))throw new RuntimeException('Isolation failed');
 db_execute("INSERT INTO plugin_icct_nms_rack_nodes(id,site_id,name,node_kind,updated_by,updated_at) VALUES(1,6,'Old A','node',1,NOW()),(2,7,'Old B','node',1,NOW())");

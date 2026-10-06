@@ -15,7 +15,7 @@ elements['port-monitor-enabled'].checked=true;
 elements['port-monitor-form'].elements={port_settings:new Element()};elements['port-monitor-form'].elements.port_settings.value=JSON.stringify({enabled:true,ports:{2:{name:'eth0',alarm:true,cnms:false,oper_severity:'Major',admin_severity:'Minor'}}});
 elements['port-observations'].textContent=JSON.stringify({ports:[{index:1,name:'lo',status:'Unknown'},{index:2,name:'eth0',status:'In use'}]});
 const document={querySelector:selector=>elements[selector.slice(1)]||null,createElement:tag=>new Element(tag),createTextNode:text=>({textContent:text}),hidden:false};
-vm.runInNewContext(fs.readFileSync(__dirname+'/../assets/js/ports.js','utf8'),{document,window:{addEventListener(){}},location:{hash:'#basic'},setInterval(){},Option:function(text,value){this.text=text;this.value=value;},console});
+vm.runInNewContext(fs.readFileSync(__dirname+'/../ports/js/ports.js','utf8'),{document,window:{addEventListener(){}},location:{hash:'#basic'},setInterval(){},Option:function(text,value){this.text=text;this.value=value;},console});
 const rows=elements['port-rows'];assert.equal(rows.children.length,2);assert.equal(rows.children[1].children.length,7);
 const severity=rows.children[1].querySelectorAll('[data-port-severity]');assert.equal(severity[0].value,'Major');assert.equal(severity[0].required,true);
 severity[0].value='Critical';severity[0].listeners.change();rows.children[1].listeners.change();assert.equal(JSON.parse(elements['port-monitor-form'].elements.port_settings.value).ports[2].oper_severity,'Critical');
@@ -27,7 +27,7 @@ console.log('PASS: automatic interface rows, saved severities, draft edits, moni
 elements['device-form'].elements.hostname.value='host';
 elements['port-monitor-form'].elements.port_settings.value=JSON.stringify({enabled:true,ports:[]});
 elements['port-monitor-enabled'].checked=true;
-vm.runInNewContext(fs.readFileSync(__dirname+'/../assets/js/ports.js','utf8'),{document,window:{addEventListener(){}},location:{hash:'#basic'},setInterval(){},Option:function(text,value){this.text=text;this.value=value;},console});
+vm.runInNewContext(fs.readFileSync(__dirname+'/../ports/js/ports.js','utf8'),{document,window:{addEventListener(){}},location:{hash:'#basic'},setInterval(){},Option:function(text,value){this.text=text;this.value=value;},console});
 const firstSeverity=rows.children[1].querySelectorAll('[data-port-severity]')[0];firstSeverity.value='Major';firstSeverity.listeners.change();rows.children[1].listeners.change();
 const firstSave=JSON.parse(elements['port-monitor-form'].elements.port_settings.value);
 assert.equal(Array.isArray(firstSave.ports),false);assert.deepEqual(Object.keys(firstSave.ports),['2']);assert.equal(firstSave.ports[2].name,'eth0');

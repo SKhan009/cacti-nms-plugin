@@ -1,9 +1,9 @@
 <?php
 /** Authenticated diagnostics: immediate Ping/Trace Route and saved-profile tools. */
 require __DIR__ . "/../../include/auth.php";
-require_once __DIR__ . "/includes/bootstrap.php";
-require_once __DIR__ . "/includes/inventory.php";
-require_once __DIR__ . "/includes/forms.php";
+require_once __DIR__ . "/shared/services/bootstrap.php";
+require_once __DIR__ . "/inventory/services/inventory.php";
+require_once __DIR__ . "/shared/services/forms.php";
 if (
     $_SERVER["REQUEST_METHOD"] === "POST" &&
     ($_POST["action"] ?? "") === "instant"
@@ -102,9 +102,9 @@ try {
         }
     }
     $title = "Device Diagnostics";
-    require __DIR__ . "/templates/header.php";
-    require __DIR__ . "/templates/diagnostics.php";
-    require __DIR__ . "/templates/footer.php";
+    require __DIR__ . "/shared/templates/header.php";
+    require __DIR__ . "/inventory/diagnostics/templates/diagnostics.php";
+    require __DIR__ . "/shared/templates/footer.php";
 } catch (Throwable $exception) {
     icct_nms_failure($exception);
 }

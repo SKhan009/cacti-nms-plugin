@@ -1,6 +1,6 @@
 <?php
-require __DIR__.'/../includes/connection_service.php';
-require __DIR__.'/../includes/topology_configuration_service.php';
+require __DIR__ . '/../presets/services/connection_service.php';
+require __DIR__ . '/../dashboard/topology/services/topology_configuration_service.php';
 $stored=[];$management=true;$denied=[];
 function icct_backend_require_management($realm){if(!$GLOBALS['management'])throw new RuntimeException('Denied');}
 function icct_backend_require_device_access($id){if(in_array($id,$GLOBALS['denied'],true))throw new RuntimeException('Denied device');}

@@ -1,6 +1,6 @@
 <?php
-require __DIR__.'/../includes/port_monitoring_service.php';
-require __DIR__.'/../includes/services/ports.php';
+require __DIR__ . '/../ports/services/port_monitoring_service.php';
+require __DIR__ . '/../ports/services/backend/ports.php';
 $rule=['name'=>'eth0','alarm'=>true,'cnms'=>true,'oper_severity'=>'Major','admin_severity'=>'Minor'];
 $legacy=icct_nms_port_monitor_validate(['enabled'=>true,'ports'=>[null,null,$rule]],[2=>'eth0']);
 if(array_keys($legacy['ports'])!==[2]||$legacy['ports'][2]!==$rule)throw new Exception('Sparse browser draft not recovered');

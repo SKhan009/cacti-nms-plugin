@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/services/diagnostics_queue.php';
+require __DIR__ . '/../inventory/diagnostics/services/backend/diagnostics_queue.php';
 $allowed=true;$realm=41;$enabled='on';$device=true;
 function db_fetch_cell_prepared($sql,$args){if(str_contains($sql,'user_auth'))return $GLOBALS['enabled'];if(str_contains($sql,'plugin_realms')){if($args!==['icct_nms','diagnostics.php'])throw new Exception('Wrong plugin realm');return $GLOBALS['realm'];}throw new Exception('Unexpected query');}
 function is_realm_allowed($realm,$user){if($user!==7)throw new Exception('Session permission cache used');return $realm===3||$GLOBALS['allowed'];}

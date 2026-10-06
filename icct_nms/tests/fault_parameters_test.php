@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/fcaps_service.php';
+require __DIR__ . '/../fcaps/services/fcaps_service.php';
 $record=['numeric'=>true,'table'=>false,'base_oid'=>'1.3.6.1.4.1.99.1','oid'=>'1.3.6.1.4.1.99.1.0','label'=>'batteryCharge','symbol'=>'UPS-MIB::batteryCharge','units'=>'%'];
 $table=array_replace($record,['table'=>true,'base_oid'=>'1.3.6.1.4.1.99.2','oid'=>'1.3.6.1.4.1.99.2','label'=>'temperature']);
 function db_fetch_assoc($sql){return [['meta_value'=>json_encode(['id'=>'test','type_id'=>'ups','object_parts'=>1,'object_count'=>2])]];}

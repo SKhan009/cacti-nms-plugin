@@ -2,17 +2,17 @@
 /** Explicit wizard saves only; step navigation never calls this endpoint. */
 require __DIR__ . '/../../include/auth.php';
 require_once $config['base_path'] . '/include/global_form.php';
-require_once __DIR__.'/includes/configuration_history.php';
-require_once __DIR__ . '/includes/bootstrap.php';
-require_once __DIR__ . '/includes/inventory.php';
-require_once __DIR__ . '/includes/forms.php';
-require_once __DIR__ . '/includes/device_service.php';
-require_once __DIR__ . '/includes/protocol_service.php';
-require_once __DIR__.'/includes/protocol_preset_service.php';
-require_once __DIR__ . '/includes/serial_service.php';
-require_once __DIR__ . '/includes/graph_service.php';
-require_once __DIR__ . '/includes/data_query_service.php';
-require_once __DIR__.'/includes/fcaps_service.php';
+require_once __DIR__ . '/configuration/services/configuration_history.php';
+require_once __DIR__ . '/shared/services/bootstrap.php';
+require_once __DIR__ . '/inventory/services/inventory.php';
+require_once __DIR__ . '/shared/services/forms.php';
+require_once __DIR__ . '/inventory/services/device_service.php';
+require_once __DIR__ . '/protocols/shared/services/protocol_service.php';
+require_once __DIR__ . '/protocols/shared/services/protocol_preset_service.php';
+require_once __DIR__ . '/protocols/serial/services/serial_service.php';
+require_once __DIR__ . '/graphs/services/graph_service.php';
+require_once __DIR__ . '/graphs/services/data_query_service.php';
+require_once __DIR__ . '/fcaps/services/fcaps_service.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 try {

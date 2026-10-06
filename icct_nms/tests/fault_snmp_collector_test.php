@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/fcaps_service.php';
+require __DIR__ . '/../fcaps/services/fcaps_service.php';
 $fixture=sys_get_temp_dir().'/icct-snmp-fault-'.getmypid();mkdir($fixture.'/lib',0700,true);foreach(['rrd','snmp'] as $file)file_put_contents($fixture.'/lib/'.$file.'.php','<?php');$config=['base_path'=>$fixture];define('SNMP_STRING_OUTPUT_ASCII',1);
 $host=['id'=>5,'hostname'=>'192.0.2.15','snmp_version'=>2,'snmp_community'=>'private-fixture','snmp_username'=>'','snmp_password'=>'','snmp_auth_protocol'=>'','snmp_priv_passphrase'=>'','snmp_priv_protocol'=>'','snmp_context'=>'','snmp_port'=>161,'snmp_timeout'=>1000,'snmp_engine_id'=>''];
 $base=['source'=>'snmp','parameter'=>'Battery temperature','oid'=>'1.3.6.1.4.1.999.1.0','scale'=>0.1,'units'=>'°C','minimum'=>null,'maximum'=>40,'condition'=>'above','severity'=>'Warning','enabled'=>true];$rules=[$base,array_replace($base,['maximum'=>50,'severity'=>'Critical'])];$writes=[];$reads=0;$response='INTEGER: 450';$enabled=true;

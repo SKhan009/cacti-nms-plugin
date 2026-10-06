@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/fcaps_service.php';
+require __DIR__ . '/../fcaps/services/fcaps_service.php';
 $fixture=sys_get_temp_dir().'/icct-fault-test-'.getmypid();mkdir($fixture.'/lib',0700,true);file_put_contents($fixture.'/lib/rrd.php','<?php');file_put_contents($fixture.'/lib/snmp.php','<?php');$config=['base_path'=>$fixture];$now=time();$writes=[];
 function icct_backend_inventory_collector_id(){return 1;}
 function read_config_option($key){return 300;}

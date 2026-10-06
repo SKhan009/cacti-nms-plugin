@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/services/ports.php';
+require __DIR__ . '/../ports/services/backend/ports.php';
 $snapshot=[]; $enabled=true;
 function db_fetch_cell_prepared($sql,$args) { global $snapshot; return json_encode($snapshot); }
 function read_config_option($key) { return 300; }

@@ -1,10 +1,10 @@
 <?php
-require __DIR__.'/../includes/services/categories.php';
-require __DIR__.'/../includes/services/configuration_validation.php';
-require __DIR__.'/../includes/services/ssh_linux.php';
-require __DIR__.'/../includes/serial_service.php';
-require __DIR__.'/../includes/protocol_preset_service.php';
-require __DIR__.'/../includes/services/syslog.php';
+require __DIR__ . '/../presets/services/backend/categories.php';
+require __DIR__ . '/../configuration/services/backend/configuration_validation.php';
+require __DIR__ . '/../protocols/ssh/services/backend/ssh_linux.php';
+require __DIR__ . '/../protocols/serial/services/serial_service.php';
+require __DIR__ . '/../protocols/shared/services/protocol_preset_service.php';
+require __DIR__ . '/../protocols/syslog/services/backend/syslog.php';
 $stored=null; $writes=0;
 function db_fetch_cell_prepared($sql,$args) { global $stored; return str_contains($sql,'meta_value') ? $stored : 1; }
 function db_execute_prepared($sql,$args) { global $stored,$writes; if(!str_contains($sql,'plugin_icct_nms_meta')) throw new RuntimeException('Defaults must not write a device or assignment.'); $stored=$args[1];$writes++; return true; }

@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/configuration_history.php';
+require __DIR__ . '/../configuration/services/configuration_history.php';
 function verify($ok,$message){if(!$ok)throw new RuntimeException($message);}
 $out=[];icct_nms_configuration_pick(['port'=>22,'password'=>'secret','private_key'=>'key'],['port'],'ssh',$out);
 verify($out===['ssh.port'=>'22'],'Only explicit fields may enter backups');

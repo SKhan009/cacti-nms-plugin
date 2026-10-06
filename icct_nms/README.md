@@ -15,13 +15,15 @@ Lifecycle setup creates the 27 owned tables from `database/schema.sql`. Normal r
 
 - `setup.php`, `INFO`: native lifecycle, access realm and menu/collector hooks.
 - `inventory.php`, `device.php`, `protocol.php`, `diagnostics.php`, `export.php`: authenticated controllers.
-- `includes/bootstrap.php`, `backend.php`, `schema.php`: owned service loader and schema boundary.
-- `includes/services/`: relevant validation, device, identity, rack, discovery, diagnostic and serial services reused from NMS source, with separate function namespaces, tables and locks.
-- `includes/device_service.php`, `protocol_service.php`, `inventory.php`, `forms.php`: controller-facing save, read and form helpers.
-- `includes/polling.php`, `diagnostic_listener.php`, `diagnostic_worker.php`, `collector/serial_transport.py`: ICCT collection using Cacti's assigned collector.
-- `templates/`: Inventory, Basic Information, Protocol Config and Diagnostics markup.
-- `ssh/`: independent encrypted broker source and pinned offline dependencies; service setup is administrator-managed.
-- `assets/css/inventory.css`, `assets/js/inventory.js`: separate responsive presentation and UI behavior.
+- `inventory/`: device and wizard services, templates, and JavaScript.
+- `protocols/{snmp,ssh,lldp,cdp,ping,serial,syslog}/`: protocol-specific implementation and runtime files.
+- `protocols/shared/`: common protocol configuration and discovery decoding.
+- `dashboard/{map,topology,rack-view,widgets}/`: related services, templates, CSS, and JavaScript.
+- `graphs/`, `ports/`, `fcaps/`, `presets/`, `configuration/`: feature services, templates, and scripts.
+- `shared/{services,templates,css,js}/`: Cacti integration, page shell, and cross-feature presentation.
+- `assets/`: fonts, images, map data, MIB assets, and shared third-party browser libraries.
+- Root PHP entry points remain stable for Cacti hooks, existing links, and form endpoints.
+- `tests/`: regression tests; `database/`: plugin schema.
 
 Source uses four-space indentation, LF endings and a final newline. Controllers handle requests, services validate and persist, and templates render. Comments explain credential preservation, device permissions, preset isolation and collector boundaries. Dependencies on Cacti core APIs are explicit.
 
@@ -60,8 +62,8 @@ Core host configuration and graph/data ownership were hashed before and after re
 From the repository root:
 
 ```sh
-node --check icct_nms/assets/js/inventory.js
-find icct_nms -name '*.php' -exec php -l {} \;
+node --check plugins/icct_nms/shared/js/inventory.js
+find plugins/icct_nms -name '*.php' -exec php -l {} \;
 ```
 
 The development verification suite is maintained locally and is not included in this plugin-only repository.
@@ -102,7 +104,7 @@ Graph origin badges use the stable graph-template hashes in Cacti’s `install/t
 
 ## Presets
 
-The shared navigation menu and Cacti console include Presets. `presets.php` starts on Segment with the Site, Segment, Device Type, Network Connections and Protocols tabs; Segment, Device Type and Network Connections are implemented. Segment cards read the existing `plugin_icct_nms_categories` records used in device classification. Management users can add or rename segments in an inline editor. Duplicate names and invalid text produce inline feedback with the draft retained; successful writes show the shared success toast. Deletion requires confirmation and is blocked while a device classification device type preset or imported SNMP recording references the segment. All writes enforce the native management realm and CSRF token. Existing classifications are retained; this screen does not seed or replace saved segments.
+The shared navigation menu and Cacti console include Presets. `presets.php` starts on Segment with the Site, Segment, Device Type, Network Connections and Protocols tabs; Segment, Device Type and Network Connections are implemented. Segment cards read the existing `plugin_icct_nms_categories` records used in device classification. Management users can add or rename segments in an inline editor. Duplicate names and invalid text produce inline feedback with the draft retained; successful writes show the shared success toast. Deletion requires confirmation and is blocked while a device classification device type preset or imported SNMP recording references the segment. All writes enforce the native management realm and CSRF token. Existing classifications are retained; this screen does not seed or replace saved segments. Static HTML is available at `html-css/icct_nms/presets.html`.
 
 Protocol help icons use concise, keyboard-accessible tooltips. Numeric guidance reads the form’s minimum/maximum attributes and units, with “maximum not configured” when the save validation only sets a lower bound. Discovery controls match the server ranges: collection 300–86400 seconds (a multiple of the poller interval), stale 600–604800 seconds (at least twice collection), refresh 10–300 seconds. SSH, serial/Modbus, SNMP security and diagnostic parameters include range or selection guidance.
 
@@ -110,9 +112,9 @@ The Device Type tab (`presets.php?tab=device-type`) lists the saved name/segment
 
 The bundled icons and additional icon files live in `assets/images/icons/`. Device image uploads live in `assets/images/device-types/uploads/`, are validated as PNG/JPEG/WebP (500 KB, 16 megapixels maximum), decoded with PHP GD and saved as PNG thumbnails up to 512 pixels. Network, rack and map visibility each support None, Icon or Image; Image requires a saved image. `icct_nms_type_asset()` resolves the selected local asset for a view. This catalogue is owned by ICCT NMS and does not modify the separate NMS plugin's settings. Uploaded files are runtime data excluded from Git; back up the upload folder together with the database.
 
-On installation, make only `assets/images/device-types/uploads/` writable by the web-server account. On RHEL use `httpd_sys_rw_content_t` for that directory and retain the included `.htaccess`. Keep the rest of the plugin read-only. PHP GD is required for uploads.
+On installation, make only `assets/images/device-types/uploads/` writable by the web-server account. On RHEL use `httpd_sys_rw_content_t` for that directory and retain the included `.htaccess`. Keep the rest of the plugin read-only. PHP GD is required for uploads. The static Device Type preview is `html-css/icct_nms/device-types.html`; it demonstrates the interface without writing to Cacti.
 
-The Network Connections tab (`presets.php?tab=network-connections`) shows five cards per desktop row with the name, colored line preview and edit/delete actions. Its six initial profiles match the supplied reference. Add/edit supports the NMS topology styles (solid, dashed, dotted, dash-dot, fine-dotted, short-dashed) and endpoint symbols (none, circle, square, arrow), with a live preview. ICCT saves its own catalogue in `plugin_icct_nms_meta` under `connection_profiles`; it does not overwrite the separate NMS plugin’s connection table. Empty saved catalogues remain empty. Native realm/CSRF checks protect writes; duplicates and invalid colors/styles stay inline with the draft retained.
+The Network Connections tab (`presets.php?tab=network-connections`) shows five cards per desktop row with the name, colored line preview and edit/delete actions. Its six initial profiles match the supplied reference. Add/edit supports the NMS topology styles (solid, dashed, dotted, dash-dot, fine-dotted, short-dashed) and endpoint symbols (none, circle, square, arrow), with a live preview. ICCT saves its own catalogue in `plugin_icct_nms_meta` under `connection_profiles`; it does not overwrite the separate NMS plugin’s connection table. Empty saved catalogues remain empty. Native realm/CSRF checks protect writes; duplicates and invalid colors/styles stay inline with the draft retained. The static preview is `html-css/icct_nms/network-connections.html`.
 
 Native SNMP/availability fields use one shared range definition for server validation and HTML/tooltip limits: SNMP port 1–65535; SNMP timeout 1–16777215 ms (Cacti unsigned MEDIUMINT capacity); ping timeout 1–2147483647 ms; ping retries 0–2147483647. These are accepted limits, not recommended timeout settings. Saved values remain unchanged.
 
@@ -228,6 +230,6 @@ Fault SNMP parameter selection uses this device’s resolved Cacti SNMP inputs a
 
 In Device → Protocol Config, add Syslog, select Severity and Facility values, enter optional Trigger Keywords / Match Strings, then Save. These three parameters also support Protocol presets and device overrides. The sender address comes from the device hostname/IP; UDP and TCP are accepted by default. Keywords match any configured phrase, case-insensitively; an empty list accepts all messages. The combined keyword length is limited to 148 characters. Syslog Console is available in the navigation menu. Events respect Cacti device permissions and support search, severity/time filters, duplicate counts, and acknowledgements.
 
-On RHEL, run `sudo bash plugins/icct_nms/syslog/rhel/install_syslog_rhel.sh /var/www/html/cacti` after the plugin schema upgrade. Set `OPEN_FIREWALL=1` only when this collector should accept UDP/TCP 514 through firewalld. The installer validates rsyslog and retains its previous configuration on failure. The worker imports `/var/log/icct-nms/remote.ndjson`; a daily timer retains events for 90 days. Devices must forward messages to the collector. Unmapped senders, disabled devices/protocols and messages outside the selected severity, facility, keyword or transport policy are discarded.
+On RHEL, run `sudo bash plugins/icct_nms/protocols/syslog/rhel/install_syslog_rhel.sh /var/www/html/cacti` after the plugin schema upgrade. Set `OPEN_FIREWALL=1` only when this collector should accept UDP/TCP 514 through firewalld. The installer validates rsyslog and retains its previous configuration on failure. The worker imports `/var/log/icct-nms/remote.ndjson`; a daily timer retains events for 90 days. Devices must forward messages to the collector. Unmapped senders, disabled devices/protocols and messages outside the selected severity, facility, keyword or transport policy are discarded.
 
 The base schema contract remains 1.2.0; this release adds three plugin-owned Syslog tables. Network reception uses rsyslog; Cacti remains authoritative for device identity and access.

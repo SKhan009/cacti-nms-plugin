@@ -2,11 +2,11 @@
 /** Read-only template associations for an unsaved device wizard. */
 require __DIR__ . '/../../include/auth.php';
 require_once $config['base_path'] . '/include/global_form.php';
-require_once __DIR__ . '/includes/bootstrap.php';
-require_once __DIR__ . '/includes/forms.php';
-require_once __DIR__ . '/includes/inventory.php';
-require_once __DIR__ . '/includes/graph_service.php';
-require_once __DIR__ . '/includes/data_query_service.php';
+require_once __DIR__ . '/shared/services/bootstrap.php';
+require_once __DIR__ . '/shared/services/forms.php';
+require_once __DIR__ . '/inventory/services/inventory.php';
+require_once __DIR__ . '/graphs/services/graph_service.php';
+require_once __DIR__ . '/graphs/services/data_query_service.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 try {
@@ -28,8 +28,8 @@ try {
     $availableDataQueries = [];
     $dataQueryMethods = icct_nms_data_query_methods($host);
     $defaultDataQueryMethod = 0;
-    ob_start();require __DIR__.'/templates/graphs.php';$graphs = ob_get_clean();
-    ob_start();require __DIR__.'/templates/data_queries.php';$queries = ob_get_clean();
+    ob_start();require __DIR__ . '/graphs/templates/graphs.php';$graphs = ob_get_clean();
+    ob_start();require __DIR__ . '/graphs/templates/data_queries.php';$queries = ob_get_clean();
     echo json_encode(['ok'=>true,'graphs'=>$graphs,'queries'=>$queries], JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
 } catch (Throwable $error) {
     http_response_code(400);

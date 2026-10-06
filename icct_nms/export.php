@@ -4,8 +4,8 @@
  */
 
 require __DIR__ . '/../../include/auth.php';
-require_once __DIR__ . '/includes/bootstrap.php';
-require_once __DIR__ . '/includes/inventory.php';
+require_once __DIR__ . '/shared/services/bootstrap.php';
+require_once __DIR__ . '/inventory/services/inventory.php';
 try {
     icct_nms_backend();
     $devices = icct_nms_inventory();

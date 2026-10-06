@@ -1,6 +1,6 @@
 <?php
-require __DIR__.'/../includes/protocol_service.php';
-require __DIR__.'/../includes/services/discovery.php';
+require __DIR__ . '/../protocols/shared/services/protocol_service.php';
+require __DIR__ . '/../protocols/shared/services/backend/discovery.php';
 $assignment=[];$preset=[];
 $enabledProtocols=["snmp"=>true,"lldp"=>true,"cdp"=>true];
 function icct_backend_protocol_enabled($id,$protocol){return $GLOBALS["enabledProtocols"][$protocol]??false;}
@@ -40,7 +40,7 @@ icct_nms_save_discovery(2,$timings+['discovery_policy'=>1,'discovery_methods_pre
 if(icct_backend_nd_host_methods($assignment)!==['fdb'])throw new RuntimeException('Cleared IP neighbour selection remains active');
 echo "Device protocol selections, shared observations and disabled collection persistence passed.\n";
 
-require __DIR__.'/../includes/topology_configuration_service.php';
+require __DIR__ . '/../dashboard/topology/services/topology_configuration_service.php';
 function db_fetch_assoc_prepared($sql,$args){return $GLOBALS['summarySnapshots']??[];}
 $assignment+=['host_id'=>2,'disabled'=>''];
 $assignment['enabled']=1;$assignment['collection_enabled']=1;$assignment['stale_seconds']=900;

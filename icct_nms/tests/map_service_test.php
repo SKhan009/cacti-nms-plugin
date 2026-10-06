@@ -1,6 +1,6 @@
 <?php
-require __DIR__.'/../includes/inventory.php';
-require __DIR__.'/../includes/map_service.php';
+require __DIR__ . '/../inventory/services/inventory.php';
+require __DIR__ . '/../dashboard/map/services/map_service.php';
 function icct_backend_require_device_access($id){if($id===9)throw new RuntimeException('Your Cacti account cannot access this device.');}
 function icct_backend_device_status_name($row){return 'Up';}
 function icct_backend_ports_view($host){return $GLOBALS['mapTestPorts'] ?? ['fresh'=>false,'collected'=>0,'ports'=>[]];}
@@ -60,7 +60,7 @@ function icct_backend_diag_selected_labels($id){return $id===7?["ping"=>"Ping IC
 if($data["sites"][0]["devices"][0]["diagnostics"]!==["ping"=>"Ping ICMP"])throw new Exception("Map diagnostic selection mismatch");
 echo "PASS: map diagnostics use saved per-device selections\n";
 
-require __DIR__.'/../includes/dashboard_service.php';
+require __DIR__ . '/../dashboard/widgets/services/dashboard_service.php';
 // Port and metric alarms share the dashboard/map severity feed; clear/unknown stay out.
 $GLOBALS['mapTestPorts']=['fresh'=>true,'collected'=>100,'ports'=>[['index'=>2,'name'=>'eth0','admin'=>1,'oper'=>2,'status'=>'Available (link down)']]];
 $GLOBALS['mapTestFaults']=[['rule'=>'port:2','state'=>'Major','graph'=>'eth0 link status','value'=>2,'sample_time'=>100],['rule'=>0,'state'=>'Critical','graph'=>'CPU','value'=>95,'sample_time'=>100]];

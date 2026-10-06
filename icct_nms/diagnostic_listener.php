@@ -5,7 +5,7 @@ if (PHP_SAPI !== "cli") {
     exit();
 }
 require __DIR__ . "/../../include/cli_check.php";
-require_once __DIR__ . "/includes/bootstrap.php";
+require_once __DIR__ . "/shared/services/bootstrap.php";
 try {
     icct_nms_backend();
     icct_backend_diag_worker_database();

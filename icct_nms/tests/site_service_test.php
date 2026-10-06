@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/site_service.php';
+require __DIR__ . '/../presets/services/site_service.php';
 $valid=['name'=>'Demo site','latitude'=>'19.0760000000','longitude'=>'72.8777000000','zoom'=>'7','timezone'=>'Asia/Kolkata'];
 $save=icct_nms_site_values($valid);
 if ($save['latitude']!==$valid['latitude'] || $save['timezone']!==$valid['timezone']) throw new Exception('Site values must be retained.');

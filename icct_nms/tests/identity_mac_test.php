@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/services/identity.php';
+require __DIR__ . '/../inventory/services/backend/identity.php';
 function expect_mac($actual,$expected){if($actual!==$expected)throw new RuntimeException('Unexpected MAC selection: '.$actual);}
 $routes="Iface Destination Gateway Flags RefCnt Use Metric Mask\nlo 00000000 00000000 0001 0 0 0 00000000\neth0 00000000 0100000A 0003 0 0 100 00000000\neth1 00000000 0100000A 0003 0 0 200 00000000\n";
 $addresses=['lo'=>'00:00:00:00:00:00','eth0'=>'08:00:27:91:b2:51','eth1'=>'02:00:00:00:00:02'];

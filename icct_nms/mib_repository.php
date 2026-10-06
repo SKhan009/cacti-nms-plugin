@@ -1,10 +1,10 @@
 <?php
-require __DIR__.'/../../include/auth.php';
-require_once __DIR__.'/includes/bootstrap.php';
-require_once __DIR__.'/includes/inventory.php';
-require_once __DIR__.'/includes/device_type_service.php';
-require_once __DIR__.'/includes/mib_repository_service.php';
-require_once __DIR__.'/includes/forms.php';
+require __DIR__ . '/../../include/auth.php';
+require_once __DIR__ . '/shared/services/bootstrap.php';
+require_once __DIR__ . '/inventory/services/inventory.php';
+require_once __DIR__ . '/presets/services/device_type_service.php';
+require_once __DIR__ . '/protocols/snmp/mibs/services/mib_repository_service.php';
+require_once __DIR__ . '/shared/services/forms.php';
 $error='';$notice='';$mode='list';$preview=null;$plan=null;$reviewValues=[];$deletedId='';
 // Initialization failures must stop before the shared header calls backend services.
 try { icct_nms_backend(); } catch (Throwable $e) { icct_nms_failure($e); }
@@ -55,4 +55,4 @@ try{
     if(isset($_GET['deleted'])&&is_string($_GET['deleted'])&&preg_match('/^[a-f0-9]{32}$/D',$_GET['deleted'])&&$management)$deletedId=$_GET['deleted'];
 }catch(Throwable $e){$error=$e->getMessage();}
 $title='MIB Repository';$mibRepositoryPage=true;
-require __DIR__.'/templates/header.php';require __DIR__.'/templates/mib_repository.php';require __DIR__.'/templates/footer.php';
+require __DIR__ . '/shared/templates/header.php';require __DIR__ . '/protocols/snmp/mibs/templates/mib_repository.php';require __DIR__ . '/shared/templates/footer.php';

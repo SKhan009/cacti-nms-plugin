@@ -6,17 +6,17 @@
 if ($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='fault_parameter_read')$auth_json=true;
 require __DIR__ . "/../../include/auth.php";
 require_once $config["base_path"] . "/include/global_form.php";
-require_once __DIR__.'/includes/configuration_history.php';
-require_once __DIR__ . "/includes/bootstrap.php";
-require_once __DIR__ . "/includes/inventory.php";
-require_once __DIR__ . "/includes/forms.php";
-require_once __DIR__ . "/includes/device_service.php";
-require_once __DIR__ . "/includes/graph_service.php";
-require_once __DIR__ . "/includes/data_query_service.php";
-require_once __DIR__."/includes/fcaps_service.php";
-require_once __DIR__ . "/includes/protocol_service.php";
-require_once __DIR__ . "/includes/serial_service.php";
-require_once __DIR__ . "/includes/protocol_preset_service.php";
+require_once __DIR__ . '/configuration/services/configuration_history.php';
+require_once __DIR__ . "/shared/services/bootstrap.php";
+require_once __DIR__ . "/inventory/services/inventory.php";
+require_once __DIR__ . "/shared/services/forms.php";
+require_once __DIR__ . "/inventory/services/device_service.php";
+require_once __DIR__ . "/graphs/services/graph_service.php";
+require_once __DIR__ . "/graphs/services/data_query_service.php";
+require_once __DIR__ . "/fcaps/services/fcaps_service.php";
+require_once __DIR__ . "/protocols/shared/services/protocol_service.php";
+require_once __DIR__ . "/protocols/serial/services/serial_service.php";
+require_once __DIR__ . "/protocols/shared/services/protocol_preset_service.php";
 // Read-only preview uses the saved device protocol credentials; never exposes them to JS.
 if ($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='fault_parameter_read') {
     header('Content-Type: application/json; charset=utf-8');
@@ -150,31 +150,31 @@ try {
             : ($cloneId
                 ? "Clone Device"
                 : "Add Device"));
-    require __DIR__ . "/templates/header.php";
+    require __DIR__ . "/shared/templates/header.php";
     $treeView = $readonly && $id && isset($_GET['tree']);
     if ($treeView) {
         $devices = icct_nms_inventory();
         $management = is_realm_allowed(3);
-        require __DIR__.'/templates/inventory_tree.php';
+        require __DIR__ . '/inventory/templates/inventory_tree.php';
     }
     $wizard = !$readonly;
     if ($wizard) {
         $host = $old;
         echo '<div id="device-wizard" data-device-id="' . (int)$id . '" data-initial-step="' . icct_nms_h($_GET['step'] ?? 'basic') . '">';
     }
-    require __DIR__ . ($readonly ? "/templates/device_view.php" : "/templates/device.php");
+    require __DIR__ . ($readonly ? "/inventory/templates/device_view.php" : "/inventory/templates/device.php");
     if ($treeView) echo '</div></div>';
     if ($wizard) {
-        require __DIR__ . "/includes/wizard_view.php";
+        require __DIR__ . "/inventory/services/wizard_view.php";
         echo '<script type="application/json" id="protocol-default-values">'.json_encode(icct_nms_protocol_presets(),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR).'</script>';
         echo '<script type="application/json" id="protocol-device-overrides">'.json_encode(icct_nms_protocol_device_overrides($id),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR).'</script>';
         echo '<div id="wizard-panels" hidden>';
-        require __DIR__ . "/templates/protocol.php";
-        require __DIR__.'/templates/ports.php';
-        require __DIR__.'/templates/fcaps.php';
+        require __DIR__ . "/protocols/shared/templates/protocol.php";
+        require __DIR__ . '/ports/templates/ports.php';
+        require __DIR__ . '/fcaps/templates/fcaps.php';
         echo '</div><footer class="form-footer wizard-footer"><button type="button" class="button" id="wizard-previous">Previous ←</button><button type="button" class="button" id="wizard-next">Next →</button></footer></div>';
     }
-    require __DIR__ . "/templates/footer.php";
+    require __DIR__ . "/shared/templates/footer.php";
 } catch (Throwable $e) {
     icct_nms_failure($e);
 }

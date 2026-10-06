@@ -8,7 +8,7 @@ const oldQuery=nodes['#fault-form'].querySelector.bind(nodes['#fault-form']);
 nodes['#fault-form'].querySelector=selector=>selector==='input[name="__csrf_magic"]'?token:oldQuery(selector);
 nodes['#fault-form'].elements.__csrf_magic={value:'',length:2};
 let reads=0;const sourceRadios=[new E('input'),new E('input')];sourceRadios[0].value='rrd';sourceRadios[1].value='snmp';
-const code=fs.readFileSync('plugins/icct_nms/assets/js/fcaps.js','utf8');vm.runInNewContext(code.slice(0,code.indexOf('  const basic='))+'})();',{document:{querySelector:s=>nodes[s]||null,querySelectorAll:selector=>selector==='.fault-source-options input'?sourceRadios:[{value:1}],createElement:tag=>new E(tag)},MutationObserver:class{observe(){}},Set,JSON,Number,String,Object,FormData,Event,queueMicrotask,fetch:async(url,opts)=>{reads++;assert.equal(opts.body.get('__csrf_magic'),'valid-first-token');return {ok:true,redirected:false,headers:{get:()=> 'application/json'},json:async()=>({value:42})};}});
+const code=fs.readFileSync('plugins/icct_nms/fcaps/js/fcaps.js','utf8');vm.runInNewContext(code.slice(0,code.indexOf('  const basic='))+'})();',{document:{querySelector:s=>nodes[s]||null,querySelectorAll:selector=>selector==='.fault-source-options input'?sourceRadios:[{value:1}],createElement:tag=>new E(tag)},MutationObserver:class{observe(){}},Set,JSON,Number,String,Object,FormData,Event,queueMicrotask,fetch:async(url,opts)=>{reads++;assert.equal(opts.body.get('__csrf_magic'),'valid-first-token');return {ok:true,redirected:false,headers:{get:()=> 'application/json'},json:async()=>({value:42})};}});
 
 setTimeout(()=>{
  const row=nodes['#fault-rule-list'].children[1];

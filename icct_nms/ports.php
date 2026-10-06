@@ -1,7 +1,7 @@
 <?php
-require __DIR__.'/../../include/auth.php';
-require_once __DIR__.'/includes/bootstrap.php';
-require_once __DIR__.'/includes/inventory.php';
+require __DIR__ . '/../../include/auth.php';
+require_once __DIR__ . '/shared/services/bootstrap.php';
+require_once __DIR__ . '/inventory/services/inventory.php';
 header('Content-Type: application/json');
 header('Cache-Control: no-store');
 try {

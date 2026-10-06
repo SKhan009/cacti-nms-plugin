@@ -1,11 +1,11 @@
 <?php
-require __DIR__.'/../../include/auth.php';
-require_once __DIR__.'/includes/bootstrap.php';
-require_once __DIR__.'/includes/inventory.php';
-require_once __DIR__.'/includes/configuration_history.php';
-require_once __DIR__.'/includes/graph_service.php';
-require_once __DIR__.'/includes/protocol_service.php';
-require_once __DIR__.'/includes/rack_view_service.php';
+require __DIR__ . '/../../include/auth.php';
+require_once __DIR__ . '/shared/services/bootstrap.php';
+require_once __DIR__ . '/inventory/services/inventory.php';
+require_once __DIR__ . '/configuration/services/configuration_history.php';
+require_once __DIR__ . '/graphs/services/graph_service.php';
+require_once __DIR__ . '/protocols/shared/services/protocol_service.php';
+require_once __DIR__ . '/dashboard/rack-view/services/rack_view_service.php';
 header('Content-Type: application/json; charset=utf-8'); header('Cache-Control: no-store');
 try {
     icct_nms_backend();

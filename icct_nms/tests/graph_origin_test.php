@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../includes/graph_origin.php';
+require_once __DIR__ . '/../graphs/services/graph_origin.php';
 function verify($condition, $message) { if (!$condition) throw new RuntimeException($message); }
 $old = icct_nms_graph_xml('<hash_000103aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa><name>Stock Graph</name><graph><lower_limit>0</lower_limit><upper_limit>100</upper_limit></graph><items><hash_100103bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb><sequence>1</sequence><task_item_id>hash_080103cccccccccccccccccccccccccccccccc</task_item_id><color_id>0000FF</color_id></hash_100103bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb></items><inputs/></hash_000103aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>');
 $baseline = icct_nms_graph_xml_fields($old);

@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/services/diagnostics_queue.php';
+require __DIR__ . '/../inventory/diagnostics/services/backend/diagnostics_queue.php';
 $config=['base_path'=>'queue-test','icct_nms_redis_socket'=>'/tmp/icct-unavailable-redis.sock'];$pending=null;$inserts=0;
 function icct_backend_require_management($realm){}
 function icct_backend_require_device_access($host){}

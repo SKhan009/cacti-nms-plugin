@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/services/diagnostics.php';
+require __DIR__ . '/../inventory/diagnostics/services/backend/diagnostics.php';
 $selection=['disabled'=>'','tools'=>'ping,traceroute_tcp,retired_method'];
 function icct_backend_require_device_access($id){if($id===9)throw new RuntimeException('Denied');}
 function db_fetch_row_prepared($sql,$args){return $GLOBALS['selection'];}

@@ -1,5 +1,5 @@
 <?php
-require __DIR__.'/../includes/protocol_preset_service.php';
+require __DIR__ . '/../protocols/shared/services/protocol_preset_service.php';
 $meta=['protocol_defaults'=>json_encode(['ssh'=>['port'=>22,'connect_timeout'=>10,'username'=>'operator','monitoring'=>'1'],'lldp'=>['interval_seconds'=>300,'stale_seconds'=>900,'refresh_seconds'=>30]])];
 function db_fetch_cell_prepared($sql,$args){return $GLOBALS['meta'][$args[0]] ?? false;}
 function icct_backend_category_execute($sql,$args){$GLOBALS['meta'][$args[0]]=$args[1];}
