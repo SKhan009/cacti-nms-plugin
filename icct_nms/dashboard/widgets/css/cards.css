@@ -62,3 +62,28 @@
 .dashboard-extra-widgets>.dashboard-card.widget-expanded,.dashboard-widgets>.dashboard-card.widget-expanded{width:auto;height:calc(100dvh - 160px);align-self:stretch;max-width:none}
 @media(max-width:600px){.dashboard-card h2{font-size:18px}.dashboard-card>header{padding:12px}.ports-device-row{grid-template-columns:35% minmax(0,1fr)}.ports-device-row>a{font-size:14px}}
 @media(max-width:600px){.dashboard-extra-widgets>.dashboard-card.widget-expanded,.dashboard-widgets>.dashboard-card.widget-expanded{height:calc(100dvh - 130px)}}
+
+/* Compact cards grow with their content; long lists scroll within the card. */
+.dashboard-card>header{min-height:48px;padding:10px 12px;cursor:grab;user-select:none;touch-action:none}
+.dashboard-card h2{font-size:18px}
+.dashboard-card .recent-content,.dashboard-card .problematic-content,.dashboard-card .ports-overview-content{max-height:320px}
+.recent-content summary{padding:10px 0;gap:9px}
+.recent-content strong{font-size:14px}
+.recent-content small{font-size:12px}
+.recent-content summary>i{width:14px;height:14px;flex-basis:14px}
+.ports-device-row{grid-template-columns:45% minmax(0,1fr);padding:8px 0;min-height:36px;gap:8px}
+.ports-device-row>a{font-size:14px}
+.port-dot{width:13px;height:13px;min-width:13px;min-height:13px}
+.port-dots{gap:5px;padding-left:8px}
+.dashboard-card .frequent-table{font-size:14px;border-spacing:0 6px}
+.dashboard-card .frequent-table td{padding:3px 8px}
+.dashboard-card .frequent-severity{padding:3px 7px;font-size:12px}
+.dashboard-card .frequent-content{max-height:360px;overflow:auto;padding:8px 12px 12px}
+.problematic-content{padding:0 12px 12px}
+.problematic-table{font-size:14px;border-spacing:0 6px}
+.problematic-filters{gap:8px;padding:10px 0}
+.problematic-filters label{font-size:13px}
+.problematic-total{padding:10px 0}
+.problematic-total strong{font-size:30px}
+.dashboard-card .workflow-content .alarm-chart{min-height:140px}
+.widget-expanded :is(.recent-content,.problematic-content,.ports-overview-content){max-height:none}

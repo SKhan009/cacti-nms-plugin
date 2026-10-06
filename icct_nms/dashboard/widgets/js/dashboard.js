@@ -22,11 +22,10 @@ let packFrame=0;
 function packCards(){
  cancelAnimationFrame(packFrame);packFrame=requestAnimationFrame(()=>{
   if(extras.hidden)return;
-  const columns=Math.max(1,Math.floor((extras.clientWidth+12)/292));
+  const columns=Math.max(1,Math.floor((extras.clientWidth+12)/372));
   extras.style.gridTemplateColumns='repeat('+columns+', minmax(0, 1fr))';
   extras.querySelectorAll('.dashboard-card').forEach(card=>{
-   const wide=['recent','ports','problematic','frequent'].includes(card.dataset.widget);
-   card.style.gridColumn='span '+(wide?Math.min(2,columns):1);
+   card.style.gridColumn='span 1';
    if(!card.hidden&&!card.classList.contains('widget-expanded'))card.style.gridRowEnd='span '+Math.ceil(card.getBoundingClientRect().height+12);
   });
  });
@@ -102,20 +101,18 @@ function move(key,target,after){
 let cardDrag=null,dragFrame=0;
 function dropPosition(x,y){
  const bounds=grid.getBoundingClientRect();if(x<bounds.left||x>bounds.right||y<bounds.top||y>bounds.bottom)return null;
- const sideBounds=side.getBoundingClientRect(),zone=!side.hidden&&x>=sideBounds.left&&x<=sideBounds.right&&y>=sideBounds.top&&y<=sideBounds.bottom?side:extras;
- const zoneBounds=zone.getBoundingClientRect();if(zone.hidden||x<zoneBounds.left||x>zoneBounds.right||y<zoneBounds.top||y>zoneBounds.bottom)return null;
- const cards=Array.from(zone.querySelectorAll('.dashboard-card:not([hidden])')).filter(card=>card.dataset.widget!==cardDrag.key);
+ const cards=Array.from(grid.querySelectorAll('.dashboard-card:not([hidden])')).filter(card=>card.dataset.widget!==cardDrag.key);
  let closest=null,distance=Infinity;
  for(const card of cards){const r=card.getBoundingClientRect(),dx=Math.max(r.left-x,0,x-r.right),dy=Math.max(r.top-y,0,y-r.bottom),score=dx*dx+dy*dy;if(score<distance){distance=score;closest=card;}}
  if(!closest)return null;
- const r=closest.getBoundingClientRect(),after=zone===side?y>r.top+r.height/2:y>=r.bottom||(y>=r.top&&x>r.left+r.width/2);
+ const r=closest.getBoundingClientRect(),after=closest.parentElement===side?y>r.top+r.height/2:y>=r.bottom||(y>=r.top&&x>r.left+r.width/2);
  return {card:closest,after};
 }
 function paintDrop(){
  document.querySelectorAll('.drag-target,.drag-before,.drag-after').forEach(card=>card.classList.remove('drag-target','drag-before','drag-after'));
  cardDrag.destination=dropPosition(cardDrag.x,cardDrag.y);
  if(cardDrag.destination){const {card,after}=cardDrag.destination;card.classList.add('drag-target',after?'drag-after':'drag-before');}
- cardDrag.preview.style.left=(cardDrag.x+12)+'px';cardDrag.preview.style.top=(cardDrag.y+12)+'px';
+ if(cardDrag.preview){cardDrag.preview.style.left=(cardDrag.x+12)+'px';cardDrag.preview.style.top=(cardDrag.y+12)+'px';}
 }
 function dragScroll(){
  if(!cardDrag?.active)return;
@@ -128,20 +125,28 @@ function endCardDrag(commit){
  if(commit&&state.destination)move(state.key,state.destination.card.dataset.widget,state.destination.after);
 }
 document.querySelectorAll('.dashboard-card header').forEach(header=>{
- const card=header.closest('[data-widget]'),grip=header.querySelector('.widget-grip'),key=card.dataset.widget;grip.draggable=false;
+ const card=header.closest('[data-widget]'),grip=header.querySelector('.widget-grip'),key=card.dataset.widget;header.draggable=true;grip.draggable=true;
+ header.addEventListener('dragstart',e=>{
+  if(card.classList.contains('widget-expanded')||e.target.closest('button:not(.widget-grip),a,input,select')){e.preventDefault();return;}
+  endCardDrag(false);cardDrag={key,card,native:true,active:true,x:e.clientX,y:e.clientY};e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',key);card.classList.add('card-dragging');document.body.classList.add('dashboard-dragging');
+ });
+ header.addEventListener('dragend',()=>endCardDrag(false));
  header.addEventListener('pointerdown',e=>{
-  if(e.button!==0||card.classList.contains('widget-expanded')||e.target.closest('button:not(.widget-grip),a,input,select'))return;
+  if(e.pointerType==='mouse'||e.button!==0||card.classList.contains('widget-expanded')||e.target.closest('button:not(.widget-grip),a,input,select'))return;
   e.preventDefault();grip.focus();cardDrag={key,card,id:e.pointerId,startX:e.clientX,startY:e.clientY,x:e.clientX,y:e.clientY,active:false};header.setPointerCapture(e.pointerId);
  });
  grip.addEventListener('keydown',e=>{if(!['ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const list=widgets().filter(w=>w!=='topology'),destination=list[list.indexOf(key)+(e.key==='ArrowUp'?-1:1)];if(destination){move(key,destination);grip.focus();}});
 });
 document.addEventListener('pointermove',e=>{
- if(!cardDrag||e.pointerId!==cardDrag.id)return;cardDrag.x=e.clientX;cardDrag.y=e.clientY;
+ if(!cardDrag||cardDrag.native||e.pointerId!==cardDrag.id)return;cardDrag.x=e.clientX;cardDrag.y=e.clientY;
  if(!cardDrag.active){if(Math.hypot(e.clientX-cardDrag.startX,e.clientY-cardDrag.startY)<5)return;cardDrag.active=true;cardDrag.card.classList.add('card-dragging');document.body.classList.add('dashboard-dragging');cardDrag.preview=element('div',names[cardDrag.key]);cardDrag.preview.className='widget-drag-preview';document.body.append(cardDrag.preview);dragFrame=requestAnimationFrame(dragScroll);}
  e.preventDefault();paintDrop();
 },{passive:false});
+grid.addEventListener('dragover',e=>{if(!cardDrag?.native)return;e.preventDefault();e.dataTransfer.dropEffect='move';cardDrag.x=e.clientX;cardDrag.y=e.clientY;paintDrop();});
+grid.addEventListener('drop',e=>{if(!cardDrag?.native)return;e.preventDefault();cardDrag.x=e.clientX;cardDrag.y=e.clientY;paintDrop();endCardDrag(true);});
 document.addEventListener('pointerup',e=>{if(cardDrag&&e.pointerId===cardDrag.id)endCardDrag(true);});
-document.addEventListener('pointercancel',()=>endCardDrag(false));
+// Native HTML dragging cancels its pointer stream while the drag is still active.
+document.addEventListener('pointercancel',()=>{if(!cardDrag?.native)endCardDrag(false);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')endCardDrag(false);});
 window.addEventListener('blur',()=>endCardDrag(false));
 function radar(){
