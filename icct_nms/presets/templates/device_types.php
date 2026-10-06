@@ -39,7 +39,7 @@ $pageUrl=static fn($n)=>'presets/controllers/presets.php?tab=device-type&per_pag
 <td><?= $type['physical_ports']===null?'Not set':(int)$type['physical_ports'] ?></td>
 <td><?php $image=icct_nms_type_asset(array_replace($type,['display_modes'=>['network'=>'image'] ])); if (!empty($type['image']) && str_contains($image,'/uploads/')): ?><img class="type-thumbnail" src="<?= icct_nms_h($image) ?>" alt="<?= icct_nms_h($type['name']) ?>"><?php else: ?><span class="type-no-image">None</span><?php endif; ?></td>
 <td><?php if ($management): ?><div class="type-actions">
-<button type="button" class="icon-button primary" data-edit-type="<?= icct_nms_h(json_encode(['type_id'=>$id]+$type,JSON_THROW_ON_ERROR)) ?>" aria-label="Edit <?= icct_nms_h($type['name']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16 12-12 4 4-12 12-5 1zM14 6l4 4"/></svg></button>
+<button type="button" class="icon-button primary" data-edit-type="<?= icct_nms_h(json_encode(['type_id'=>$id]+$type,JSON_THROW_ON_ERROR)) ?>" aria-label="Edit <?= icct_nms_h($type['name']) ?>"><svg class="icct-edit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5L8 21l-5 1 1-5ZM14 5l5 5"/></svg></button>
 <form method="post" data-delete-type data-type-name="<?= icct_nms_h($type['name']) ?>"><?php icct_nms_token(); ?><input type="hidden" name="action" value="delete_type"><input type="hidden" name="type_id" value="<?= icct_nms_h($id) ?>"><button class="icon-button primary" aria-label="Delete <?= icct_nms_h($type['name']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7"/></svg></button></form>
 </div><?php endif; ?></td></tr>
 <?php endforeach; ?>

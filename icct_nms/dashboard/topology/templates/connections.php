@@ -19,7 +19,7 @@
 <?php foreach ($connections as $id=>$connection): ?>
 <article class="segment-card connection-card"><div class="connection-caption"><span><?= icct_nms_h($connection['name']) ?></span><?= icct_nms_connection_preview($connection) ?></div>
 <?php if ($management): ?><div class="segment-actions">
-<button type="button" class="icon-button" data-edit-connection="<?= icct_nms_h(json_encode(['connection_id'=>$id]+$connection,JSON_THROW_ON_ERROR)) ?>" aria-label="Edit <?= icct_nms_h($connection['name']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16 12-12 4 4-12 12-5 1zM14 6l4 4"/></svg></button>
+<button type="button" class="icon-button" data-edit-connection="<?= icct_nms_h(json_encode(['connection_id'=>$id]+$connection,JSON_THROW_ON_ERROR)) ?>" aria-label="Edit <?= icct_nms_h($connection['name']) ?>"><svg class="icct-edit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5L8 21l-5 1 1-5ZM14 5l5 5"/></svg></button>
 <form method="post" data-delete-connection data-connection-name="<?= icct_nms_h($connection['name']) ?>"><?php icct_nms_token(); ?><input type="hidden" name="action" value="delete_connection"><input type="hidden" name="connection_id" value="<?= icct_nms_h($id) ?>"><button class="icon-button" aria-label="Delete <?= icct_nms_h($connection['name']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7"/></svg></button></form>
 </div><?php endif; ?></article>
 <?php endforeach; ?>

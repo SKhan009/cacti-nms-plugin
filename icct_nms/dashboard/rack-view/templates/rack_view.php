@@ -3,7 +3,7 @@
 <dialog id="rackDraftDialog" aria-labelledby="rackDraftTitle"><h2 id="rackDraftTitle">Unsaved rack placement</h2><p>Save your changes before leaving edit mode?</p><div class="rack-draft-actions"><button type="button" class="button" data-rack-choice="cancel">Keep editing</button><button type="button" class="button" data-rack-choice="discard">Discard</button><button type="button" class="button primary" data-rack-choice="save">Save</button></div></dialog>
 <div class="rack-layout"><aside id="rackDevicePool" hidden><h3>Device List</h3><div id="rackDeviceList"></div></aside>
 <div class="rack-stage"><button type="button" class="rack-slide previous" id="rackPrevious" aria-label="Previous racks" hidden>‹</button><div id="rackCabinets"></div><button type="button" class="rack-slide next" id="rackNext" aria-label="Next racks" hidden>›</button><p id="rackPageStatus" role="status"></p></div>
-<div class="rack-controls"><button type="button" class="rack-icon" id="rackViewEdit" aria-label="Edit rack placement" aria-pressed="false" title="Edit rack placement">✎</button>
+<div class="rack-controls"><button type="button" class="rack-icon" id="rackViewEdit" aria-label="Edit rack placement" aria-pressed="false" title="Edit rack placement"><svg class="icct-edit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5L8 21l-5 1 1-5ZM14 5l5 5"/></svg></button>
 <button type="button" class="rack-icon" id="rackViewZoomIn" aria-label="Enlarge racks" title="Enlarge racks">+</button>
 <button type="button" class="rack-icon" id="rackViewZoomOut" aria-label="Reduce racks" title="Reduce racks">−</button>
 <button type="button" class="rack-icon" id="rackViewFit" aria-label="Fit racks" title="Fit racks">▣</button>

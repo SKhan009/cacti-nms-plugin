@@ -3,7 +3,7 @@
 <div class="topology-layout">
 <div class="topology-stage" id="topologyStage" aria-label="Device topology"><div id="topologyCanvas"><svg id="topologyLinks" aria-label="Discovered connections"></svg><div id="topologyDevices"></div></div></div>
 <div class="rack-controls topology-controls">
-<button class="rack-icon" type="button" id="topologyZoomIn" aria-label="Enlarge topology">+</button><button class="rack-icon" type="button" id="topologyZoomOut" aria-label="Reduce topology">−</button><button class="rack-icon" type="button" id="topologyFit" aria-label="Fit topology">▣</button><button class="rack-icon" type="button" id="topologyFullscreen" aria-label="Topology fullscreen">⛶</button><button class="rack-icon" type="button" id="topologyEdit" aria-label="Edit topology layout" aria-pressed="false">✎</button>
+<button class="rack-icon" type="button" id="topologyZoomIn" aria-label="Enlarge topology">+</button><button class="rack-icon" type="button" id="topologyZoomOut" aria-label="Reduce topology">−</button><button class="rack-icon" type="button" id="topologyFit" aria-label="Fit topology">▣</button><button class="rack-icon" type="button" id="topologyFullscreen" aria-label="Topology fullscreen">⛶</button><button class="rack-icon" type="button" id="topologyEdit" aria-label="Edit topology layout" aria-pressed="false"><svg class="icct-edit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5L8 21l-5 1 1-5ZM14 5l5 5"/></svg></button>
 </div></div>
 <div id="topologyAlarms" class="icct-map-counts" aria-label="Active fault totals"></div>
 <form id="topologyToken" hidden><?php icct_nms_token(); ?></form>

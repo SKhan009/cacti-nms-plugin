@@ -21,7 +21,7 @@
 <article class="segment-card">
     <span><?= icct_nms_h($segment['name']) ?></span>
     <?php if ($management): ?><div class="segment-actions">
-    <button type="button" class="icon-button" data-edit-segment="<?= (int)$segment['id'] ?>" data-segment-name="<?= icct_nms_h($segment['name']) ?>" aria-label="Edit <?= icct_nms_h($segment['name']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16 12-12 4 4-12 12-5 1zM14 6l4 4"/></svg></button>
+    <button type="button" class="icon-button" data-edit-segment="<?= (int)$segment['id'] ?>" data-segment-name="<?= icct_nms_h($segment['name']) ?>" aria-label="Edit <?= icct_nms_h($segment['name']) ?>"><svg class="icct-edit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5L8 21l-5 1 1-5ZM14 5l5 5"/></svg></button>
     <form method="post" data-delete-segment data-segment-name="<?= icct_nms_h($segment['name']) ?>"><?php icct_nms_token(); ?><input type="hidden" name="action" value="delete_segment"><input type="hidden" name="segment_id" value="<?= (int)$segment['id'] ?>"><button type="submit" class="icon-button" aria-label="Delete <?= icct_nms_h($segment['name']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7"/></svg></button></form>
     </div><?php endif; ?>
 </article>

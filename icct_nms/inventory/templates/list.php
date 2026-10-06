@@ -182,7 +182,7 @@
                         <a href="inventory/controllers/device.php?id=<?= $id ?>" aria-label="Edit <?= icct_nms_h(
     $d["description"],
 ) ?>">
-                            ✎
+                            <svg class="icct-edit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5L8 21l-5 1 1-5ZM14 5l5 5"/></svg>
                         </a>
                         <details class="row-menu">
                             <summary aria-label="More actions for <?= icct_nms_h(
