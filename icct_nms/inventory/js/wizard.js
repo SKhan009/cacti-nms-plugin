@@ -158,13 +158,13 @@
     if(choice==='discard' || (choice==='save' && await save())){if(choice==='save')icctQueueToast({title:'Saved',text:basic.dataset.staticPreview ? 'Changes saved in this preview. Live device configuration is unchanged.' : 'Device changes saved successfully.'});leaving=true;location.href=url;}
   }
   dialog.querySelectorAll('[data-draft-choice]').forEach(b=>b.addEventListener('click',()=>dialog.close(b.dataset.draftChoice)));
-  async function explicitSave(){
+  async function explicitSave(returnToInventory = false){
     if(!await save())return;
     const message={title:'Saved',text:basic.dataset.staticPreview ? 'Changes saved in this preview. Live device configuration is unchanged.' : 'Device changes saved successfully.'};
-    if(basic.dataset.staticPreview)icctToast(message);
+    if(basic.dataset.staticPreview || !returnToInventory)icctToast(message);
     else {icctQueueToast(message);leaving=true;location.href=new URL('inventory/controllers/inventory.php',document.baseURI).href;}
   }
-  document.querySelectorAll('[data-wizard-save]').forEach(b=>b.addEventListener('click',explicitSave));
+  document.querySelectorAll('[data-wizard-save]').forEach(b=>b.addEventListener('click',()=>explicitSave(true)));
   document.addEventListener('click',event=>{
     if(event.defaultPrevented)return;
     const link=event.target.closest('a[href]');if(!link)return;
