@@ -214,7 +214,7 @@ MIB review automatically fills declared numeric bounds along with names, syntax-
 
 ### Managed diagnostic listener on systemd collectors
 
-When Cacti's poller uses a one-shot systemd service, its child listeners are stopped with the poller's control group. Install `deploy/icct-nms-diagnostics.service` as a separate enabled service to keep diagnostics available between poller runs. The supplied unit uses the standard `/var/www/html/cacti` path and `apache` account; adjust both for the installation. In Cacti's `include/config.php`, set `$config['icct_backend_diagnostic_listener_launcher'] = 'service';` so the poller does not also launch the listener. Use `systemctl enable --now icct-nms-diagnostics.service` after installing the unit and reloading systemd. The worker retains its device, owner, protocol selection, and registered plugin realm checks; Redis remains a wakeup/result cache with durable database fallback.
+When Cacti's poller uses a one-shot systemd service, its child listeners are stopped with the poller's control group. Install `deployment/icct-nms-diagnostics.service` as a separate enabled service to keep diagnostics available between poller runs. The supplied unit uses the standard `/var/www/html/cacti` path and `apache` account; adjust both for the installation. In Cacti's `include/config.php`, set `$config['icct_backend_diagnostic_listener_launcher'] = 'service';` so the poller does not also launch the listener. Use `systemctl enable --now icct-nms-diagnostics.service` after installing the unit and reloading systemd. The worker retains its device, owner, protocol selection, and registered plugin realm checks; Redis remains a wakeup/result cache with durable database fallback.
 
 ### Device preset inheritance
 
@@ -233,3 +233,10 @@ In Device → Protocol Config, add Syslog, select Severity and Facility values, 
 On RHEL, run `sudo bash plugins/icct_nms/protocols/syslog/rhel/install_syslog_rhel.sh /var/www/html/cacti` after the plugin schema upgrade. Set `OPEN_FIREWALL=1` only when this collector should accept UDP/TCP 514 through firewalld. The installer validates rsyslog and retains its previous configuration on failure. The worker imports `/var/log/icct-nms/remote.ndjson`; a daily timer retains events for 90 days. Devices must forward messages to the collector. Unmapped senders, disabled devices/protocols and messages outside the selected severity, facility, keyword or transport policy are discarded.
 
 The base schema contract remains 1.2.0; this release adds three plugin-owned Syslog tables. Network reception uses rsyslog; Cacti remains authoritative for device identity and access.
+
+
+## Feature layout and root entry points
+
+Page implementations live in their feature's `controllers/` folder. Diagnostic workers live in `inventory/diagnostics/cli/`. Root PHP files are small compatibility entry points that preserve Cacti's registered routes, bookmarks, and form endpoints. `setup.php` and `INFO` are Cacti plugin metadata and remain at the root.
+
+Feature folders own their CSS, JavaScript, templates, and services. Cross-feature code belongs in `shared/`. `assets/` contains fonts, icons, MIBs, maps, and third-party browser libraries. `data/` contains protected uploaded MIBs; `database/` contains the schema. All general service installation files belong in `deployment/`. Tests remain in `tests/`.
