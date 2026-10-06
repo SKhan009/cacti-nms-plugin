@@ -25,7 +25,7 @@ function icct_nms_fault_parameters($id) {
         }
     }
     if($id) {
-        $rows=db_fetch_assoc_prepared("SELECT DISTINCT pi.oid,r.data_source_name,dt.name,origin.id AS metric_id,gti.graph_template_id AS template_id
+        $rows=db_fetch_assoc_prepared("SELECT DISTINCT pi.arg1 AS oid,r.data_source_name,dt.name,origin.id AS metric_id,gti.graph_template_id AS template_id
             FROM poller_item pi JOIN data_local dl ON dl.id=pi.local_data_id
             JOIN data_template dt ON dt.id=dl.data_template_id
             JOIN data_template_rrd r ON r.local_data_id=dl.id AND r.data_source_name=pi.rrd_name
