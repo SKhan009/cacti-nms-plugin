@@ -29,7 +29,7 @@
 <?php elseif ($view==='topology'): require __DIR__ . '/../../topology/templates/topology_view.php'; ?>
 <?php else: ?><div class="icct-device-cards">
 <?php foreach ($viewDevices as $device): $asset=''; foreach ($viewTypes as $type) if ((int)$type['category_id']===(int)$device['category_id'] && $type['name']===$device['device_type']) { $asset=icct_nms_type_asset($type,$view==='image'?'map':'network'); break; } ?>
-<a class="icct-device-card" href="device.php?id=<?= (int)$device['id'] ?>"><?php if ($asset): ?><img src="<?= icct_nms_h($asset) ?>" alt=""><?php endif; ?><strong><?= icct_nms_h($device['description']) ?></strong><span><?= icct_nms_h($device['site_name'] ?: 'Unassigned site') ?></span><span class="device-status <?= icct_nms_status_class($device['status_label']) ?>"><?= icct_nms_h($device['status_label']) ?></span></a>
+<a class="icct-device-card" href="inventory/controllers/device.php?id=<?= (int)$device['id'] ?>"><?php if ($asset): ?><img src="<?= icct_nms_h($asset) ?>" alt=""><?php endif; ?><strong><?= icct_nms_h($device['description']) ?></strong><span><?= icct_nms_h($device['site_name'] ?: 'Unassigned site') ?></span><span class="device-status <?= icct_nms_status_class($device['status_label']) ?>"><?= icct_nms_h($device['status_label']) ?></span></a>
 <?php endforeach; ?></div><?php endif; ?>
 </div>
 <?php endforeach; ?>
@@ -55,7 +55,7 @@
 <header class="topology-summary-heading"><div><h2 id="mapSiteTitle"></h2><p id="mapSiteCoordinates"></p></div><span id="mapSiteStatus" class="device-status"></span><form method="dialog"><button class="button" aria-label="Close site summary">×</button></form></header>
 <dl id="mapSiteCounts" class="topology-capacity map-site-counts"></dl>
 <div id="mapSiteAlarms" class="topology-summary-alarms"></div>
-<nav class="topology-summary-links map-site-links" aria-label="Site actions"><a id="mapSiteTopology" href="topology.php">View Topology <span aria-hidden="true">→</span></a><button type="button" disabled title="Site chat is not configured.">Chat <span aria-hidden="true">→</span></button></nav>
+<nav class="topology-summary-links map-site-links" aria-label="Site actions"><a id="mapSiteTopology" href="dashboard/controllers/topology.php">View Topology <span aria-hidden="true">→</span></a><button type="button" disabled title="Site chat is not configured.">Chat <span aria-hidden="true">→</span></button></nav>
 </dialog>
-<script type="application/json" id="icctMapData" data-summary-url="topology.php"><?= json_encode($mapData+['states'=>'assets/maps/india-states.json','tiles'=>null],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
+<script type="application/json" id="icctMapData" data-summary-url="dashboard/controllers/topology.php"><?= json_encode($mapData+['states'=>'shared/assets/maps/india-states.json','tiles'=>null],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
 </section>

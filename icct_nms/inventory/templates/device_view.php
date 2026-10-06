@@ -40,23 +40,23 @@ $display = static function($value) { return icct_nms_h(trim((string)$value) !== 
 ?>
 <div class="device-view">
 <header class="device-view-header">
- <a class="device-back" href="inventory.php" aria-label="Back to inventory">←</a>
+ <a class="device-back" href="inventory/controllers/inventory.php" aria-label="Back to inventory">←</a>
  <div class="device-view-identity"><h1><span class="device-status-dot <?= $status==='Up'?'online':($status==='Down'?'offline':'other') ?>" aria-label="<?= icct_nms_h($status) ?>"></span><?= icct_nms_h($values['description']) ?></h1><span><?= icct_nms_h($values['hostname']) ?></span></div>
  <dl class="device-view-metrics"><div><dt>Packet Loss</dt><dd><?= isset($old['cur_loss']) && is_numeric($old['cur_loss']) ? $display($old['cur_loss']).'%' : '—' ?></dd></div><div><dt>Response Time</dt><dd><?= isset($old['cur_time']) && is_numeric($old['cur_time']) ? number_format((float)$old['cur_time'], 2).' ms' : '—' ?></dd></div><div><dt>System Uptime</dt><dd><?= icct_nms_h(icct_nms_uptime($old['snmp_sysUpTimeInstance'] ?? 0)) ?></dd></div></dl>
  <div class="device-view-actions" aria-label="Device diagnostics and actions">
  <?php foreach ($diagnosticGroups as $family=>$methods): ?>
  <?php if (in_array($family, ['traceroute','mtr'], true)): $familyLabel=$family==='traceroute'?'Traceroute':'MTR'; ?>
  <details class="row-menu device-diagnostic-menu"><summary class="device-tool" aria-label="<?= $familyLabel ?> protocols" data-tooltip="<?= $familyLabel ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="<?= $paths[$family==='traceroute'?'traceroute':'mtr_icmp'] ?>"/></svg><span class="device-tool-caret" aria-hidden="true">⌄</span></summary><div class="row-menu-panel">
- <?php foreach ($methods as $tool=>$label): ?><a href="diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h($tool) ?>#diagnostic-run" data-host-id="<?= $id ?>" data-tool="<?= icct_nms_h($tool) ?>" data-device-name="<?= icct_nms_h($values['description']) ?>"><?= icct_nms_h($label) ?></a><?php endforeach; ?>
+ <?php foreach ($methods as $tool=>$label): ?><a href="inventory/diagnostics/controllers/diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h($tool) ?>#diagnostic-run" data-host-id="<?= $id ?>" data-tool="<?= icct_nms_h($tool) ?>" data-device-name="<?= icct_nms_h($values['description']) ?>"><?= icct_nms_h($label) ?></a><?php endforeach; ?>
  </div></details>
  <?php else: $tool=array_key_first($methods);$label=$methods[$tool]; ?>
- <a class="device-tool" href="diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h($tool) ?>#diagnostic-run" data-host-id="<?= $id ?>" data-tool="<?= icct_nms_h($tool) ?>" data-device-name="<?= icct_nms_h($values['description']) ?>" aria-label="<?= icct_nms_h($label) ?>" data-tooltip="<?= icct_nms_h($label) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="<?= $paths[$tool] ?? 'M4 5h16v14H4z M8 9l3 3-3 3 M13 15h4' ?>"/></svg></a>
+ <a class="device-tool" href="inventory/diagnostics/controllers/diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h($tool) ?>#diagnostic-run" data-host-id="<?= $id ?>" data-tool="<?= icct_nms_h($tool) ?>" data-device-name="<?= icct_nms_h($values['description']) ?>" aria-label="<?= icct_nms_h($label) ?>" data-tooltip="<?= icct_nms_h($label) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="<?= $paths[$tool] ?? 'M4 5h16v14H4z M8 9l3 3-3 3 M13 15h4' ?>"/></svg></a>
  <?php endif; ?><?php endforeach; ?>
  <?php if (is_realm_allowed(3)): ?><details class="row-menu device-view-menu"><summary class="device-tool" aria-label="More device actions">⋮</summary><div class="row-menu-panel">
  <button type="button" disabled title="Alarm suppression unavailable.">Alarm Suppression</button>
- <form method="post" action="protocol.php?id=<?= $id ?>"><?php icct_nms_token(); ?><input type="hidden" name="action" value="reindex"><button type="submit">Re-Index Device</button></form>
- <a href="device.php?id=<?= $id ?>">Modify Device</a>
- <a href="device.php?clone_id=<?= $id ?>" data-clone-device data-device-name="<?= icct_nms_h($values['description']) ?>">Clone Device</a>
+ <form method="post" action="protocols/shared/controllers/protocol.php?id=<?= $id ?>"><?php icct_nms_token(); ?><input type="hidden" name="action" value="reindex"><button type="submit">Re-Index Device</button></form>
+ <a href="inventory/controllers/device.php?id=<?= $id ?>">Modify Device</a>
+ <a href="inventory/controllers/device.php?clone_id=<?= $id ?>" data-clone-device data-device-name="<?= icct_nms_h($values['description']) ?>">Clone Device</a>
  <?php foreach ([($old['disabled']==='on'?2:3)=>($old['disabled']==='on'?'Enable Device':'Disable Device'),1=>'Delete Device'] as $action=>$label): ?><form method="post" action="<?= icct_nms_h($config['url_path']) ?>host.php" <?= $action===1?'class="danger-action"':'' ?>><?php icct_nms_token(); ?><input type="hidden" name="action" value="actions"><input type="hidden" name="drp_action" value="<?= $action ?>"><input type="hidden" name="chk_<?= $id ?>" value="on"><button type="submit"><?= $label ?></button></form><?php endforeach; ?>
  </div></details><?php endif; ?>
  </div>

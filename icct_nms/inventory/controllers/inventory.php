@@ -10,7 +10,7 @@ try {
     icct_nms_backend();
     $devices = icct_nms_inventory();
     if (($_GET['view'] ?? '') === 'tree' && $devices) {
-        icct_nms_redirect('device.php?id='.(int)$devices[0]['id'].'&view=1&tree=1');
+        icct_nms_redirect('inventory/controllers/device.php?id='.(int)$devices[0]['id'].'&view=1&tree=1');
     }
 } catch (Throwable $error) {
     icct_nms_failure($error);

@@ -14,7 +14,7 @@ function icct_nms_device_shape($category,$name,$types) {
 /** Discover trusted, browser-supported images from the designated icon folder. */
 function icct_nms_type_icon_catalogue() {
     $labels=['switch'=>'Switch','router'=>'Router','server'=>'Server','workstation'=>'PC / desktop','laptop'=>'Laptop','phone'=>'Phone','ipphone'=>'Desk phone','ups'=>'UPS / battery','sensor'=>'Sensor','printer'=>'Printer','camera'=>'Camera','wireless'=>'Wireless AP','firewall'=>'Firewall','satellite'=>'Satellite / VSAT','device'=>'Generic device'];
-    $folder=__DIR__ . '/../../assets/images/icons';
+    $folder=__DIR__ . '/../../shared/assets/images/icons';
     $files=is_dir($folder) ? scandir($folder) : [];
     $icons=[];
     foreach ($files ?: [] as $filename) {
@@ -25,7 +25,7 @@ function icct_nms_type_icon_catalogue() {
         // Preserve saved SVG keys; retain extensions for other images and collisions.
         $key=$extension==='svg' && !isset($icons[$stem]) ? $stem : $filename;
         $icons[$key]=['label'=>$labels[$stem] ?? ucwords(str_replace(['-','_'],' ',$stem)),
-            'asset'=>'assets/images/icons/'.rawurlencode($filename)];
+            'asset'=>'shared/assets/images/icons/'.rawurlencode($filename)];
     }
     uasort($icons,function($a,$b) { return strnatcasecmp($a['label'],$b['label']); });
     return $icons;
@@ -59,7 +59,7 @@ function icct_nms_device_types() {
 function icct_nms_type_asset($type,$view='network') {
     $mode=$type['display_modes'][$view] ?? 'icon';
     if ($mode==='none') return '';
-    if ($mode==='image' && preg_match('/^uploads\/[a-f0-9]{32}\.(png|jpg|webp)$/D',$type['image'] ?? '')) return 'assets/images/device-types/'.$type['image'];
+    if ($mode==='image' && preg_match('/^uploads\/[a-f0-9]{32}\.(png|jpg|webp)$/D',$type['image'] ?? '')) return 'shared/assets/images/device-types/'.$type['image'];
     $icon=isset(icct_nms_type_icons()[$type['icon'] ?? '']) ? $type['icon'] : 'device';
     return icct_nms_type_icon_asset($icon);
 }
@@ -76,7 +76,7 @@ function icct_nms_type_image_upload($file) {
     $ratio=min(1,512/max($info[0],$info[1])); $target=imagecreatetruecolor(max(1,(int)($info[0]*$ratio)),max(1,(int)($info[1]*$ratio)));
     imagealphablending($target,false); imagesavealpha($target,true);
     imagecopyresampled($target,$source,0,0,0,0,imagesx($target),imagesy($target),$info[0],$info[1]);
-    $relative='uploads/'.bin2hex(random_bytes(16)).'.png'; $path=__DIR__ . '/../../assets/images/device-types'.$relative;
+    $relative='uploads/'.bin2hex(random_bytes(16)).'.png'; $path=__DIR__ . '/../../shared/assets/images/device-types'.$relative;
     try { if (!imagepng($target,$path)) throw new RuntimeException('Cannot store the device image. Check image folder permissions.'); chmod($path,0644); }
     finally { imagedestroy($target); imagedestroy($source); }
     return $relative;
@@ -127,9 +127,9 @@ function icct_nms_save_device_type($input,$file=null,$ownTransaction=true) {
         if($transaction) {icct_backend_category_execute('COMMIT');$transaction=false;}
         if ($old && !empty($old['image']) && ($types[$id]['image'] ?? '') !== $old['image'] && preg_match('/^uploads\/[a-f0-9]{32}\.png$/D', $old['image'])) {
             $used = false; foreach ($types as $remaining) if (($remaining['image'] ?? '') === $old['image']) $used = true;
-            if (!$used) @unlink(__DIR__ . '/../../assets/images/device-types'.$old['image']);
+            if (!$used) @unlink(__DIR__ . '/../../shared/assets/images/device-types'.$old['image']);
         }
         return ($input['action'] ?? '')==='delete_type' ? 'Device type deleted.' : ($old ? 'Device type updated.' : 'Device type added.');
-    } catch (Throwable $e) { if($transaction) icct_backend_category_execute('ROLLBACK'); if ($image) @unlink(__DIR__ . '/../../assets/images/device-types'.$image); throw $e; }
+    } catch (Throwable $e) { if($transaction) icct_backend_category_execute('ROLLBACK'); if ($image) @unlink(__DIR__ . '/../../shared/assets/images/device-types'.$image); throw $e; }
     finally { db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]); }
 }

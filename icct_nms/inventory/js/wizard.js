@@ -52,7 +52,7 @@
   previous.addEventListener('click',()=>{location.hash=steps[Math.max(0,steps.indexOf(currentStep())-1)];});
   next.addEventListener('click',()=>{
     const index=steps.indexOf(currentStep());
-    if(index===6) { leave('inventory.php'); return; }
+    if(index===6) { leave('inventory/controllers/inventory.php'); return; }
     // Navigation keeps incomplete drafts; validation occurs only on explicit Save.
     location.hash=steps[index+1];
   });
@@ -63,7 +63,7 @@
     if (id || basic.dataset.staticPreview) return;
     const request = ++templateRequest;
     try {
-      const response = await fetch('wizard_templates.php?template_id='+encodeURIComponent(basic.elements.host_template_id.value), {credentials:'same-origin'});
+      const response = await fetch('inventory/controllers/wizard_templates.php?template_id='+encodeURIComponent(basic.elements.host_template_id.value), {credentials:'same-origin'});
       const payload = await response.json();
       if (!response.ok || !payload.ok) throw new Error(payload.error || 'Template associations could not load.');
       if (request !== templateRequest) return;
@@ -81,7 +81,7 @@
     data.set('host_id',String(id));
     const token=basic.querySelector('input[name="__csrf_magic"]');
     if(token)data.set('__csrf_magic',token.value);
-    const response=await fetch('wizard_save.php',{method:'POST',body:data,credentials:'same-origin'});
+    const response=await fetch('inventory/controllers/wizard_save.php',{method:'POST',body:data,credentials:'same-origin'});
     const payload=await response.json();
     if(!response.ok || !payload.ok)throw new Error(payload.error || 'Changes could not be saved.');
     id=Number(payload.id);wizard.dataset.deviceId=String(id);
@@ -134,7 +134,7 @@
       for(const [name] of protocolInitial) {
         const p=document.getElementById(name);protocolInitial.set(name,{hidden:p.hidden,enabled:p.querySelector('.protocol-enable input')?.checked});
       }
-      if(!basic.dataset.staticPreview)history.replaceState(null,'','device.php?id='+id+location.hash);
+      if(!basic.dataset.staticPreview)history.replaceState(null,'',new URL('inventory/controllers/device.php?id='+id+location.hash,document.baseURI).href);
       return true;
     } catch(error) {
       const panel=errorContext.closest('.protocol-item');
@@ -162,10 +162,11 @@
     if(!await save())return;
     const message={title:'Saved',text:basic.dataset.staticPreview ? 'Changes saved in this preview. Live device configuration is unchanged.' : 'Device changes saved successfully.'};
     if(basic.dataset.staticPreview)icctToast(message);
-    else {icctQueueToast(message);leaving=true;location.href='inventory.php';}
+    else {icctQueueToast(message);leaving=true;location.href=new URL('inventory/controllers/inventory.php',document.baseURI).href;}
   }
   document.querySelectorAll('[data-wizard-save]').forEach(b=>b.addEventListener('click',explicitSave));
   document.addEventListener('click',event=>{
+    if(event.defaultPrevented)return;
     const link=event.target.closest('a[href]');if(!link)return;
     const url=new URL(link.href,location.href);
     if(url.origin===location.origin && url.pathname===location.pathname && url.hash)return;

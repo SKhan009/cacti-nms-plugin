@@ -76,7 +76,7 @@ try {
         try {
             $jobId = icct_backend_diag_run($id, $tool);
             icct_nms_redirect(
-                "diagnostics.php?host_id=" .
+                "inventory/diagnostics/controllers/diagnostics.php?host_id=" .
                     $id .
                     "&tool=" .
                     rawurlencode($tool) .

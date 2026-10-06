@@ -170,7 +170,7 @@ if (table) {
         const item = document.createElement("div");
         item.className = "tree-device";
         const link = document.createElement("a");
-        link.href = `device.php?id=${row.dataset.id}&view=1`;
+        link.href = `inventory/controllers/device.php?id=${row.dataset.id}&view=1`;
         link.textContent = row.dataset.name;
         const status = document.createElement("span");
         status.textContent = row.dataset.status;
@@ -566,7 +566,7 @@ if (protocolWorkspace && !document.querySelector("#device-wizard") && !document.
       next = document.querySelector("#protocol-next");
     if (dataQuery) {
       previous.href = "#graphs";
-      next.href = "inventory.php";
+      next.href = "inventory/controllers/inventory.php";
       next.textContent = "Done →";
     } else if (graphs) {
       previous.href = "#diagnostics";
@@ -1536,7 +1536,7 @@ for(const select of [windowSelect,interval])select.addEventListener('change',()=
 document.addEventListener('click',event=>{
  const button=event.target.closest('button[data-graph-popup]');
  if(!button){if(event.target.closest('[data-device-view-tab],#device-graph-prev,#device-graph-next'))stopAll();return;}
- const endpoint=new URL(button.dataset.graphUrl,location.href);if(endpoint.origin!==location.origin)return;
+ const endpoint=new URL(button.dataset.graphUrl,document.baseURI);if(endpoint.origin!==location.origin)return;
  event.preventDefault();const figure=button.closest('figure');if(active.has(figure)){stop(figure);return;}
  const image=figure.querySelector('.device-graph-image img'),status=document.createElement('p');status.className='device-realtime-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');figure.append(status);
  const state={figure,image,button,status,endpoint,original:image.src,version:0,timer:null,request:null};active.set(figure,state);figure.dataset.realtime='true';button.setAttribute('aria-pressed','true');button.setAttribute('aria-label','Stop real-time graph');button.dataset.tooltip='Stop real-time graph';controls.hidden=false;filters.hidden=true;refresh(state);

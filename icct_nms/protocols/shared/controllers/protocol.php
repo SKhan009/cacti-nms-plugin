@@ -40,11 +40,11 @@ try {
         }
         $_SESSION["icct_nms_notice"] =
             $count . " device discovery collections queued.";
-        icct_nms_redirect("inventory.php");
+        icct_nms_redirect("inventory/controllers/inventory.php");
     }
     $id = icct_nms_id($_GET["id"] ?? 0);
     if ($_SERVER["REQUEST_METHOD"] === "GET") {
-        icct_nms_redirect("device.php?id=" . $id . "&step=protocol");
+        icct_nms_redirect("inventory/controllers/device.php?id=" . $id . "&step=protocol");
     }
     $host = icct_nms_device($id);
     icct_backend_require_management(3);
@@ -59,7 +59,7 @@ try {
                 case "reload_data_query":
                 case "verbose_data_query":
                     $_SESSION["icct_nms_notice"] = icct_nms_save_data_query($id, $host, $_POST);
-                    icct_nms_redirect("protocol.php?id=" . $id . "#data-query");
+                    icct_nms_redirect("protocols/shared/controllers/protocol.php?id=" . $id . "#data-query");
                     break;
                 case "add_graph_template":
                 case "remove_graph_template":
@@ -68,7 +68,7 @@ try {
                         $_POST["action"] === "add_graph_template"
                             ? "Graph template associated."
                             : "Graph template association removed.";
-                    icct_nms_redirect("protocol.php?id=" . $id . "#graphs");
+                    icct_nms_redirect("protocols/shared/controllers/protocol.php?id=" . $id . "#graphs");
                     break;
                 case "toggle_protocol":
                     icct_nms_toggle_protocol($id, $host, $_POST);
@@ -91,7 +91,7 @@ try {
                     icct_backend_device_reindex($id);
                     $_SESSION["icct_nms_notice"] =
                         "Device " . $id . " data queries re-indexed.";
-                    icct_nms_redirect("inventory.php");
+                    icct_nms_redirect("inventory/controllers/inventory.php");
                     break;
                 case "snmp":
                     if (!icct_backend_protocol_enabled($id, "snmp")) {
@@ -169,7 +169,7 @@ try {
                 $_SESSION["icct_nms_notice"] = $settingNames[$action] .
                     " settings saved successfully for " . $deviceName . ".";
             }
-            icct_nms_redirect("protocol.php?id=" . $id);
+            icct_nms_redirect("protocols/shared/controllers/protocol.php?id=" . $id);
         } catch (Throwable $e) {
             $error = $e->getMessage();
         }

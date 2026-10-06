@@ -87,8 +87,8 @@ function icct_mib_name($value,$max=150){
 }
 /** Private runtime files stay in the plugin; only this directory is writable. */
 function icct_mib_private_directory(){
-    $root=__DIR__ . '/../../../../data/mibs';
-    if(!is_dir($root)||!is_writable($root))throw new RuntimeException('The plugin data/mibs directory must be writable by the web-server account.');
+    $root=__DIR__ . '/../storage';
+    if(!is_dir($root)||!is_writable($root))throw new RuntimeException('The plugin protocols/snmp/mibs/storage directory must be writable by the web-server account.');
     $dir=$root.'/review-'.bin2hex(random_bytes(16));
     if(!mkdir($dir,0700))throw new RuntimeException('Cannot create private MIB parsing directory.');
     return $dir;
@@ -200,7 +200,7 @@ function icct_mib_preview($upload,$typeId,$allowUnresolved=false){
         }
         if(count($symbols)>512)throw new InvalidArgumentException('Limit: 512 object definitions per upload. Split larger modules.');
         $dependencies=icct_mib_repository_dependencies($dir,$files);$parseError='';
-        $args=[read_config_option('path_snmptranslate')?:'snmptranslate','-M',$dir.':'.__DIR__ . '/../../../../assets/mibs','-m',implode(':',array_keys($files))];
+        $args=[read_config_option('path_snmptranslate')?:'snmptranslate','-M',$dir.':'.__DIR__ . '/../../../../shared/assets/mibs','-m',implode(':',array_keys($files))];
         try{icct_mib_command(array_merge($args,['-Tz']));}
         catch(RuntimeException $e){
             if(!$allowUnresolved||!str_starts_with($e->getMessage(),'Missing MIB dependencies:'))throw $e;

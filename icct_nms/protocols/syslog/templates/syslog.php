@@ -27,6 +27,6 @@ $syslogHelp=static function($label,$help){ ?><span class="field-info" tabindex="
 <div class="syslog-keyword-box"><div class="syslog-keyword-chips"></div><input type="text" class="syslog-keyword-input" aria-label="Add match string" placeholder="Add match string" maxlength="148"></div>
 </div>
 <div class="protocol-actions split-actions">
-<?php if(empty($presetMode)): ?><a class="button" href="syslog.php?host_id=<?= (int)$id ?>">Open Syslog Console</a><?php endif; ?>
+<?php if(empty($presetMode)): ?><a class="button" href="protocols/syslog/controllers/syslog.php?host_id=<?= (int)$id ?>">Open Syslog Console</a><?php endif; ?>
 <button class="button primary" type="submit">Save</button>
 </div>

@@ -99,7 +99,7 @@
         const counts=document.querySelector('#mapSiteCounts');counts.replaceChildren();
         [['Total Devices','total'],['Online','online'],['Offline','offline'],['Disabled','disabled']].forEach(([label,key])=>{const row=siteElement('div');row.append(siteElement('dt',label),siteElement('dd',String(site.counts[key])));counts.append(row);});
         const alarms=document.querySelector('#mapSiteAlarms');alarms.replaceChildren();Object.entries(alarmColors).forEach(([severity,color])=>{const badge=siteElement('span'),dot=siteElement('i');dot.style.background=color;badge.append(dot,document.createTextNode((severity==='Warning'?'Warn':severity==='Information'?'Info':severity)+': '+String(site.fault_counts[severity]||0).padStart(2,'0')));alarms.append(badge);});
-        document.querySelector('#mapSiteTopology').href='topology.php?site_id='+encodeURIComponent(site.id)+'&view=topology';
+        document.querySelector('#mapSiteTopology').href='dashboard/controllers/topology.php?site_id='+encodeURIComponent(site.id)+'&view=topology';
     }
     function showSite(site){
         if(!siteDialog)return;

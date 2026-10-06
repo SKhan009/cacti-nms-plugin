@@ -47,7 +47,7 @@
 <?php endif; ?>
 <?php if (!empty($mapPage)): ?>
     <script src="dashboard/widgets/js/dashboard.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../dashboard/widgets/js/dashboard.js'),0,12) ?>" defer></script>
-    <script src="assets/vendor/leaflet/leaflet.js" defer></script>
+    <script src="shared/assets/vendor/leaflet/leaflet.js" defer></script>
     <script src="dashboard/rack-view/js/rack-view.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../dashboard/rack-view/js/rack-view.js'),0,12) ?>" defer></script>
     <script src="dashboard/topology/js/topology-view.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../dashboard/topology/js/topology-view.js'),0,12) ?>" defer></script>
     <script src="dashboard/map/js/map.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../dashboard/map/js/map.js'),0,12) ?>" defer></script>

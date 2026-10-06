@@ -6,7 +6,7 @@ $recordPager = static function($key, $page, $total) use ($id) {
     $url = static function($target) use ($id, $key) {
         $params = ['id'=>$id, 'view'=>1, 'changes_page'=>max(1,(int)($_GET['changes_page'] ?? 1)), 'diagnostics_page'=>max(1,(int)($_GET['diagnostics_page'] ?? 1))];
         $params[$key] = $target;
-        return 'device.php?'.http_build_query($params).'#view-records';
+        return 'inventory/controllers/device.php?'.http_build_query($params).'#view-records';
     };
     echo '<div class="type-pagination"><span>'.($total ? (($page-1)*25+1).'–'.min($page*25,$total) : '0').' of '.$total.' records</span><span class="type-page-count">Page '.$page.' of '.$pages.'</span>';
     foreach ([$page-1=>'Previous', $page+1=>'Next'] as $target=>$label) {

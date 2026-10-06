@@ -33,7 +33,7 @@
     });
   }
   let poolBound=false;function droppableOncePool(){if(!poolBound){droppable(pool,0,0);poolBound=true;}}
-  async function refresh(){const response=await fetch('rack_placement.php',{credentials:'same-origin',cache:'no-store'});const result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||'Unable to refresh racks.');data=scopedData(result.data);savedData=structuredClone(data);render();}
+  async function refresh(){const response=await fetch('presets/controllers/rack_placement.php',{credentials:'same-origin',cache:'no-store'});const result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||'Unable to refresh racks.');data=scopedData(result.data);savedData=structuredClone(data);render();}
   function reservationCard(value){const n=el('div','rack-device reserved');n.append(el('span','rack-device-name','Reserved slot'));n.draggable=editing;n.tabIndex=0;n.title='Reserved rack space';if(editing&&value!=='reserve:new'){const remove=el('button','','×');remove.type='button';remove.setAttribute('aria-label','Clear reserved slot');remove.addEventListener('click',()=>stageReservation(value,0,0));n.append(remove);}n.addEventListener('dragstart',event=>{if(!editing||busy){event.preventDefault();return;}event.dataTransfer.setData('text/plain',value);});return n;}
   function trackReservations(rack){const original=savedData.racks.find(r=>Number(r.id)===Number(rack.id));if(JSON.stringify(rack.reservations||[])===JSON.stringify(original.reservations||[]))reservedChanges.delete(Number(rack.id));else reservedChanges.set(Number(rack.id),{rack_id:Number(rack.id),revision:original.reservation_revision,items:rack.reservations||[]});}
   function stageReservation(value,rackId,start){
@@ -62,7 +62,7 @@
   async function saveDraft(){
     if(busy)return false;if(!(changes.size||reservedChanges.size))return true;
     const body=new FormData(document.querySelector('#rackViewToken'));body.set('moves',JSON.stringify([...changes.values()]));body.set('reservations',JSON.stringify([...reservedChanges.values()]));busy=true;render();message.textContent='Saving…';
-    try{const response=await fetch('rack_placement.php',{method:'POST',credentials:'same-origin',body});const result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||'Changes could not be saved.');data=scopedData(result.data);savedData=structuredClone(data);changes.clear();reservedChanges.clear();message.textContent='';return true;}
+    try{const response=await fetch('presets/controllers/rack_placement.php',{method:'POST',credentials:'same-origin',body});const result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||'Changes could not be saved.');data=scopedData(result.data);savedData=structuredClone(data);changes.clear();reservedChanges.clear();message.textContent='';return true;}
     catch(error){message.textContent=error.message;return false;}
     finally{busy=false;render();}
   }

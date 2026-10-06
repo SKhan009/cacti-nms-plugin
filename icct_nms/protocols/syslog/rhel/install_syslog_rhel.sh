@@ -156,5 +156,5 @@ systemctl --no-pager --full status icct-nms-syslog-worker.service | sed -n '1,12
 echo
 echo "ICCT Syslog production integration installed."
 echo "Spool : $SPOOL_FILE"
-echo "Console: /cacti/plugins/icct_nms/syslog.php"
+echo "Console: /cacti/plugins/icct_nms/protocols/syslog/controllers/syslog.php"
 echo "If firewalld is managed centrally, open UDP/TCP 514 there instead of setting OPEN_FIREWALL=1."

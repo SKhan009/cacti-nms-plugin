@@ -14,12 +14,12 @@ function icct_nms_navigation()
     }
     // Cacti's native external-link flag bypasses its AJAX #main fragment loader.
     // The responsive Inventory is a complete document and opens in its own tab.
-    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/topology.php'] = 'Dashboard';
-    $url = $config['url_path'] . 'plugins/icct_nms/inventory.php';
+    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/dashboard/controllers/topology.php'] = 'Dashboard';
+    $url = $config['url_path'] . 'plugins/icct_nms/inventory/controllers/inventory.php';
     $menu['ICCT NMS']['EXTERNAL::' . $url] = 'Inventory';
-    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/presets.php'] = 'Presets';
-    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/topology_configuration.php'] = 'Topology Configuration';
-    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/mib_repository.php'] = 'MIB Repository';
-    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/syslog.php'] = 'Syslog Console';
+    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/presets/controllers/presets.php'] = 'Presets';
+    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/dashboard/topology/controllers/topology_configuration.php'] = 'Topology Configuration';
+    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/protocols/snmp/mibs/controllers/mib_repository.php'] = 'MIB Repository';
+    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/protocols/syslog/controllers/syslog.php'] = 'Syslog Console';
     $menu_glyphs['ICCT NMS'] = 'fas fa-network-wired';
 }

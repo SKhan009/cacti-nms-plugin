@@ -37,7 +37,7 @@
   async function refresh(){
     if(loading||location.hash!=='#ports'||document.hidden||basic.dataset.staticPreview||!Number(wizard.dataset.deviceId))return;
     loading=true;
-    try{const response=await fetch('ports.php?id='+encodeURIComponent(wizard.dataset.deviceId),{credentials:'same-origin',cache:'no-store'});if(!response.headers.get('content-type')?.includes('application/json'))throw new Error('Reload the page and check your Cacti session.');const payload=await response.json();if(!response.ok||!payload.ok)throw new Error(payload.error||'Interfaces could not load.');observation=payload.data;document.querySelector('#port-error').hidden=true;render();}
+    try{const response=await fetch('ports/controllers/ports.php?id='+encodeURIComponent(wizard.dataset.deviceId),{credentials:'same-origin',cache:'no-store'});if(!response.headers.get('content-type')?.includes('application/json'))throw new Error('Reload the page and check your Cacti session.');const payload=await response.json();if(!response.ok||!payload.ok)throw new Error(payload.error||'Interfaces could not load.');observation=payload.data;document.querySelector('#port-error').hidden=true;render();}
     catch(error){const status=document.querySelector('#port-error');status.textContent=error.message;status.hidden=false;}
     finally{loading=false;}
   }

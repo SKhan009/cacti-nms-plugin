@@ -26,12 +26,12 @@ $protocolPresetHelp = static function (string $key, string $label) use ($presetM
 <?php if (empty($wizard) && !$presetMode): ?>
 <div class="titlebar">
     <h1><?= icct_nms_h($host["description"]) ?></h1>
-    <a class="button" href="inventory.php">Done</a>
+    <a class="button" href="inventory/controllers/inventory.php">Done</a>
 </div>
 <nav class="steps">
     <ol>
         <li>
-            <a href="device.php?id=<?= $id ?>">
+            <a href="inventory/controllers/device.php?id=<?= $id ?>">
                 Basic Information
                 <small>1/7</small>
             </a>
@@ -48,10 +48,10 @@ $protocolPresetHelp = static function (string $key, string $label) use ($presetM
                 <small>3/7</small>
             </a>
         </li>
-        <li data-protocol-step="3"><a href="protocol.php?id=<?= $id ?>#graphs">Graphs<small>4/7</small></a></li>
+        <li data-protocol-step="3"><a href="protocols/shared/controllers/protocol.php?id=<?= $id ?>#graphs">Graphs<small>4/7</small></a></li>
         <li data-protocol-step="4"><a href="#data-query">Data Query<small>5/7</small></a></li>
-        <li><a href="device.php?id=<?= $id ?>#ports">Port Config<small>6/7</small></a></li>
-        <li><a href="device.php?id=<?= $id ?>#fcaps">FCAPS<small>7/7</small></a></li>
+        <li><a href="inventory/controllers/device.php?id=<?= $id ?>#ports">Port Config<small>6/7</small></a></li>
+        <li><a href="inventory/controllers/device.php?id=<?= $id ?>#fcaps">FCAPS<small>7/7</small></a></li>
     </ol>
 </nav>
 <?php endif; ?>
@@ -420,7 +420,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial", "syslog"] as $key) {
     <?php endif; ?>
     <?php if (empty($wizard) && !$presetMode): ?>
     <footer class="form-footer">
-        <a class="button" id="protocol-previous" href="device.php?id=<?= $id ?>">Previous ←</a>
+        <a class="button" id="protocol-previous" href="inventory/controllers/device.php?id=<?= $id ?>">Previous ←</a>
         <a class="button" id="protocol-next" href="#diagnostics">Next →</a>
     </footer>
     <?php endif; ?>

@@ -3,7 +3,7 @@
 ?>
 <div class="titlebar">
     <h1><?= icct_nms_h($host["description"]) ?> — Diagnostics</h1>
-    <a class="button" href="inventory.php">Done</a>
+    <a class="button" href="inventory/controllers/inventory.php">Done</a>
 </div>
 <section class="diagnostics-page">
     <?php if($diagnosticLabels): ?><form method="post" id="diagnostic-run-form">

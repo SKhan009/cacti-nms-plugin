@@ -44,7 +44,7 @@ try {
             elseif ($activePreset === 'network-connections') $message = icct_nms_save_connection($_POST);
             else $message = icct_nms_save_segment($_POST);
             $_SESSION['icct_nms_notice'] = $message;
-            icct_nms_redirect('presets.php?tab='.$activePreset);
+            icct_nms_redirect('presets/controllers/presets.php?tab='.$activePreset);
 
         } catch (Throwable $failure) { $error = $failure->getMessage(); }
     }

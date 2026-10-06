@@ -21,10 +21,10 @@ try{
         icct_nms_post();$action=$_POST['action']??'';
         if(in_array($action,['delete','restore'],true)){
             icct_mib_set_deleted($_POST['bundle_id']??'', $action==='delete');
-            icct_nms_redirect('mib_repository.php'.($action==='delete'?'?deleted='.rawurlencode($_POST['bundle_id']):''));
+            icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php'.($action==='delete'?'?deleted='.rawurlencode($_POST['bundle_id']):''));
         }elseif($action==='upload'){
             $mode='upload';$draft=icct_mib_preview($_FILES['mibs']??[], $_POST['type_id']??'',true);
-            $_SESSION['icct_mib_draft']=$draft;unset($_SESSION['icct_mib_plan'],$_SESSION['icct_mib_values'],$_SESSION['icct_mib_inputs']);icct_nms_redirect('mib_repository.php?review=1');
+            $_SESSION['icct_mib_draft']=$draft;unset($_SESSION['icct_mib_plan'],$_SESSION['icct_mib_values'],$_SESSION['icct_mib_inputs']);icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?review=1');
         }elseif($action==='reparse'){
             $bundle=null;foreach($bundles as $candidate)if($candidate['id']===($_POST['bundle_id']??''))$bundle=$candidate;
             if(!$bundle)throw new InvalidArgumentException('MIB upload not found.');
@@ -33,16 +33,16 @@ try{
                 foreach($bundle['files'] as $i=>$file){$path=tempnam($storedDir,'stored-');if($path===false)throw new RuntimeException('Cannot prepare saved MIB.');$paths[]=$path;chmod($path,0600);$content=icct_mib_file($bundle,$i);if(file_put_contents($path,$content)!==strlen($content))throw new RuntimeException('Cannot prepare saved MIB.');$upload['name'][]=$file['name'];$upload['tmp_name'][]=$path;$upload['error'][]=UPLOAD_ERR_OK;}
                 $draft=icct_mib_preview($upload,$bundle['type_id'],true);
             }finally{foreach($paths as $path)unlink($path);rmdir($storedDir);}
-            $_SESSION['icct_mib_draft']=$draft;unset($_SESSION['icct_mib_plan'],$_SESSION['icct_mib_values'],$_SESSION['icct_mib_inputs']);icct_nms_redirect('mib_repository.php?review=1');
-        }elseif($action==='discard'){unset($_SESSION['icct_mib_draft'],$_SESSION['icct_mib_plan'],$_SESSION['icct_mib_values'],$_SESSION['icct_mib_inputs']);icct_nms_redirect('mib_repository.php');
+            $_SESSION['icct_mib_draft']=$draft;unset($_SESSION['icct_mib_plan'],$_SESSION['icct_mib_values'],$_SESSION['icct_mib_inputs']);icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?review=1');
+        }elseif($action==='discard'){unset($_SESSION['icct_mib_draft'],$_SESSION['icct_mib_plan'],$_SESSION['icct_mib_values'],$_SESSION['icct_mib_inputs']);icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php');
         }elseif(in_array($action,['review','confirm'],true)){
             $mode=$action==='confirm'?'confirm':'review';$preview=$draft;
             if(!$draft||!hash_equals($draft['id'],(string)($_POST['draft_id']??'')))throw new InvalidArgumentException('Upload review is no longer available. Upload again.');
             if($action==='review'){
-                unset($_SESSION['icct_mib_plan']);if(($_POST['review_complete']??'')!=='1')throw new InvalidArgumentException('The review form was truncated. Enable JavaScript and retry so all selected OIDs are included.');$reviewValues=icct_mib_review_input($_POST);$_SESSION['icct_mib_values']=$reviewValues;$plan=icct_mib_plan($draft,$reviewValues);$_SESSION['icct_mib_plan']=$plan;icct_nms_redirect('mib_repository.php?confirm=1');
+                unset($_SESSION['icct_mib_plan']);if(($_POST['review_complete']??'')!=='1')throw new InvalidArgumentException('The review form was truncated. Enable JavaScript and retry so all selected OIDs are included.');$reviewValues=icct_mib_review_input($_POST);$_SESSION['icct_mib_values']=$reviewValues;$plan=icct_mib_plan($draft,$reviewValues);$_SESSION['icct_mib_plan']=$plan;icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?confirm=1');
             }else{
                 $plan=$_SESSION['icct_mib_plan']??null;if(!$plan||($_POST['confirmed']??'')!=='1')throw new InvalidArgumentException('Review and confirm the creation options first.');
-                icct_mib_save($draft,$plan);unset($_SESSION['icct_mib_draft'],$_SESSION['icct_mib_plan'],$_SESSION['icct_mib_values'],$_SESSION['icct_mib_inputs']);icct_nms_redirect('mib_repository.php?saved=1');
+                icct_mib_save($draft,$plan);unset($_SESSION['icct_mib_draft'],$_SESSION['icct_mib_plan'],$_SESSION['icct_mib_values'],$_SESSION['icct_mib_inputs']);icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?saved=1');
             }
         }else throw new InvalidArgumentException('Unknown repository action.');
     }elseif(isset($_GET['upload'])){icct_backend_require_management(3);$mode='upload';}

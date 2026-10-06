@@ -79,7 +79,7 @@ try {
         }
         if($queueWake){
             icct_backend_diag_run_command(
-                [PHP_BINARY, "-q", dirname(__DIR__, 3) . "/diagnostic_worker.php"],
+                [PHP_BINARY, "-q", dirname(__DIR__, 3) . "/inventory/diagnostics/cli/diagnostic_worker.php"],
                 75,
                 $heartbeat,
             );

@@ -2,7 +2,7 @@
 'use strict';
 const dialog=document.querySelector('#shared-diagnostic-dialog');if(!dialog)return;
 const form=document.querySelector('#shared-diagnostic-form'),select=document.querySelector('#shared-diagnostic-tool'),status=document.querySelector('#shared-diagnostic-status'),output=document.querySelector('#shared-diagnostic-output'),title=document.querySelector('#shared-diagnostic-title'),run=form.querySelector('[type=submit]');
-const endpoint=new URL('diagnostics.php',location.href);let timer=null,version=0,host=0,job=0,pending=false,busy=false,returnFocus=null;
+const endpoint=new URL('inventory/diagnostics/controllers/diagnostics.php',document.baseURI);let timer=null,version=0,host=0,job=0,pending=false,busy=false,returnFocus=null;
 // Collector recovery instructions are informational; the browser never runs them.
 const recovery=document.createElement('section');recovery.id='shared-diagnostic-recovery';recovery.hidden=true;
 const recoveryTitle=document.createElement('h3');recoveryTitle.textContent='Diagnostic service recovery';recovery.append(recoveryTitle);

@@ -61,6 +61,10 @@ function icct_nms_token()
  */
 function icct_nms_redirect($url)
 {
+    global $config;
+    if (!preg_match('~^(?:[a-z][a-z0-9+.-]*:|/)~i', $url)) {
+        $url = $config['url_path'] . 'plugins/icct_nms/' . $url;
+    }
     header('Location: ' . $url, true, 303);
     exit();
 }
@@ -71,7 +75,7 @@ function icct_nms_redirect($url)
 function icct_nms_failure(Throwable $error)
 {
     http_response_code(503);
-    print '<!doctype html><html lang="en"><meta charset="utf-8"><title>Inventory unavailable</title><link rel="stylesheet" href="shared/css/inventory.css"><body class="icct-inventory"><h1>Inventory unavailable</h1><p>' .
+    print '<!doctype html><html lang="en"><meta charset="utf-8"><title>Inventory unavailable</title><link rel="stylesheet" href="' . icct_nms_h($GLOBALS['config']['url_path'] . 'plugins/icct_nms/shared/css/inventory.css') . '"><body class="icct-inventory"><h1>Inventory unavailable</h1><p>' .
         icct_nms_h($error->getMessage()) .
         '</p></body></html>';
     exit();

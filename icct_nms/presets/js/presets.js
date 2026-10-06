@@ -42,7 +42,7 @@ function openTypeEditor(type = {}) {
   const validImage=/^uploads\/[a-f0-9]{32}\.(png|jpg|webp)$/.test(type.image ?? '');
   preview.hidden=!validImage;
   document.querySelector('#type-remove-image').hidden=!validImage;
-  if(validImage) preview.src=new URL('../images/device-types/'+type.image,document.querySelector('script[src*="presets.js"]').src).href; else preview.removeAttribute('src');
+  if(validImage) preview.src=new URL('shared/assets/images/device-types/'+type.image,document.baseURI).href; else preview.removeAttribute('src');
   document.querySelector('#type-upload-name').textContent='';
   closeIconPicker(); updateTypeIcon();
   typeEditor.elements.type_name.focus();

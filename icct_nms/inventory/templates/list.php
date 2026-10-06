@@ -6,9 +6,9 @@
 <div class="inventory-heading">
     <div>
         <p class="breadcrumb">
-            <a href="topology.php">Dashboard</a>
+            <a href="dashboard/controllers/topology.php">Dashboard</a>
             /
-            <a href="inventory.php">Inventory</a>
+            <a href="inventory/controllers/inventory.php">Inventory</a>
             / Table View
         </p>
         <h1>Inventory</h1>
@@ -18,12 +18,12 @@
             <button class="active" type="button" data-view="table" aria-pressed="true">
                 Table View
             </button>
-            <a href="inventory.php?view=tree">Tree View</a>
+            <a href="inventory/controllers/inventory.php?view=tree">Tree View</a>
         </div>
-        <a class="export-button" href="export.php" aria-label="Export inventory CSV">↥</a>
+        <a class="export-button" href="inventory/controllers/export.php" aria-label="Export inventory CSV">↥</a>
         <?php if ($management): ?>
         <button class="button" type="button" id="device-discovery">Device Discovery</button>
-        <a class="button primary" href="device.php">Add Device</a>
+        <a class="button primary" href="inventory/controllers/device.php">Add Device</a>
         <?php endif; ?>
     </div>
 </div>
@@ -161,7 +161,7 @@
                 <td>
                     <div class="row-actions">
                         <a
-                            href="device.php?id=<?= $id ?>&amp;view=1"
+                            href="inventory/controllers/device.php?id=<?= $id ?>&amp;view=1"
                             aria-label="View <?= icct_nms_h(
                                 $d["description"],
                             ) ?>"
@@ -179,7 +179,7 @@
                             ∿
                         </a>
                         <?php if ($management): ?>
-                        <a href="device.php?id=<?= $id ?>" aria-label="Edit <?= icct_nms_h(
+                        <a href="inventory/controllers/device.php?id=<?= $id ?>" aria-label="Edit <?= icct_nms_h(
     $d["description"],
 ) ?>">
                             ✎
@@ -190,7 +190,7 @@
                             ) ?>">⋮</summary>
                             <div class="row-menu-panel">
                                 <?php $deviceDiagnostics=icct_backend_diag_selected_labels($id);foreach($deviceDiagnostics as $tool=>$label): ?>
-                                <a href="diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h($tool) ?>#diagnostic-run" data-host-id="<?= $id ?>" data-tool="<?= icct_nms_h($tool) ?>" data-device-name="<?= icct_nms_h($d['description']) ?>"><?= icct_nms_h($label) ?></a>
+                                <a href="inventory/diagnostics/controllers/diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h($tool) ?>#diagnostic-run" data-host-id="<?= $id ?>" data-tool="<?= icct_nms_h($tool) ?>" data-device-name="<?= icct_nms_h($d['description']) ?>"><?= icct_nms_h($label) ?></a>
                                 <?php endforeach; ?>
                                 <?php if(!$deviceDiagnostics): ?><span>No diagnostics selected</span><?php endif; ?>
                                 <?php $launch = icct_nms_meta(
@@ -214,13 +214,13 @@
                                 <button type="button" disabled title="No Cross Launch URL is saved for this device.">Cross Launch URL</button>
                                 <?php endif; ?>
                                 <button type="button" disabled title="Alarm suppression unavailable.">Alarm Suppression</button>
-                                <form method="post" action="protocol.php?id=<?= $id ?>">
+                                <form method="post" action="protocols/shared/controllers/protocol.php?id=<?= $id ?>">
                                     <?php icct_nms_token(); ?>
                                     <input type="hidden" name="action" value="reindex">
                                     <button type="submit">Re-Index Device</button>
                                 </form>
-                                <a href="device.php?id=<?= $id ?>">Modify Device</a>
-                                <a href="device.php?clone_id=<?= $id ?>" data-clone-device data-device-name="<?= icct_nms_h(
+                                <a href="inventory/controllers/device.php?id=<?= $id ?>">Modify Device</a>
+                                <a href="inventory/controllers/device.php?clone_id=<?= $id ?>" data-clone-device data-device-name="<?= icct_nms_h(
     $d["description"],
 ) ?>">Clone Device</a>
                                 <?php foreach (
@@ -289,7 +289,7 @@
         <h2>Device Discovery</h2>
         <button type="button" data-close-dialog aria-label="Close">×</button>
     </div>
-    <form method="post" action="protocol.php">
+    <form method="post" action="protocols/shared/controllers/protocol.php">
         <?php icct_nms_token(); ?>
         <input type="hidden" name="action" value="discover" />
         <button class="button primary">Queue Discovery</button>

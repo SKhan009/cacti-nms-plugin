@@ -42,7 +42,7 @@ function icct_backend_diag_dispatch()
     }
     require_once $config['base_path'] . '/lib/poller.php';
     // Both executable and script are installation paths, never request parameters.
-    exec_background(PHP_BINARY, '-q ' . escapeshellarg(ICCT_NMS_ROOT . '/diagnostic_listener.php'));
+    exec_background(PHP_BINARY, '-q ' . escapeshellarg(ICCT_NMS_ROOT . '/inventory/diagnostics/cli/diagnostic_listener.php'));
 }
 
 /** Reused Inventory service: diag execution context. */

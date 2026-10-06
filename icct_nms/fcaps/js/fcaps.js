@@ -135,7 +135,7 @@
       if(!id||id==='0'){reading.value='Save device and SNMP setup first';return;}
       reading.value='Reading…';
       const data=new FormData();data.set('action','fault_parameter_read');data.set('oid',oid.value);const token=form.querySelector('input[name="__csrf_magic"]');if(!token?.value){reading.value='Reload the page before reading';return;}data.set('__csrf_magic',token.value);
-      try{const response=await fetch('device.php?id='+encodeURIComponent(id),{method:'POST',body:data,credentials:'same-origin',headers:{Accept:'application/json'}});if(response.redirected||!response.headers.get('Content-Type')?.includes('application/json'))throw new Error('Request expired. Reload the page and try again.');const result=await response.json();if(generation!==readGeneration)return;if(!response.ok)throw new Error(result.error||'Reading unavailable');if(!Object.prototype.hasOwnProperty.call(result,'value'))throw new Error('Session expired. Reload the page and sign in.');reading.value=result.value===null?'Unsupported or no response':String(Number(result.value)*Number(scale.value||1))+(units.value?' '+units.value:'');}
+      try{const response=await fetch('inventory/controllers/device.php?id='+encodeURIComponent(id),{method:'POST',body:data,credentials:'same-origin',headers:{Accept:'application/json'}});if(response.redirected||!response.headers.get('Content-Type')?.includes('application/json'))throw new Error('Request expired. Reload the page and try again.');const result=await response.json();if(generation!==readGeneration)return;if(!response.ok)throw new Error(result.error||'Reading unavailable');if(!Object.prototype.hasOwnProperty.call(result,'value'))throw new Error('Session expired. Reload the page and sign in.');reading.value=result.value===null?'Unsupported or no response':String(Number(result.value)*Number(scale.value||1))+(units.value?' '+units.value:'');}
       catch(error){if(generation===readGeneration)reading.value=error.message;}
     }
     function fillParameter(item){if(!item)return;oid.value=item.oid;parameter.value=item.parameter;units.value=item.units||'';scale.value=item.scale||1;if(!name.value)name.value=item.parameter;sync();readParameter();}
@@ -217,7 +217,7 @@
     try {
       const data=new FormData();data.set('host_id',document.querySelector('#device-wizard').dataset.deviceId);data.set('action','configuration_backup');
       const token=basic.querySelector('[name="__csrf_magic"]');if(token)data.set(token.name,token.value);
-      const response=await fetch('wizard_save.php',{method:'POST',body:data});const body=await response.json();if(!response.ok||!body.ok)throw new Error(body.error||'Backup failed.');
+      const response=await fetch('inventory/controllers/wizard_save.php',{method:'POST',body:data});const body=await response.json();if(!response.ok||!body.ok)throw new Error(body.error||'Backup failed.');
       backups.splice(0,backups.length,...body.backups);
       const rows=document.querySelector('#configuration-history-rows');rows.replaceChildren();
       for(const backup of backups){

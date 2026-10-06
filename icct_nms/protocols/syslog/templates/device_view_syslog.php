@@ -9,13 +9,13 @@ if ($syslogPage > $syslogPages) {
     $syslogPage = $syslogPages;
     $syslogEvents = icct_backend_syslog_events([(int)$id], ['host_id'=>(int)$id, 'search'=>$syslogSearch], 50, ($syslogPage-1)*50, $syslogTotal);
 }
-$syslogPageUrl = static fn($page) => 'device.php?'.http_build_query(['id'=>(int)$id,'view'=>1,'syslog_search'=>$syslogSearch,'syslog_page'=>$page]).'#view-syslog';
+$syslogPageUrl = static fn($page) => 'inventory/controllers/device.php?'.http_build_query(['id'=>(int)$id,'view'=>1,'syslog_search'=>$syslogSearch,'syslog_page'=>$page]).'#view-syslog';
 $syslogSeverityNames = icct_backend_syslog_severity_labels();
 $syslogFacilityNames = icct_backend_syslog_facility_labels();
 ?>
 <section id="view-syslog" data-device-view-panel="syslog" hidden>
 <h2>Syslog</h2>
-<form method="get" action="device.php#view-syslog" class="device-syslog-search">
+<form method="get" action="inventory/controllers/device.php#view-syslog" class="device-syslog-search">
 <input type="hidden" name="id" value="<?= (int)$id ?>"><input type="hidden" name="view" value="1">
 <label for="device-syslog-search">Search messages</label>
 <input id="device-syslog-search" type="search" name="syslog_search" value="<?= icct_nms_h($syslogSearch) ?>" placeholder="Search message, program or source IP">

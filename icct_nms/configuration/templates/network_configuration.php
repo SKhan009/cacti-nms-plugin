@@ -10,7 +10,7 @@ $networkField=function($key,$label,$kind='text',$tip='',$extra='')use($networkEd
 ?>
 <form method="post" class="topology-config-form network-editor" id="networkEditor">
 <?php icct_nms_token(); ?><input type="hidden" name="action" value="save_network"><input type="hidden" name="network_id" value="<?= (int)$networkEdit['id'] ?>">
-<div class="titlebar"><h2><?= $networkEdit['id']?'Edit':'Add' ?> Network</h2><div class="type-editor-actions"><a class="button" href="?tab=networks">Cancel</a><button class="button primary">Save</button></div></div>
+<div class="titlebar"><h2><?= $networkEdit['id']?'Edit':'Add' ?> Network</h2><div class="type-editor-actions"><a class="button" href="<?= icct_nms_h(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ?>?tab=networks">Cancel</a><button class="button primary">Save</button></div></div>
 <h3>General Settings</h3><div class="form-grid">
 <?php
 $networkField('name','Network Name *');$networkField('poller_id','Data Collector');$networkField('site_id','Associated Site');$networkField('sched_type','Schedule Type');
@@ -26,5 +26,5 @@ $networkField('dns_servers','Alternate DNS Servers','text','Space-separated DNS 
 <?php $networkField('start_at','Starting Date/Time *','text','Uses the Cacti server timezone.','data-network-schedules="2,3,4,5"');$networkField('recur_every','Rerun Every','text','','data-network-schedules="2,3"');$networkField('day_of_week','Days of Week','multi','','data-network-schedules="3"');$networkField('month','Months of Year','multi','','data-network-schedules="4,5"');$networkField('day_of_month','Days of Month','multi','','data-network-schedules="4"');$networkField('monthly_week','Weeks of Month','multi','','data-network-schedules="5"');$networkField('monthly_day','Days of Week','multi','','data-network-schedules="5"'); ?></div>
 <h3>Reachability Settings</h3><div class="form-grid">
 <?php $networkField('snmp_id','SNMP Options');$networkField('ping_method','Ping Method');$networkField('ping_port','Ping Port','number','','data-network-ping="2,3,5"');$networkField('ping_timeout','Ping Timeout (ms)','number','','data-network-ping="1,2,3,5"');$networkField('ping_retries','Ping Retry Count','number','','data-network-ping="1,2,3,5"'); ?></div>
-<div class="type-editor-actions"><a class="button" href="?tab=networks">Cancel</a><button class="button primary">Save</button></div>
+<div class="type-editor-actions"><a class="button" href="<?= icct_nms_h(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ?>?tab=networks">Cancel</a><button class="button primary">Save</button></div>
 </form>

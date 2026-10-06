@@ -2,7 +2,7 @@
 /** Lifecycle-only schema creation. Ordinary requests never create or repair tables. */
 function icct_nms_schema_install()
 {
-    $sql = file_get_contents(__DIR__ . '/../../database/schema.sql');
+    $sql = file_get_contents(__DIR__ . '/../database/schema.sql');
     $sql = preg_replace('/^--.*$/m', '', $sql);
     foreach (explode(';', $sql) as $statement) {
         if (trim($statement) !== '' && !db_execute($statement)) {

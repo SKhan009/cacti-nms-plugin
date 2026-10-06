@@ -80,7 +80,7 @@ try {
         } else {
             throw new InvalidArgumentException('Unsupported Syslog action.');
         }
-        icct_nms_redirect('syslog.php' . ($_GET ? '?' . http_build_query($_GET) : ''));
+        icct_nms_redirect('protocols/syslog/controllers/syslog.php' . ($_GET ? '?' . http_build_query($_GET) : ''));
     }
 
     $devices = icct_nms_inventory();
@@ -161,7 +161,7 @@ function icct_nms_syslog_query(array $replace = [])
 ?>
 <div class="inventory-heading syslog-heading">
     <div>
-        <p class="breadcrumb"><a href="inventory.php">Inventory</a> / Syslog Console</p>
+        <p class="breadcrumb"><a href="inventory/controllers/inventory.php">Inventory</a> / Syslog Console</p>
         <h1>Syslog Console</h1>
         <p class="page-description">Passive device events received by the LNMS Syslog service and mapped to configured Cacti devices.</p>
     </div>
@@ -218,7 +218,7 @@ function icct_nms_syslog_query(array $replace = [])
                 <tbody>
                 <?php foreach ($windowsBindings as $binding): ?>
                     <tr>
-                        <td><a href="device.php?id=<?= (int) $binding['host_id'] ?>&view=1"><?= icct_nms_h($binding['description']) ?></a></td>
+                        <td><a href="inventory/controllers/device.php?id=<?= (int) $binding['host_id'] ?>&view=1"><?= icct_nms_h($binding['description']) ?></a></td>
                         <td><?= icct_nms_h($binding['source_address'] ?: $binding['hostname']) ?></td>
                         <td><?= icct_nms_h(strtoupper($binding['transport'])) ?></td>
                         <td><?= (int) $binding['max_severity'] ?></td>
@@ -290,7 +290,7 @@ function icct_nms_syslog_query(array $replace = [])
         <input type="search" name="search" value="<?= icct_nms_h($search) ?>" placeholder="Message / source / program / device" />
     </label>
     <button class="button" type="submit">Apply</button>
-    <a class="button secondary" href="syslog.php">Clear</a>
+    <a class="button secondary" href="protocols/syslog/controllers/syslog.php">Clear</a>
 </form>
 
 <div class="table-scroll syslog-table-scroll" tabindex="0" role="region" aria-label="Syslog events">
@@ -315,7 +315,7 @@ function icct_nms_syslog_query(array $replace = [])
         <tr>
             <td><?= icct_nms_h($event['event_time']) ?><small>Last <?= icct_nms_h($event['last_seen']) ?></small></td>
             <td><span class="syslog-severity severity-<?= icct_nms_h($event['nms_severity']) ?>"><?= icct_nms_h(ucfirst($event['nms_severity'])) ?></span><small><?= icct_nms_h($event['severity']) ?> (<?= (int) $event['severity_code'] ?>)</small></td>
-            <td><a href="device.php?id=<?= (int) $event['host_id'] ?>&view=1"><?= icct_nms_h($event['description']) ?></a><small><?= icct_nms_h($event['hostname']) ?></small></td>
+            <td><a href="inventory/controllers/device.php?id=<?= (int) $event['host_id'] ?>&view=1"><?= icct_nms_h($event['description']) ?></a><small><?= icct_nms_h($event['hostname']) ?></small></td>
             <td><?= icct_nms_h($event['source_ip']) ?><small><?= icct_nms_h($event['source_host']) ?> · <?= icct_nms_h(strtoupper($event['transport'])) ?></small></td>
             <td><?= icct_nms_h($event['facility']) ?><small><?= icct_nms_h($event['program']) ?></small></td>
             <td class="syslog-message"><details><summary><?= icct_nms_h(mb_strimwidth($event['message'], 0, 120, '…')) ?></summary><pre><?= icct_nms_h($event['message']) ?></pre></details></td>
@@ -354,15 +354,15 @@ function icct_nms_syslog_query(array $replace = [])
 </div>
 <div class="inventory-pagination">
     <label>Items per page
-        <select onchange="location.href='syslog.php?<?= icct_nms_h(icct_nms_syslog_query(['rows' => ''])) ?>&rows='+this.value">
+        <select onchange="location.href=new URL('protocols/syslog/controllers/syslog.php?<?= icct_nms_h(icct_nms_syslog_query(['rows' => ''])) ?>&rows='+this.value,document.baseURI).href">
             <?php foreach ([25,50,100,200] as $choice): ?><option value="<?= $choice ?>" <?= $rows === $choice ? 'selected' : '' ?>><?= $choice ?></option><?php endforeach; ?>
         </select>
     </label>
     <span><?= $total ? (($page - 1) * $rows + 1) . '–' . min($page * $rows, $total) . ' of ' . $total . ' events' : '0 events' ?></span>
     <div class="page-controls">
-        <a class="page-link <?= $page <= 1 ? 'disabled' : '' ?>" href="<?= $page <= 1 ? '#' : 'syslog.php?' . icct_nms_h(icct_nms_syslog_query(['page' => $page - 1])) ?>">‹</a>
+        <a class="page-link <?= $page <= 1 ? 'disabled' : '' ?>" href="<?= $page <= 1 ? '#' : 'protocols/syslog/controllers/syslog.php?' . icct_nms_h(icct_nms_syslog_query(['page' => $page - 1])) ?>">‹</a>
         <span><?= $page ?> of <?= $pages ?></span>
-        <a class="page-link <?= $page >= $pages ? 'disabled' : '' ?>" href="<?= $page >= $pages ? '#' : 'syslog.php?' . icct_nms_h(icct_nms_syslog_query(['page' => $page + 1])) ?>">›</a>
+        <a class="page-link <?= $page >= $pages ? 'disabled' : '' ?>" href="<?= $page >= $pages ? '#' : 'protocols/syslog/controllers/syslog.php?' . icct_nms_h(icct_nms_syslog_query(['page' => $page + 1])) ?>">›</a>
     </div>
 </div>
 <?php require dirname(__DIR__, 3) . '/shared/templates/footer.php'; ?>

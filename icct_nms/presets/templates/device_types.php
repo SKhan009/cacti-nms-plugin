@@ -6,7 +6,7 @@ $perPage = in_array((int)($_GET['per_page'] ?? 10),[10,25,50],true) ? (int)($_GE
 $total=count($deviceTypes); $pages=max(1,(int)ceil($total/$perPage));
 $page=max(1,min($pages,(int)($_GET['page'] ?? 1)));
 $rows=array_slice($deviceTypes,($page-1)*$perPage,$perPage,true);
-$pageUrl=static fn($n)=>'presets.php?tab=device-type&per_page='.$perPage.'&sort='.$sort.'&page='.$n;
+$pageUrl=static fn($n)=>'presets/controllers/presets.php?tab=device-type&per_page='.$perPage.'&sort='.$sort.'&page='.$n;
 ?>
 <?php if ($management): ?>
 <form method="post" enctype="multipart/form-data" class="device-type-editor" id="device-type-editor" <?= $typeEditing?'':'hidden' ?>>
@@ -31,7 +31,7 @@ $pageUrl=static fn($n)=>'presets.php?tab=device-type&per_page='.$perPage.'&sort=
 </form>
 <?php endif; ?>
 <div class="device-types-list">
-<table class="action-table device-types-table"><thead><tr><th><a href="<?= icct_nms_h('presets.php?tab=device-type&per_page='.$perPage.'&sort='.($sort==='asc'?'desc':'asc')) ?>" aria-label="Sort device types <?= $sort==='asc'?'descending':'ascending' ?>">Device Type Name &amp; Segment <span aria-hidden="true"><?= $sort==='asc'?'↑':'↓' ?></span></a></th><th>Icon</th><th>Device Shape</th><th>No. of Ports</th><th>Device Type Image</th><th>Actions</th></tr></thead><tbody>
+<table class="action-table device-types-table"><thead><tr><th><a href="<?= icct_nms_h('presets/controllers/presets.php?tab=device-type&per_page='.$perPage.'&sort='.($sort==='asc'?'desc':'asc')) ?>" aria-label="Sort device types <?= $sort==='asc'?'descending':'ascending' ?>">Device Type Name &amp; Segment <span aria-hidden="true"><?= $sort==='asc'?'↑':'↓' ?></span></a></th><th>Icon</th><th>Device Shape</th><th>No. of Ports</th><th>Device Type Image</th><th>Actions</th></tr></thead><tbody>
 <?php foreach ($rows as $id=>$type): ?>
 <tr><td><?= icct_nms_h($type['name']) ?><small><?= icct_nms_h($segmentNames[$type['category_id']] ?? 'None') ?></small></td>
 <td><img class="type-icon" src="<?= icct_nms_h(icct_nms_type_asset($type, 'catalogue-icon') ) ?>" alt="<?= icct_nms_h(icct_nms_type_icons()[$type['icon']] ?? 'Device') ?>"></td>

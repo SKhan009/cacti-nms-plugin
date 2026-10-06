@@ -25,7 +25,7 @@ try{
             elseif($action==='delete_link')icct_nms_connection_delete($_POST['link_id']??'');
             else throw new InvalidArgumentException('Unknown action.');
             $_SESSION['icct_nms_notice']=in_array($action,['run_network','discover_device'],true)?'Discovery requested for the assigned collector.':'Topology configuration saved.';
-            icct_nms_redirect('topology_configuration.php?tab='.$tab);
+            icct_nms_redirect('dashboard/topology/controllers/topology_configuration.php?tab='.$tab);
         }catch(Throwable $failure){$error=$failure->getMessage();}
     }
     $devices=icct_nms_inventory();$byId=array_column($devices,null,'id');$profiles=icct_nms_connections();$links=array_filter(icct_nms_manual_links(),fn($link)=>isset($byId[$link['source']],$byId[$link['target']]));

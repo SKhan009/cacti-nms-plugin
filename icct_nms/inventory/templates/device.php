@@ -10,7 +10,7 @@
     <div class="titlebar">
         <h1><?= icct_nms_h($title) ?></h1>
         <div class="title-actions">
-            <a class="button" href="inventory.php">Cancel</a>
+            <a class="button" href="inventory/controllers/inventory.php">Cancel</a>
             <?php if (!$readonly): ?>
             <button class="button primary" type="button" data-wizard-save><?= !empty($cloneId)
                 ? "Create Clone"
@@ -31,14 +31,14 @@
                 </span>
             </li>
             <li>
-                <a href="<?= $id ? "protocol.php?id=" . $id : "#protocol" ?>">
+                <a href="<?= $id ? "protocols/shared/controllers/protocol.php?id=" . $id : "#protocol" ?>">
                     Protocol Config
                     <small>2/7</small>
                 </a>
             </li>
             <li>
                 <a href="<?= $id
-                    ? "protocol.php?id=" . $id . "#diagnostics"
+                    ? "protocols/shared/controllers/protocol.php?id=" . $id . "#diagnostics"
                     : "#diagnostics" ?>">
                     Device Diagnostics
                     <small>3/7</small>
@@ -46,8 +46,8 @@
             </li>
             <li <?= $id ? "" : 'aria-disabled="true"' ?>><?php if (
     $id
-): ?><a href="protocol.php?id=<?= $id ?>#graphs">Graphs<small>4/7</small></a><?php else: ?><a href="#graphs">Graphs<small>4/7</small></a><?php endif; ?></li>
-            <li <?= $id ? "" : 'aria-disabled="true"' ?>><?php if ($id): ?><a href="protocol.php?id=<?= $id ?>#data-query">Data Query<small>5/7</small></a><?php else: ?><a href="#data-query">Data Query<small>5/7</small></a><?php endif; ?></li>
+): ?><a href="protocols/shared/controllers/protocol.php?id=<?= $id ?>#graphs">Graphs<small>4/7</small></a><?php else: ?><a href="#graphs">Graphs<small>4/7</small></a><?php endif; ?></li>
+            <li <?= $id ? "" : 'aria-disabled="true"' ?>><?php if ($id): ?><a href="protocols/shared/controllers/protocol.php?id=<?= $id ?>#data-query">Data Query<small>5/7</small></a><?php else: ?><a href="#data-query">Data Query<small>5/7</small></a><?php endif; ?></li>
             <li><a href="#ports">Port Config<small>6/7</small></a></li>
             <li><a href="#fcaps">FCAPS<small>7/7</small></a></li>
         </ol>
