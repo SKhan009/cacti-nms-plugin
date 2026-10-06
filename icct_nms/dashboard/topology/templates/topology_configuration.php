@@ -2,13 +2,9 @@
 $connectionFieldHelp = static function($label,$text) { ?>
 <span class="field-info" tabindex="0" role="img" aria-label="Information about <?= icct_nms_h($label) ?>" data-tooltip="<?= icct_nms_h($text) ?>"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
 <?php };
-$connectionDeviceActions = static function($id) use ($management,$deviceDiscovery,$deviceDiagnostics) {
-    $summary=$deviceDiscovery[$id]??[];$diagnostics=$deviceDiagnostics[$id]??[];
+$connectionDeviceActions = static function($id) use ($management) {
     if(!$management)return;
     ?><a class="button" href="inventory/controllers/device.php?id=<?= (int)$id ?>#protocol">Device Configuration</a><?php
-    if(array_filter($summary,fn($row)=>$row['status']!=='Disabled')){ ?>
-    <form method="post"><?php icct_nms_token(); ?><input type="hidden" name="action" value="discover_device"><input type="hidden" name="host_id" value="<?= (int)$id ?>"><button class="button" type="submit">Discover Now</button></form><?php }
-    if($diagnostics){ ?><a class="button" href="inventory/diagnostics/controllers/diagnostics.php?host_id=<?= (int)$id ?>">Diagnostics</a><?php }
 };
 ?>
 <section class="topology-configuration">
