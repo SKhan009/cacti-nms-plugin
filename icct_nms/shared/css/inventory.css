@@ -3109,3 +3109,6 @@ h1, h2, h3, h4, h5, h6 { line-height: 1.25; }
 .device-syslog-table{min-width:1000px;table-layout:auto}
 .device-syslog-table small{display:block;color:#666;margin-top:4px}
 .device-syslog-table .device-syslog-message{white-space:pre-wrap;min-width:280px;max-width:560px;overflow-wrap:anywhere}
+
+.type-visibility .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:700px){.type-visibility .form-grid{grid-template-columns:1fr}}

@@ -243,3 +243,15 @@
 #dashboardDeleteDialog{width:360px;max-width:calc(100vw - 32px);border:1px solid #ddd;padding:24px;background:white;color:#202020;box-shadow:0 8px 32px #0003}
 #dashboardDeleteDialog::backdrop{background:#0005}
 #dashboardDeleteDialog h2{margin:0 0 16px;font-size:20px}
+
+/* Rack front panels: plain labelled bars unless the preset selects an asset. */
+.rack-cabinet header{border-bottom:3px solid #c6c6c6;padding:16px 12px;min-height:80px}
+.rack-cabinet h3{font-size:22px;margin-bottom:8px}
+.rack-frame{width:86%;max-width:320px;margin:30px auto;background:#272527}
+.rack-slots{height:calc(max(clamp(320px,calc(100dvh - 350px),610px),calc(var(--rack-units,12)*34px))*var(--rack-scale));gap:7px;padding:4px 5px 4px 12px}
+.rack-slot.occupied{background:#272527}
+.rack-slots>.rack-device{padding:4px 9px;font-size:14px;line-height:1.2;border-radius:4px;gap:8px}
+.rack-device-name{flex:1;min-width:0;text-align:left}
+.rack-device-image{width:32px;height:24px;object-fit:contain;flex:none}
+.rack-alarm-count{display:inline-flex;align-items:center;justify-content:center;flex:none;width:20px;height:20px;border:1px solid #666;border-radius:50%;font-size:11px;line-height:1}
+@media(max-width:700px){.rack-cabinet h3{font-size:16px}.rack-slots>.rack-device{font-size:11px;padding:2px 4px;gap:3px}.rack-alarm-count{width:16px;height:16px;font-size:9px}.rack-device-image{width:20px;height:16px}}

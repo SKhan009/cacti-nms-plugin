@@ -10,7 +10,16 @@
   const scopeSite=dashboardSource?Number(JSON.parse(dashboardSource.textContent).site_id||0):0;
   function scopedData(value){if(!scopeSite)return value;return {...value,sites:value.sites.filter(site=>Number(site.id)===scopeSite),racks:value.racks,devices:value.devices};}
   function siteDevices(){return data.devices;}
-  function card(device){const n=el('div','rack-device '+window.icctStatusClass(device.status));n.dataset.deviceId=device.id;n.draggable=editing;n.tabIndex=0;const link=el('span','rack-device-name',device.name);const shape=el('span','device-shape-symbol shape-'+(device.shape||'rectangle'));shape.setAttribute('aria-label','Device shape: '+(device.shape||'rectangle'));n.append(shape,link,el('small','',device.status));n.title=device.name+' · '+device.status;n.addEventListener('dragstart',event=>{if(!editing||busy){event.preventDefault();return;}event.dataTransfer.setData('text/plain',String(device.id));});return n;}
+  function card(device){
+    const n=el('div','rack-device '+window.icctStatusClass(device.status));n.dataset.deviceId=device.id;n.draggable=editing;n.tabIndex=0;
+    if(device.rack_asset){const image=el('img','rack-device-image');image.src=device.rack_asset;image.alt='';image.draggable=false;image.addEventListener('error',()=>image.hidden=true);n.append(image);}
+    n.append(el('span','rack-device-name',device.name));
+    const badge=el('span','rack-alarm-count',String(device.fault_count||0));
+    const colors={Critical:'#ff3b45',Major:'#ff7026',Minor:'#ff9900',Warning:'#40aa92',Information:'#24839c'};
+    badge.style.background=colors[device.fault_severity]||'#fff';badge.style.color=device.fault_severity==='Critical'?'#fff':'#222';badge.title=device.fault_count?device.fault_count+' active alarms · '+device.fault_severity:'No active alarms';n.append(badge);
+    n.title=device.name+' · '+device.status;n.setAttribute('aria-label',n.title+' · '+(device.fault_count||0)+' active alarms');
+    n.addEventListener('dragstart',event=>{if(!editing||busy){event.preventDefault();return;}event.dataTransfer.setData('text/plain',String(device.id));});return n;
+  }
   function droppable(target,rackId,unit,peripheral=false){target.addEventListener('dragover',event=>{if(editing&&!busy){event.preventDefault();target.classList.add('drag-over');}});target.addEventListener('dragleave',()=>target.classList.remove('drag-over'));target.addEventListener('drop',event=>{event.preventDefault();target.classList.remove('drag-over');const value=event.dataTransfer.getData('text/plain'),id=Number(value);if(editing&&value.startsWith('reserve:'))stageReservation(value,rackId,unit);else if(editing&&siteDevices().some(d=>d.id===id))stage(id,rackId,unit,peripheral);});}
   function render(){
     const racks=data.racks,devices=siteDevices();
@@ -24,7 +33,7 @@
     if(!racks.length)cabinets.append(el('p','','No racks configured. Add a rack in Presets → Rack Config.'));
     racks.slice(rackOffset,rackOffset+3).forEach(rack=>{
       const shell=el('section','rack-cabinet'),heading=el('header','');heading.append(el('h3','',rack.name),el('small','',rack.unit_count+' U'));shell.append(heading);
-      const frame=el('div','rack-frame'),slots=el('div','rack-slots');slots.style.gridTemplateRows='repeat('+rack.unit_count+',minmax(0,1fr))';
+      const frame=el('div','rack-frame'),slots=el('div','rack-slots');slots.style.setProperty('--rack-units',rack.unit_count);slots.style.gridTemplateRows='repeat('+rack.unit_count+',minmax(0,1fr))';
       const occupied=new Set(rack.blocked.map(Number));(rack.reservations||[]).forEach(item=>{for(let u=item.start;u<item.start+item.height;u++)occupied.add(u);});devices.filter(d=>d.rack_id===Number(rack.id)&&!d.peripheral).forEach(d=>{for(let u=d.start;u<d.start+d.height;u++)occupied.add(u);});
       for(let u=1;u<=Number(rack.unit_count);u++){const slot=el('div','rack-slot'+(occupied.has(u)?' occupied':''));slot.style.gridRow=String(u);slot.append(el('span','rack-unit-label',u+'U'));slot.title=occupied.has(u)?u+'U — In use':u+'U — Available';droppable(slot,Number(rack.id),u);slots.append(slot);}
       devices.filter(d=>d.rack_id===Number(rack.id)&&!d.peripheral).forEach(d=>{const n=card(d);n.style.gridRow=d.start+' / span '+d.height;droppable(n,Number(rack.id),d.start);slots.append(n);});

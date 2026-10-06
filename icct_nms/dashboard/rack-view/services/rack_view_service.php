@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . "/../../../presets/services/rack_reservation_service.php";
+require_once __DIR__ . "/../../../fcaps/services/fcaps_service.php";
 /** Both rack editing surfaces share these placement records and validation. */
 function icct_nms_rack_units($units,$capacity) {
     if (!is_array($units) || !$units || count($units)>100) throw new InvalidArgumentException('Select at least one rack unit.');
@@ -46,7 +47,12 @@ function icct_nms_rack_view_data() {
         $id=(int)$device['id']; $allowed[$id]=true;
         $peripheral=(int)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['rack_peripheral_'.$id]);
         $rackId=(int)($device['rack_id'] ?: $peripheral);
-        $out[]=['shape'=>icct_nms_device_shape($device['category_id'],$device['device_type'],$types),'id'=>$id,'name'=>$device['description'],'site_id'=>(int)$device['site_id'],'status'=>$device['status_label'],'rack_id'=>(int)($device['rack_id'] ?: $peripheral),'start'=>(int)$device['start_unit'],'height'=>(int)($device['unit_height'] ?: 1),'peripheral'=>(bool)$peripheral,'revision'=>icct_nms_rack_revision($id)];
+        $asset='';
+        foreach ($types as $type) if ((int)$type['category_id']===(int)$device['category_id'] && $type['name']===$device['device_type']) {$asset=icct_nms_type_asset($type,'rack');break;}
+        $counts=array_fill_keys(['Critical','Major','Minor','Warning','Information'],0);
+        foreach (icct_nms_fault_observations($device) as $fault) if(isset($counts[$fault['state']]))$counts[$fault['state']]++;
+        $severity='';foreach($counts as $level=>$count)if($count){$severity=$level;break;}
+        $out[]=['rack_asset'=>$asset,'fault_count'=>array_sum($counts),'fault_severity'=>$severity,'shape'=>icct_nms_device_shape($device['category_id'],$device['device_type'],$types),'id'=>$id,'name'=>$device['description'],'site_id'=>(int)$device['site_id'],'status'=>$device['status_label'],'rack_id'=>(int)($device['rack_id'] ?: $peripheral),'start'=>(int)$device['start_unit'],'height'=>(int)($device['unit_height'] ?: 1),'peripheral'=>(bool)$peripheral,'revision'=>icct_nms_rack_revision($id)];
     }
     $racks=db_fetch_assoc('SELECT r.*,s.name AS site_name FROM plugin_icct_nms_racks r LEFT JOIN sites s ON s.id=r.site_id ORDER BY s.name,r.rack_number,r.id');
     foreach ($racks as &$rack) {

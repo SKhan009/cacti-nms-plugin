@@ -33,7 +33,7 @@ function closeIconPicker() { if(iconGrid) { iconGrid.hidden=true;iconToggle.setA
 function openTypeEditor(type = {}) {
   typeEditor.reset();
   const fields = {type_id:type.type_id ?? '',type_name:type.name ?? '',category_id:type.category_id ?? 0,physical_ports:type.physical_ports ?? '',icon:type.icon ?? '',shape:type.shape ?? (type.icon==='switch'?'wide':'rectangle')};
-  for (const view of ['network','rack','map']) fields[`display_${view}`] = type.display_modes?.[view] ?? (type.type_id?'icon':'');
+  for (const view of ['network','rack']) fields[`display_${view}`] = type.display_modes?.[view] ?? (type.type_id?'icon':'');
   for (const [name,value] of Object.entries(fields)) typeEditor.elements[name].value = value;
   document.querySelector('#type-editor-title').textContent = type.type_id ? 'Edit Device Type' : 'Add Device Type';
   typeSaveButton.textContent = type.type_id ? 'Save' : 'Add';

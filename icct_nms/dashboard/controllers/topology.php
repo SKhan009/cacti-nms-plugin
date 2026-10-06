@@ -66,7 +66,7 @@ try {
     if(isset($_GET['dashboard_readings'])){header('Content-Type: application/json');header('Cache-Control: no-store');echo json_encode($dashboardReadings,JSON_THROW_ON_ERROR);exit;}
     $mapConfigured=!empty($config['nms_geoserver_wms_url']) && !empty($config['nms_geoserver_layer']);
 } catch (Throwable $error) { icct_nms_failure($error); }
-$dashboardView=in_array($_GET['view']??'', ['topology','rack','image','map'],true)?$_GET['view']:'topology';
+$dashboardView=in_array($_GET['view']??'', ['topology','rack','image'],true)?$_GET['view']:'topology';
 $title='Dashboard'; $mapPage=true;
 require dirname(__DIR__, 2) . '/shared/templates/header.php';
 require dirname(__DIR__, 2) . '/dashboard/map/templates/map.php';
