@@ -336,15 +336,6 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial", "syslog"] as $key) {
             </div>
             <div class="protocol-actions"><button class="button primary">Save</button></div>
         </form>
-        <?php
-        require_once __DIR__.'/../../../dashboard/topology/services/topology_mtr_service.php';
-        $mtrReports=$id ? icct_nms_link_mtr($id) : [];
-        foreach ($mtrReports as $report): ?>
-        <details class="diagnostic-monitor-report">
-            <summary><?= icct_nms_h($report['method'].' · '.$report['collected'].' · '.$report['status']) ?></summary>
-            <pre><?= icct_nms_h($report['output']) ?></pre>
-        </details>
-        <?php endforeach; ?>
     </section>
     <?php require __DIR__ . "/../../../graphs/templates/graphs.php"; ?>
     <?php require __DIR__ . "/../../../graphs/templates/data_queries.php"; ?>
