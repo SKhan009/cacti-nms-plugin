@@ -1595,23 +1595,3 @@ window.addEventListener('pagehide',()=>active.forEach(cancel));
   });
 })();
 
-(() => {
-  const rows=document.querySelector('[data-serial-register-rows]');
-  const add=document.querySelector('[data-add-serial-register]');
-  const template=document.querySelector('[data-serial-register-template]');
-  if(!rows||!add||!template)return;
-  let next=rows.children.length;
-  add.addEventListener('click',()=>{
-    if(rows.children.length>=16)return;
-    const fragment=template.content.cloneNode(true);
-    fragment.querySelectorAll('[name]').forEach(input=>input.name=input.name.replace('[ROW]',`[${next}]`));
-    next++;rows.append(fragment);add.disabled=rows.children.length>=16;
-  });
-  rows.addEventListener('click',event=>{
-    const button=event.target.closest('[data-remove-serial-register]');
-    if(!button)return;
-    if(rows.children.length>1)button.closest('tr').remove();
-    else button.closest('tr').querySelectorAll('input').forEach(input=>input.value='');
-    add.disabled=false;
-  });
-})();

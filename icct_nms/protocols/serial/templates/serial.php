@@ -192,16 +192,4 @@ $value
         ); ?>
     </div>
     <input type="hidden" name="connection_revision" value="" />
-    <?php if(empty($presetMode)):
-    $registerRows=[];
-    try{$registerTarget=icct_backend_config_target($id,false);if($registerTarget['profile']['protocol']==='modbus_rtu')$registerRows=array_values($registerTarget['fields']);}catch(Throwable $e){}
-    if(!$registerRows)$registerRows=[[]];
-    $registerRow=function($row,$number){ ?>
-    <tr><td><input aria-label="Register label" name="serial_registers[<?= $number ?>][label]" value="<?= icct_nms_h($row['label']??'') ?>" maxlength="100"></td><td><input aria-label="Zero-based register offset" name="serial_registers[<?= $number ?>][offset]" type="number" min="0" max="65535" value="<?= icct_nms_h($row['offset']??'') ?>"></td><td><select aria-label="Register read function" name="serial_registers[<?= $number ?>][function]"><option value="3">03 Holding register</option><option value="4" <?= ($row['function']??3)===4?'selected':'' ?>>04 Input register</option></select></td><td><select aria-label="Register type" name="serial_registers[<?= $number ?>][type]"><option value="uint16">Unsigned 16-bit</option><option value="int16" <?= ($row['type']??'')==='int16'?'selected':'' ?>>Signed 16-bit</option></select></td><td><input aria-label="Register units" name="serial_registers[<?= $number ?>][unit]" value="<?= icct_nms_h($row['unit']??'') ?>" maxlength="30"></td><td><button type="button" data-remove-serial-register aria-label="Remove register">×</button></td></tr>
-    <?php }; ?>
-    <h3>Register Readings</h3><p>Enter zero-based offsets from the device's Modbus register map. Saving enables background collection for this device.</p>
-    <div class="site-table-wrap"><table class="site-table serial-register-editor"><thead><tr><th>Label</th><th>Offset (zero-based)</th><th>Read function</th><th>Type</th><th>Units</th><th></th></tr></thead><tbody data-serial-register-rows><?php foreach($registerRows as $number=>$row)$registerRow($row,$number); ?></tbody></table></div>
-    <button type="button" class="button" data-add-serial-register>+ Add Register</button>
-    <template data-serial-register-template><?php $registerRow([],'ROW'); ?></template>
-    <?php endif; ?>
 </section>
