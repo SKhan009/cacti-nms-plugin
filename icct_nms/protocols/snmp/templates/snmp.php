@@ -16,8 +16,8 @@
         'SNMP Community String',
         'snmp_community',
         !empty($readonly) ? '' : $values['snmp_community'],
-        'password',
-        'autocomplete="new-password"'
+        'text',
+        'autocomplete="off" spellcheck="false"'
     );
     icct_nms_input(
         'SNMP Port',
