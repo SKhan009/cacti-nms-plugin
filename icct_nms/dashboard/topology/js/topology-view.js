@@ -101,5 +101,22 @@ document.addEventListener('icct:alarm-readings',e=>{
  const badge=cards.querySelector('[data-device-id="'+d.id+'"] .topology-alarm');if(badge){badge.textContent=String(d.fault_count);badge.style.background=d.alarm?severityColors[d.alarm.severity]||'#aaa':'white';badge.title=d.alarm?d.alarm.severity+': '+d.alarm.message:'No active fault';}
  });alarmTotals();
 });
+async function refreshTopology(){
+ if(editing||busy||dirty||panel.hidden||document.documentElement.dataset.staticPreview)return;
+ const scope=document.querySelector('#dashboardData');
+ const site=scope?Number(JSON.parse(scope.textContent).site_id||0):0;
+ try{
+  const response=await fetch('dashboard/controllers/topology.php?topology_readings=1&site_id='+encodeURIComponent(site),{credentials:'same-origin',cache:'no-store'});
+  if(!response.ok)throw Error('Discovery refresh unavailable.');
+  const fresh=await response.json();
+  if(editing||busy||dirty)return;
+  fresh.devices.forEach((device,index)=>{if(!positions[device.id])positions[device.id]=fresh.layout[device.id]||[.08+(index%cols)*.84/Math.max(1,cols-1),Math.min(.92,.08+Math.floor(index/cols)*.18)];});
+  devices.splice(0,devices.length,...fresh.devices);data.links=fresh.links;data.revision=fresh.revision;
+  const ids=new Set(devices.map(device=>String(device.id)));Object.keys(positions).forEach(id=>{if(!ids.has(id))delete positions[id];});
+  saved=structuredClone(positions);alarmTotals();render();
+ }catch(error){message.textContent=error.message;}
+}
+setInterval(refreshTopology,30000);
+document.addEventListener('icct:before-view-change',event=>{if(event.detail.tab.dataset.view==='topology')setTimeout(refreshTopology,0);});
 alarmTotals();render();
 })();
