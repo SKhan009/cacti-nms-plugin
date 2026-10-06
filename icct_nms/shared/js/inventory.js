@@ -863,9 +863,10 @@ if (typeProfileData) {
   const updateTypes = () => {
     const saved = type.value;
     type.replaceChildren(new Option('None',''));
-    for (const profile of profiles.filter(p => String(p.category_id) === segment.value)) type.add(new Option(profile.name,profile.name));
-    if (saved && [...type.options].some(option => option.value === saved)) type.value = saved;
-    else if (type.options.length === 2) type.selectedIndex = 1;
+    const names = [...new Set(profiles.filter(p => String(p.category_id) === segment.value).map(p => p.name))].sort((a,b) => a.localeCompare(b));
+    for (const name of names) type.add(new Option(name,name));
+    type.value = names.includes(saved) ? saved : '';
+    if (type.value !== saved) type.dispatchEvent(new Event('change', {bubbles:true}));
   };
   segment.addEventListener('change',updateTypes);
   // Server-rendered choices preserve the saved selection on first render.
