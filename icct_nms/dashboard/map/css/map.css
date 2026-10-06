@@ -285,3 +285,8 @@
 #topologyDevices .topology-alarm{display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:16px;height:16px;margin:0;padding:0;line-height:1;font-size:10px;font-weight:400;text-indent:0}
 .icct-inventory .rack-icon{display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:0;line-height:1}
 .icct-inventory .rack-icon svg{display:block;width:18px;height:18px;margin:0;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* Wide switch presets keep a slim horizontal silhouette. */
+#topologyDevices .topology-device.shape-wide{width:156px}
+#topologyDevices .topology-device.has-device-asset.shape-wide:not(.has-device-image){height:52px;gap:1px;padding:2px 5px}
+#topologyDevices .topology-device.shape-wide:not(.has-device-image) .topology-device-icon{width:22px;height:16px}

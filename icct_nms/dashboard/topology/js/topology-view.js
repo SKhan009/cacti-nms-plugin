@@ -29,8 +29,8 @@ function render(){
  cards.replaceChildren();canvas.style.transform='scale('+scale+')';canvas.style.width='100%';canvas.style.height='100%';
  const w=canvas.clientWidth,h=canvas.clientHeight;
  // Fit dense inventories without changing the saved device coordinates.
- const sizes={square:[52,52],rectangle:[64,52],wide:[120,44],tall:[44,72]};
- const dimensions=devices.map(d=>{const shape=d.shape||(d===core?'wide':'rectangle');const size=sizes[shape]||sizes.rectangle;return d.network_asset?[size[0],d.network_asset.includes('/uploads/')?(shape==='tall'?92:76):(shape==='tall'?76:60)]:size;});
+ const sizes={square:[52,52],rectangle:[64,52],wide:[156,44],tall:[44,72]};
+ const dimensions=devices.map(d=>{const shape=d.shape||(d===core?'wide':'rectangle');const size=sizes[shape]||sizes.rectangle;return d.network_asset?[size[0],d.network_asset.includes('/uploads/')?(shape==='tall'?92:76):(shape==='tall'?76:shape==='wide'?52:60)]:size;});
  const maxWidth=Math.max(1,...dimensions.map(s=>s[0])),maxHeight=Math.max(1,...dimensions.map(s=>s[1]));
  const halfRows=Math.ceil(rows/2),rowGap=halfRows>1?h*.32/(halfRows-1):h*.20;
  const densityScale=devices.length>20?Math.min(1,(w*.84/Math.max(1,cols-1)-8)/maxWidth,(rowGap-8)/maxHeight):1;
