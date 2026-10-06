@@ -39,8 +39,11 @@ try{icct_nms_save_rack_preset(['rack_profile_id'=>$empty,'rack_name'=>'Rack 2','
 checkRack(db_fetch_cell_prepared('SELECT unit_count FROM plugin_icct_nms_racks WHERE profile_id=?',[$empty])==24,'Capacity rollback failed');
 icct_nms_save_rack_preset(['rack_profile_id'=>$empty,'rack_name'=>'Main Rack','unit_count'=>30]);
 checkRack(db_fetch_cell_prepared('SELECT unit_count FROM plugin_icct_nms_racks WHERE profile_id=?',[$empty])==30,'Capacity not synchronized');
-try{icct_nms_save_rack_preset(['action'=>'delete_rack_profile','rack_profile_id'=>$empty]);throw new RuntimeException('Occupied rack deleted');}catch(InvalidArgumentException $expected){}
+checkRack(strpos(icct_nms_rack_delete_block_reason($empty),'devices are assigned')!==false,'Occupied rack not blocked in UI');
+try{icct_nms_save_rack_preset(['action'=>'delete_rack_profile','rack_profile_id'=>$empty]);throw new RuntimeException('Occupied rack deleted');}catch(InvalidArgumentException $expected){checkRack(strpos($expected->getMessage(),'devices are assigned')!==false,'Unclear delete error');}
+checkRack(db_fetch_cell_prepared('SELECT id FROM plugin_icct_nms_racks WHERE profile_id=?',[$empty])==$rack2,'Rejected delete removed rack');
 icct_nms_save_rack_preset(['rack_name'=>'Empty Rack','unit_count'=>18]);
 checkRack(count(icct_nms_device_rack_choices())===4,'New empty rack not available immediately');
+checkRack(icct_nms_rack_delete_block_reason(array_key_last(icct_nms_rack_presets()))==='','Empty rack incorrectly blocked');
 checkRack(db_fetch_cell('SELECT site_id FROM host WHERE id=1001')==3,'Rack placement changed device site');
 echo "PASS: unique rack catalogue, empty presets, preserved placements, site-independent selection, capacity synchronization and safe rollback.\n";

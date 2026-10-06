@@ -18,9 +18,8 @@ function icct_nms_save_rack_preset($input) {
         if($id!==''&&!isset($profiles[$id]))throw new InvalidArgumentException('This rack configuration no longer exists.');
         if(($input['action'] ?? '')==='delete_rack_profile') {
             if($id==='')throw new InvalidArgumentException('Choose a saved rack configuration.');
-            foreach(db_fetch_assoc_prepared('SELECT * FROM plugin_icct_nms_racks WHERE profile_id=?',[$id]) as $rack) {
-                if(db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_icct_nms_rack_devices WHERE rack_id=?',[$rack['id']]) || icct_nms_rack_reservations((int)$rack['id']) || db_fetch_cell_prepared("SELECT COUNT(*) FROM plugin_icct_nms_meta WHERE meta_key LIKE 'rack_peripheral_%' AND meta_value=?",[(string)$rack['id']]))throw new InvalidArgumentException('Move devices and clear reserved units before deleting this rack.');
-            }
+            $blocked=icct_nms_rack_delete_block_reason($id);
+            if($blocked!=='')throw new InvalidArgumentException($blocked);
             icct_backend_category_execute('DELETE FROM plugin_icct_nms_racks WHERE profile_id=?',[$id]);
             unset($profiles[$id]);
             icct_backend_category_execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',['rack_profiles',json_encode($profiles,JSON_THROW_ON_ERROR)]);
@@ -85,4 +84,14 @@ function icct_nms_resolve_preset_rack($selection,$site,$position) {
         return $rack;
     } catch (Throwable $failure) {icct_backend_category_execute('ROLLBACK');throw $failure;}
     finally {db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]);}
+}
+
+/** Shared UI and mutation guard; checked again under the rack lock on delete. */
+function icct_nms_rack_delete_block_reason($profile) {
+    $reserved=false;
+    foreach(db_fetch_assoc_prepared('SELECT * FROM plugin_icct_nms_racks WHERE profile_id=?',[$profile]) as $rack) {
+        if(db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_icct_nms_rack_devices WHERE rack_id=?',[$rack['id']]) || db_fetch_cell_prepared("SELECT COUNT(*) FROM plugin_icct_nms_meta WHERE meta_key LIKE 'rack_peripheral_%' AND meta_value=?",[(string)$rack['id']]))return 'Cannot delete this rack because devices are assigned to it. Move or unassign them first.';
+        if(icct_nms_rack_reservations((int)$rack['id']))$reserved=true;
+    }
+    return $reserved?'Cannot delete this rack because it contains reserved units. Clear the reservations first.':'';
 }
