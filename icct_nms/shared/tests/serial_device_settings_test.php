@@ -23,3 +23,7 @@ if($a['timeout_ms']!==1000 || $b['timeout_ms']!==2000 || $connection['settings']
 if(icct_backend_serial_device_settings(1,6,$connection['settings'])!==$connection['settings']) throw new RuntimeException('Snapshot crossed connections.');
 if(icct_backend_serial_device_settings(3,5,$connection['settings'])!==$connection['settings']) throw new RuntimeException('Legacy fallback failed.');
 echo "Serial saves, shared connection isolation, collector settings resolution and legacy fallback passed.\n";
+$fields=icct_nms_serial_register_fields([['label'=>'Voltage','offset'=>'0','function'=>'4','type'=>'uint16','unit'=>'V'],['label'=>'Temperature','offset'=>'1','function'=>'3','type'=>'int16','unit'=>'C']]);
+if(count($fields)!==2||$fields[0]['offset']!==0||$fields[1]['min']!==-32768||$fields[0]['writable'])throw new RuntimeException('Serial register definition failed.');
+foreach([[['label'=>'X','offset'=>'65536','function'=>'3','type'=>'uint16']], [['label'=>'X','offset'=>'1','function'=>'3','type'=>'uint16'],['label'=>'Y','offset'=>'1','function'=>'3','type'=>'int16']]] as $bad){try{icct_nms_serial_register_fields($bad);throw new RuntimeException('Invalid serial registers accepted.');}catch(InvalidArgumentException $e){}}
+echo "Serial register validation, zero-based offsets, signed types and duplicate rejection passed.\n";

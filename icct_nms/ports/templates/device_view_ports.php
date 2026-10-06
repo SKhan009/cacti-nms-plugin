@@ -1,4 +1,22 @@
 <?php
+$serialView=icct_backend_serial_assignment($id);
+if($serialView && (int)$old['snmp_version']===0):
+$serialState=icct_backend_config_connection_status($id);
+$serialTarget=null;$serialError='';
+try{$serialTarget=icct_backend_config_target($id,false);}catch(Throwable $e){$serialError=$e->getMessage();}
+?>
+<section id="view-ports" data-device-view-panel="ports" hidden>
+<h2>Serial Connection</h2>
+<dl class="device-detail-grid">
+<?php foreach(['Connection'=>$serialView['connection_name'],'Endpoint'=>$serialView['endpoint'],'Device Bus Address'=>$serialView['device_address'],'Status'=>$serialState['status']??'Unavailable'] as $label=>$value): ?><div><dt><?= icct_nms_h($label) ?></dt><dd><?= icct_nms_h($value) ?></dd></div><?php endforeach; ?>
+</dl>
+<?php if($serialError): ?><p role="status"><?= icct_nms_h($serialError) ?></p><?php endif; ?>
+<?php if($serialTarget): ?><h3>Register Readings</h3><div class="site-table-wrap"><table class="site-table"><thead><tr><th>Parameter</th><th>Register offset</th><th>Read function</th><th>Value</th><th>Units</th><th>Status</th><th>Collected</th></tr></thead><tbody>
+<?php foreach($serialTarget['fields'] as $key=>$field): $reading=icct_backend_config_reading($id,$key); ?><tr><td><?= icct_nms_h($field['label']) ?></td><td><?= (int)$field['offset'] ?></td><td><?= (int)$field['function'] ?></td><td><?= icct_nms_h($reading['value']??'—') ?></td><td><?= icct_nms_h($field['unit']) ?></td><td><?= icct_nms_h(ucfirst($reading['status'])) ?></td><td><?= icct_nms_h($reading['observed_at']??'Awaiting collection') ?></td></tr><?php endforeach; ?>
+</tbody></table></div><?php endif; ?>
+<?php if(is_realm_allowed(3)): ?><a class="button primary" href="inventory/controllers/device.php?id=<?= (int)$id ?>#protocol">Configure Serial Registers</a><?php endif; ?>
+</section>
+<?php return; endif;
 $portView=icct_backend_ports_view($old);
 $portConnections=icct_nms_port_connections($id,$portView['ports']);
 $states=[1=>'UP',2=>'DOWN',3=>'TESTING',4=>'UNKNOWN',5=>'DORMANT',6=>'NOT PRESENT',7=>'LOWER LAYER DOWN'];

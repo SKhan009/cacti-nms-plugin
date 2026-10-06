@@ -24,13 +24,13 @@ function icct_backend_config_connection_status($host_id)
         foreach ($target['fields'] as $key => $field) {
             $states[] = icct_backend_config_reading($host_id, $key)['status'];
         }
-        $status = in_array('failed', $states, true)
+        $status = !$states ? 'Unavailable' : (in_array('failed', $states, true)
             ? 'Read failed'
             : (in_array('unavailable', $states, true)
                 ? 'Unavailable'
                 : (in_array('stale', $states, true)
                     ? 'Stale'
-                    : 'Responding'));
+                    : 'Responding')));
     } catch (Throwable $e) {
         $status = 'Unavailable';
     }
