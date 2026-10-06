@@ -146,7 +146,7 @@ document.querySelector('#rack-profile-search')?.addEventListener('input',event=>
 
 document.querySelectorAll('[data-delete-rack-profile]').forEach(form=>form.addEventListener('submit',async event=>{
   event.preventDefault();
-  if(form.dataset.deleteBlocked){await icctShowMessage({title:'Cannot delete rack',text:form.dataset.deleteBlocked});return;}
+  if(form.dataset.deleteBlocked){await icctShowMessage({title:'Cannot delete rack',text:form.dataset.deleteBlocked,modal:true});return;}
   if(await icctShowMessage({title:'Delete rack',text:`Delete “${form.dataset.rackName}”? This removes the empty rack from presets and Rack View.`,confirm:true,danger:true,accept:'Delete'})) {
     if(form.dataset.staticPreview)icctToast({title:'Preview',text:'Delete rack configurations in the live application.'});else form.submit();
   }

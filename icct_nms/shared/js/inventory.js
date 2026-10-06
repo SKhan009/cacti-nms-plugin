@@ -42,8 +42,8 @@ function icctQueueToast(message) {
   try { sessionStorage.setItem('icct-next-toast', JSON.stringify(message)); }
   catch (_) { icctToast(message); }
 }
-function icctShowMessage({title = "Information", text, confirm = false, danger = false, accept = "OK", context, inline = false}) {
-  if (!confirm) {
+function icctShowMessage({title = "Information", text, confirm = false, danger = false, accept = "OK", context, inline = false, modal = false}) {
+  if (!confirm && !modal) {
     if (danger || inline) icctInlineMessage({title, text, danger, context});
     else icctToast({title, text});
     return Promise.resolve(true);
@@ -52,10 +52,10 @@ function icctShowMessage({title = "Information", text, confirm = false, danger =
   const acceptButton = document.querySelector("#message-confirm");
   document.querySelector("#message-title").textContent = title;
   document.querySelector("#message-text").textContent = text;
-  document.querySelector("#message-cancel").hidden = false;
+  document.querySelector("#message-cancel").hidden = !confirm;
   acceptButton.textContent = accept;acceptButton.classList.toggle("danger", danger);
   messageDialog.returnValue = "";messageDialog.setAttribute("role", "alertdialog");
-  messageDialog.showModal();document.querySelector("#message-cancel").focus();
+  messageDialog.showModal();(confirm ? document.querySelector("#message-cancel") : acceptButton).focus();
   return new Promise(resolve => messageDialog.addEventListener("close", () => resolve(messageDialog.returnValue === "accepted"), {once: true}));
 }
 if (messageDialog) {
