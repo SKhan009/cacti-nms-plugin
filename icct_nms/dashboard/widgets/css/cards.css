@@ -36,6 +36,28 @@
 .dashboard-port-tooltip dl{grid-template-columns:38% minmax(0,1fr);gap:10px 14px}
 .dashboard-port-tooltip dt{color:#333}
 .dashboard-port-tooltip dd{padding-left:14px}
+.dashboard-card .alarm-content{padding:16px}
+.dashboard-card .alarm-mode button{padding:9px 16px;font-size:14px}
+.dashboard-card .alarm-chart{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:18px;align-items:center}
+.dashboard-card .alarm-chart svg{display:block;width:100%;height:auto;max-height:none;stroke:none;stroke-width:0}
+.dashboard-card .alarm-chart ul{max-height:none;overflow:visible;min-width:0}
+.dashboard-card .alarm-chart li{display:grid;grid-template-columns:8px minmax(0,1fr) auto;align-items:center;gap:6px;font-size:13px;line-height:1.4;margin:12px 0}
+.dashboard-card .alarm-chart li i{width:8px;height:8px}
+.dashboard-card .alarm-chart li span{white-space:normal;overflow:visible;overflow-wrap:anywhere;text-overflow:clip}
+.dashboard-card .alarm-chart li b{margin:0;font-weight:400;white-space:nowrap;font-variant-numeric:tabular-nums}
+.dashboard-card .alarm-chart li b::before{content:': ';color:#555}
+.dashboard-card .alarm-content p{font-size:12px;line-height:1.5;margin:12px 0 0}
+.dashboard-card .workflow-content .alarm-chart{margin-top:0;min-height:170px}
+.dashboard-card .frequent-content{padding:12px 18px 18px}
+.dashboard-card .frequent-table{width:100%;font-size:16px;line-height:1.5;border-collapse:separate;border-spacing:0 10px;table-layout:auto}
+.workspace .dashboard-card :is(.frequent-table,.problematic-table)>tbody>tr:nth-child(n){background:#fff}
+.dashboard-card .frequent-table td{background:#fff;padding:5px 12px;border:0;vertical-align:middle}
+.dashboard-card .frequent-table td:first-child{width:auto;padding-left:0}
+.dashboard-card .frequent-table td+td{border-left:1px solid #d4d4d4}
+.dashboard-card .frequent-table td:last-child{width:15%;font-variant-numeric:tabular-nums}
+.dashboard-card .frequent-table td[colspan]{border:0;padding:12px 0}
+.dashboard-card .frequent-severity{padding:4px 10px;border:1px solid #333;border-radius:20px;font-size:14px;line-height:1.4}
+.dashboard-card .frequent-content p{font-size:12px;line-height:1.5}
 .widget-expanded :is(.recent-content,.problematic-content,.ports-overview-content){max-height:none;flex:1;overflow:auto}
 .dashboard-extra-widgets>.dashboard-card.widget-expanded,.dashboard-widgets>.dashboard-card.widget-expanded{width:auto;height:calc(100dvh - 160px);align-self:stretch;max-width:none}
 @media(max-width:600px){.dashboard-card h2{font-size:18px}.dashboard-card>header{padding:12px}.ports-device-row{grid-template-columns:35% minmax(0,1fr)}.ports-device-row>a{font-size:14px}}
