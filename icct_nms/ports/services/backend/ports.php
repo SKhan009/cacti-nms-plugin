@@ -151,6 +151,16 @@ function icct_backend_ports_view($host) {
     return ['ports'=>$ports,'fresh'=>$fresh,'collected'=>$same?(int)($snapshot['time'] ?? 0):0,'uptime_ticks'=>$same?($snapshot['uptime_ticks'] ?? null):null,'source'=>$source,'message'=>$fresh?'Port status from the latest collector observation.':($same && !empty($snapshot['error'])?$snapshot['error']:'Waiting for a current observation. Save SNMP settings; the assigned Cacti poller discovers interfaces automatically.')];
 }
 
+/** Discovery stores management addresses as either strings or typed address records. */
+function icct_nms_port_management_addresses($values) {
+    $addresses=[];
+    foreach($values as $value){
+        $address=is_array($value)?($value['address']??''):$value;
+        if(is_string($address)&&filter_var($address,FILTER_VALIDATE_IP))$addresses[$address]=$address;
+    }
+    return array_values($addresses);
+}
+
 /** Current neighbour reports from this authorized device, matched by ifIndex or name. */
 function icct_nms_port_connections($id,$ports) {
     require_once __DIR__ . '/../../../dashboard/topology/services/topology_configuration_service.php';
@@ -163,7 +173,7 @@ function icct_nms_port_connections($id,$ports) {
             foreach($ports as $port){
                 if(!empty($peer['local_ifindex'])?(int)$peer['local_ifindex']!==(int)$port['index']:strcasecmp(trim($peer['local_port']??''),$port['name'])!==0)continue;
                 $connections[$port['index']]['names'][]=$peer['remote_name']??($peer['peer_label']??'');
-                foreach($peer['management_addresses']??[] as $address)if(is_string($address))$connections[$port['index']]['addresses'][]=$address;
+                foreach(icct_nms_port_management_addresses($peer['management_addresses']??[]) as $address)$connections[$port['index']]['addresses'][]=$address;
             }
         }
     }

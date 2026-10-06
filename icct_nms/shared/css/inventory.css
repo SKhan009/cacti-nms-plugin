@@ -3171,3 +3171,9 @@ h1, h2, h3, h4, h5, h6 { line-height: 1.25; }
 .diagnostics-settings .diagnostic-extra .field {margin:0;}
 @media(max-width:1100px){.diagnostics-settings .diagnostic-row-mtr{grid-template-columns:150px 180px 1fr}.diagnostics-settings .diagnostic-monitor{grid-column:2 / -1}.diagnostics-settings .diagnostic-background{margin-left:auto}}
 @media(max-width:700px){.diagnostics-settings .diagnostic-row-mtr{grid-template-columns:minmax(120px,1fr) minmax(140px,210px)}.diagnostics-settings .diagnostic-row-mtr .diagnostic-methods{grid-column:1 / -1}.diagnostics-settings .diagnostic-monitor{grid-column:1 / -1;flex-wrap:wrap}.diagnostics-settings .diagnostic-extra{grid-column:2;width:auto}}
+
+/* An odd or single connector does not reserve a phantom lower socket. */
+#view-ports .device-port-pair.single{min-height:30px}
+#view-ports .device-port-pair.single .device-port-jack{width:auto;min-width:52px}
+#view-ports .device-port-pair.single .device-port-jack span{position:static;transform:none;max-width:none;white-space:nowrap;padding:0 5px}
+#view-ports .device-port-pair.single .device-port-jack{height:auto;flex-direction:column;gap:2px;padding:3px}

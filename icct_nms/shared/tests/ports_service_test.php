@@ -65,3 +65,6 @@ echo "Observed-only table and chassis exclude loopback and virtual connectors.\n
 expectPorts(icct_backend_ports_integer('ethernetCsmacd')===6&&icct_backend_ports_integer('softwareLoopback')===24,'Cacti stripped interface type names not parsed');
 
 expectPorts(!empty($slots['chassis'][1]['placeholder'])&&!isset($slots['chassis'][1]['oper']),'Preset slot invented a measured status');
+
+expectPorts(icct_nms_port_management_addresses([['address'=>'192.0.2.10','family'=>4],['address'=>'2001:db8::1','family'=>6],'192.0.2.10','invalid',[]])===['192.0.2.10','2001:db8::1'],'Structured LLDP/CDP management addresses lost or invalid addresses accepted');
+echo "Structured and legacy neighbour management addresses passed.\n";
