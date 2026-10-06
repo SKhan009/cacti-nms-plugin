@@ -299,6 +299,12 @@ function icct_mib_collection($record,$values){
     if($method==='auto')$method=!empty($record['table'])&&empty($values['instance_index'])&&empty($values['oid_override'])&&(!isset($values['oid'])||ltrim(trim($values['oid']),'.')===$record['base_oid'])?'indexed':'get';
     return $method;
 }
+/** Names shown in the wizard come from the native methods used by template creation. */
+function icct_mib_collection_names(){
+    $get=db_fetch_cell("SELECT di.name FROM data_input di JOIN data_template_data dtd ON dtd.data_input_id=di.id JOIN data_template dt ON dt.id=dtd.data_template_id WHERE dt.name='SNMP - Generic OID Template' AND dtd.local_data_id=0 AND di.type_id=2 LIMIT 1");
+    $indexed=db_fetch_cell('SELECT name FROM data_input WHERE type_id=3 ORDER BY id LIMIT 1');
+    return ['get'=>$get?:'SNMP GET (not installed)','indexed'=>$indexed?:'Indexed SNMP (not installed)'];
+}
 function icct_mib_profiles(){return db_fetch_assoc('SELECT id,name,step,heartbeat FROM data_source_profiles ORDER BY step DESC,id')?:[];}
 function icct_mib_plan($preview,$input){
     $types=icct_nms_device_types();$type=$input['type_id']??'';
@@ -409,7 +415,7 @@ function icct_mib_native_metric($record,$options,$existing=[]){
     }
     $data=(int)db_fetch_cell_prepared('SELECT id FROM data_template_data WHERE data_template_id=? AND local_data_id=0',[$pair['data_template_id']]);
     $rrd=(int)db_fetch_cell_prepared('SELECT id FROM data_template_rrd WHERE data_template_id=? AND local_data_id=0',[$pair['data_template_id']]);
-    $field=(int)db_fetch_cell("SELECT id FROM data_input_fields WHERE data_input_id=1 AND data_name='oid'");
+    $field=(int)db_fetch_cell("SELECT f.id FROM data_input_fields f JOIN data_template_data dtd ON dtd.data_input_id=f.data_input_id JOIN data_template dt ON dt.id=dtd.data_template_id WHERE dt.name='SNMP - Generic OID Template' AND dtd.local_data_id=0 AND f.data_name='oid' LIMIT 1");
     if(!$data||!$rrd||!$field)throw new RuntimeException('The duplicated data template is incomplete.');
     $ds=substr(trim(preg_replace('/[^a-z0-9]+/','_',strtolower($record['label'])),'_'),0,19)?:'reading';
     icct_mib_write("UPDATE data_template_data SET name=?,data_source_profile_id=?,rrd_step=?,t_data_source_profile_id='',t_rrd_step='' WHERE id=?",['|host_description| - '.$record['label'],$record['profile_id'],$record['polling_interval'],$data]);
