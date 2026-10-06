@@ -33,3 +33,17 @@ foreach ($routes as $route) {
     if (!is_file($root . '/' . $route[2])) throw new RuntimeException('Legacy URL has no controller: ' . $route[1]);
 }
 echo "PASS: all 14 legacy HTTP endpoints map to existing feature controllers.\n";
+
+// Cacti get_current_page() matches permission realms by basename, even for nested routes.
+$setup = file_get_contents($root . '/setup.php');
+if (!preg_match("~api_plugin_register_realm\\(\\s*'icct_nms',\\s*'([^']+)'~", $setup, $realm)) {
+    throw new RuntimeException('Inventory permission realm is missing.');
+}
+$realmFiles = explode(',', $realm[1]);
+foreach ($realmFiles as $file) {
+    if (basename($file) !== $file) throw new RuntimeException('Cacti realm requires a filename, not a controller path: ' . $file);
+}
+foreach ($routes as $route) {
+    if (!in_array(basename($route[2]), $realmFiles, true)) throw new RuntimeException('Controller is missing from the permission realm: ' . $route[2]);
+}
+echo "PASS: all HTTP controllers use basename permission registration.\n";

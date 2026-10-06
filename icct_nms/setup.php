@@ -4,7 +4,7 @@ function plugin_icct_nms_version()
 {
     return [
         'name' => 'icct_nms',
-        'version' => '1.2.5',
+        'version' => '1.2.6',
         'longname' => 'ICCT NMS Inventory',
         'author' => 'NMS Project',
         'homepage' => 'https://www.cacti.net/',
@@ -55,7 +55,7 @@ function icct_nms_setup_registration()
     );
     api_plugin_register_realm(
         'icct_nms',
-        'protocols/snmp/mibs/controllers/mib_repository.php,topology_configuration.php,rack_placement.php,topology.php,inventory.php,device.php,protocol.php,export.php,diagnostics.php,wizard_save.php,wizard_templates.php,presets.php,ports.php,syslog.php',
+        'mib_repository.php,topology_configuration.php,rack_placement.php,topology.php,inventory.php,device.php,protocol.php,export.php,diagnostics.php,wizard_save.php,wizard_templates.php,presets.php,ports.php,syslog.php',
         'View ICCT NMS Inventory',
         1
     );
