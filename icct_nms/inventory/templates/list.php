@@ -189,7 +189,15 @@
                                 $d["description"],
                             ) ?>">⋮</summary>
                             <div class="row-menu-panel">
-                                <a href="inventory/diagnostics/controllers/diagnostics.php?host_id=<?= $id ?>#diagnostic-run">Diagnostics</a>
+                                <?php $quickTools=icct_backend_diag_selected_labels($id);
+                                foreach (['ping'=>'Ping','arp'=>'ARP','traceroute'=>'Trace Route'] as $tool=>$label):
+                                    $selectedTool=$tool;
+                                    if($tool==='traceroute')foreach(['traceroute','traceroute_icmp','traceroute_tcp'] as $candidate)if(isset($quickTools[$candidate])){$selectedTool=$candidate;break;}
+                                ?>
+                                <?php if(isset($quickTools[$selectedTool])): ?>
+                                <a href="inventory/diagnostics/controllers/diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h($selectedTool) ?>#diagnostic-run"><?= $label ?></a>
+                                <?php else: ?><button type="button" disabled title="Enable <?= $label ?> in Device Diagnostics first."><?= $label ?></button><?php endif; ?>
+                                <?php endforeach; ?>
                                 <?php $launch = icct_nms_meta(
                                     "icct_cross_launch_" . $id,
                                 ); ?>
@@ -207,12 +215,14 @@
                                 <a href="<?= icct_nms_h(
                                     $launch,
                                 ) ?>" target="_blank" rel="noopener noreferrer">Cross Launch URL</a>
-                                <?php endif; ?>
+                                <?php else: ?><button type="button" disabled title="Set the device's Cross Launch URL first.">Cross Launch URL</button><?php endif; ?>
+                                <button type="button" disabled title="Alarm suppression unavailable.">Alarm Suppression</button>
                                 <form method="post" action="protocols/shared/controllers/protocol.php?id=<?= $id ?>">
                                     <?php icct_nms_token(); ?>
                                     <input type="hidden" name="action" value="reindex">
                                     <button type="submit">Re-Index Device</button>
                                 </form>
+                                <a href="inventory/controllers/device.php?id=<?= $id ?>">Modify Device</a>
                                 <a href="inventory/controllers/device.php?clone_id=<?= $id ?>" data-clone-device data-device-name="<?= icct_nms_h(
     $d["description"],
 ) ?>">Clone Device</a>

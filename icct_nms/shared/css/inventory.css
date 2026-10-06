@@ -3148,7 +3148,7 @@ h1, h2, h3, h4, h5, h6 { line-height: 1.25; }
 #mibFiles .mib-row-actions .button{width:100%;min-height:36px}#mibFiles .mib-row-actions .icon-button{margin:0;width:36px;height:36px}
 
 /* Compact, flat inventory actions; tool selection stays in Diagnostics. */
-.inventory-row-menu .row-menu-panel {width:190px;max-height:min(320px,calc(100dvh - 88px));padding:4px 0;}
+.inventory-row-menu .row-menu-panel {width:210px;max-height:min(420px,calc(100dvh - 88px));padding:4px 0;}
 .inventory-row-menu .row-menu-panel :is(a,button) {padding:8px 12px;font-size:14px;line-height:20px;min-height:36px;}
 
 /* Server identity and measured resource chips match the shared header. */
