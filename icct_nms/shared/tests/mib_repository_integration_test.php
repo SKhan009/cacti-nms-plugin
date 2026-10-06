@@ -115,4 +115,26 @@ try{
  }
 }finally{foreach(glob($fixtureDir.'/*')?:[] as $file)unlink($file);rmdir($fixtureDir);}
 $expired=$preview;$expired['created']=time()-3601;try{icct_mib_save($expired,$plan);throw new LogicException('Expired accepted');}catch(InvalidArgumentException $e){check(str_contains($e->getMessage(),'expired'),'Expired review rejected');}
+
+$wizardPreview=$preview;$wizardPreview['id']=bin2hex(random_bytes(16));$wizardPreview['created']=time();
+$wizard=icct_mib_save($wizardPreview,icct_mib_plan($wizardPreview,['type_id'=>$type,'template_name'=>'QA Wizard']));
+check(!$wizard['rows']&&!$wizard['host_template_id']&&icct_mib_file($wizard,0)===file_get_contents($path),'Wizard saves original MIB before any templates');
+try{icct_mib_wizard_save($wizard['id'],['step'=>2]);throw new LogicException('Out-of-order save accepted');}catch(InvalidArgumentException $e){check(true,'Wizard blocks skipping unsaved steps');}
+$wizardInput=$input;$wizardInput['step']=1;$wizardInput['template_name']='QA Wizard';
+$wizardInput['records'][$metricKey]['data_name']='QA Wizard Data';$wizardInput['records'][$metricKey]['graph_name']='QA Wizard Graph';
+$wizard=icct_mib_wizard_save($wizard['id'],$wizardInput);$wizardData=$wizard['rows'][0]['data_template_id'];
+check($wizard['wizard_step']===1&&$wizardData>0&&!$wizard['rows'][0]['graph_template_id']&&!$wizard['host_template_id'],'First step creates only selected data source templates');
+check(icct_mib_wizard_get($wizard['id'])['rows'][0]['settings']['data_name']==='QA Wizard Data','Saved step resumes with reviewed settings');
+try{icct_mib_wizard_save($wizard['id'],$wizardInput);throw new LogicException('Duplicate stage accepted');}catch(InvalidArgumentException $e){check(true,'Wizard rejects repeated Save without duplicating templates');}
+$wizardGraph=['step'=>2,'records'=>[$metricKey=>['graph_name'=>'QA Wizard Custom Graph','legend'=>'Custom legend','color'=>'FF0000','graph_type'=>6,'cf'=>2,'statistics'=>'1','threshold_high'=>'90']]];
+$badWizard=$wizardGraph;$badWizard['records'][$metricKey]['color']='invalid';
+try{icct_mib_wizard_save($wizard['id'],$badWizard);throw new LogicException('Invalid setting accepted');}catch(InvalidArgumentException $e){check(icct_mib_wizard_get($wizard['id'])['wizard_step']===1,'Invalid graph setting keeps current saved step intact');}
+$wizard=icct_mib_wizard_save($wizard['id'],$wizardGraph);$wizardGraphId=$wizard['rows'][0]['graph_template_id'];
+check($wizard['wizard_step']===2&&$wizard['rows'][0]['data_template_id']===$wizardData&&$wizardGraphId>0&&!$wizard['host_template_id'],'Graph step reuses saved data source and delays device template');
+check((int)db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates_item WHERE graph_template_id=? AND graph_type_id=6 AND consolidation_function_id=2 AND text_format=?',[$wizardGraphId,'Custom legend'])===1,'User graph edits persist in native template items');
+$wizard=icct_mib_wizard_save($wizard['id'],['step'=>3,'type_id'=>$type,'template_name'=>'QA Wizard Edited Device']);
+check($wizard['wizard_step']===3&&db_fetch_cell_prepared('SELECT name FROM host_template WHERE id=?',[$wizard['host_template_id']])==='QA Wizard Edited Device','Final step saves edited device template name');
+check((int)db_fetch_cell_prepared('SELECT COUNT(*) FROM host_template_graph WHERE host_template_id=? AND graph_template_id=?',[$wizard['host_template_id'],$wizardGraphId])===1,'Device template links the exact saved graph');
+icct_mib_wizard_reparse($stored['id'],$resolved);
+check(icct_mib_wizard_get($stored['id'])['object_count']===1&&icct_mib_file($stored,0)===$main,'Dependency reparse refreshes saved file in place');
 echo "MIB repository integration passed in temporary tables.\n";

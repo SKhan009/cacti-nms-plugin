@@ -252,6 +252,7 @@ function icct_mib_plan($preview,$input){
     if($options['graph']&&!$options['data'])throw new InvalidArgumentException('Graph templates require data source templates.');
     $name=icct_mib_name($input['template_name']??'');$records=[];
     foreach($preview['records'] as $i=>$record){
+        $record+=icct_mib_bounds($record['syntax']??'');
         if(empty($input['selected'][$i]))continue;
         if(!$record['numeric'])throw new InvalidArgumentException('Only readable numeric objects can create polling templates.');
         $r=$input['records'][$i]??[];$oid=ltrim(trim($r['oid']??$record['oid']),'.');
@@ -277,7 +278,7 @@ function icct_mib_plan($preview,$input){
         $record['color']=strtoupper(trim($r['color']??'00CF00'));
         if(!preg_match('/^[A-F0-9]{6}$/D',$record['color']))throw new InvalidArgumentException('Graph color must be six hexadecimal digits.');
         $record['legend']=icct_mib_name($r['legend']??$record['label'],150);
-        $record['statistics']=isset($r['statistics'])?($r['statistics']==='1'):true;
+        $record['statistics']=isset($r['statistics'])?((string)$r['statistics']==='1'):true;
         foreach(['threshold_low','threshold_high'] as $key){
             $v=trim($r[$key]??'');if($v!==''&&(!is_numeric($v)||!is_finite((float)$v)))throw new InvalidArgumentException($record['symbol'].': threshold lines must be finite numbers or blank.');$record[$key]=$v;
         }
@@ -290,15 +291,17 @@ function icct_mib_plan($preview,$input){
     return ['name'=>$name,'type_id'=>$type,'type_name'=>$types[$type]['name'],'category_id'=>$types[$type]['category_id'],'options'=>$options,'records'=>$records];
 }
 function icct_mib_write($sql,$args=[]){if(!db_execute_prepared($sql,$args))throw new RuntimeException('Could not save MIB templates.');}
-function icct_mib_native_metric($record,$options){
+function icct_mib_native_metric($record,$options,$existing=[]){
     global $config;
     require_once $config['base_path'].'/lib/api_data_source.php';require_once $config['base_path'].'/lib/api_graph.php';require_once $config['base_path'].'/lib/template.php';
-    $pair=['data_template_id'=>0,'graph_template_id'=>0];
+    $pair=array_replace(['data_template_id'=>0,'graph_template_id'=>0],$existing);
     if(!$options['data'])return $pair;
+    if(!$pair['data_template_id']){
     $base=(int)db_fetch_cell("SELECT id FROM data_template WHERE name='SNMP - Generic OID Template'");
     if(!$base)throw new RuntimeException('Cacti Generic OID data template is not installed.');
     $pair['data_template_id']=(int)api_duplicate_data_source(0,$base,$record['data_name']);
     if(!$pair['data_template_id'])throw new RuntimeException('Could not create data source template.');
+    }
     $data=(int)db_fetch_cell_prepared('SELECT id FROM data_template_data WHERE data_template_id=? AND local_data_id=0',[$pair['data_template_id']]);
     $rrd=(int)db_fetch_cell_prepared('SELECT id FROM data_template_rrd WHERE data_template_id=? AND local_data_id=0',[$pair['data_template_id']]);
     $field=(int)db_fetch_cell("SELECT id FROM data_input_fields WHERE data_input_id=1 AND data_name='oid'");
@@ -376,4 +379,83 @@ function icct_mib_objects($bundle){
     $encoded='';for($i=0;$i<(int)$bundle['object_parts'];$i++)$encoded.=(string)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['mib_objects_'.$bundle['id'].'_'.$i]);
     $json=base64_decode($encoded,true);if($json===false)throw new RuntimeException('Stored MIB metadata is unavailable.');
     $records=json_decode($json,true,512,JSON_THROW_ON_ERROR);if(!is_array($records)||count($records)!==(int)$bundle['object_count'])throw new RuntimeException('Stored MIB metadata is incomplete.');return $records;
+}
+
+/** Persist resumable wizard metadata using the same chunking as repository rows. */
+function icct_mib_wizard_store($bundle){
+    $rows=$bundle['rows'];unset($bundle['rows']);
+    $parts=str_split(base64_encode(json_encode($rows,JSON_THROW_ON_ERROR)),45000);
+    foreach($parts as $i=>$part)icct_mib_write('REPLACE INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['mib_rows_'.$bundle['id'].'_'.$i,$part]);
+    $bundle['row_parts']=count($parts);
+    icct_mib_write('UPDATE plugin_icct_nms_meta SET meta_value=?,updated_at=NOW() WHERE meta_key=?',[json_encode($bundle,JSON_THROW_ON_ERROR),'mib_repository_'.$bundle['id']]);
+    if($bundle['host_template_id'])icct_mib_write('REPLACE INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['mib_bundle_'.$bundle['host_template_id'],json_encode($bundle,JSON_THROW_ON_ERROR)]);
+}
+function icct_mib_wizard_get($id){
+    if(!is_string($id)||!preg_match('/^[a-f0-9]{32}$/D',$id))throw new InvalidArgumentException('Invalid MIB file.');
+    foreach(icct_mib_list() as $bundle)if($bundle['id']===$id)return $bundle;
+    throw new InvalidArgumentException('MIB file not found.');
+}
+/** Each Save commits only the current stage; reloads cannot duplicate templates. */
+function icct_mib_wizard_save($id,$input){
+    global $config;icct_backend_require_management(3);
+    if((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',['icct_mib_templates'])!==1)throw new RuntimeException('Template creation is busy. Retry shortly.');
+    try{
+        $bundle=icct_mib_wizard_get($id);$completed=(int)($bundle['wizard_step']??(!empty($bundle['rows'])?3:0));$step=(int)($input['step']??0);
+        if($step!==$completed+1||$step>3)throw new InvalidArgumentException('This step was already saved or is not ready. Reload the wizard.');
+        $objects=icct_mib_objects($bundle);$values=$input;
+        if($step>1){
+            $values['selected']=[];$values['records']=[];
+            foreach($bundle['rows'] as $row){$i=$row['object_index'];$values['selected'][$i]=1;$values['records'][$i]=$row['settings'];
+                if($step===2)foreach(['graph_name','graph_type','cf','color','legend','statistics','threshold_low','threshold_high','units'] as $field)if(isset($input['records'][$i][$field]))$values['records'][$i][$field]=$input['records'][$i][$field];
+            }
+            if($step===2){$values['template_name']=$bundle['name'];$values['type_id']=$bundle['type_id'];}
+        }
+        $values['create_data']=1;$values['create_graph']=$step>=2?1:0;$values['create_device']=$step===3?1:0;
+        $plan=icct_mib_plan(['records'=>$objects,'parse_error'=>$bundle['parse_error']??''],$values);
+        $names=$step===1?array_column($plan['records'],'data_name'):($step===2?array_column($plan['records'],'graph_name'):[$plan['name']]);
+        if(count($names)!==count(array_unique($names)))throw new InvalidArgumentException('Template names must be unique.');
+        $table=[1=>'data_template',2=>'graph_templates',3=>'host_template'][$step];
+        foreach($names as $name)if(db_fetch_cell_prepared('SELECT id FROM '.$table.' WHERE name=?',[$name]))throw new InvalidArgumentException('Template already exists: '.$name.'. Choose another name.');
+        if(!db_execute('START TRANSACTION'))throw new RuntimeException('Cannot begin saving this step.');
+        try{
+            if($step<3){
+                $previous=array_column($bundle['rows'],null,'oid');$rows=[];
+                foreach($plan['records'] as $record){
+                    $pair=icct_mib_native_metric($record,['data'=>true,'graph'=>$step===2],$step===2?($previous[$record['oid']]??[]):[]);
+                    $index=array_search($record['symbol'],array_column($objects,'symbol'),true);
+                    $rows[]=array_merge($pair,['object_index'=>$index,'oid'=>$record['oid'],'name'=>$record['label'],'deferred_instance'=>!empty($record['deferred_instance']),'settings'=>$record]);
+                }
+                $bundle['rows']=$rows;
+            }else{
+                require_once $config['base_path'].'/lib/template.php';
+                $hostId=(int)sql_save(['id'=>0,'hash'=>get_hash_host_template(0),'name'=>$plan['name']],'host_template');
+                if(!$hostId)throw new RuntimeException('Could not create device template.');
+                foreach($bundle['rows'] as $row)icct_mib_write('INSERT INTO host_template_graph(host_template_id,graph_template_id) VALUES(?,?)',[$hostId,$row['graph_template_id']]);
+                $bundle['host_template_id']=$hostId;
+            }
+            foreach(['name','type_id','type_name','category_id','options'] as $key)$bundle[$key]=$plan[$key];
+            $bundle['wizard_step']=$step;icct_mib_wizard_store($bundle);
+            if(!db_execute('COMMIT'))throw new RuntimeException('Could not save this step.');
+        }catch(Throwable $e){db_execute('ROLLBACK');throw $e;}
+    }finally{db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',['icct_mib_templates']);}
+    if($step<3){set_config_option('time_last_change_graph',time());set_config_option('time_last_change_data_source',time());}
+    return $bundle;
+}
+
+/** Resolve saved-file imports in place without creating another upload. */
+function icct_mib_wizard_reparse($id,$preview){
+    icct_backend_require_management(3);
+    if((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',['icct_mib_templates'])!==1)throw new RuntimeException('Template creation is busy. Retry shortly.');
+    try{
+        $bundle=icct_mib_wizard_get($id);
+        if(!empty($bundle['rows']))throw new InvalidArgumentException('Templates already exist. Open their saved configuration.');
+        if(!db_execute('START TRANSACTION'))throw new RuntimeException('Cannot refresh saved MIB.');
+        try{
+            $parts=str_split(base64_encode(json_encode($preview['records'],JSON_THROW_ON_ERROR)),45000);
+            foreach($parts as $i=>$part)icct_mib_write('REPLACE INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['mib_objects_'.$id.'_'.$i,$part]);
+            $bundle['object_parts']=count($parts);$bundle['object_count']=count($preview['records']);$bundle['parse_error']=$preview['parse_error']??'';$bundle['dependencies']=$preview['dependencies']??[];
+            icct_mib_wizard_store($bundle);
+            if(!db_execute('COMMIT'))throw new RuntimeException('Could not refresh saved MIB.');
+        }catch(Throwable $e){db_execute('ROLLBACK');throw $e;}
+    }finally{db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',['icct_mib_templates']);}
 }

@@ -1,0 +1,16 @@
+(()=>{'use strict';const form=document.querySelector('#mibWizard');if(!form)return;
+const rows=[...form.querySelectorAll('[data-oid-row]')],panels=[...form.querySelectorAll('[data-oid-panel]')],step=Number(form.dataset.step),search=form.querySelector('#mibOidSearch'),all=form.querySelector('#mibOidSelectAll');
+function open(i){rows.forEach(row=>row.classList.toggle('active',row.dataset.oidRow===String(i)));panels.forEach(panel=>panel.hidden=panel.dataset.oidPanel!==String(i));}
+function selected(){let count=0;rows.forEach(row=>{const checkbox=row.querySelector('input');if(checkbox.checked)count++;const panel=panels.find(p=>p.dataset.oidPanel===row.dataset.oidRow);panel.querySelectorAll('input,select').forEach(input=>input.disabled=step===1&&!checkbox.checked);});form.querySelector('#mibOidSelection').textContent=count+' OIDs selected';if(all){const eligible=rows.filter(r=>!r.querySelector('input').disabled);all.checked=count>0&&count===eligible.length;all.indeterminate=count>0&&count<eligible.length;}}
+rows.forEach(row=>{row.querySelector('button').addEventListener('click',()=>open(row.dataset.oidRow));row.querySelector('input').addEventListener('change',()=>{selected();open(row.dataset.oidRow);});});
+search.addEventListener('input',()=>{const query=search.value.trim().toLowerCase();rows.forEach(row=>row.hidden=!row.dataset.search.includes(query));form.querySelectorAll('.mib-module').forEach(module=>{module.hidden=![...module.querySelectorAll('[data-oid-row]')].some(r=>!r.hidden);if(query)module.open=true;});});
+all?.addEventListener('change',()=>{rows.forEach(row=>{const checkbox=row.querySelector('input');if(!checkbox.disabled)checkbox.checked=all.checked;});selected();});
+form.querySelectorAll('[data-mib-index]').forEach(index=>index.addEventListener('input',()=>{const oid=index.closest('[data-oid-panel]').querySelector('[data-base-oid]');oid.value=index.value.trim()?oid.dataset.baseOid+'.'+index.value.trim():oid.dataset.baseOid;}));
+form.addEventListener('submit',event=>{
+ if(step>=4){event.preventDefault();return;}
+ if(step===1&&!rows.some(row=>row.querySelector('input').checked)){event.preventDefault();form.querySelector('#mibOidSelection').textContent='Select at least one readable numeric OID.';return;}
+ for(const input of form.querySelectorAll('input,select'))if(!input.disabled&&!input.checkValidity()){event.preventDefault();const panel=input.closest('[data-oid-panel]');if(panel)open(panel.dataset.oidPanel);input.reportValidity();input.focus();return;}
+ const payload={selected:{},records:{}};for(const [name,value] of new FormData(form)){let m=name.match(/^selected\[(\d+)\]$/);if(m){payload.selected[m[1]]=value;continue;}m=name.match(/^records\[(\d+)\]\[(\w+)\]$/);if(m){payload.records[m[1]]??={};payload.records[m[1]][m[2]]=value;}}
+ const packed=document.createElement('input');packed.type='hidden';packed.name='review_payload';packed.value=JSON.stringify(payload);form.append(packed);rows.forEach(row=>row.querySelector('input').disabled=true);panels.forEach(panel=>panel.querySelectorAll('input,select').forEach(input=>input.disabled=true));
+});selected();open((rows.find(row=>row.querySelector('input').checked)||rows[0])?.dataset.oidRow);
+})();

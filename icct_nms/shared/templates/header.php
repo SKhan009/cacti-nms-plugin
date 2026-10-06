@@ -21,6 +21,7 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
         <title><?= icct_nms_h($title) ?> · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
         <link rel="stylesheet" href="shared/css/inventory.css?v=<?= substr(hash_file('sha256', __DIR__ . '/../css/inventory.css'), 0, 12) ?>" />
+        <?php if (!empty($mibRepositoryPage)): ?><link rel="stylesheet" href="protocols/snmp/mibs/css/mib-wizard.css?v=<?= substr(hash_file('sha256',__DIR__.'/../../protocols/snmp/mibs/css/mib-wizard.css'),0,12) ?>"><?php endif; ?>
         <?php if ($title === "Syslog Console"): ?><link rel="stylesheet" href="protocols/syslog/css/syslog.css?v=<?= substr(hash_file('sha256', __DIR__ . '/../../protocols/syslog/css/syslog.css'),0,12) ?>"><?php endif; ?>
         <?php if (!empty($mapPage)): ?>
         <link rel="stylesheet" href="shared/assets/vendor/leaflet/leaflet.css">
