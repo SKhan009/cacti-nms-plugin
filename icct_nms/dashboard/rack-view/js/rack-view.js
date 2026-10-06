@@ -6,6 +6,20 @@
   const cabinets=document.querySelector('#rackCabinets'),pool=document.querySelector('#rackDevicePool'),message=document.querySelector('#rackViewMessage'),actions=document.querySelector('#rackEditActions');
   const saveButton=document.querySelector('#rackSaveDraft'),dialog=document.querySelector('#rackDraftDialog');
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
+  const severityColors={Critical:'#ff3b45',Major:'#ff7026',Minor:'#ff9900',Warning:'#40aa92',Information:'#24839c'};
+  function renderLegend(){
+    const totals=Object.fromEntries(Object.keys(severityColors).map(level=>[level,0]));
+    const rackIds=new Set(data.racks.map(rack=>Number(rack.id)));
+    data.devices.filter(device=>rackIds.has(Number(device.rack_id))&&!device.peripheral).forEach(device=>{
+      Object.keys(totals).forEach(level=>totals[level]+=Number(device.fault_counts?.[level]||0));
+    });
+    const legend=document.querySelector('#rackAlarms');
+    legend.replaceChildren(el('span','', 'Total: '+Object.values(totals).reduce((sum,count)=>sum+count,0)));
+    Object.entries(totals).forEach(([level,count])=>{
+      const pill=el('span',''),dot=el('i','');dot.style.background=severityColors[level];dot.setAttribute('aria-hidden','true');
+      pill.append(dot,document.createTextNode(level+': '+count));legend.append(pill);
+    });
+  }
   const dashboardSource=document.querySelector('#dashboardData');
   const scopeSite=dashboardSource?Number(JSON.parse(dashboardSource.textContent).site_id||0):0;
   function scopedData(value){if(!scopeSite)return value;return {...value,sites:value.sites.filter(site=>Number(site.id)===scopeSite),racks:value.racks,devices:value.devices};}
@@ -15,14 +29,13 @@
     if(device.rack_asset){const image=el('img','rack-device-image');image.src=device.rack_asset;image.alt='';image.draggable=false;image.addEventListener('error',()=>image.hidden=true);n.append(image);}
     n.append(el('span','rack-device-name',device.name));
     const badge=el('span','rack-alarm-count',String(device.fault_count||0));
-    const colors={Critical:'#ff3b45',Major:'#ff7026',Minor:'#ff9900',Warning:'#40aa92',Information:'#24839c'};
-    badge.style.background=colors[device.fault_severity]||'#fff';badge.style.color=device.fault_severity==='Critical'?'#fff':'#222';badge.title=device.fault_count?device.fault_count+' active alarms · '+device.fault_severity:'No active alarms';n.append(badge);
+    badge.style.background=severityColors[device.fault_severity]||'#fff';badge.style.color=device.fault_severity==='Critical'?'#fff':'#222';badge.title=device.fault_count?device.fault_count+' active alarms · '+device.fault_severity:'No active alarms';n.append(badge);
     n.title=device.name+' · '+device.status;n.setAttribute('aria-label',n.title+' · '+(device.fault_count||0)+' active alarms');
     n.addEventListener('dragstart',event=>{if(!editing||busy){event.preventDefault();return;}event.dataTransfer.setData('text/plain',String(device.id));});return n;
   }
   function droppable(target,rackId,unit,peripheral=false){target.addEventListener('dragover',event=>{if(editing&&!busy){event.preventDefault();target.classList.add('drag-over');}});target.addEventListener('dragleave',()=>target.classList.remove('drag-over'));target.addEventListener('drop',event=>{event.preventDefault();target.classList.remove('drag-over');const value=event.dataTransfer.getData('text/plain'),id=Number(value);if(editing&&value.startsWith('reserve:'))stageReservation(value,rackId,unit);else if(editing&&siteDevices().some(d=>d.id===id))stage(id,rackId,unit,peripheral);});}
   function render(){
-    const racks=data.racks,devices=siteDevices();
+    const racks=data.racks,devices=siteDevices();renderLegend();
     rackOffset=Math.min(rackOffset,Math.max(0,Math.floor((racks.length-1)/3)*3));
     const previous=document.querySelector('#rackPrevious'),next=document.querySelector('#rackNext');
     previous.hidden=next.hidden=racks.length<=3;previous.disabled=rackOffset===0;next.disabled=rackOffset+3>=racks.length;

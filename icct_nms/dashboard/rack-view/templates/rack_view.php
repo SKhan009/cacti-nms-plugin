@@ -9,5 +9,6 @@
 <button type="button" class="rack-icon" id="rackViewFit" aria-label="Fit racks" title="Fit racks">▣</button>
 <button type="button" class="rack-icon" id="rackViewFullscreen" aria-label="Rack fullscreen" title="Fullscreen">⛶</button>
 </div></div>
+<div id="rackAlarms" class="icct-map-counts" aria-label="Active rack fault totals"></div>
 <form id="rackViewToken" hidden><?php icct_nms_token(); ?></form>
 <script type="application/json" id="rackViewData"><?= json_encode(icct_nms_rack_view_data(),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>

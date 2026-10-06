@@ -52,7 +52,7 @@ function icct_nms_rack_view_data() {
         $counts=array_fill_keys(['Critical','Major','Minor','Warning','Information'],0);
         foreach (icct_nms_fault_observations($device) as $fault) if(isset($counts[$fault['state']]))$counts[$fault['state']]++;
         $severity='';foreach($counts as $level=>$count)if($count){$severity=$level;break;}
-        $out[]=['rack_asset'=>$asset,'fault_count'=>array_sum($counts),'fault_severity'=>$severity,'shape'=>icct_nms_device_shape($device['category_id'],$device['device_type'],$types),'id'=>$id,'name'=>$device['description'],'site_id'=>(int)$device['site_id'],'status'=>$device['status_label'],'rack_id'=>(int)($device['rack_id'] ?: $peripheral),'start'=>(int)$device['start_unit'],'height'=>(int)($device['unit_height'] ?: 1),'peripheral'=>(bool)$peripheral,'revision'=>icct_nms_rack_revision($id)];
+        $out[]=['rack_asset'=>$asset,'fault_counts'=>$counts,'fault_count'=>array_sum($counts),'fault_severity'=>$severity,'shape'=>icct_nms_device_shape($device['category_id'],$device['device_type'],$types),'id'=>$id,'name'=>$device['description'],'site_id'=>(int)$device['site_id'],'status'=>$device['status_label'],'rack_id'=>(int)($device['rack_id'] ?: $peripheral),'start'=>(int)$device['start_unit'],'height'=>(int)($device['unit_height'] ?: 1),'peripheral'=>(bool)$peripheral,'revision'=>icct_nms_rack_revision($id)];
     }
     $racks=db_fetch_assoc('SELECT r.*,s.name AS site_name FROM plugin_icct_nms_racks r LEFT JOIN sites s ON s.id=r.site_id ORDER BY s.name,r.rack_number,r.id');
     foreach ($racks as &$rack) {
