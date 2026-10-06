@@ -1594,4 +1594,3 @@ window.addEventListener('pagehide',()=>active.forEach(cancel));
     document.querySelector('#segment-tree-empty').hidden = count > 0;
   });
 })();
-
