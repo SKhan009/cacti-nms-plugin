@@ -1405,6 +1405,8 @@ if (protocolDefaultData) {
   const copyDefaults = protocol => {
     const section=document.getElementById('protocol-'+protocol);
     if (!section || copied.has(protocol) || !defaults[protocol]) return;
+    // A saved protocol is a device-owned snapshot, including values equal to the old preset.
+    if (!newDevice && section.dataset.saved==='1') return;
     const form=section.querySelector('form');
     for (const [name,value] of Object.entries(defaults[protocol])) {
       if((overrides[protocol]||[]).includes(name)||dirty.get(protocol)?.has(name))continue;

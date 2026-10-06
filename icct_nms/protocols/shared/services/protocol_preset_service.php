@@ -60,7 +60,7 @@ function icct_nms_save_protocol_preset($input) {
         $presets=icct_nms_protocol_presets(); $presets[$protocol]=$values;
         icct_backend_category_execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',['protocol_defaults',json_encode($presets,JSON_THROW_ON_ERROR)]);
     } finally { db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]); }
-    return strtoupper($protocol).' defaults saved. Device forms inherit these values unless overridden.';
+    return strtoupper($protocol).' defaults saved. Newly added protocols use these values; saved device settings remain unchanged.';
 }
 
 /** Only names of overridden non-secret preset fields are stored here. */
