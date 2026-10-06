@@ -24,7 +24,7 @@ function icct_nms_schema_install()
     if (
         !db_execute_prepared(
             'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
-            ['icct_nms_schema_version', '1.2.8']
+            ['icct_nms_schema_version', '1.2.10']
         )
     ) {
         throw new RuntimeException('ICCT NMS schema version could not be saved.');
@@ -139,6 +139,9 @@ function icct_nms_schema_diagnostic_mtr_migration(){
 /** Background MTR settings are private to each device diagnostic assignment. */
 function icct_nms_schema_mtr_background_migration() {
     foreach ([
+        ['diagnostic_profiles','arp_interface',"VARCHAR(15) NOT NULL DEFAULT ''"],
+        ['diagnostic_profiles','pathchar_hops','TINYINT UNSIGNED NOT NULL DEFAULT 20'],
+        ['diagnostic_profiles','pathchar_timeout','SMALLINT UNSIGNED NOT NULL DEFAULT 60'],
         ['diagnostic_profiles','mtr_background','TINYINT UNSIGNED NOT NULL DEFAULT 0'],
         ['diagnostic_profiles','mtr_interval','SMALLINT UNSIGNED NOT NULL DEFAULT 300'],
         ['diagnostic_jobs','is_background','TINYINT UNSIGNED NOT NULL DEFAULT 0'],

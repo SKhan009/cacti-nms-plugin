@@ -284,7 +284,7 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial", "syslog"] as $key) {
                     ['MTR', ['mtr_icmp'=>'MTR (ICMP)','mtr_tcp'=>'MTR (TCP)'], 'mtr_cycles', 'MTR Readings', 1, 30],
                     ['ARP', ['arp'=>'ARP'], '', '', 0, 0],
                     ['iPerf (Sec)', ['iperf3'=>'iPerf (Sec)'], 'bandwidth_seconds', 'Bandwidth Test (Sec)', 1, 30],
-                    ['Pathchar', ['pathchar'=>'Pathchar'], '', '', 0, 0],
+                    ['Pathchar', ['pathchar'=>'Pathchar'], 'pathchar_hops', 'Pathchar Hops (pchar)', 1, 30],
                     ['Netperf (Sec)', ['netperf'=>'Netperf (Sec)'], 'bandwidth_seconds', 'Bandwidth Test (Sec)', 1, 30],
                 ];
                 foreach ($groups as [$group,$methods,$parameter,$caption,$min,$max]):
@@ -302,7 +302,17 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial", "syslog"] as $key) {
                     </label>
                     <?php if ($parameter): ?>
                     <div class="diagnostic-parameter" data-diagnostic-parameter="<?= $parameter ?>">
-                        <?php icct_nms_input($caption,$parameter,$diag[$parameter]??['ping_count'=>4,'trace_hops'=>20,'bandwidth_seconds'=>10,'mtr_cycles'=>(int)($diag['ping_count']??4)][$parameter],'number','min="'.$min.'" max="'.$max.'"'); ?>
+                        <?php icct_nms_input($caption,$parameter,$diag[$parameter]??['ping_count'=>4,'trace_hops'=>20,'bandwidth_seconds'=>10,'mtr_cycles'=>(int)($diag['ping_count']??4),'pathchar_hops'=>20][$parameter],'number','min="'.$min.'" max="'.$max.'"'); ?>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($group==='ARP'): ?>
+                    <div class="diagnostic-parameter" data-diagnostic-parameter="arp_interface">
+                        <?php icct_nms_input('Collector Interface (optional)','arp_interface',$diag['arp_interface']??'','text','maxlength="15" placeholder="All interfaces"'); ?>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($group==='Pathchar'): ?>
+                    <div class="diagnostic-extra" data-diagnostic-parameter="pathchar_timeout">
+                        <?php icct_nms_input('Time Limit (Sec)','pathchar_timeout',$diag['pathchar_timeout']??60,'number','min="10" max="120"'); ?>
                     </div>
                     <?php endif; ?>
                     <?php if ($isGroup): ?>
@@ -317,8 +327,8 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial", "syslog"] as $key) {
                     <?php endif; ?>
                     <?php if ($group==='MTR'): ?>
                     <div class="diagnostic-monitor">
-                        <label class="check-row"><input type="checkbox" name="mtr_background" value="1" <?= !empty($diag['mtr_background'])?'checked':'' ?> /> Automatic background monitoring</label>
-                        <?php icct_nms_input('Monitoring Interval (Sec)','mtr_interval',$diag['mtr_interval']??300,'number','min="60" max="3600"'); ?>
+                        <?php icct_nms_input('MTR Interval (Sec)','mtr_interval',$diag['mtr_interval']??300,'number','min="60" max="3600"'); ?>
+                        <label class="check-row diagnostic-background">Automatic background monitoring <input type="checkbox" name="mtr_background" value="1" <?= !empty($diag['mtr_background'])?'checked':'' ?> /></label>
                     </div>
                     <?php endif; ?>
                 </div>

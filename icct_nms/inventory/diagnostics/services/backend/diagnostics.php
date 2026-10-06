@@ -13,6 +13,9 @@ function icct_backend_diag_arguments($row, $tool, $name)
         "mtr_cycles" => $row["mtr_cycles"] ?? $row["ping_count"],
         "mtr_background" => 0,
         "mtr_interval" => $row["mtr_interval"] ?? 300,
+        "arp_interface" => $row["arp_interface"] ?? '',
+        "pathchar_hops" => $row["pathchar_hops"] ?? 20,
+        "pathchar_timeout" => $row["pathchar_timeout"] ?? 60,
         "trace_hops" => $row["trace_hops"],
         "bandwidth_seconds" => $row["bandwidth_seconds"],
     ]);
@@ -42,6 +45,7 @@ function icct_backend_diag_arguments($row, $tool, $name)
     switch ($tool) {
         case "arp":
             $args = ["neigh", "show"];
+            if (!empty($row["arp_interface"])) array_push($args, "dev", $row["arp_interface"]);
             $timeout = 5;
             break;
         case "ping":
@@ -151,7 +155,7 @@ function icct_backend_diag_arguments($row, $tool, $name)
                     ? [
                         "-n",
                         "-H",
-                        (string) $row["trace_hops"],
+                        (string) ($row["pathchar_hops"] ?? 20),
                         "-R",
                         "3",
                         "-I",
@@ -159,7 +163,7 @@ function icct_backend_diag_arguments($row, $tool, $name)
                         $target,
                     ]
                     : ["-n", $target];
-            $timeout = 60;
+            $timeout = (int) ($row["pathchar_timeout"] ?? 60);
             break;
         default:
             throw new InvalidArgumentException("Unsupported diagnostic tool.");
@@ -199,6 +203,9 @@ function icct_backend_diag_assignment($host_id, $tool)
         "mtr_cycles" => $row["mtr_cycles"] ?? $row["ping_count"],
         "mtr_background" => $row["mtr_background"] ?? 0,
         "mtr_interval" => $row["mtr_interval"] ?? 300,
+        "arp_interface" => $row["arp_interface"] ?? '',
+        "pathchar_hops" => $row["pathchar_hops"] ?? 20,
+        "pathchar_timeout" => $row["pathchar_timeout"] ?? 60,
         "trace_hops" => $row["trace_hops"],
         "bandwidth_seconds" => $row["bandwidth_seconds"],
     ]);
@@ -388,6 +395,15 @@ function icct_backend_diag_profile_validate($input)
     if ($background && !array_intersect($tools, ["mtr_icmp", "mtr_tcp"])) {
         throw new InvalidArgumentException("Select an MTR method for automatic monitoring.");
     }
+    $arpInterface = trim((string) ($input['arp_interface'] ?? ''));
+    if ($arpInterface !== '' && !preg_match('/^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,14}$/D', $arpInterface)) {
+        throw new InvalidArgumentException('Enter a collector interface name of up to 15 characters.');
+    }
+    $pathHops = (int) ($input['pathchar_hops'] ?? 20);
+    $pathTimeout = (int) ($input['pathchar_timeout'] ?? 60);
+    if ($pathHops < 1 || $pathHops > 30 || $pathTimeout < 10 || $pathTimeout > 120) {
+        throw new InvalidArgumentException('Use 1–30 Pathchar hops and a 10–120 second time limit.');
+    }
     return [
         "name" => $name,
         "tools" => implode(",", $tools),
@@ -397,6 +413,9 @@ function icct_backend_diag_profile_validate($input)
         "mtr_cycles" => $mtr,
         "mtr_background" => $background,
         "mtr_interval" => $interval,
+        "arp_interface" => $arpInterface,
+        "pathchar_hops" => $pathHops,
+        "pathchar_timeout" => $pathTimeout,
     ];
 }
 
@@ -651,6 +670,9 @@ function icct_backend_diag_signature($row)
                     "mtr_cycles",
                     "mtr_background",
                     "mtr_interval",
+                    "arp_interface",
+                    "pathchar_hops",
+                    "pathchar_timeout",
                     "trace_hops",
                     "bandwidth_seconds",
                 ]),

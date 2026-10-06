@@ -3160,3 +3160,14 @@ h1, h2, h3, h4, h5, h6 { line-height: 1.25; }
 .topbar .profile .user-avatar {width:30px;height:30px;}
 @media(max-width:950px){.topbar{gap:8px}.topbar .brand-logo-bel{width:100px}.topbar .station{min-width:100px;max-width:190px}.topbar .profile{min-width:0}.topbar .system-metrics{padding-right:8px}.topbar .system-metrics span{padding:4px 6px}}
 @media(max-width:700px){.topbar{height:auto;min-height:56px;flex-wrap:wrap;padding:8px}.topbar .station{flex:1;max-width:none}.topbar .system-metrics{margin-left:0}.topbar .profile{margin-left:auto}.topbar .profile small{display:none}}
+
+/* Diagnostic method, parameters and monitor toggle share one desktop row. */
+.diagnostics-settings .diagnostic-row-mtr {grid-template-columns:170px 210px minmax(170px,1fr) minmax(340px,1.5fr);}
+.diagnostics-settings .diagnostic-row-mtr .diagnostic-methods {grid-column:3;flex-direction:row;padding-left:0;gap:10px;}
+.diagnostics-settings .diagnostic-monitor {grid-column:4;flex-wrap:nowrap;align-items:center;gap:16px;}
+.diagnostics-settings .diagnostic-monitor .field {width:170px;flex-shrink:0;}
+.diagnostics-settings .diagnostic-background {margin-left:auto;justify-content:space-between;gap:12px;}
+.diagnostics-settings .diagnostic-extra {grid-column:3;width:210px;}
+.diagnostics-settings .diagnostic-extra .field {margin:0;}
+@media(max-width:1100px){.diagnostics-settings .diagnostic-row-mtr{grid-template-columns:150px 180px 1fr}.diagnostics-settings .diagnostic-monitor{grid-column:2 / -1}.diagnostics-settings .diagnostic-background{margin-left:auto}}
+@media(max-width:700px){.diagnostics-settings .diagnostic-row-mtr{grid-template-columns:minmax(120px,1fr) minmax(140px,210px)}.diagnostics-settings .diagnostic-row-mtr .diagnostic-methods{grid-column:1 / -1}.diagnostics-settings .diagnostic-monitor{grid-column:1 / -1;flex-wrap:wrap}.diagnostics-settings .diagnostic-extra{grid-column:2;width:auto}}

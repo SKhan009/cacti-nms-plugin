@@ -6,7 +6,7 @@ if(db_fetch_cell("SHOW COLUMNS FROM plugin_icct_nms_racks LIKE 'node_id'"))forea
  if(!db_execute("CREATE TEMPORARY TABLE qa_copy LIKE `$table`")||!db_execute("INSERT INTO qa_copy SELECT * FROM `$table`")||!db_execute("CREATE TEMPORARY TABLE `$table` LIKE qa_copy")||!db_execute("INSERT INTO `$table` SELECT * FROM qa_copy")||!db_execute('DROP TEMPORARY TABLE qa_copy'))throw new RuntimeException('Isolation failed');
 }
 require __DIR__ . '/../../shared/services/schema.php';icct_nms_schema_sites_migration();
-if(db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['icct_nms_schema_version'])!=='1.2.8')throw new RuntimeException('Upgrade the plugin before integration QA; tests never change the installed schema version.');
+if(db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['icct_nms_schema_version'])!=='1.2.10')throw new RuntimeException('Upgrade the plugin before integration QA; tests never change the installed schema version.');
 if(session_status()===PHP_SESSION_NONE)session_start();
 $_SESSION=['sess_user_id'=>1];
 require_once __DIR__.'/../../shared/services/bootstrap.php';

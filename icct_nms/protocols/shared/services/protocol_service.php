@@ -98,7 +98,7 @@ function icct_nms_save_diagnostics($id, $input)
         ],
     );
     icct_backend_category_execute(
-        "INSERT INTO plugin_icct_nms_diagnostic_profiles(name,tools,ping_count,trace_hops,bandwidth_seconds,mtr_cycles,mtr_background,mtr_interval,updated_by,updated_at) VALUES(?,?,?,?,?,?,?,?,?,NOW())",
+        "INSERT INTO plugin_icct_nms_diagnostic_profiles(name,tools,ping_count,trace_hops,bandwidth_seconds,mtr_cycles,mtr_background,mtr_interval,arp_interface,pathchar_hops,pathchar_timeout,updated_by,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,NOW())",
         array_merge(array_values($profile), [icct_backend_current_user_id()]),
     );
     icct_backend_category_execute(

@@ -1207,6 +1207,9 @@ if (diagnosticSettings) {
     ],
     bandwidth_seconds: ["iperf3", "netperf"],
     mtr_cycles: ["mtr_icmp", "mtr_tcp"],
+    arp_interface: ["arp"],
+    pathchar_hops: ["pathchar"],
+    pathchar_timeout: ["pathchar"],
   };
   const traceGroup = diagnosticSettings.querySelector(
     "[data-traceroute-group]",
