@@ -18,6 +18,7 @@ function icct_nms_schema_install()
     }
     icct_nms_schema_sites_migration();
     icct_nms_schema_rack_catalogue_migration();
+    icct_nms_schema_missing_preset_racks();
     if (
         !db_execute_prepared(
             'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
@@ -52,6 +53,27 @@ function icct_nms_schema_sites_migration() {
     icct_nms_schema_execute('DROP TABLE plugin_icct_nms_rack_nodes');
 }
 function icct_nms_schema_execute($sql){if(!db_execute($sql))throw new RuntimeException('Site/rack migration failed. Check the Cacti database log.');}
+
+/** Repair presets saved by older releases even after the catalogue migration ran.
+ * Only create missing physical racks; existing IDs, capacity and placements stay intact.
+ * Called by installation/upgrade, never by ordinary page reads.
+ */
+function icct_nms_schema_missing_preset_racks() {
+    $lock='icct_backend_racks_'.substr(hash('sha256',(string)db_fetch_cell('SELECT DATABASE()')),0,32);
+    if((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',[$lock])!==1)throw new RuntimeException('Rack upgrade is busy. Retry shortly.');
+    try {
+        icct_nms_schema_execute('START TRANSACTION');
+        $raw=(string)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['rack_profiles']);
+        $profiles=$raw!==''?json_decode($raw,true,512,JSON_THROW_ON_ERROR):[];
+        foreach($profiles as $key=>$profile) {
+            if(db_fetch_cell_prepared('SELECT id FROM plugin_icct_nms_racks WHERE profile_id=? LIMIT 1',[$key]))continue;
+            if(!is_string($key)||!preg_match('/^[a-f0-9]{16}$/D',$key)||!is_array($profile)||!is_string($profile['name']??null)||trim($profile['name'])===''||strlen($profile['name'])>600||filter_var($profile['unit_count']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1,'max_range'=>100]])===false)throw new RuntimeException('A saved rack preset is invalid. Correct its name and capacity in Presets before upgrading.');
+            if(!db_execute_prepared('INSERT INTO plugin_icct_nms_racks(site_id,profile_id,rack_number,name,unit_count,updated_by,updated_at) VALUES(0,?,1,?,?,0,NOW())',[$key,$profile['name'],(int)$profile['unit_count']]))throw new RuntimeException('Saved rack presets could not be synchronized. Check the Cacti database log.');
+        }
+        icct_nms_schema_execute('COMMIT');
+    } catch(Throwable $failure) {db_execute('ROLLBACK');throw $failure;}
+    finally {db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]);}
+}
 
 /** Convert legacy site/group copies to one catalogue row per physical rack.
  * Keep occupied rack IDs, reservations and placements; remove only empty copies.

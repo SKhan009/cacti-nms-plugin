@@ -6,6 +6,7 @@
 
 1. Copy this directory to `cacti/plugins/icct_nms`.
 2. Install or upgrade and enable **ICCT NMS Inventory** through native Plugin Management.
+   When replacing an older release, disable and re-enable ICCT NMS in Plugin Management to run its configuration upgrade. Version 1.2.5 repairs missing physical rack records for saved rack presets, including installations where the earlier catalogue migration already ran. Existing device placements are retained. Copying files alone does not run database upgrades; Cacti installs plugins in a disabled state until enabled.
 3. Grant the **View ICCT NMS Inventory** realm. Cacti's existing device-management permission and device ACLs remain authoritative.
 4. Open **ICCT NMS → Inventory**. On the configured VM: `http://127.0.0.1:8080/cacti/plugins/icct_nms/inventory/controllers/inventory.php`.
 

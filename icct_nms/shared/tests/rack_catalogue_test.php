@@ -46,4 +46,17 @@ icct_nms_save_rack_preset(['rack_name'=>'Empty Rack','unit_count'=>18]);
 checkRack(count(icct_nms_device_rack_choices())===4,'New empty rack not available immediately');
 checkRack(icct_nms_rack_delete_block_reason(array_key_last(icct_nms_rack_presets()))==='','Empty rack incorrectly blocked');
 checkRack(db_fetch_cell('SELECT site_id FROM host WHERE id=1001')==3,'Rack placement changed device site');
+// Older releases can save metadata after the one-time catalogue migration.
+$late='abcdef0123456789';$profiles=icct_nms_rack_presets();
+$profiles[$late]=['name'=>'Late Rack','rack_count'=>1,'unit_count'=>20];
+db_execute_prepared('UPDATE plugin_icct_nms_meta SET meta_value=? WHERE meta_key=?',[json_encode($profiles),'rack_profiles']);
+icct_nms_schema_rack_catalogue_migration();
+checkRack(!db_fetch_cell_prepared('SELECT id FROM plugin_icct_nms_racks WHERE profile_id=?',[$late]),'Fixture must reproduce an already migrated missing rack');
+icct_nms_schema_missing_preset_racks();
+$lateRack=db_fetch_row_prepared('SELECT * FROM plugin_icct_nms_racks WHERE profile_id=?',[$late]);
+checkRack($lateRack && $lateRack['name']==='Late Rack' && (int)$lateRack['unit_count']===20,'Late preset not repaired');
+$before=json_encode(icct_nms_device_rack_choices());
+icct_nms_schema_missing_preset_racks();
+checkRack(json_encode(icct_nms_device_rack_choices())===$before,'Repair duplicated or changed existing racks');
+checkRack(db_fetch_cell('SELECT rack_id FROM plugin_icct_nms_rack_devices WHERE host_id=1001')==$rack2,'Repair changed device placement');
 echo "PASS: unique rack catalogue, empty presets, preserved placements, site-independent selection, capacity synchronization and safe rollback.\n";

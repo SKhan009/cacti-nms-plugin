@@ -77,7 +77,7 @@ function icct_nms_failure(Throwable $error)
     http_response_code(503);
     print '<!doctype html><html lang="en"><meta charset="utf-8"><title>Inventory unavailable</title><link rel="stylesheet" href="' . icct_nms_h($GLOBALS['config']['url_path'] . 'plugins/icct_nms/shared/css/inventory.css') . '"><body class="icct-inventory"><h1>Inventory unavailable</h1><p>' .
         icct_nms_h($error->getMessage()) .
-        '</p></body></html>';
+        '</p><p><a href="' . icct_nms_h($GLOBALS['config']['url_path'] . 'plugins.php') . '">Open Cacti Plugin Management</a></p></body></html>';
     exit();
 }
 

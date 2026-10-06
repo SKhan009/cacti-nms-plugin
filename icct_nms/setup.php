@@ -4,7 +4,7 @@ function plugin_icct_nms_version()
 {
     return [
         'name' => 'icct_nms',
-        'version' => '1.2.4',
+        'version' => '1.2.5',
         'longname' => 'ICCT NMS Inventory',
         'author' => 'NMS Project',
         'homepage' => 'https://www.cacti.net/',
@@ -29,6 +29,9 @@ function plugin_icct_nms_check_config()
     require_once __DIR__ . '/shared/services/schema.php';
     icct_nms_schema_install();
     icct_nms_setup_registration();
+    if (!db_execute_prepared('UPDATE plugin_config SET version=? WHERE directory=?', [plugin_icct_nms_version()['version'], 'icct_nms'])) {
+        throw new RuntimeException('ICCT NMS upgrade version could not be saved.');
+    }
     return true;
 }
 /** Registration must run from a Cacti-approved lifecycle setup entry point. */
