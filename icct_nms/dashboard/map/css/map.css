@@ -275,3 +275,13 @@
 #topologyDevices .has-device-image.shape-tall .topology-device-icon{height:50px}
 #topologyDevices .topology-device-icon[hidden]{display:none}
 #topologyDevices .topology-alarm{align-self:center;flex:none}
+
+/* Compact icon nodes and centered control/badge artwork. */
+#topologyDevices .topology-device.shape-rectangle{width:64px}
+#topologyDevices .topology-device.shape-wide{width:120px}
+#topologyDevices .topology-device.has-device-asset:not(.has-device-image){height:60px;gap:2px;padding:3px}
+#topologyDevices .topology-device.has-device-asset.shape-tall:not(.has-device-image){height:76px}
+#topologyDevices .topology-device:not(.has-device-image) .topology-device-icon{width:20px;height:20px;flex:none}
+#topologyDevices .topology-alarm{display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:16px;height:16px;margin:0;padding:0;line-height:1;font-size:10px;font-weight:400;text-indent:0}
+.icct-inventory .rack-icon{display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:0;line-height:1}
+.icct-inventory .rack-icon svg{display:block;width:18px;height:18px;margin:0;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
