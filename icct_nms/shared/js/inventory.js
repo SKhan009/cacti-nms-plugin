@@ -634,7 +634,7 @@ rowMenus.forEach((menu) => {
         innerWidth - panel.offsetWidth - 12,
       ),
     );
-    const headerBottom = document.querySelector(".app-header")?.getBoundingClientRect().bottom || 72;
+    const headerBottom = document.querySelector(".topbar")?.getBoundingClientRect().bottom || 72;
     const minTop = Math.max(12, headerBottom + 8);
     const below = anchor.bottom + 4;
     const above = anchor.top - panel.offsetHeight - 4;

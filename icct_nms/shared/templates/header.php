@@ -3,6 +3,9 @@
  * Shared Inventory shell with the actual authenticated account and assigned collector.
  */
 
+require_once __DIR__ . '/../services/server_status.php';
+$serverStatus = icct_nms_server_status($config['base_path']);
+
 $user = db_fetch_row_prepared('SELECT username,full_name FROM user_auth WHERE id=?', [
     icct_backend_current_user_id()
 ]);
@@ -47,13 +50,17 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
                 <a class="brand-home" href="dashboard/controllers/topology.php" aria-label="Bharat Electronics — Dashboard"><img class="brand-logo brand-logo-bel" src="shared/assets/images/bharat-electronics-logo.svg" alt="Bharat Electronics" width="128" height="34"></a>
             </div>
             <div class="station">
-                <strong>ICCT NMS</strong>
-                <span><?= icct_nms_h($collector) ?></span>
+                <strong title="Cacti server"><span class="status-dot" aria-hidden="true"></span><?= icct_nms_h($serverStatus['hostname']) ?></strong>
+                <span><?= icct_nms_h($collector) ?> · Poller <?= icct_nms_h(read_config_option('poller_interval')) ?> sec</span>
             </div>
-            <div class="system-metrics"><span>Poller: <?= icct_nms_h(read_config_option('poller_interval')) ?> sec</span></div>
+            <div class="system-metrics" aria-label="Cacti server resource usage">
+                <?php foreach (['cpu' => 'CPU', 'ram' => 'RAM', 'disk' => 'DISK'] as $metric => $label): ?>
+                <span title="<?= $label === 'DISK' ? 'Cacti filesystem usage' : 'Cacti server ' . $label . ' usage' ?>"><?= $label ?>: <?= $serverStatus[$metric] === null ? '—' : icct_nms_h($serverStatus[$metric]) . '%' ?></span>
+                <?php endforeach; ?>
+            </div>
             <a class="cacti-backend-button" href="<?= icct_nms_h($config['url_path']) ?>index.php">Cacti Backend</a>
             <a class="profile" href="<?= icct_nms_h($config['url_path']) ?>auth_profile.php">
-                <span class="user-avatar" aria-hidden="true">◉</span>
+                <svg class="user-avatar" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14"/><circle cx="16" cy="12" r="5" fill="currentColor" stroke="none"/><path d="M7 26v-3a9 9 0 0 1 18 0v3" fill="currentColor" stroke="none"/></svg>
                 <span>
                     <strong><?= icct_nms_h($user['username']) ?></strong>
                     <small><?= icct_nms_h($user['full_name']) ?></small>
