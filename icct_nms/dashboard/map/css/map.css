@@ -264,3 +264,14 @@
 #rackAlarms{justify-content:flex-end;align-self:stretch;margin:0;padding:12px 14px;flex:none}
 #rackAlarms span{display:inline-flex;align-items:center;gap:5px}
 #rackAlarms i{width:12px;height:12px;border-radius:50%;flex:none}
+
+/* Name, centered preset asset, then alarm badge for every topology shape. */
+#topologyDevices .topology-device.has-device-asset{height:76px;justify-content:space-between;gap:3px;padding:4px}
+#topologyDevices .topology-device.has-device-asset.shape-tall{height:92px}
+#topologyDevices .topology-device-heading{flex-direction:column;flex:none;width:100%;min-width:0;gap:0}
+#topologyDevices .topology-device-icon{display:block;align-self:center;width:24px;height:30px;max-width:100%;min-height:0;margin:0 auto;object-fit:contain;flex:1 1 auto}
+#topologyDevices .has-device-image .topology-device-icon{width:calc(100% - 4px);height:36px}
+#topologyDevices .has-device-image.shape-wide .topology-device-icon{width:110px;height:30px}
+#topologyDevices .has-device-image.shape-tall .topology-device-icon{height:50px}
+#topologyDevices .topology-device-icon[hidden]{display:none}
+#topologyDevices .topology-alarm{align-self:center;flex:none}
