@@ -5,7 +5,7 @@ define('IN_CACTI_INSTALL',true);require '/var/www/html/cacti/include/cli_check.p
 require_once __DIR__ . '/../../shared/services/bootstrap.php';icct_nms_backend();require_once __DIR__ . '/../../presets/services/device_type_service.php';require_once __DIR__ . '/../../protocols/snmp/mibs/services/mib_repository_service.php';
 $_SESSION=['sess_user_id'=>1];
 function check($ok,$message){if(!$ok)throw new RuntimeException($message);echo "PASS: $message\n";}
-foreach(['data_local','graph_local','host_template','host_template_graph','data_template','data_template_data','data_template_rrd','data_input_data','graph_templates','graph_templates_graph','graph_templates_item','graph_template_input','graph_template_input_defs','plugin_icct_nms_meta','settings','colors'] as $table){
+foreach(['data_local','graph_local','host_template','host_template_graph','data_template','data_template_data','data_template_rrd','data_input_data','graph_templates','graph_templates_graph','graph_templates_item','graph_template_input','graph_template_input_defs','plugin_icct_nms_meta','settings','colors','host_graph','poller_item','poller_reindex','poller_command','data_source_stats_hourly','data_source_stats_daily','data_source_stats_weekly','data_source_stats_monthly','data_source_stats_yearly'] as $table){
  if(!db_execute("CREATE TEMPORARY TABLE qa_mib_copy LIKE `$table`"))throw new RuntimeException('Isolation failed');db_execute("INSERT INTO qa_mib_copy SELECT * FROM `$table`");db_execute("CREATE TEMPORARY TABLE `$table` LIKE qa_mib_copy");db_execute("INSERT INTO `$table` SELECT * FROM qa_mib_copy");db_execute('DROP TEMPORARY TABLE qa_mib_copy');
 }
 $types=icct_nms_device_types();$type=array_key_first($types);$path=__DIR__ . '/../../shared/assets/mibs/IF-MIB.txt';
@@ -110,8 +110,8 @@ try{
  $resolved=icct_mib_preview($upload,$type);
  check(in_array('QA-REPO-BASE-MIB',$resolved['dependencies'],true)&&count($resolved['records'])===1&&$resolved['records'][0]['base_oid']==='1.3.6.1.4.1.999998.1','Saved database import resolves OIDs without reuploading dependency');
  foreach(['IF-MIB','IP-MIB','BRIDGE-MIB','CISCO-ENTITY-SENSOR-MIB'] as $module){
-  $args=[read_config_option('path_snmptranslate')?:'snmptranslate','-M',__DIR__ . '/../../shared/assets/mibs','-m',$module,'-Tz'];
-  check(icct_mib_command($args)!=='',$module.' and all its imports resolve using only the plugin folder');
+  $modulePreview=icct_mib_preview(['name'=>[$module.'.txt'],'tmp_name'=>[__DIR__.'/../../shared/assets/mibs/'.$module.'.txt'],'error'=>[UPLOAD_ERR_OK]],$type);
+  check(count($modulePreview['records'])>0,$module.' and all its imports resolve using only the plugin folder');
  }
 }finally{foreach(glob($fixtureDir.'/*')?:[] as $file)unlink($file);rmdir($fixtureDir);}
 $expired=$preview;$expired['created']=time()-3601;try{icct_mib_save($expired,$plan);throw new LogicException('Expired accepted');}catch(InvalidArgumentException $e){check(str_contains($e->getMessage(),'expired'),'Expired review rejected');}
@@ -137,4 +137,37 @@ check($wizard['wizard_step']===3&&db_fetch_cell_prepared('SELECT name FROM host_
 check((int)db_fetch_cell_prepared('SELECT COUNT(*) FROM host_template_graph WHERE host_template_id=? AND graph_template_id=?',[$wizard['host_template_id'],$wizardGraphId])===1,'Device template links the exact saved graph');
 icct_mib_wizard_reparse($stored['id'],$resolved);
 check(icct_mib_wizard_get($stored['id'])['object_count']===1&&icct_mib_file($stored,0)===$main,'Dependency reparse refreshes saved file in place');
+
+
+// Optional RRD execution uses an isolated folder and never writes the installation's RRA directory.
+if(getenv('ICCT_QA_RRD')==='1'){
+    $rrdQaDir=sys_get_temp_dir().'/icct-mib-rrd-'.bin2hex(random_bytes(8));mkdir($rrdQaDir,0700);$config['rra_path']=$rrdQaDir;
+    register_shutdown_function(function()use($rrdQaDir){foreach(glob($rrdQaDir.'/*')?:[] as $file)unlink($file);rmdir($rrdQaDir);});
+}
+$sourceBytes=file_get_contents(__DIR__.'/../../shared/assets/mibs/IF-MIB.txt');
+foreach(['BOM'=>"\xEF\xBB\xBF".$sourceBytes,'CRLF'=>str_replace("\n","\r\n",$sourceBytes),'UTF16'=>"\xFF\xFE".iconv('UTF-8','UTF-16LE',$sourceBytes)] as $encoding=>$bytes){
+    $encodedPreview=icct_mib_preview(['name'=>['IF-MIB.txt'],'stored_content'=>[$bytes]],$type);
+    check(count($encodedPreview['records'])===count($preview['records']),$encoding.' MIB reparses in memory without a writable plugin folder');
+}
+try{icct_mib_preview(['name'=>['download.txt'],'stored_content'=>['<html>Download MIB</html>']],$type);throw new LogicException('HTML accepted');}catch(InvalidArgumentException $e){check(str_contains($e->getMessage(),'not a MIB definition'),'HTML download pages receive an actionable error');}
+$activationPreview=icct_mib_preview(['name'=>['IF-MIB.txt'],'tmp_name'=>[__DIR__.'/../../shared/assets/mibs/IF-MIB.txt'],'error'=>[UPLOAD_ERR_OK]],$type);
+$scalar=null;foreach($activationPreview['records'] as $i=>$r)if($r['numeric']&&!$r['table']&&!$r['enum']){$scalar=$i;break;}
+$activationPlan=icct_mib_plan($activationPreview,['type_id'=>$type,'template_name'=>'Offline activation QA','create_data'=>1,'create_graph'=>1,'create_device'=>1,'selected'=>[$scalar=>1]]);
+$activationBundle=icct_mib_save($activationPreview,$activationPlan);
+check(icct_backend_device_activate_imported_templates($qaHost,$activationBundle['host_template_id'])===1,'Applying MIB device template creates a native Cacti graph');
+$activatedGraph=db_fetch_row_prepared('SELECT * FROM graph_local WHERE host_id=? AND graph_template_id=?',[$qaHost,$activationBundle['rows'][0]['graph_template_id']]);
+$activatedData=db_fetch_cell_prepared('SELECT local_data_id FROM data_template_rrd WHERE id=(SELECT task_item_id FROM graph_templates_item WHERE local_graph_id=? AND task_item_id>0 LIMIT 1)',[$activatedGraph['id']]);
+check((int)$activatedData>0,'Native graph links its live Cacti RRD data source');
+$poller=db_fetch_row_prepared('SELECT arg1 AS oid,rrd_path,rrd_name FROM poller_item WHERE local_data_id=?',[$activatedData]);
+check($poller&&$poller['oid']===$activationPreview['records'][$scalar]['oid']&&!empty($poller['rrd_path'])&&!empty($poller['rrd_name']),'Native Cacti poller contains exact MIB OID, RRD path and data source name');
+check(icct_backend_device_activate_imported_templates($qaHost,$activationBundle['host_template_id'])===0,'Saving the device again does not duplicate MIB graphs or data sources');
+
+if(getenv('ICCT_QA_RRD')==='1'){
+    require_once $config['library_path'].'/rrd.php';
+    $host=db_fetch_row_prepared('SELECT * FROM host WHERE id=?',[$qaHost]);
+    $reading=cacti_snmp_get($host['hostname'],$host['snmp_community'],$poller['oid'],$host['snmp_version']);
+    check(is_numeric($reading),'Generated MIB OID returns a numeric reading from the local SNMP device');
+    $updated=rrdtool_function_update([$poller['rrd_path']=>['local_data_id'=>$activatedData,'times'=>[time()=>[$poller['rrd_name']=>$reading]]]]);
+    check($updated===1&&is_file($poller['rrd_path'])&&filesize($poller['rrd_path'])>0,'Cacti creates and updates the generated MIB RRD through its native poller RRD API');
+}
 echo "MIB repository integration passed in temporary tables.\n";

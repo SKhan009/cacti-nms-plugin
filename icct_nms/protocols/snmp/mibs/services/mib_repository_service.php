@@ -151,7 +151,7 @@ function icct_mib_device_inputs($preview,$hostId){
         JOIN data_input_fields f ON f.id=did.data_input_field_id AND f.data_name='oid'
         JOIN data_template_rrd r ON r.local_data_id=dl.id WHERE dl.host_id=? ORDER BY dl.id",[$hostId]);
     // Indexed data queries keep their resolved OIDs in the device poller cache.
-    $indexed=db_fetch_assoc_prepared("SELECT DISTINCT dl.id AS local_data_id,dl.data_template_id,dtd.id AS input_id,pi.oid,dt.name AS data_name,r.data_source_name,r.data_source_type_id AS ds_type,r.rrd_minimum AS min,r.rrd_maximum AS max,r.id AS rrd_id
+    $indexed=db_fetch_assoc_prepared("SELECT DISTINCT dl.id AS local_data_id,dl.data_template_id,dtd.id AS input_id,pi.arg1 AS oid,dt.name AS data_name,r.data_source_name,r.data_source_type_id AS ds_type,r.rrd_minimum AS min,r.rrd_maximum AS max,r.id AS rrd_id
         FROM poller_item pi JOIN data_local dl ON dl.id=pi.local_data_id
         JOIN data_template_data dtd ON dtd.local_data_id=dl.id JOIN data_template dt ON dt.id=dl.data_template_id
         JOIN data_template_rrd r ON r.local_data_id=dl.id AND r.data_source_name=pi.rrd_name
@@ -181,7 +181,52 @@ function icct_mib_device_inputs($preview,$hostId){
     }
     return $result;
 }
+/** Plugin-local upload reader. Original bytes are stored; parsing never contacts a device. */
+function icct_mib_text($text){
+    if(str_starts_with($text,"\xFF\xFE")||str_starts_with($text,"\xFE\xFF")){
+        if(!function_exists('iconv'))throw new InvalidArgumentException('Save this MIB as UTF-8 text before uploading.');
+        $text=iconv(str_starts_with($text,"\xFF\xFE")?'UTF-16LE':'UTF-16BE','UTF-8',substr($text,2));
+        if($text===false)throw new InvalidArgumentException('Save this MIB as UTF-8 text before uploading.');
+    }
+    return $text;
+}
 function icct_mib_preview($upload,$typeId,$allowUnresolved=false){
+    require_once __DIR__.'/mib_offline_parser.php';
+    $types=icct_nms_device_types();if(!is_string($typeId)||!isset($types[$typeId]))throw new InvalidArgumentException('Select a device type.');
+    $names=$upload['name']??[];if(!is_array($names)||!count($names)||count($names)>8)throw new InvalidArgumentException('Upload 1–8 MIB files including dependencies.');
+    $files=[];$texts=[];$total=0;
+    foreach($names as $i=>$name){
+        $content=isset($upload['stored_content'][$i])?$upload['stored_content'][$i]:file_get_contents(icct_mib_upload_path($upload,$i));$size=strlen($content);$total+=$size;
+        if($size<1||$size>1048576||$total>4194304)throw new InvalidArgumentException('Limit: 1 MiB per file, 4 MiB total.');
+        $text=icct_mib_text($content);
+        $clean=IcctMibOfflineParser::clean($text);
+        if(str_contains($clean,"\0")||!preg_match('/\b([A-Za-z][A-Za-z0-9-]*)\s+DEFINITIONS\s*::=\s*BEGIN\b/',$clean,$m))throw new InvalidArgumentException('This file is not a MIB definition. Upload the vendor .mib, .my or .txt file containing a DEFINITIONS ::= BEGIN module, rather than an HTML download page.');
+        $module=$m[1];if(isset($files[$module]))throw new InvalidArgumentException('Duplicate MIB module.');
+        $files[$module]=['name'=>basename($name),'module'=>$module,'bytes'=>$size,'sha256'=>hash('sha256',$content),'content'=>$content];$texts[$module]=$text;
+    }
+    $requested=array_keys($files);$catalog=[];
+    foreach(icct_mib_list() as $bundle)foreach($bundle['files'] as $i=>$file)if(!isset($catalog[$file['module']]))$catalog[$file['module']]=[$bundle,$i];
+    $queue=$requested;$missing=[];$dependencies=[];$loadedBytes=0;
+    while($queue){
+        $module=array_shift($queue);$clean=IcctMibOfflineParser::clean($texts[$module]);
+        if(!preg_match('/\bIMPORTS\b(.*?);/s',$clean,$imports))continue;
+        preg_match_all('/\bFROM\s+([A-Za-z][A-Za-z0-9-]*)/',$imports[1],$matches);
+        foreach($matches[1] as $dependency){
+            if(isset($texts[$dependency])||isset($missing[$dependency]))continue;
+            if(isset($catalog[$dependency])){[$b,$i]=$catalog[$dependency];$text=icct_mib_file($b,$i);}
+            else{$path=__DIR__.'/../../../../shared/assets/mibs/'.$dependency.'.txt';if(!is_file($path)){ $missing[$dependency]=true;continue; }$text=file_get_contents($path);}
+            $loadedBytes+=strlen($text);if(count($texts)>=128||$loadedBytes>8388608)throw new RuntimeException('Repository dependency limit exceeded.');
+            $texts[$dependency]=icct_mib_text($text);$dependencies[]=$dependency;$queue[]=$dependency;
+        }
+    }
+    $error='';$records=[];
+    try{
+        if($missing)throw new RuntimeException('Missing MIB dependencies: '.implode(', ',array_keys($missing)).'. Upload these modules to the MIB Repository. Internet access is not required.');
+        $records=(new IcctMibOfflineParser($texts))->records($requested);
+    }catch(RuntimeException $e){if(!$allowUnresolved)throw $e;$error=$e->getMessage();}
+    return ['id'=>bin2hex(random_bytes(16)),'type_id'=>$typeId,'type_name'=>$types[$typeId]['name'],'category_id'=>$types[$typeId]['category_id'],'files'=>array_values($files),'records'=>$records,'parse_error'=>$error,'dependencies'=>$dependencies,'parser'=>'plugin-php','created'=>time(),'owner'=>icct_backend_current_user_id()];
+}
+function icct_mib_preview_native($upload,$typeId,$allowUnresolved=false){
     $types=icct_nms_device_types();if(!is_string($typeId)||!isset($types[$typeId]))throw new InvalidArgumentException('Select a device type.');
     $names=$upload['name']??[];if(!is_array($names)||!count($names)||count($names)>8)throw new InvalidArgumentException('Upload 1–8 MIB files including dependencies.');
     $dir=icct_mib_private_directory();
