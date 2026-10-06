@@ -634,10 +634,12 @@ rowMenus.forEach((menu) => {
         innerWidth - panel.offsetWidth - 12,
       ),
     );
-    const top = Math.max(
-      12,
-      Math.min(anchor.bottom + 4, innerHeight - panel.offsetHeight - 12),
-    );
+    const headerBottom = document.querySelector(".app-header")?.getBoundingClientRect().bottom || 72;
+    const minTop = Math.max(12, headerBottom + 8);
+    const below = anchor.bottom + 4;
+    const above = anchor.top - panel.offsetHeight - 4;
+    const preferredTop = below + panel.offsetHeight <= innerHeight - 12 ? below : above;
+    const top = Math.max(minTop, Math.min(preferredTop, innerHeight - panel.offsetHeight - 12));
     panel.style.left = `${left}px`;
     panel.style.top = `${top}px`;
   });

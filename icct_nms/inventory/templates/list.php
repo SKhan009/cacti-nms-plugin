@@ -184,15 +184,12 @@
 ) ?>">
                             <svg class="icct-edit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5L8 21l-5 1 1-5ZM14 5l5 5"/></svg>
                         </a>
-                        <details class="row-menu">
+                        <details class="row-menu inventory-row-menu">
                             <summary aria-label="More actions for <?= icct_nms_h(
                                 $d["description"],
                             ) ?>">⋮</summary>
                             <div class="row-menu-panel">
-                                <?php $deviceDiagnostics=icct_backend_diag_selected_labels($id);foreach($deviceDiagnostics as $tool=>$label): ?>
-                                <a href="inventory/diagnostics/controllers/diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h($tool) ?>#diagnostic-run" data-host-id="<?= $id ?>" data-tool="<?= icct_nms_h($tool) ?>" data-device-name="<?= icct_nms_h($d['description']) ?>"><?= icct_nms_h($label) ?></a>
-                                <?php endforeach; ?>
-                                <?php if(!$deviceDiagnostics): ?><span>No diagnostics selected</span><?php endif; ?>
+                                <a href="inventory/diagnostics/controllers/diagnostics.php?host_id=<?= $id ?>#diagnostic-run">Diagnostics</a>
                                 <?php $launch = icct_nms_meta(
                                     "icct_cross_launch_" . $id,
                                 ); ?>
@@ -210,16 +207,12 @@
                                 <a href="<?= icct_nms_h(
                                     $launch,
                                 ) ?>" target="_blank" rel="noopener noreferrer">Cross Launch URL</a>
-                                <?php else: ?>
-                                <button type="button" disabled title="No Cross Launch URL is saved for this device.">Cross Launch URL</button>
                                 <?php endif; ?>
-                                <button type="button" disabled title="Alarm suppression unavailable.">Alarm Suppression</button>
                                 <form method="post" action="protocols/shared/controllers/protocol.php?id=<?= $id ?>">
                                     <?php icct_nms_token(); ?>
                                     <input type="hidden" name="action" value="reindex">
                                     <button type="submit">Re-Index Device</button>
                                 </form>
-                                <a href="inventory/controllers/device.php?id=<?= $id ?>">Modify Device</a>
                                 <a href="inventory/controllers/device.php?clone_id=<?= $id ?>" data-clone-device data-device-name="<?= icct_nms_h(
     $d["description"],
 ) ?>">Clone Device</a>
