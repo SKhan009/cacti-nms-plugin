@@ -25,6 +25,7 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
         <?php if (!empty($mapPage)): ?>
         <link rel="stylesheet" href="shared/assets/vendor/leaflet/leaflet.css">
         <link rel="stylesheet" href="dashboard/map/css/map.css?v=<?= substr(hash_file('sha256',__DIR__ . '/../../dashboard/map/css/map.css'),0,12) ?>">
+        <link rel="stylesheet" href="dashboard/widgets/css/cards.css?v=<?= substr(hash_file('sha256',__DIR__ . '/../../dashboard/widgets/css/cards.css'),0,12) ?>">
         <?php endif; ?>
     </head>
     <body class="icct-inventory">

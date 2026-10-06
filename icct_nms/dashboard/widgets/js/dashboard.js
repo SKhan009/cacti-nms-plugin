@@ -25,7 +25,8 @@ function packCards(){
   const columns=Math.max(1,Math.floor((extras.clientWidth+12)/292));
   extras.style.gridTemplateColumns='repeat('+columns+', minmax(0, 1fr))';
   extras.querySelectorAll('.dashboard-card').forEach(card=>{
-   card.style.gridColumn='span 1';
+   const wide=['recent','ports','problematic','frequent'].includes(card.dataset.widget);
+   card.style.gridColumn='span '+(wide?Math.min(2,columns):1);
    if(!card.hidden&&!card.classList.contains('widget-expanded'))card.style.gridRowEnd='span '+Math.ceil(card.getBoundingClientRect().height+12);
   });
  });
@@ -206,7 +207,7 @@ function portsOverview(){
  hidePortTip();const root=document.querySelector('#portsOverview');root.replaceChildren();
  const states={1:'Up',2:'Down',3:'Testing',4:'Unknown',5:'Dormant',6:'Not present',7:'Lower layer down'};
  for(const device of readings.ports||[]){const row=element('div'),name=element('a',device.name),dots=element('div');row.className='ports-device-row';name.href='inventory/controllers/device.php?id='+device.id+'&view=1#view-ports';dots.className='port-dots';
-  for(const port of device.ports.items){const fresh=device.ports.fresh,dot=element('button');dot.type='button';dot.className='port-dot';dot.style.background=!fresh||port.alarm_state==='Unknown'?'#aaa':colors[port.alarm_state]|| (port.alarm_state==='Normal'?'#43ae69':port.oper===1?'#43ae69':'#aaa');dot.setAttribute('aria-label',device.name+' · '+port.name+' · '+port.status+' · '+(port.alarm_state||'Unmonitored'));
+  for(const port of device.ports.items){const fresh=device.ports.fresh,dot=element('button');dot.type='button';dot.className='port-dot';dot.style.background=!fresh?'#aaa':colors[port.alarm_state]||(Number(port.admin)===2?'#ff4148':Number(port.oper)===1?'#43ae69':Number(port.oper)===2?'#155cff':[3,5,6,7].includes(Number(port.oper))?'#ff9b17':'#aaa');dot.setAttribute('aria-label',device.name+' · '+port.name+' · '+port.status+' · '+(port.alarm_state||'Unmonitored'));
    function show(){clearTimeout(tipTimer);portTip.replaceChildren();const speed=(port.high_speed_mbps||0)*1000000||(port.speed_bps||0),capacity=speed>=1e9?(speed/1e9).toLocaleString()+' Gbps':speed>=1e6?(speed/1e6).toLocaleString()+' Mbps':speed>0?speed+' bps':'Speed unavailable';const list=element('dl');for(const [label,value] of [['Interface Name',device.name+' · '+port.name+' ('+(fresh?capacity:'Speed unavailable')+')'],['Admin Status',fresh?(states[port.admin]||'Unknown'):'Unknown'],['Operational Status',fresh?(states[port.oper]||'Unknown'):'Unknown'],['Availability',port.status],['Alarm',port.alarm_state==='Normal'?'Clear':port.alarm_state||'Unmonitored'],['Updated',device.ports.collected?new Date(device.ports.collected*1000).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'}):'Unavailable']]){const dt=element('dt',label),dd=element('dd',value);if(label==='Alarm')dd.style.color=colors[port.alarm_state]||'#777';if(label.includes('Status'))dd.style.color=value==='Up'?'#26974d':value==='Down'?'#e6353e':'#777';if(label==='Availability'&&port.status==='Available (link down)')dd.style.color='#155cff';list.append(dt,dd);}portTip.append(list);portTip.hidden=false;dot.setAttribute('aria-describedby','dashboardPortTooltip');const box=dot.getBoundingClientRect(),tip=portTip.getBoundingClientRect();portTip.style.left=Math.max(8,Math.min(box.left,innerWidth-tip.width-8))+'px';portTip.style.top=(box.bottom+8+tip.height<innerHeight?box.bottom+8:Math.max(8,box.top-tip.height-8))+'px';}
    dot.addEventListener('pointerenter',show);dot.addEventListener('focus',show);dot.addEventListener('click',show);dot.addEventListener('pointerleave',()=>{tipTimer=setTimeout(hidePortTip,180);});dot.addEventListener('blur',hidePortTip);dots.append(dot);
   }row.append(name,dots);root.append(row);
