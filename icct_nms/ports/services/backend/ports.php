@@ -121,6 +121,15 @@ function icct_nms_port_slots($ports,$count) {
     return ['chassis'=>$chassis,'ports'=>$ports,'capacity'=>$capacity,'physical_count'=>count($physical)];
 }
 function icct_backend_ports_view($host) {
+    // Dashboard inventory summaries omit SNMP settings required for permissions
+    // and the snapshot signature. Resolve the native record before either check.
+    if (!array_key_exists('snmp_version', $host)) {
+        $host = db_fetch_row_prepared("SELECT * FROM host WHERE id=? AND deleted=''", [(int)($host['id'] ?? 0)]);
+        if (!$host || !array_key_exists('snmp_version', $host)) {
+            return ['ports'=>[], 'fresh'=>false, 'collected'=>0, 'uptime_ticks'=>null,
+                'source'=>'SNMP IF-MIB / IF-X-MIB', 'message'=>'Device configuration is unavailable.'];
+        }
+    }
     $snapshot=json_decode((string)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['ports_snapshot_'.$host['id']]),true);
     if(!is_array($snapshot)||($snapshot['signature']??'')!==icct_backend_ports_signature($host)||!empty($snapshot['error'])||time()-(int)($snapshot['time']??0)>2*max(60,(int)read_config_option('poller_interval'))||(($snapshot['source']??'SNMP IF-MIB / IF-X-MIB')==='SNMP IF-MIB / IF-X-MIB'&&((int)$host['snmp_version']<1||!icct_backend_protocol_enabled($host['id'],'snmp')))){
         $ssh=json_decode((string)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['ports_ssh_snapshot_'.$host['id']]),true);

@@ -1,6 +1,8 @@
 <?php
 require __DIR__ . '/../../ports/services/backend/ports.php';
-$snapshot=[]; $enabled=true;
+$snapshot=[]; $enabled=true; $nativeHost=[];
+set_error_handler(static function($severity,$message,$file,$line) { throw new ErrorException($message,0,$severity,$file,$line); });
+function db_fetch_row_prepared($sql,$args) { global $nativeHost; return ($nativeHost['id'] ?? 0)===$args[0] ? $nativeHost : []; }
 function db_fetch_cell_prepared($sql,$args) { global $snapshot; return json_encode($snapshot); }
 function read_config_option($key) { return 300; }
 function icct_backend_protocol_enabled($id,$protocol) { global $enabled; return $enabled; }
@@ -14,6 +16,19 @@ expectPorts(icct_backend_ports_status(['admin'=>1,'oper'=>5],true)==='Unknown','
 $host=['id'=>2,'hostname'=>'test-host','poller_id'=>1,'disabled'=>'','snmp_version'=>2,'snmp_community'=>'test'];
 $snapshot=['time'=>time(),'signature'=>icct_backend_ports_signature($host),'ports'=>$ports,'error'=>''];
 expectPorts(icct_backend_ports_view($host)['fresh'],'Fresh observation rejected');
+$nativeHost=$host;
+$summary=['id'=>2,'hostname'=>'test-host','poller_id'=>1,'disabled'=>''];
+$summaryView=icct_backend_ports_view($summary);
+expectPorts($summaryView['fresh'] && $summaryView['ports']===icct_backend_ports_view($host)['ports'],'Inventory summary lost native port readings');
+$nativeHost['disabled']='on';
+expectPorts(!icct_backend_ports_view($summary)['fresh'],'Summary bypassed native disabled-device state');
+$nativeHost=$host; $nativeHost['snmp_version']=0;
+expectPorts(!icct_backend_ports_view($summary)['fresh'],'Summary bypassed native SNMP disablement');
+$nativeHost=[];
+$missingView=icct_backend_ports_view($summary);
+expectPorts(!$missingView['fresh'] && $missingView['ports']===[],'Deleted device exposed cached ports');
+$nativeHost=$host;
+echo "Inventory summaries resolve native settings without warnings; disabled and missing devices stay unavailable.\n";
 $snapshot['time']=time()-601;
 expectPorts(!icct_backend_ports_view($host)['fresh'] && icct_backend_ports_view($host)['ports'][0]['status']==='Unknown','Stale status retained');
 $snapshot['time']=time();
