@@ -4,7 +4,7 @@ $recordPage = static fn($key) => max(1, min(1000000, (int)($_GET[$key] ?? 1)));
 $recordPager = static function($key, $page, $total) use ($id) {
     $pages = max(1, (int)ceil($total / 25));
     $url = static function($target) use ($id, $key) {
-        $params = ['id'=>$id, 'view'=>1, 'changes_page'=>max(1,(int)($_GET['changes_page'] ?? 1)), 'diagnostics_page'=>max(1,(int)($_GET['diagnostics_page'] ?? 1))];
+        $params = ['id'=>$id, 'view'=>1, 'changes_page'=>max(1,(int)($_GET['changes_page'] ?? 1)), 'diagnostics_page'=>max(1,(int)($_GET['diagnostics_page'] ?? 1)), 'port_events_page'=>max(1,(int)($_GET['port_events_page'] ?? 1))];
         $params[$key] = $target;
         return 'inventory/controllers/device.php?'.http_build_query($params).'#view-records';
     };
@@ -17,7 +17,7 @@ $recordPager = static function($key, $page, $total) use ($id) {
 };
 ?>
 <section id="view-records" data-device-view-panel="records" hidden>
-<h2>Records</h2>
+<h2>Logs</h2>
 <?php if (!is_realm_allowed(3)): ?>
 <p>Device management permission is required to read configuration and diagnostic records.</p>
 <?php else:
@@ -27,6 +27,21 @@ $recordPager = static function($key, $page, $total) use ($id) {
     $changesPage = min($recordPage('changes_page'), max(1,(int)ceil($totalChanges/25)));
     $changeRows = db_fetch_assoc_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE '.$changeFilter.' ORDER BY meta_key DESC LIMIT 25 OFFSET '.(($changesPage-1)*25),[strlen($prefix),$prefix]);
 ?>
+<?php
+    $portEventStates=[1=>'UP',2=>'DOWN',3=>'TESTING',4=>'UNKNOWN',5=>'DORMANT',6=>'NOT PRESENT',7=>'LOWER LAYER DOWN'];
+    $portEventsTotal=(int)db_fetch_cell_prepared('SELECT COUNT(*) FROM plugin_icct_nms_port_alarm_events WHERE host_id=?',[(int)$id]);
+    $portEventsPage=min($recordPage('port_events_page'),max(1,(int)ceil($portEventsTotal/25)));
+    $portEvents=db_fetch_assoc_prepared('SELECT * FROM plugin_icct_nms_port_alarm_events WHERE host_id=? ORDER BY id DESC LIMIT 25 OFFSET '.(($portEventsPage-1)*25),[(int)$id]);
+?>
+<h3>Port alarm history</h3>
+<div class="site-table-wrap port-alarm-history"><table class="site-table" aria-label="Port alarm history"><thead><tr><th>Time</th><th>Port / ifIndex</th><th>Event</th><th>Previous severity</th><th>Current severity</th><th>Admin / Operational</th><th>Reading time</th></tr></thead><tbody>
+<?php foreach($portEvents as $event): ?><tr>
+<td><?= icct_nms_h($event['created_at']) ?></td><td><?= icct_nms_h($event['port_name']) ?><small>ifIndex <?= (int)$event['if_index'] ?></small></td>
+<td class="<?= $event['event']==='Cleared'?'port-event-cleared':'' ?>"><?= icct_nms_h($event['event']) ?></td>
+<td><?= icct_nms_h($event['severity_before']?:'None') ?></td><td><?= icct_nms_h($event['severity_after']?:'None') ?><small><?= icct_nms_h($event['state_after']) ?></small></td>
+<td><?= icct_nms_h(($portEventStates[(int)$event['admin_status']]??'Unknown').' / '.($portEventStates[(int)$event['oper_status']]??'Unknown')) ?></td><td><?= icct_nms_h($event['collected_at']??'Unavailable') ?></td>
+</tr><?php endforeach; ?><?php if(!$portEvents): ?><tr><td colspan="7">No port alarm events recorded.</td></tr><?php endif; ?></tbody></table></div>
+<?php $recordPager('port_events_page',$portEventsPage,$portEventsTotal); ?>
 <h3>Configuration changes</h3>
 <p>Recorded configuration changes, newest first. Passwords and private keys are excluded. Changes before history recording began are unavailable.</p>
 <div class="device-record-list">

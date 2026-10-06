@@ -6,7 +6,7 @@ function icct_backend_database_ready()
 {
     return db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?', [
         'icct_nms_schema_version'
-    ]) === '1.2.0';
+    ]) === '1.2.8';
 }
 
 /** Reused Inventory service: require database. */

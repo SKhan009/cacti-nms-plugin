@@ -3076,10 +3076,14 @@ h1, h2, h3, h4, h5, h6 { line-height: 1.25; }
 #view-ports .device-port-jack.unknown{color:#b7b7b7}
 #view-ports .device-port-pair .device-port-jack:nth-child(2){flex-direction:row}
 
-/* Only sockets carry a background; the surrounding port area stays white. */
-#view-ports .device-port-chassis{background:transparent;border:0;padding:18px 4px;box-shadow:none}
-#view-ports .device-port-bank{background:transparent;padding:0}
-#view-ports .device-port-jack span{color:#444}
+/* Switch front panel follows the reference: dark enclosure and grey socket banks. */
+#view-ports .device-port-chassis{background:#4b494d;border:3px solid #111;padding:20px 10px;box-shadow:none}
+#view-ports .device-port-bank{background:#b8b7b9;padding:4px}
+#view-ports .device-port-jack span{color:#fff}
+.port-config-row input.port-identity{background:#f4f4f4}
+.port-alarm-history .port-event-cleared{color:#26974d}
+.port-alarm-history td{vertical-align:top}
+
 
 /* Syslog filters follow the two-column protocol design. */
 .syslog-settings { margin-bottom: 18px; }

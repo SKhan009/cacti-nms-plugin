@@ -61,7 +61,7 @@ $display = static function($value) { return icct_nms_h(trim((string)$value) !== 
  </div></details><?php endif; ?>
  </div>
 </header>
-<nav class="device-view-tabs" aria-label="Device view sections"><?php foreach (['details'=>'Device Details','graphs'=>'Graphs','ports'=>'Interfaces/Ports','fcaps'=>'FCAPS','syslog'=>'Syslog','records'=>'Records'] as $key=>$label): ?><a href="#view-<?= $key ?>" data-device-view-tab="<?= $key ?>"><?= $label ?></a><?php endforeach; ?></nav>
+<nav class="device-view-tabs" aria-label="Device view sections"><?php foreach (['details'=>'Device Details','graphs'=>'Graphs','ports'=>'Interfaces/Ports','fcaps'=>'FCAPS','syslog'=>'Syslog','records'=>'Logs'] as $key=>$label): ?><a href="#view-<?= $key ?>" data-device-view-tab="<?= $key ?>"><?= $label ?></a><?php endforeach; ?></nav>
 <section id="view-details" data-device-view-panel="details">
 <dl class="device-detail-grid">
 <?php foreach ([

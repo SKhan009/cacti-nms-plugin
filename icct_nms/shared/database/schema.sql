@@ -427,3 +427,21 @@ CREATE TABLE IF NOT EXISTS `plugin_icct_nms_syslog_ingest_state` (
   `updated_at` datetime NOT NULL,
   PRIMARY KEY (`source_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE IF NOT EXISTS `plugin_icct_nms_port_alarm_events` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `host_id` mediumint unsigned NOT NULL,
+  `if_index` int unsigned NOT NULL,
+  `port_name` varchar(255) NOT NULL,
+  `event` varchar(32) NOT NULL,
+  `state_before` varchar(16) NOT NULL,
+  `state_after` varchar(16) NOT NULL,
+  `severity_before` varchar(16) NOT NULL,
+  `severity_after` varchar(16) NOT NULL,
+  `admin_status` tinyint unsigned DEFAULT NULL,
+  `oper_status` tinyint unsigned DEFAULT NULL,
+  `collected_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `device_history` (`host_id`,`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

@@ -6,7 +6,7 @@ $slots=icct_nms_port_slots($portView['ports'],$profile['physical_ports']??null);
 $physicalPorts=array_values(array_filter($slots['chassis'],static fn($port)=>empty($port['placeholder'])));
 $portView['ports']=$physicalPorts;
 $portAvailability=static fn($port)=>match($port['status']){'In use'=>'In use','Available (link down)'=>'Not in use','Disabled'=>'Disabled',default=>'Unknown'};
-$portTone=static fn($port)=>(!empty($port['placeholder'])||!$portView['fresh'])?'unknown':(($port['admin']??null)===2 || ($port['oper']??null)===2?'down':(($port['oper']??null)===1?'up':'unknown'));
+$portTone=static fn($port)=>(!empty($port['placeholder'])||!$portView['fresh'])?'unknown':(($port['admin']??null)===2 || in_array($port['oper']??null,[2,7],true)?'down':(($port['oper']??null)===1?'up':'unknown'));
 ?>
 <section id="view-ports" data-device-view-panel="ports" hidden>
 <h2>Interfaces/Ports</h2>
@@ -23,6 +23,6 @@ $lastChange='Not reported';$ticks=$port['last_change_ticks']??null;$uptime=$port
 if($fresh&&$ticks!==null){if($ticks===0)$lastChange='Before last agent restart';elseif($uptime!==null&&$uptime>=$ticks)$lastChange=date('d/m/Y H:i:s',(int)($portView['collected']-($uptime-$ticks)/100));}
 $availability=$portAvailability($port);
 $cells=[empty($port['placeholder'])?(int)$port['index']:'Not reported',$port['name'],$port['panel_port']??'Not reported',$availability,$fresh?($states[$port['oper']??0]??'UNKNOWN'):'UNKNOWN',implode(', ',$names)?:'Not reported',implode(', ',$addresses)?:'Not reported',$fresh&& !empty($port['vlan_id'])?'['.$port['vlan_id'].']':'Not reported',$fresh?($states[$port['admin']??0]??'UNKNOWN'):'UNKNOWN',$fresh&&$speed>0?rtrim(rtrim(number_format($speed/1e9,6,'.',''),'0'),'.'):'Not reported',$lastChange];
-?><tr data-port-row="<?= (int)$port['index'] ?>"><?php foreach($cells as $column=>$cell): ?><td<?php if(in_array($column,[4,8],true)): ?> class="port-state <?= $fresh?($cell==='UP'?'up':($cell==='DOWN'?'down':'unknown')):'unknown' ?>"<?php endif; ?>><?= icct_nms_h($cell) ?></td><?php endforeach; ?></tr><?php endforeach; ?>
+?><tr data-port-row="<?= (int)$port['index'] ?>"><?php foreach($cells as $column=>$cell): ?><td<?php if(in_array($column,[4,8],true)): ?> class="port-state <?= $fresh?($cell==='UP'?'up':(in_array($cell,['DOWN','LOWER LAYER DOWN'],true)?'down':'unknown')):'unknown' ?>"<?php endif; ?>><?= icct_nms_h($cell) ?></td><?php endforeach; ?></tr><?php endforeach; ?>
 </tbody></table></div><p id="device-port-empty" <?= $portView['ports']?'hidden':'' ?>>No interfaces reported for the current configuration.</p><p id="device-port-count" role="status" aria-live="polite"></p>
 </section>
