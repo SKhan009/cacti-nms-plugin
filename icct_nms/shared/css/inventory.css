@@ -1143,6 +1143,25 @@ dialog p {
   border: 0;
   font-size: 20px;
 }
+.password-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #393939;
+  cursor: pointer;
+}
+.password-toggle svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.password-toggle .password-eye-slash { display: none; }
+.password-toggle[aria-pressed="true"] .password-eye-slash { display: block; }
+.password-toggle:hover { color: #155dff; }
 .protocol-content hr {
   border: 0;
   border-top: 1px solid #c6c6c6;

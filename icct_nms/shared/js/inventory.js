@@ -587,7 +587,7 @@ if (protocolWorkspace && !document.querySelector("#device-wizard") && !document.
 
 // Credential visibility is an explicit, local display choice.
 document.querySelectorAll('input[type="password"]').forEach((input) => {
-  if (input.disabled || input.closest("fieldset[disabled]")) return;
+  if (input.name === "snmp_community" || input.closest("fieldset[disabled]")) return;
   const wrapper = document.createElement("span");
   wrapper.className = "password-wrap";
   input.replaceWith(wrapper);
@@ -595,9 +595,11 @@ document.querySelectorAll('input[type="password"]').forEach((input) => {
   const toggle = document.createElement("button");
   toggle.type = "button";
   toggle.className = "password-toggle";
-  toggle.textContent = "◉";
+  toggle.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="password-eye-slash" d="m3 3 18 18"/></svg>';
+  toggle.setAttribute("aria-pressed", "false");
   toggle.setAttribute("aria-label", `Show ${input.name.replaceAll("_", " ")}`);
   toggle.addEventListener("click", () => {
+    if (input.disabled) return;
     const show = input.type === "password";
     input.type = show ? "text" : "password";
     toggle.setAttribute("aria-pressed", String(show));
@@ -605,6 +607,7 @@ document.querySelectorAll('input[type="password"]').forEach((input) => {
       "aria-label",
       `${show ? "Hide" : "Show"} ${input.name.replaceAll("_", " ")}`,
     );
+    toggle.dataset.tooltip = toggle.getAttribute("aria-label");
   });
   wrapper.append(toggle);
 });
