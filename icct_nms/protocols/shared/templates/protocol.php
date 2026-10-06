@@ -276,144 +276,65 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial", "syslog"] as $key) {
             <input type="hidden" name="action" value="diagnostics" />
             <span class="field-label">Select Diagnostics Methods <span class="field-info" tabindex="0" role="img" aria-label="Information about diagnostic methods" data-tooltip="Choose the diagnostics available for this device. Configure packet count, hop limit and test duration alongside the selected methods."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span></span>
             <div class="diagnostics-list diagnostics-settings">
-              <div class="diagnostic-options">
                 <?php
-                $selected = icct_backend_diag_tools($diag["tools"] ?? "");
-                $labels = icct_backend_diag_available_labels();
-                // One shared native parameter per group; keep the existing saved profile fields.
+                $selected = icct_backend_diag_tools($diag['tools'] ?? '');
                 $groups = [
-                    [
-                        "Ping (Packets)",
-                        ["ping"],
-                        "ping_count",
-                        "Ping (Packets)",
-                        1,
-                        10,
-                    ],
-                    [
-                        "Traceroute (Hops)",
-                        ["traceroute", "traceroute_icmp", "traceroute_tcp"],
-                        "trace_hops",
-                        "Traceroute (Hops)",
-                        1,
-                        30,
-                    ],
-                    ["MTR", ["mtr_icmp", "mtr_tcp"], "", "", 0, 0],
-                    ["ARP", ["arp"], "", "", 0, 0],
-                    [
-                        "iPerf (Sec)",
-                        ["iperf3"],
-                        "bandwidth_seconds",
-                        "Bandwidth Test (Sec)",
-                        1,
-                        30,
-                    ],
-                    ["Pathchar (Sec)", ["pathchar"], "", "", 0, 0],
-                    ["Netperf (Sec)", ["netperf"], "", "", 0, 0],
+                    ['Ping (Packets)', ['ping'=>'Ping (Packets)'], 'ping_count', 'Ping (Packets)', 1, 10],
+                    ['Traceroute (Hops)', ['traceroute'=>'UDP','traceroute_icmp'=>'ICMP','traceroute_tcp'=>'TCP'], 'trace_hops', 'Traceroute (Hops)', 1, 30],
+                    ['MTR', ['mtr_icmp'=>'MTR (ICMP)','mtr_tcp'=>'MTR (TCP)'], 'mtr_cycles', 'MTR Readings', 1, 30],
+                    ['ARP', ['arp'=>'ARP'], '', '', 0, 0],
+                    ['iPerf (Sec)', ['iperf3'=>'iPerf (Sec)'], 'bandwidth_seconds', 'Bandwidth Test (Sec)', 1, 30],
+                    ['Pathchar', ['pathchar'=>'Pathchar'], '', '', 0, 0],
+                    ['Netperf (Sec)', ['netperf'=>'Netperf (Sec)'], 'bandwidth_seconds', 'Bandwidth Test (Sec)', 1, 30],
                 ];
-                foreach (
-                    $groups
-                    as [$group, $methods, $parameter, $caption, $min, $max]
-                ): ?>
-                <div class="diagnostic-row">
-                    <div class="diagnostic-methods">
-                        <?php if ($group === "Traceroute (Hops)"): ?>
-                        <label class="check-row" data-tooltip="Select or clear all Traceroute methods. UDP, ICMP and TCP discover the route using different probe types.">
-                            <input type="checkbox" data-traceroute-group aria-label="Traceroute (Hops)" />
-                            Traceroute (Hops)
-                        </label>
-                        <?php elseif ($group === "MTR"): ?>
-                        <label class="check-row" data-tooltip="Select or clear both MTR modes for repeated path monitoring using ICMP or TCP probes.">
-                            <input type="checkbox" data-mtr-group aria-label="MTR" />
-                            MTR
-                        </label>
-                        <?php endif; ?>
-                        <?php foreach ($methods as $key):
-                            if (!isset($labels[$key])) {
-                                continue;
-                            } ?>
-                        <label <?php if (count($methods) === 1): ?>data-tooltip="<?= icct_nms_h(
-                            [
-                                "ping" =>
-                                    "Send ICMP probes to test reachability. The packet count controls how many probes are sent.",
-                                "traceroute" =>
-                                    "One-time path discovery using UDP probes.",
-                                "traceroute_icmp" =>
-                                    "One-time path discovery using ICMP probes.",
-                                "traceroute_tcp" =>
-                                    "One-time path discovery using TCP probes.",
-                                "mtr_icmp" =>
-                                    "Continuous path monitoring using ICMP probes during the diagnostic run.",
-                                "mtr_tcp" =>
-                                    "Continuous path monitoring using TCP probes during the diagnostic run.",
-                                "arp" =>
-                                    "Show the assigned collector’s cached IP-to-MAC neighbours.",
-                                "iperf3" =>
-                                    "Measure bandwidth against an iPerf3 server. Duration uses the Bandwidth Test setting.",
-                                "pathchar" =>
-                                    "Estimate route characteristics using the available Pathchar tool and configured hop limit.",
-                                "netperf" =>
-                                    "Measure network performance against netserver. Duration uses the Bandwidth Test setting.",
-                            ][$key],
-                        ) ?>"<?php endif; ?> class="check-row <?= count($methods) > 1
-    ? "diagnostic-child"
-    : "" ?>">
-                            <input type="checkbox" name="diagnostic_tools[]" value="<?= $key ?>" <?= in_array(
-    $key,
-    $selected,
-    true,
-)
-    ? "checked"
-    : "" ?> />
-                            <?= icct_nms_h(
-                                [
-                                    "ping" => "Ping (Packets)",
-                                    "traceroute" => "UDP",
-                                    "traceroute_icmp" => "ICMP",
-                                    "traceroute_tcp" => "TCP",
-                                    "mtr_icmp" => "MTR ICMP",
-                                    "mtr_tcp" => "MTR TCP",
-                                    "arp" => "ARP",
-                                    "iperf3" => "iPerf (Sec)",
-                                    "pathchar" => "Pathchar (Sec)",
-                                    "netperf" => "Netperf (Sec)",
-                                ][$key],
-                            ) ?>
-                        </label>
-                        <?php
-                        endforeach; ?>
-                    </div>
-
-                </div>
-                <?php endforeach;
+                foreach ($groups as [$group,$methods,$parameter,$caption,$min,$max]):
+                    $isGroup=count($methods)>1;
+                    $key=array_key_first($methods);
                 ?>
-              </div>
-              <div class="diagnostic-parameters">
-                <?php foreach (
-                    $groups
-                    as [$group, $methods, $parameter, $caption, $min, $max]
-                ): ?>
+                <div class="diagnostic-row <?= $group==='MTR'?'diagnostic-row-mtr':'' ?>">
+                    <label class="check-row diagnostic-primary">
+                        <?php if ($isGroup): ?>
+                        <input type="checkbox" <?= $group==='MTR'?'data-mtr-group':'data-traceroute-group' ?> aria-label="<?= icct_nms_h($group) ?>" />
+                        <?php else: ?>
+                        <input type="checkbox" name="diagnostic_tools[]" value="<?= $key ?>" <?= in_array($key,$selected,true)?'checked':'' ?> />
+                        <?php endif; ?>
+                        <?= icct_nms_h($group) ?>
+                    </label>
                     <?php if ($parameter): ?>
                     <div class="diagnostic-parameter" data-diagnostic-parameter="<?= $parameter ?>">
-                        <?php icct_nms_input(
-                            $caption,
-                            $parameter,
-                            $diag[$parameter] ??
-                                [
-                                    "ping_count" => 4,
-                                    "trace_hops" => 20,
-                                    "bandwidth_seconds" => 10,
-                                ][$parameter],
-                            "number",
-                            'min="' . $min . '" max="' . $max . '"',
-                        ); ?>
+                        <?php icct_nms_input($caption,$parameter,$diag[$parameter]??['ping_count'=>4,'trace_hops'=>20,'bandwidth_seconds'=>10,'mtr_cycles'=>(int)($diag['ping_count']??4)][$parameter],'number','min="'.$min.'" max="'.$max.'"'); ?>
                     </div>
                     <?php endif; ?>
+                    <?php if ($isGroup): ?>
+                    <div class="diagnostic-methods">
+                        <?php foreach ($methods as $key=>$label): ?>
+                        <label class="check-row diagnostic-child">
+                            <input type="checkbox" name="diagnostic_tools[]" value="<?= $key ?>" <?= in_array($key,$selected,true)?'checked':'' ?> />
+                            <?= icct_nms_h($label) ?>
+                        </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($group==='MTR'): ?>
+                    <div class="diagnostic-monitor">
+                        <label class="check-row"><input type="checkbox" name="mtr_background" value="1" <?= !empty($diag['mtr_background'])?'checked':'' ?> /> Automatic background monitoring</label>
+                        <?php icct_nms_input('Monitoring Interval (Sec)','mtr_interval',$diag['mtr_interval']??300,'number','min="60" max="3600"'); ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
                 <?php endforeach; ?>
-              </div>
             </div>
             <div class="protocol-actions"><button class="button primary">Save</button></div>
         </form>
+        <?php
+        require_once __DIR__.'/../../../dashboard/topology/services/topology_mtr_service.php';
+        $mtrReports=$id ? icct_nms_link_mtr($id) : [];
+        foreach ($mtrReports as $report): ?>
+        <details class="diagnostic-monitor-report">
+            <summary><?= icct_nms_h($report['method'].' · '.$report['collected'].' · '.$report['status']) ?></summary>
+            <pre><?= icct_nms_h($report['output']) ?></pre>
+        </details>
+        <?php endforeach; ?>
     </section>
     <?php require __DIR__ . "/../../../graphs/templates/graphs.php"; ?>
     <?php require __DIR__ . "/../../../graphs/templates/data_queries.php"; ?>

@@ -2078,46 +2078,43 @@ body:has(#inventory-table) .table-scroll {
   opacity: 0.55;
 }
 
-/* Keep diagnostic parameters alongside the corresponding method group. */
-.diagnostics-settings {
+/* Diagnostics follow compact, divided rows in the device wizard. */
+.diagnostics-settings { display: block; }
+.diagnostics-settings .diagnostic-row {
   display: grid;
-  grid-template-columns: 250px minmax(0, 620px);
-  gap: 20px;
-  align-items: start;
+  grid-template-columns: 170px 210px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border, #d5d5d5);
 }
-.diagnostic-row {
-  padding: 3px 0;
-}
-.diagnostic-methods > .field-label {
-  margin: 4px 0;
-}
-.diagnostic-parameters {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.diagnostics-settings .diagnostic-primary { grid-column: 1; }
+.diagnostics-settings .diagnostic-parameter { grid-column: 2; }
+.diagnostics-settings .diagnostic-parameter .field { margin: 0; }
+.diagnostics-settings .diagnostic-methods {
+  grid-column: 3;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
 }
-.diagnostic-parameter .field {
-  margin: 0;
+.diagnostics-settings .diagnostic-child { margin: 0; }
+.diagnostics-settings .diagnostic-row-mtr { row-gap: 8px; }
+.diagnostics-settings .diagnostic-row-mtr .diagnostic-methods {
+  grid-column: 1 / -1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding-left: 28px;
 }
-.diagnostic-inactive {
-  opacity: 0.5;
-}
-.diagnostic-inactive input {
-  cursor: not-allowed;
-}
-@media (max-width: 900px) {
-  .diagnostics-settings {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  .diagnostic-parameters {
-    grid-row: 1;
-  }
+.diagnostics-settings .diagnostic-inactive input { cursor: not-allowed; }
+@media (max-width: 700px) {
+  .diagnostics-settings .diagnostic-row { grid-template-columns: minmax(130px, 1fr) minmax(140px, 210px); gap: 12px; }
+  .diagnostics-settings .diagnostic-methods { grid-column: 1 / -1; padding-left: 28px; }
 }
 @media (max-width: 420px) {
-  .diagnostic-parameters {
-    grid-template-columns: 1fr;
-  }
+  .diagnostics-settings .diagnostic-row { grid-template-columns: 1fr; }
+  .diagnostics-settings .diagnostic-parameter { grid-column: 1; }
 }
 
 .clone-instructions {
@@ -3134,3 +3131,9 @@ h1, h2, h3, h4, h5, h6 { line-height: 1.25; }
 
 /* One upper-right pencil orientation for every edit action. */
 .icct-inventory .icct-edit-icon{display:inline-block;width:18px;height:18px;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+.diagnostic-monitor { grid-column: 2 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 16px; }
+.diagnostic-monitor .field { width: 210px; margin: 0; }
+.diagnostic-monitor-report { margin: 12px 0; }
+.diagnostic-monitor-report pre { overflow: auto; max-height: 300px; }
+@media (max-width: 700px) { .diagnostic-monitor { grid-column: 1 / -1; } }

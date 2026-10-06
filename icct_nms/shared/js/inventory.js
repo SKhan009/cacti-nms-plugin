@@ -974,6 +974,8 @@ if (document.body) {
     ping_timeout: "Wait for a reachability response.",
     ping_retries: "Retry failed reachability probes.",
     ping_count: "Packets per ping test.",
+    mtr_cycles: "Readings per MTR report, sampled once per second. Automatic monitoring repeats the report at the saved monitoring interval.",
+    mtr_interval: "Seconds between automatic MTR reports for this device (60–3600). Monitoring runs on its assigned Cacti collector while the page is closed.",
     trace_hops: "Maximum traceroute hops.",
     bandwidth_seconds: "Bandwidth-test duration.",
   };
@@ -1202,6 +1204,7 @@ if (diagnosticSettings) {
       "pathchar",
     ],
     bandwidth_seconds: ["iperf3", "netperf"],
+    mtr_cycles: ["mtr_icmp", "mtr_tcp"],
   };
   const traceGroup = diagnosticSettings.querySelector(
     "[data-traceroute-group]",
@@ -1223,7 +1226,12 @@ if (diagnosticSettings) {
       input.checked = mtrGroup.checked;
     });
   });
+  const monitor = diagnosticSettings.querySelector('input[name="mtr_background"]');
   const updateDiagnostics = () => {
+    if (monitor) {
+      monitor.disabled = !mtrMethods.some((input) => input.checked);
+      if (monitor.disabled) monitor.checked = false;
+    }
     if (mtrGroup) {
       const checked = mtrMethods.filter((input) => input.checked).length;
       mtrGroup.checked = checked === mtrMethods.length && checked > 0;
@@ -1238,25 +1246,33 @@ if (diagnosticSettings) {
       ...diagnosticSettings.querySelectorAll("input[type=checkbox]:checked"),
     ].map((input) => input.value);
     Object.entries(dependencies).forEach(([name, methods]) => {
-      const section = diagnosticSettings.querySelector(
+      const sections = diagnosticSettings.querySelectorAll(
         `[data-diagnostic-parameter="${name}"]`,
       );
-      const input = section.querySelector("input");
-      const inactive = !methods.some((method) => selected.includes(method));
-      input.disabled = inactive;
-      section.classList.toggle("diagnostic-inactive", inactive);
-      // Disabled fields still retain their configured value when other methods are saved.
-      let retained = section.querySelector("input[type=hidden]");
-      if (!retained) {
-        retained = document.createElement("input");
-        retained.type = "hidden";
-        retained.name = name;
-        section.append(retained);
-      }
-      retained.value = input.value;
-      retained.disabled = !inactive;
+      sections.forEach((section) => {
+        const input = section.querySelector("input");
+        const inactive = !methods.some((method) => selected.includes(method));
+        input.disabled = inactive;
+        section.classList.toggle("diagnostic-inactive", inactive);
+        // Disabled fields still retain their configured value when other methods are saved.
+        let retained = section.querySelector("input[type=hidden]");
+        if (!retained) {
+          retained = document.createElement("input");
+          retained.type = "hidden";
+          retained.name = name;
+          section.append(retained);
+        }
+        retained.value = input.value;
+        retained.disabled = !inactive;
+      });
     });
   };
+  diagnosticSettings.addEventListener("input", (event) => {
+    const input = event.target;
+    if (!input.matches('input[type="number"]')) return;
+    diagnosticSettings.querySelectorAll(`input[type="number"][name="${input.name}"]`).forEach((peer) => { peer.value = input.value; });
+    updateDiagnostics();
+  });
   diagnosticSettings.addEventListener("change", updateDiagnostics);
   updateDiagnostics();
 }

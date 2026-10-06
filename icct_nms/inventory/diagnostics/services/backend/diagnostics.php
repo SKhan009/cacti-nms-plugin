@@ -10,6 +10,9 @@ function icct_backend_diag_arguments($row, $tool, $name)
         "diagnostic_profile_name" => $row["name"],
         "diagnostic_tools" => [$tool],
         "ping_count" => $row["ping_count"],
+        "mtr_cycles" => $row["mtr_cycles"] ?? $row["ping_count"],
+        "mtr_background" => 0,
+        "mtr_interval" => $row["mtr_interval"] ?? 300,
         "trace_hops" => $row["trace_hops"],
         "bandwidth_seconds" => $row["bandwidth_seconds"],
     ]);
@@ -78,7 +81,7 @@ function icct_backend_diag_arguments($row, $tool, $name)
                     "--report",
                     "--no-dns",
                     "--report-cycles",
-                    (string) $row["ping_count"],
+                    (string) ($row["mtr_cycles"] ?? $row["ping_count"]),
                     "--max-ttl",
                     (string) $row["trace_hops"],
                     "--interval",
@@ -193,6 +196,9 @@ function icct_backend_diag_assignment($host_id, $tool)
         "diagnostic_profile_name" => $row["name"],
         "diagnostic_tools" => $row["tools"],
         "ping_count" => $row["ping_count"],
+        "mtr_cycles" => $row["mtr_cycles"] ?? $row["ping_count"],
+        "mtr_background" => $row["mtr_background"] ?? 0,
+        "mtr_interval" => $row["mtr_interval"] ?? 300,
         "trace_hops" => $row["trace_hops"],
         "bandwidth_seconds" => $row["bandwidth_seconds"],
     ]);
@@ -357,27 +363,40 @@ function icct_backend_diag_profile_validate($input)
     }
 
     $ping = (int) ($input["ping_count"] ?? 4);
+    $mtr = (int) ($input["mtr_cycles"] ?? $ping);
     $hops = (int) ($input["trace_hops"] ?? 20);
     $seconds = (int) ($input["bandwidth_seconds"] ?? 10);
     if (
         $ping < 1 ||
         $ping > 10 ||
+        $mtr < 1 || $mtr > 30 ||
         $hops < 1 ||
         $hops > 30 ||
         $seconds < 1 ||
         $seconds > 30
     ) {
         throw new InvalidArgumentException(
-            "Use 1–10 ping packets, 1–30 hops, and a 1–30 second bandwidth test.",
+            "Use 1–10 ping packets, 1–30 MTR readings, 1–30 hops, and a 1–30 second bandwidth test.",
         );
     }
 
+    $background = empty($input["mtr_background"]) ? 0 : 1;
+    $interval = (int) ($input["mtr_interval"] ?? 300);
+    if ($interval < 60 || $interval > 3600) {
+        throw new InvalidArgumentException("Use an MTR monitoring interval of 60–3600 seconds.");
+    }
+    if ($background && !array_intersect($tools, ["mtr_icmp", "mtr_tcp"])) {
+        throw new InvalidArgumentException("Select an MTR method for automatic monitoring.");
+    }
     return [
         "name" => $name,
         "tools" => implode(",", $tools),
         "ping_count" => $ping,
         "trace_hops" => $hops,
         "bandwidth_seconds" => $seconds,
+        "mtr_cycles" => $mtr,
+        "mtr_background" => $background,
+        "mtr_interval" => $interval,
     ];
 }
 
@@ -629,6 +648,9 @@ function icct_backend_diag_signature($row)
                     "name",
                     "tools",
                     "ping_count",
+                    "mtr_cycles",
+                    "mtr_background",
+                    "mtr_interval",
                     "trace_hops",
                     "bandwidth_seconds",
                 ]),

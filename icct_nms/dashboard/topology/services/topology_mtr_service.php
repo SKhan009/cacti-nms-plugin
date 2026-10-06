@@ -13,12 +13,12 @@ function icct_nms_mtr_hops($output) {
     }
     return $hops;
 }
-/** Read this account's saved reports only; opening a link never starts a probe. */
+/** Read saved reports for an authorized device; opening a link never starts a probe. */
 function icct_nms_link_mtr($id) {
     icct_backend_require_device_access($id);$reports=[];
     foreach(['mtr_icmp','mtr_tcp'] as $tool) {
         try {$assignment=icct_backend_diag_assignment($id,$tool);}catch(Throwable $e){continue;}
-        $job=db_fetch_row_prepared("SELECT status,finished_at,result_json FROM plugin_icct_nms_diagnostic_jobs WHERE host_id=? AND user_id=? AND poller_id=? AND tool=? AND config_hash=? AND status IN ('complete','failed') ORDER BY id DESC LIMIT 1",[$id,icct_backend_current_user_id(),(int)$assignment['poller_id'],$tool,icct_backend_diag_signature($assignment)]);
+        $job=db_fetch_row_prepared("SELECT status,finished_at,result_json FROM plugin_icct_nms_diagnostic_jobs WHERE host_id=? AND (user_id=? OR is_background=1) AND poller_id=? AND tool=? AND config_hash=? AND status IN ('complete','failed') ORDER BY id DESC LIMIT 1",[$id,icct_backend_current_user_id(),(int)$assignment['poller_id'],$tool,icct_backend_diag_signature($assignment)]);
         if(!$job)continue;
         $result=json_decode($job['result_json']??'',true);
         if(!is_array($result)||($result['target']??'')!==$assignment['hostname'])continue;

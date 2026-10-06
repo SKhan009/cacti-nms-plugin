@@ -75,6 +75,7 @@ try {
         $queueWake=icct_backend_diag_redis_wake($collector);
         if(microtime(true)-$lastQueueCheck>=1){
             $lastQueueCheck=microtime(true);
+            $queueWake=icct_backend_mtr_monitor_once($collector) || $queueWake;
             $queueWake=$queueWake || db_fetch_cell_prepared("SELECT id FROM plugin_icct_nms_diagnostic_jobs WHERE poller_id=? AND status IN ('queued','running') LIMIT 1",[$collector]);
         }
         if($queueWake){

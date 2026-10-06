@@ -16,6 +16,8 @@ function icct_nms_schema_install()
             if(!db_execute("ALTER TABLE plugin_icct_nms_syslog_devices ADD `".$column."` TEXT DEFAULT NULL"))throw new RuntimeException('Syslog filter upgrade failed.');
         }
     }
+    icct_nms_schema_diagnostic_mtr_migration();
+    icct_nms_schema_mtr_background_migration();
     icct_nms_schema_sites_migration();
     icct_nms_schema_rack_catalogue_migration();
     icct_nms_schema_missing_preset_racks();
@@ -125,4 +127,24 @@ function icct_nms_schema_rack_catalogue_migration() {
         $execute('COMMIT');
     } catch(Throwable $failure) {$execute('ROLLBACK');throw $failure;}
     finally {db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]);}
+}
+
+/** Preserve legacy MTR cycle counts when giving MTR its own device setting. */
+function icct_nms_schema_diagnostic_mtr_migration(){
+    if(!db_fetch_cell("SHOW COLUMNS FROM plugin_icct_nms_diagnostic_profiles LIKE 'mtr_cycles'")){
+        if(!db_execute('ALTER TABLE plugin_icct_nms_diagnostic_profiles ADD mtr_cycles TINYINT UNSIGNED NOT NULL DEFAULT 4')||!db_execute('UPDATE plugin_icct_nms_diagnostic_profiles SET mtr_cycles=ping_count'))throw new RuntimeException('MTR settings upgrade failed.');
+    }
+}
+
+/** Background MTR settings are private to each device diagnostic assignment. */
+function icct_nms_schema_mtr_background_migration() {
+    foreach ([
+        ['diagnostic_profiles','mtr_background','TINYINT UNSIGNED NOT NULL DEFAULT 0'],
+        ['diagnostic_profiles','mtr_interval','SMALLINT UNSIGNED NOT NULL DEFAULT 300'],
+        ['diagnostic_jobs','is_background','TINYINT UNSIGNED NOT NULL DEFAULT 0'],
+    ] as [$table,$column,$definition]) {
+        if (!db_fetch_cell("SHOW COLUMNS FROM plugin_icct_nms_".$table." LIKE '".$column."'")) {
+            icct_nms_schema_execute("ALTER TABLE plugin_icct_nms_".$table." ADD ".$column." ".$definition);
+        }
+    }
 }

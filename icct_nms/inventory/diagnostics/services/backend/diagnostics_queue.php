@@ -70,6 +70,9 @@ function icct_backend_diag_execution_context($job, $collector)
             'Device, profile or collector changed after submission. Run a new test.'
         );
     }
+    if (!empty($job['is_background']) && (empty($row['mtr_background']) || !in_array($job['tool'], ['mtr_icmp','mtr_tcp'], true))) {
+        throw new RuntimeException('Automatic MTR monitoring is no longer enabled for this device.');
+    }
     return $row;
 }
 
@@ -134,7 +137,7 @@ function icct_backend_diag_poll()
             return;
         }
         $job = db_fetch_row_prepared(
-            "SELECT * FROM plugin_icct_nms_diagnostic_jobs WHERE poller_id=? AND status='queued' ORDER BY id LIMIT 1",
+            "SELECT * FROM plugin_icct_nms_diagnostic_jobs WHERE poller_id=? AND status='queued' ORDER BY is_background,id LIMIT 1",
             [$collector]
         );
         if (!$job) {
@@ -305,5 +308,40 @@ function icct_backend_diag_worker_database()
         $database_default = $rdatabase_default;
         // Do not reuse authentication/settings values primed from the local replica.
         $config['config_options_array'] = [];
+    }
+}
+
+/** Schedule one due MTR report on this collector. Interactive work takes priority. */
+function icct_backend_mtr_monitor_once($collector)
+{
+    $lock='icct_nms_mtr_schedule_'.(int)$collector;
+    if ((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,0)',[$lock])!==1) return false;
+    try {
+        if ((int)db_fetch_cell_prepared('SELECT status FROM plugin_config WHERE directory=?',['icct_nms'])!==1) return false;
+        if (db_fetch_cell_prepared("SELECT id FROM plugin_icct_nms_diagnostic_jobs WHERE poller_id=? AND status IN ('queued','running') LIMIT 1",[$collector])) return false;
+        $devices=db_fetch_assoc_prepared("SELECT h.id AS host_id,p.tools,p.updated_by FROM host h JOIN plugin_icct_nms_diagnostic_devices d ON d.host_id=h.id JOIN plugin_icct_nms_diagnostic_profiles p ON p.id=d.profile_id WHERE h.poller_id=? AND h.disabled='' AND h.deleted='' AND p.mtr_background=1 ORDER BY COALESCE((SELECT MAX(j.requested_at) FROM plugin_icct_nms_diagnostic_jobs j WHERE j.host_id=h.id AND j.is_background=1),'1970-01-01') LIMIT 32",[$collector]);
+        foreach ($devices as $device) {
+            foreach (array_intersect(icct_backend_diag_tools($device['tools']),['mtr_icmp','mtr_tcp']) as $tool) {
+                try {
+                    $job=['host_id'=>(int)$device['host_id'],'user_id'=>(int)$device['updated_by'],'tool'=>$tool,'is_background'=>1];
+                    icct_backend_diag_authorize_job($job);
+                    $row=icct_backend_diag_assignment($job['host_id'],$tool);
+                    if (empty($row['mtr_background']) || (int)$row['poller_id']!==(int)$collector) continue;
+                    [, $binary]=icct_backend_diag_executable($tool);
+                    if (!$binary) continue;
+                    $hash=icct_backend_diag_signature($row);
+                    $last=db_fetch_cell_prepared("SELECT MAX(requested_at) FROM plugin_icct_nms_diagnostic_jobs WHERE host_id=? AND tool=? AND config_hash=? AND is_background=1",[$job['host_id'],$tool,$hash]);
+                    if ($last && strtotime($last)>time()-max(60,(int)$row['mtr_interval'])) continue;
+                    icct_backend_category_execute("INSERT INTO plugin_icct_nms_diagnostic_jobs(host_id,poller_id,user_id,tool,config_hash,is_background,status,result_json,requested_at) VALUES(?,?,?,?,?,1,'queued','',NOW())",[$job['host_id'],$collector,$job['user_id'],$tool,$hash]);
+                    return true;
+                } catch (Throwable $error) {
+                    // A revoked owner, disabled device or unavailable tool must never run.
+                    continue;
+                }
+            }
+        }
+        return false;
+    } finally {
+        db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]);
     }
 }
