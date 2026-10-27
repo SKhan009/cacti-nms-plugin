@@ -6,6 +6,7 @@ require_once dirname(__DIR__, 4) . '/presets/services/device_type_service.php';
 require_once dirname(__DIR__, 4) . '/protocols/snmp/mibs/services/mib_repository_service.php';
 require_once dirname(__DIR__, 4) . '/protocols/snmp/mibs/services/mib_browser_service.php';
 require_once dirname(__DIR__, 4) . '/shared/services/forms.php';
+$uploadJson=$_SERVER['REQUEST_METHOD']==='POST'&&($_POST['action']??'')==='upload'&&($_POST['upload_response']??'')==='json';
 $error='';$notice='';$mode='list';$preview=null;$plan=null;$reviewValues=[];$deletedId='';
 // Initialization failures must stop before the shared header calls backend services.
 try { icct_nms_backend(); } catch (Throwable $e) { icct_nms_failure($e); }
@@ -31,6 +32,7 @@ try{
             $mode='upload';$draft=icct_mib_preview($_FILES['mibs']??[], $_POST['type_id']??'',true);
             $filePlan=icct_mib_plan($draft,['type_id'=>$draft['type_id'],'template_name'=>icct_mib_default_name($draft)]);
             $stored=icct_mib_save($draft,$filePlan);
+            if($uploadJson){header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>true,'object_count'=>count($draft['records']),'redirect'=>'protocols/snmp/mibs/controllers/mib_repository.php?wizard='.$stored['id']],JSON_THROW_ON_ERROR);exit;}
             icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?wizard='.$stored['id']);
         }elseif($action==='reparse'){
             $bundle=null;foreach($bundles as $candidate)if($candidate['id']===($_POST['bundle_id']??''))$bundle=$candidate;
@@ -61,7 +63,7 @@ try{
         if(!$inspection)throw new InvalidArgumentException('MIB upload not found.');$objects=icct_mib_objects($inspection);$mode='inspect';
     }elseif(isset($_GET['saved']))$notice='MIB files and selected templates saved.';
     if(isset($_GET['deleted'])&&is_string($_GET['deleted'])&&preg_match('/^[a-f0-9]{32}$/D',$_GET['deleted'])&&$management)$deletedId=$_GET['deleted'];
-}catch(Throwable $e){$error=$e->getMessage();if($mode==='wizard'&&!isset($wizardBundle))$mode='list';}
+}catch(Throwable $e){if($uploadJson){http_response_code(400);header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>false,'error'=>$e->getMessage()],JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE);exit;}$error=$e->getMessage();if($mode==='wizard'&&!isset($wizardBundle))$mode='list';}
 try { if($mode==='wizard'&&isset($wizardBundle)){
     $wizardBundle=icct_mib_wizard_get($wizardBundle['id']);$wizardObjects=icct_mib_objects($wizardBundle);
     $wizardStep=min(4,1+(int)($wizardBundle['wizard_step']??(!empty($wizardBundle['rows'])?3:0)));
