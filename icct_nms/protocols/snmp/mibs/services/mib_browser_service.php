@@ -31,7 +31,7 @@ function icct_mib_browser_data($bundles){
         catch(Throwable $e){$warnings[]=$bundle['name'].': '.$e->getMessage();continue;}
         $texts=[];
         foreach($bundle['files'] as $i=>$file){try{$texts[$file['module']]=icct_mib_file($bundle,$i);}catch(Throwable $e){$warnings[]=$file['name'].': '.$e->getMessage();}}
-        foreach($objects as $object){
+        foreach($objects as $objectIndex=>$object){
             [$module,$name]=explode('::',$object['symbol'],2);$id=count($records);$created=false;
             foreach($bundle['rows'] as $row)if(($row['symbol']??'')===$object['symbol']||($row['settings']['symbol']??'')===$object['symbol']||($row['oid']??'')===($object['oid']??'')){
                 if(!empty($row['data_template_id'])&&isset($native[$row['data_template_id']]))$created=true;
@@ -41,11 +41,18 @@ function icct_mib_browser_data($bundles){
             preg_match('/\bSTATUS\s+([A-Za-z-]+)/',$definition,$status);
             preg_match('/\bDEFVAL\s*\{(.*?)\}/s',$definition,$default);
             preg_match('/\b(?:INDEX|AUGMENTS)\s*\{(.*?)\}/s',$definition,$indexes);
-            $records[]=$object+['name'=>$name,'module'=>$module,'bundle'=>$bundle['id'],'created'=>$created,
+            $records[]=$object+['name'=>$name,'module'=>$module,'bundle'=>$bundle['id'],'object_index'=>$objectIndex,'created'=>$created,
                 'status'=>$status[1]??'','defval'=>isset($default[1])?trim($default[1]):'',
                 'indexes'=>isset($indexes[1])?trim(preg_replace('/\s+/',' ',$indexes[1])):(!empty($object['table'])?($object['index_description']??''):'')];
         }
     }
+    $existing=icct_mib_existing_source_indexes($records);$unique=[];
+    foreach($records as $i=>$record){
+        if(isset($existing[$i]))$record['created']=true;
+        $key=$record['symbol'].'|'.$record['base_oid'];
+        if(!isset($unique[$key])||$record['created'])$unique[$key]=$record;
+    }
+    $records=array_values($unique);
     // Columns inherit their row's INDEX/AUGMENTS declaration from the saved MIB.
     foreach($records as &$record)if($record['indexes']===''){
         $closest='';

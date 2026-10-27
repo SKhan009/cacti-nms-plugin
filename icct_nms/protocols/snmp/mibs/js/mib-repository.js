@@ -77,7 +77,8 @@ search.addEventListener('input',filter);type.addEventListener('change',filter);s
   document.querySelectorAll('[data-mib-property]').forEach(cell=>{const value=record[cell.dataset.mibProperty];cell.textContent=value===undefined||value===null||value===''?'—':String(value);});
   const badge=document.querySelector('#mibBrowserBadge');badge.hidden=false;badge.classList.toggle('not-created',!record.created);badge.querySelector('span').textContent=record.created?'Data Source Exists':'Data Source Not Created';
   const state=leaves.find(leaf=>Number(leaf.dataset.mibNode)===id)?.querySelector('.mib-browser-state svg');if(state)badge.querySelector('svg').replaceWith(state.cloneNode(true));
-  const configure=document.querySelector('#mibBrowserConfigure');if(configure){configure.hidden=false;configure.href='protocols/snmp/mibs/controllers/mib_repository.php?wizard='+encodeURIComponent(record.bundle);}
+  const create=document.querySelector('#mibBrowserCreate');if(create){create.disabled=!record.numeric||record.created;create.title=record.created?'A data source already exists.':(!record.numeric?'This object cannot create a numeric Cacti data source.':'Create data source and graph templates');create.onclick=()=>location.assign('protocols/snmp/mibs/controllers/mib_repository.php?generate='+encodeURIComponent(record.bundle)+'&object='+encodeURIComponent(record.object_index));}
+  const configure=document.querySelector('#mibBrowserConfigure');if(configure){configure.hidden=!record.created;configure.href='protocols/snmp/mibs/controllers/mib_repository.php?wizard='+encodeURIComponent(record.bundle);}
  }
  leaves.forEach(leaf=>leaf.addEventListener('click',()=>select(Number(leaf.dataset.mibNode))));
  search.addEventListener('input',()=>{
@@ -133,4 +134,20 @@ search.addEventListener('input',filter);type.addEventListener('change',filter);s
   xhr.addEventListener('timeout',()=>fail('The upload response timed out. Reopen the MIB Repository to check whether the file was saved before retrying.'));
   xhr.send(body);
  }));
+})();
+
+(()=>{'use strict';
+ const form=document.querySelector('#mibGenerationForm');if(!form)return;
+ const button=document.querySelector('#mibGenerate'),progress=document.querySelector('#mibGenerationProgress'),status=document.querySelector('#mibGenerationStatus'),bar=document.querySelector('#mibGenerationBar'),error=document.querySelector('#mibGenerationError'),spinner=document.querySelector('.mib-generation-spinner');let busy=false;
+ form.addEventListener('submit',async event=>{
+  event.preventDefault();if(busy||button.disabled)return;busy=true;button.disabled=true;error.hidden=true;progress.hidden=false;spinner.hidden=false;bar.removeAttribute('value');status.textContent='Generation in progress... Please wait for the results.';
+  const body=new FormData(form);body.set('generation_response','json');
+  try{
+   const response=await fetch(new URL(form.getAttribute('action'),document.baseURI),{method:'POST',credentials:'same-origin',headers:{Accept:'application/json'},body});
+   if(!response.headers.get('content-type')?.includes('application/json'))throw Error('Your session expired. Reopen the MIB Repository to check the saved stage.');
+   const result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||'Could not generate templates.');
+   const next=new URL(result.redirect,document.baseURI);if(next.origin!==location.origin||!next.pathname.endsWith('/protocols/snmp/mibs/controllers/mib_repository.php'))throw Error('Invalid generation destination.');
+   location.assign(next.href);
+  }catch(failure){busy=false;button.disabled=false;spinner.hidden=true;progress.hidden=true;error.textContent=failure.message;error.hidden=false;}
+ });
 })();

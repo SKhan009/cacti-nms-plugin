@@ -26,7 +26,7 @@ $renderTree=function($node,$depth=0)use(&$renderTree,$browser,$icon){
 <p id="mibBrowserEmpty" class="mib-browser-empty" <?= $browser['records']?'hidden':'' ?>><?= $browser['records']?'No matching MIB objects.':'Upload a MIB file to browse its objects.' ?></p>
 </aside>
 <div class="mib-browser-detail">
-<div class="mib-browser-detail-heading"><h2 id="mibBrowserName">Select an OID</h2><span id="mibBrowserBadge" class="mib-browser-badge" hidden><?= $icon('exists') ?><span></span></span></div>
+<div class="mib-browser-detail-heading"><h2 id="mibBrowserName">Select an OID</h2><div class="mib-browser-detail-actions"><span id="mibBrowserBadge" class="mib-browser-badge" hidden><?= $icon('exists') ?><span></span></span><?php if($management): ?><button type="button" class="button" id="mibBrowserCreate" disabled>Create</button><?php endif; ?></div></div>
 <table class="mib-browser-properties" aria-label="Selected OID details"><tbody><?php foreach(['name'=>'Name','base_oid'=>'OID','module'=>'MIB','syntax'=>'Syntax','access'=>'Access','status'=>'Status','defval'=>'Defval','indexes'=>'Indexes','description'=>'Description'] as $key=>$label): ?><tr><th scope="row"><?= $label ?></th><td data-mib-property="<?= $key ?>">—</td></tr><?php endforeach; ?></tbody></table>
 <?php if($management): ?><a class="mib-browser-configure" id="mibBrowserConfigure" hidden>Configure Templates →</a><?php endif; ?>
 <?php foreach($browser['warnings'] as $warning): ?><p class="notice error"><?= icct_nms_h($warning) ?></p><?php endforeach; ?>

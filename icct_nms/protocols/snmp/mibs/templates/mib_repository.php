@@ -1,3 +1,4 @@
+<?php if($mode==='generation'&&isset($generationBundle)):require __DIR__.'/mib_generation.php';return;endif; ?>
 <?php if($mode==='list'&&!isset($_GET['files'])&&!$deletedId): ?>
 <div class="titlebar mib-browser-titlebar"><div><p class="breadcrumb"><a href="dashboard/controllers/topology.php">Dashboard</a> / MIB Repository</p><h1>MIB Repository</h1></div><div class="mib-browser-title-actions"><a class="mib-browser-files" href="protocols/snmp/mibs/controllers/mib_repository.php?files=1" aria-label="Manage MIB files" title="Manage MIB files"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h7l2 3h9v11H3z"/></svg></a><?php if($management): ?><a class="button primary" href="protocols/snmp/mibs/controllers/mib_repository.php?upload=1" data-mib-upload-open>Upload</a><?php endif; ?></div></div>
 <?php require __DIR__.'/mib_browser.php';if($management){$uploadChooser=true;require __DIR__.'/mib_upload_dialog.php';}return;endif; ?>

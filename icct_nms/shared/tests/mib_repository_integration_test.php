@@ -3,6 +3,8 @@
 if(PHP_SAPI!=='cli')exit(1);
 define('IN_CACTI_INSTALL',true);require '/var/www/html/cacti/include/cli_check.php';api_plugin_load_realms();require_once $config['base_path'].'/lib/auth.php';
 require_once __DIR__ . '/../../shared/services/bootstrap.php';icct_nms_backend();require_once __DIR__ . '/../../presets/services/device_type_service.php';require_once __DIR__ . '/../../protocols/snmp/mibs/services/mib_repository_service.php';
+require_once __DIR__.'/../../protocols/snmp/mibs/services/mib_browser_service.php';
+require_once __DIR__.'/../../protocols/snmp/mibs/services/mib_generation_service.php';
 $_SESSION=['sess_user_id'=>1];
 function check($ok,$message){if(!$ok)throw new RuntimeException($message);echo "PASS: $message\n";}
 $testQueryFiles=[];
@@ -138,6 +140,25 @@ check((int)db_fetch_cell_prepared('SELECT COUNT(*) FROM graph_templates_item WHE
 $wizard=icct_mib_wizard_save($wizard['id'],['step'=>3,'type_id'=>$type,'template_name'=>'QA Wizard Edited Device']);
 check($wizard['wizard_step']===3&&db_fetch_cell_prepared('SELECT name FROM host_template WHERE id=?',[$wizard['host_template_id']])==='QA Wizard Edited Device','Final step saves edited device template name');
 check((int)db_fetch_cell_prepared('SELECT COUNT(*) FROM host_template_graph WHERE host_template_id=? AND graph_template_id=?',[$wizard['host_template_id'],$wizardGraphId])===1,'Device template links the exact saved graph');
+// Automatic generation uses the same native APIs, isolated from persistent Cacti tables.
+$generationPreview=$preview;$generationPreview['id']=bin2hex(random_bytes(16));$generationPreview['created']=time();
+$generationIndex=null;
+foreach($generationPreview['records'] as $i=>$candidate)if($candidate['numeric']&&!$candidate['table']){
+ $generationPreview['records'][$i]['base_oid']='1.3.6.1.4.1.32473.98765.1';$generationPreview['records'][$i]['oid']='1.3.6.1.4.1.32473.98765.1.0';$generationIndex=$i;break;
+}
+$generated=icct_mib_save($generationPreview,icct_mib_plan($generationPreview,['type_id'=>$type,'template_name'=>'QA Automatic Generation']));
+check(icct_mib_generation_results($generated,2)===[],'No success results before generation is committed');
+$generated=icct_mib_generation_save($generated['id'],2,$generationIndex);$generatedData=$generated['rows'][0]['data_template_id'];
+check(count($generated['rows'])===1&&$generatedData>0&&!$generated['rows'][0]['graph_template_id'],'Create generates only the selected OID data template');
+check(icct_mib_generation_results($generated,2)[0]['id']===$generatedData,'Generation results reference the saved native template');
+try{icct_mib_generation_save($generated['id'],2,$generationIndex);throw new LogicException('Duplicate Generate accepted');}catch(InvalidArgumentException $e){check(true,'Repeated Generate cannot duplicate data templates');}
+$generated=icct_mib_generation_save($generated['id'],3);
+check($generated['rows'][0]['data_template_id']===$generatedData&&$generated['rows'][0]['graph_template_id']>0,'Graph generation reuses the selected native data template');
+$generated=icct_mib_generation_save($generated['id'],4);
+check($generated['host_template_id']>0&&(int)db_fetch_cell_prepared('SELECT COUNT(*) FROM host_template_graph WHERE host_template_id=? AND graph_template_id=?',[$generated['host_template_id'],$generated['rows'][0]['graph_template_id']])===1,'Device generation associates the saved native graph');
+$remaining=icct_mib_generation_input($generated,2);$nextIndex=array_key_first($remaining['selected']);
+$additional=icct_mib_generation_save($generated['id'],2,$nextIndex);
+check($additional['id']!==$generated['id']&&count($additional['rows'])===1&&icct_mib_wizard_get($generated['id'])['host_template_id']===$generated['host_template_id'],'Another Create preserves previous generated template associations');
 icct_mib_wizard_reparse($stored['id'],$resolved);
 check(icct_mib_wizard_get($stored['id'])['object_count']===1&&icct_mib_file($stored,0)===$main,'Dependency reparse refreshes saved file in place');
 

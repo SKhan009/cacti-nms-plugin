@@ -5,8 +5,10 @@ require_once dirname(__DIR__, 4) . '/inventory/services/inventory.php';
 require_once dirname(__DIR__, 4) . '/presets/services/device_type_service.php';
 require_once dirname(__DIR__, 4) . '/protocols/snmp/mibs/services/mib_repository_service.php';
 require_once dirname(__DIR__, 4) . '/protocols/snmp/mibs/services/mib_browser_service.php';
+require_once dirname(__DIR__, 4) . '/protocols/snmp/mibs/services/mib_generation_service.php';
 require_once dirname(__DIR__, 4) . '/shared/services/forms.php';
 $uploadJson=$_SERVER['REQUEST_METHOD']==='POST'&&($_POST['action']??'')==='upload'&&($_POST['upload_response']??'')==='json';
+$generationJson=$_SERVER['REQUEST_METHOD']==='POST'&&($_POST['action']??'')==='generate'&&($_POST['generation_response']??'')==='json';
 $error='';$notice='';$mode='list';$preview=null;$plan=null;$reviewValues=[];$deletedId='';
 // Initialization failures must stop before the shared header calls backend services.
 try { icct_nms_backend(); } catch (Throwable $e) { icct_nms_failure($e); }
@@ -24,6 +26,14 @@ try{
         if(in_array($action,['delete','restore'],true)){
             icct_mib_set_deleted($_POST['bundle_id']??'', $action==='delete');
             icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php'.($action==='delete'?'?deleted='.rawurlencode($_POST['bundle_id']):''));
+        }elseif($action==='generate'){
+            $mode='generation';$generationBundle=icct_mib_wizard_get($_POST['bundle_id']??'');
+            $generationStage=icct_backend_topology_integer($_POST['stage']??'',2,4,'Generation stage');
+            $generationObject=isset($_POST['object'])&&$_POST['object']!==''?icct_backend_topology_integer($_POST['object'],0,511,'OID'):null;
+            $generationBundle=icct_mib_generation_save($generationBundle['id'],$generationStage,$generationObject);
+            $generationNext='protocols/snmp/mibs/controllers/mib_repository.php?generate='.$generationBundle['id'].'&stage='.$generationStage;
+            if($generationJson){header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>true,'redirect'=>$generationNext],JSON_THROW_ON_ERROR);exit;}
+            icct_nms_redirect($generationNext);
         }elseif($action==='wizard_save'){
             $mode='wizard';$wizardBundle=icct_mib_wizard_get($_POST['bundle_id']??'');
             icct_mib_wizard_save($wizardBundle['id'],icct_mib_review_input($_POST));
@@ -33,7 +43,7 @@ try{
             $filePlan=icct_mib_plan($draft,['type_id'=>$draft['type_id'],'template_name'=>icct_mib_default_name($draft)]);
             $uploadSummary=$uploadJson?icct_mib_upload_summary($draft):null;
             $stored=icct_mib_save($draft,$filePlan);
-            if($uploadJson){header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>true,'object_count'=>count($draft['records']),'summary'=>$uploadSummary,'redirect'=>'protocols/snmp/mibs/controllers/mib_repository.php?wizard='.$stored['id'].'&automatic=1','repository'=>'protocols/snmp/mibs/controllers/mib_repository.php'],JSON_THROW_ON_ERROR);exit;}
+            if($uploadJson){header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>true,'object_count'=>count($draft['records']),'summary'=>$uploadSummary,'redirect'=>'protocols/snmp/mibs/controllers/mib_repository.php?generate='.$stored['id'],'repository'=>'protocols/snmp/mibs/controllers/mib_repository.php'],JSON_THROW_ON_ERROR);exit;}
             icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?wizard='.$stored['id']);
         }elseif($action==='reparse'){
             $bundle=null;foreach($bundles as $candidate)if($candidate['id']===($_POST['bundle_id']??''))$bundle=$candidate;
@@ -57,6 +67,11 @@ try{
     }elseif(isset($_GET['upload'])){icct_backend_require_management(3);$mode='upload';}
     elseif(isset($_GET['review'])||isset($_GET['confirm'])){
         icct_backend_require_management(3);if(!$draft)throw new InvalidArgumentException('Upload a MIB first.');$preview=$draft;$reviewValues=$_SESSION['icct_mib_values']??[];$plan=$_SESSION['icct_mib_plan']??null;$mode=isset($_GET['confirm'])&&$plan?'confirm':'review';
+    }elseif(isset($_GET['generate'])){
+        icct_backend_require_management(3);$mode='generation';$generationBundle=icct_mib_wizard_get($_GET['generate']);
+        $generationStage=isset($_GET['object'])?2:(isset($_GET['stage'])?icct_backend_topology_integer($_GET['stage'],2,4,'Generation stage'):min(4,(int)($generationBundle['wizard_step']??0)+2));
+        if($generationStage>(int)($generationBundle['wizard_step']??0)+2)throw new InvalidArgumentException('Complete the previous generation stage first.');
+        $generationObject=isset($_GET['object'])?icct_backend_topology_integer($_GET['object'],0,511,'OID'):null;
     }elseif(isset($_GET['wizard'])){
         icct_backend_require_management(3);$mode='wizard';$wizardBundle=icct_mib_wizard_get($_GET['wizard']);
     }elseif(isset($_GET['inspect'])){
@@ -64,7 +79,7 @@ try{
         if(!$inspection)throw new InvalidArgumentException('MIB upload not found.');$objects=icct_mib_objects($inspection);$mode='inspect';
     }elseif(isset($_GET['saved']))$notice='MIB files and selected templates saved.';
     if(isset($_GET['deleted'])&&is_string($_GET['deleted'])&&preg_match('/^[a-f0-9]{32}$/D',$_GET['deleted'])&&$management)$deletedId=$_GET['deleted'];
-}catch(Throwable $e){if($uploadJson){http_response_code(400);header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>false,'error'=>$e->getMessage()],JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE);exit;}$error=$e->getMessage();if($mode==='wizard'&&!isset($wizardBundle))$mode='list';}
+}catch(Throwable $e){if($uploadJson||$generationJson){http_response_code(400);header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>false,'error'=>$e->getMessage()],JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE);exit;}$error=$e->getMessage();if(($mode==='wizard'&&!isset($wizardBundle))||($mode==='generation'&&(!isset($generationBundle)||!isset($generationStage))))$mode='list';}
 try { if($mode==='wizard'&&isset($wizardBundle)){
     $wizardBundle=icct_mib_wizard_get($wizardBundle['id']);$wizardObjects=icct_mib_objects($wizardBundle);
     $wizardStep=min(4,1+(int)($wizardBundle['wizard_step']??(!empty($wizardBundle['rows'])?3:0)));
