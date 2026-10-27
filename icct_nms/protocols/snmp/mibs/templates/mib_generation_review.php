@@ -23,17 +23,17 @@ $generationProfiles=array_column(icct_mib_profiles(),'name','id');$collectionNam
 <div role="tabpanel" id="mibDataFields<?= $i ?>" aria-labelledby="mibDataTab<?= $i ?>" data-generation-tab-panel="data"><div class="protocol-grid mib-generation-fields">
 <?php
 icct_nms_input('Data Source - Template Name *',$prefix.'[data_name]',$r['data_name']??$generationBundle['name'].' - '.$object['label'],'text','required maxlength="190"');
-icct_nms_select('Collection Method',$prefix.'[collection_method]',$object['table']?['auto'=>'Auto (Recommended) — '.$collectionNames['indexed'],'indexed'=>$collectionNames['indexed'],'get'=>$collectionNames['get'].' — Specific Instance']:['auto'=>'Auto (Recommended) — '.$collectionNames['get'],'get'=>$collectionNames['get']],$r['collection_method']??'auto');
+icct_nms_select('Collection Method',$prefix.'[collection_method]',icct_mib_collection_options($object,$collectionNames),icct_mib_collection($object,$r));
 icct_nms_select('Polling Interval / Cacti Profile',$prefix.'[profile_id]',$generationProfiles,$r['profile_id']??array_key_first($generationProfiles));
 ?>
 <label class="field mib-source-active"><span class="field-label">Data Source Active</span><input type="hidden" name="<?= $prefix ?>[active]" value="0"><span><input type="checkbox" role="switch" aria-label="Data Source Active" name="<?= $prefix ?>[active]" value="1" <?= ($r['active']??true)?'checked':'' ?>><span data-active-label>Enabled</span></span></label>
 <?php
-icct_nms_input('Polling OID *',$prefix.'[oid]',$r['oid']??$object['oid'],'text','required maxlength="255"');
+icct_nms_input('Polling OID *',$prefix.'[oid]',$r['oid']??$object['oid'],'text','required maxlength="255" data-base-oid="'.icct_nms_h($object['base_oid']).'"');
 icct_nms_select('Data Source Type',$prefix.'[ds_type]',[1=>'Gauge',2=>'Counter (rate)',3=>'Derive',4=>'Absolute'],$r['ds_type']??$object['ds_type']);
 icct_nms_input('Units',$prefix.'[units]',$r['units']??$object['units'],'text','maxlength="20"');
 icct_nms_input('RRD Minimum (U = unknown)',$prefix.'[min]',$r['min']??$object['min']);
 icct_nms_input('RRD Maximum (U = unknown)',$prefix.'[max]',$r['max']??$object['max']);
-if($object['table'])icct_nms_input('Instance Index (Specific GET)',$prefix.'[instance_index]',$r['instance_index']??'','text','maxlength="128" placeholder="Required for a specific table instance"');
+if($object['table'])icct_nms_input('Instance Index (Specific GET)',$prefix.'[instance_index]',$r['instance_index']??'','text','maxlength="128" data-mib-index placeholder="Required for a specific table instance"');
 ?>
 <input type="hidden" name="<?= $prefix ?>[label]" value="<?= icct_nms_h($r['label']??$object['label']) ?>">
 </div></div><div role="tabpanel" id="mibFaultFields<?= $i ?>" aria-labelledby="mibFaultTab<?= $i ?>" data-generation-tab-panel="fault" hidden><?php require __DIR__.'/mib_fault_presets.php'; ?></div>

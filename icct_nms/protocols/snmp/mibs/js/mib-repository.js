@@ -84,7 +84,7 @@ if(review){
   empty.hidden=count>0;
   if(count&&!leaves.some(leaf=>!leaf.hidden&&Number(leaf.dataset.mibNode)===selected))select(Number(leaves.find(leaf=>!leaf.hidden).dataset.mibNode));
  });
- if(leaves.length)select(Number(leaves[0].dataset.mibNode));
+ if(leaves.length){const initial=source.dataset.initialObject;const target=initial===''?null:records.findIndex(record=>record.object_index===Number(initial));select(target!==null&&target>=0?target:Number(leaves[0].dataset.mibNode));}
 })();
 
 (()=>{'use strict';
@@ -135,11 +135,13 @@ if(review){
  const button=document.querySelector('#mibGenerate'),progress=document.querySelector('#mibGenerationProgress'),status=document.querySelector('#mibGenerationStatus'),bar=document.querySelector('#mibGenerationBar'),error=document.querySelector('#mibGenerationError'),spinner=document.querySelector('.mib-generation-spinner');let busy=false;
  const review=form.querySelector('.mib-generation-review'),rows=[...form.querySelectorAll('[data-generation-row]')],panels=[...form.querySelectorAll('[data-generation-panel]')];
  function openPanel(id){panels.forEach(panel=>panel.hidden=panel.dataset.generationPanel!==id);rows.forEach(row=>{const active=row.dataset.generationRow===id;row.classList.toggle('active',active);row.querySelector('button').setAttribute('aria-expanded',String(active));});document.querySelector('#mibGenerationEmpty').hidden=true;}
- function selection(){let count=0;rows.forEach(row=>{const checked=row.querySelector('input').checked;if(checked)count++;form.querySelector('[data-generation-panel="'+row.dataset.generationRow+'"]').querySelectorAll('input,select').forEach(input=>input.disabled=!checked);});button.disabled=count===0;document.querySelector('#mibGenerationSelected').textContent=count+' OIDs selected';}
+ function collection(panel){const method=panel.querySelector('[name$="[collection_method]"]'),index=panel.querySelector('[data-mib-index]'),oid=panel.querySelector('[data-base-oid]');if(!method||!oid)return;const indexed=method.value==='indexed';oid.readOnly=indexed;if(index){index.closest('.field').hidden=indexed;index.disabled=method.disabled||indexed;if(indexed){index.value='';oid.value=oid.dataset.baseOid;}}}
+ function selection(){let count=0;rows.forEach(row=>{const checked=row.querySelector('input').checked;if(checked)count++;form.querySelector('[data-generation-panel="'+row.dataset.generationRow+'"]').querySelectorAll('input,select').forEach(input=>input.disabled=!checked);});panels.forEach(collection);button.disabled=count===0;document.querySelector('#mibGenerationSelected').textContent=count+' OIDs selected';}
  if(review){
   form.noValidate=true;
   panels.forEach(panel=>{
-   const help={'Data Source - Template Name *':'Name saved in native Cacti data templates.','Collection Method':'Auto chooses SNMP GET for scalars and indexed SNMP for table columns.','Polling Interval / Cacti Profile':'Collection profiles configured in Cacti.','Data Source Active':'Enable or disable this Cacti data source template.','Polling OID *':'Numeric OID parsed from the MIB.','Data Source Type':'How RRDTool interprets the collected value.','Units':'Units declared by the MIB, when available.','RRD Minimum (U = unknown)':'Use the MIB bound or U for an unknown minimum.','RRD Maximum (U = unknown)':'Use the MIB bound or U for an unknown maximum.'};
+   panel.querySelector('[name$="[collection_method]"]')?.addEventListener('change',()=>collection(panel));
+   const help={'Data Source - Template Name *':'Name saved in native Cacti data templates.','Collection Method':'Installed Cacti SNMP input method selected from the OID definition.','Polling Interval / Cacti Profile':'Collection profiles configured in Cacti.','Data Source Active':'Enable or disable this Cacti data source template.','Polling OID *':'Numeric OID parsed from the MIB.','Data Source Type':'How RRDTool interprets the collected value.','Units':'Units declared by the MIB, when available.','RRD Minimum (U = unknown)':'Use the MIB bound or U for an unknown minimum.','RRD Maximum (U = unknown)':'Use the MIB bound or U for an unknown maximum.'};
    panel.querySelectorAll('.field-label').forEach(label=>{const explanation=help[label.textContent.trim()];if(!explanation)return;const icon=document.createElement('span');icon.className='mib-field-help';icon.textContent='ⓘ';icon.title=explanation;icon.setAttribute('aria-label',explanation);label.append(icon);});
    const presets=panel.querySelector('[data-fault-presets]');
    if(presets){
@@ -174,4 +176,35 @@ if(review){
    location.assign(next.href);
   }catch(failure){busy=false;button.disabled=false;spinner.hidden=true;progress.hidden=true;error.textContent=failure.message;error.hidden=false;}
  });
+})();
+
+// Use the same local filtering and page controls as the Inventory table.
+(()=>{'use strict';
+ const list=document.querySelector('[data-mib-saved-list]');if(!list)return;
+ const rows=[...list.querySelectorAll('[data-list-row]')],filters=[...list.querySelectorAll('[data-list-filter]')],search=list.querySelector('[data-list-search]'),size=list.querySelector('[data-list-size]'),pageSelect=list.querySelector('[data-list-page]'),clear=list.querySelector('[data-list-clear]'),sort=list.querySelector('[data-list-sort]');
+ let page=1,ascending=true;
+ function rowValues(row,key){return key==='module'&&row.dataset.modules?JSON.parse(row.dataset.modules):[row.dataset[key]];}
+ filters.forEach(filter=>{
+  const values=[...new Set(rows.flatMap(row=>rowValues(row,filter.dataset.listFilter)).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  values.forEach(value=>filter.add(new Option(value,value)));
+  filter.addEventListener('change',()=>{page=1;render();});
+ });
+ function render(){
+  const query=search.value.trim().toLowerCase(),matches=rows.filter(row=>row.dataset.search.toLowerCase().includes(query)&&filters.every(filter=>!filter.value||rowValues(row,filter.dataset.listFilter).includes(filter.value))).sort((a,b)=>(ascending?1:-1)*a.dataset.name.localeCompare(b.dataset.name,undefined,{numeric:true}));
+  const limit=Number(size.value),pages=Math.max(1,Math.ceil(matches.length/limit));page=Math.max(1,Math.min(page,pages));
+  rows.forEach(row=>row.hidden=true);list.querySelectorAll('[data-list-editor]').forEach(editor=>editor.hidden=true);list.querySelectorAll('[data-repository-edit]').forEach(button=>button.setAttribute('aria-expanded','false'));
+  matches.slice((page-1)*limit,page*limit).forEach(row=>{row.hidden=false;row.parentNode.append(row);const id=row.querySelector('[data-repository-edit]')?.dataset.repositoryEdit;if(id)row.parentNode.append(document.getElementById('mib-edit-'+id));});
+  const empty=list.querySelector('[data-list-empty]');empty.hidden=matches.length>0;empty.parentNode.append(empty);
+  list.querySelector('[data-list-range]').textContent=(matches.length?`${(page-1)*limit+1}–${Math.min(page*limit,matches.length)}`:'0')+` of ${matches.length} items`;
+  pageSelect.replaceChildren(...Array.from({length:pages},(_,i)=>new Option(String(i+1),String(i+1),false,i+1===page)));
+  list.querySelector('[data-list-pages]').textContent=`of ${pages} pages`;list.querySelector('[data-list-prev]').disabled=page===1;list.querySelector('[data-list-next]').disabled=page===pages;
+  clear.disabled=!query&&!filters.some(filter=>filter.value);
+ }
+ search.addEventListener('input',()=>{page=1;render();});size.addEventListener('change',()=>{page=1;render();});pageSelect.addEventListener('change',()=>{page=Number(pageSelect.value);render();});
+ list.querySelector('[data-list-prev]').addEventListener('click',()=>{page--;render();});list.querySelector('[data-list-next]').addEventListener('click',()=>{page++;render();});
+ clear.addEventListener('click',()=>{search.value='';filters.forEach(filter=>filter.value='');page=1;render();});
+ sort.addEventListener('click',()=>{ascending=!ascending;sort.closest('th').setAttribute('aria-sort',ascending?'ascending':'descending');sort.querySelector('span').textContent=ascending?'↑':'↓';render();});
+ list.querySelectorAll('[data-repository-edit]').forEach(button=>button.addEventListener('click',()=>{const editor=document.getElementById('mib-edit-'+button.dataset.repositoryEdit);editor.hidden=!editor.hidden;button.setAttribute('aria-expanded',String(!editor.hidden));if(!editor.hidden)editor.querySelector('[name=name]').focus();}));
+ list.querySelectorAll('[data-repository-cancel]').forEach(button=>button.addEventListener('click',()=>{const editor=button.closest('[data-list-editor]');editor.querySelector('form').reset();editor.hidden=true;const trigger=list.querySelector('[data-repository-edit="'+editor.dataset.listEditor+'"]');trigger.setAttribute('aria-expanded','false');trigger.focus();}));
+ render();
 })();

@@ -304,7 +304,14 @@ function icct_mib_collection($record,$values){
 function icct_mib_collection_names(){
     $get=db_fetch_cell("SELECT di.name FROM data_input di JOIN data_template_data dtd ON dtd.data_input_id=di.id JOIN data_template dt ON dt.id=dtd.data_template_id WHERE dt.name='SNMP - Generic OID Template' AND dtd.local_data_id=0 AND di.type_id=2 LIMIT 1");
     $indexed=db_fetch_cell('SELECT name FROM data_input WHERE type_id=3 ORDER BY id LIMIT 1');
-    return ['get'=>$get?:'SNMP GET (not installed)','indexed'=>$indexed?:'Indexed SNMP (not installed)'];
+    return ['get'=>$get?:'SNMP GET (not installed)','indexed'=>$indexed?:'Indexed SNMP (not installed)','get_available'=>(bool)$get,'indexed_available'=>(bool)$indexed];
+}
+/** Only the installed native SNMP methods relevant to this object are offered. */
+function icct_mib_collection_options($record,$names){
+    $options=[];
+    if(!empty($record['table'])&&!empty($names['indexed_available']))$options['indexed']=$names['indexed'];
+    if(!empty($names['get_available']))$options['get']=$names['get'];
+    return $options;
 }
 function icct_mib_profiles(){return db_fetch_assoc('SELECT id,name,step,heartbeat FROM data_source_profiles ORDER BY step DESC,id')?:[];}
 function icct_mib_plan($preview,$input){
@@ -594,5 +601,20 @@ function icct_mib_wizard_reparse($id,$preview){
             icct_mib_wizard_store($bundle);
             if(!db_execute('COMMIT'))throw new RuntimeException('Could not refresh saved MIB.');
         }catch(Throwable $e){db_execute('ROLLBACK');throw $e;}
+    }finally{db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',['icct_mib_templates']);}
+}
+
+/** Edit repository metadata under the same lock used by generation and removal. */
+function icct_mib_repository_edit($id,$name,$typeId){
+    icct_backend_require_management(3);
+    $name=icct_mib_name($name);$types=icct_nms_device_types();
+    if(!is_string($typeId)||!isset($types[$typeId]))throw new InvalidArgumentException('Choose a saved device type.');
+    if((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',['icct_mib_templates'])!==1)throw new RuntimeException('Repository is busy. Retry shortly.');
+    try{
+        $bundle=icct_mib_wizard_get($id);
+        $bundle['name']=$name;$bundle['type_id']=$typeId;$bundle['type_name']=$types[$typeId]['name'];$bundle['category_id']=$types[$typeId]['category_id'];
+        if(!db_execute('START TRANSACTION'))throw new RuntimeException('Cannot begin repository update.');
+        try{icct_mib_wizard_store($bundle);if(!db_execute('COMMIT'))throw new RuntimeException('Could not commit repository update.');}
+        catch(Throwable $e){db_execute('ROLLBACK');throw $e;}
     }finally{db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',['icct_mib_templates']);}
 }

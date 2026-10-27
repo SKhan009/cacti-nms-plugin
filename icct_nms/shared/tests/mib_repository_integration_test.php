@@ -18,6 +18,10 @@ db_execute("DELETE did FROM data_input_data did JOIN data_input_fields f ON f.id
 $types=icct_nms_device_types();$type=array_key_first($types);$path=__DIR__ . '/../../shared/assets/mibs/IF-MIB.txt';
 $preview=icct_mib_preview(['name'=>['IF-MIB.txt'],'tmp_name'=>[$path],'error'=>[UPLOAD_ERR_OK]],$type);
 check(count($preview['records'])>30,'IF-MIB parses multiple full object definitions');
+$nativeMethods=icct_mib_collection_names();
+check(icct_mib_collection_options(['table'=>false],$nativeMethods)===['get'=>$nativeMethods['get']],'Scalar collection shows only the installed Cacti GET method');
+check(array_keys(icct_mib_collection_options(['table'=>true],$nativeMethods))===['indexed','get'],'Table collection shows installed native methods without an Auto option');
+check(icct_mib_collection_options(['table'=>true],['get'=>'Native GET','get_available'=>true,'indexed_available'=>false])===['get'=>'Native GET'],'Unavailable Cacti methods are omitted');
 check((bool)array_filter($preview['records'],fn($r)=>$r['description']&&$r['syntax']&&$r['access']),'Syntax, access and descriptions retained');
 check((bool)array_filter($preview['records'],fn($r)=>$r['table']&&$r['numeric']),'Indexed IF-MIB counters require reviewed instance OIDs');
 $selected=[];$records=[];foreach($preview['records'] as $i=>$r)if($r['numeric']&&!$r['table']&&!$r['enum']){$selected[$i]=1;$records[$i]=['oid'=>$r['oid'],'label'=>$r['label'],'data_name'=>'MIB QA - '.$r['label'],'graph_name'=>'MIB QA - '.$r['label'],'ds_type'=>$r['ds_type'],'units'=>$r['units'],'min'=>'U','max'=>'U'];break;}
@@ -59,6 +63,17 @@ check((int)db_fetch_cell_prepared('SELECT COUNT(*) FROM host_template_graph WHER
 check(icct_mib_list()[0]['rows']===$bundle['rows'],'Chunked template associations reload from database');
 check(icct_mib_objects($bundle)===$preview['records'],'Full object metadata remains available after saving');
 check(icct_mib_file($bundle,0)===file_get_contents($path),'Original uploaded MIB retained with checksum verification');
+$beforeEdit=icct_mib_wizard_get($bundle['id']);
+icct_mib_repository_edit($bundle['id'],'Edited repository',(string)$type);
+$afterEdit=icct_mib_wizard_get($bundle['id']);
+check($afterEdit['name']==='Edited repository'&&$afterEdit['rows']===$beforeEdit['rows']&&$afterEdit['files']===$beforeEdit['files'],'Inline repository edit preserves uploaded files and native template associations');
+check(icct_mib_file($afterEdit,0)===file_get_contents($path),'Download remains intact after repository edit');
+foreach([['<invalid>',(string)$type],['Valid','not-a-saved-type']] as $invalid){
+    try{icct_mib_repository_edit($bundle['id'],$invalid[0],$invalid[1]);throw new RuntimeException('Invalid repository edit accepted');}
+    catch(InvalidArgumentException $e){check(icct_mib_wizard_get($bundle['id'])['name']==='Edited repository','Invalid repository edit leaves saved metadata intact');}
+}
+icct_mib_repository_edit($bundle['id'],$beforeEdit['name'],(string)$type);
+
 check($hosts===(int)db_fetch_cell('SELECT COUNT(*) FROM host')&&$data===(int)db_fetch_cell('SELECT COUNT(*) FROM data_local')&&$graphs===(int)db_fetch_cell('SELECT COUNT(*) FROM graph_local'),'Preparation creates no live device/data/graph instances');
 try{icct_mib_save($preview,$plan);throw new LogicException('Replay accepted');}catch(InvalidArgumentException $e){check(str_contains($e->getMessage(),'already saved'),'Duplicate confirmation cannot recreate templates');}
 $bad=$input;unset($bad['create_data']);try{icct_mib_plan($preview,$bad);throw new LogicException('Dependency accepted');}catch(InvalidArgumentException $e){check(str_contains($e->getMessage(),'require'),'Graph dependency validated');}
