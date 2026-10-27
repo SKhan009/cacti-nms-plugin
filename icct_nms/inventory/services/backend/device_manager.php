@@ -164,7 +164,6 @@ function icct_backend_device_save($device_id, $input)
     $snmp_auth_protocol = trim((string) $input['snmp_auth_protocol']);
     $snmp_priv_protocol = trim((string) $input['snmp_priv_protocol']);
     $snmp_priv_passphrase = (string) $input['snmp_priv_passphrase'];
-    $proxy = !empty($input['proxy']);
     foreach (['max_oids', 'device_threads'] as $field_name) {
         $input[$field_name] = icct_backend_core_field_value(
             $field_name,
@@ -247,26 +246,8 @@ function icct_backend_device_save($device_id, $input)
     ) {
         throw new InvalidArgumentException('A Cacti device already uses this name.');
     }
-    // Serial members share a physical endpoint; bus-address uniqueness is enforced by ICCT NMS.
-    $serial_identity =
-        $device_id > 0 &&
-        $snmp_version === 0 &&
-        (bool) db_fetch_cell_prepared(
-            'SELECT d.host_id FROM plugin_icct_nms_serial_devices d JOIN plugin_icct_nms_serial_connections c ON c.id=d.connection_id WHERE d.host_id=? AND c.endpoint=?',
-            [$device_id, $hostname]
-        );
-    if (
-        !$proxy &&
-        !$serial_identity &&
-        (int) db_fetch_cell_prepared(
-            "SELECT COUNT(*) FROM host WHERE hostname = ? AND snmp_port = ? AND snmp_community = ? AND id != ? AND deleted = ''",
-            [$hostname, $snmp_port, $community, $device_id]
-        )
-    ) {
-        throw new InvalidArgumentException(
-            'This SNMP endpoint already exists. Enable proxy/simulator mode to share an address.'
-        );
-    }
+    // Native Cacti records may share an endpoint (for example, separate SNMP contexts).
+    // Validate the device name above and save each record through Cacti's native API.
 
     $availability = (int) $input['availability_method'];
     if (!array_key_exists($availability, $availability_options)) {

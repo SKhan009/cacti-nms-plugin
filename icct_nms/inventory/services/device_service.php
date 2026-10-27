@@ -42,8 +42,6 @@ function icct_nms_save_device($id, $old, $input)
         'notes'
     ]);
     $values['disabled'] = isset($input['enabled']) ? '' : 'on';
-    // Preserve explicit shared endpoint state, never infer it from duplicates.
-    $values['proxy'] = $id ? icct_backend_shared_endpoint_get($id) : false;
     $short = icct_backend_short_name_validate($input['short_name'] ?? '');
     if ($short === '') {
         $short = icct_backend_short_name_generate($values['description'], $input['device_type'], $id);
@@ -239,6 +237,5 @@ function icct_nms_save_snmp($id, $old, $input)
         'snmp_password',
         'snmp_priv_passphrase'
     ]);
-    $values['proxy'] = icct_backend_shared_endpoint_get($id);
     return icct_backend_device_save($id, $values);
 }

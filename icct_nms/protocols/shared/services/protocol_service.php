@@ -297,7 +297,6 @@ function icct_nms_toggle_protocol($id, $host, $input)
         }
         // Preserve unused native fields exactly, including blank legacy algorithms.
         $values = array_replace($host, ["snmp_version" => $version]);
-        $values["proxy"] = icct_backend_shared_endpoint_get($id);
         icct_backend_device_save($id, $values);
     }
     if ($protocol === "ssh") {

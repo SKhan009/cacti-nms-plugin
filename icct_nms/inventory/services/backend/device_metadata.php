@@ -114,15 +114,6 @@ function icct_backend_manual_serial_validate($value)
     return $value;
 }
 
-/** Reused Inventory service: shared endpoint get. */
-function icct_backend_shared_endpoint_get($host_id)
-{
-    return (int) db_fetch_cell_prepared(
-        'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
-        ['device_shared_endpoint_' . (int) $host_id]
-    ) === 1;
-}
-
 /** Reused Inventory service: short name get. */
 function icct_backend_short_name_get($id)
 {
