@@ -1,5 +1,15 @@
 <?php
 require_once __DIR__.'/mib_fault_presets_service.php';
+/** A MIB is reusable across device types; upload does not assign a device type. */
+function icct_mib_device_types(){
+    return icct_nms_device_types()+['__mib_unassigned__'=>['name'=>'Not assigned','category_id'=>0]];
+}
+function icct_mib_validate_upload_selection($upload){
+    $names=$upload['name']??[];
+    if(!is_array($names)||count($names)!==1)throw new InvalidArgumentException('Select one MIB file.');
+    $name=reset($names);
+    if(!is_string($name)||str_contains($name,"\0")||!in_array(strtolower(pathinfo($name,PATHINFO_EXTENSION)),['mib','my','txt'],true))throw new InvalidArgumentException('Select a .mib, .my or .txt MIB file.');
+}
 /** Offline MIB repository and reviewed native Cacti templates. Parser adapted from the NMS reference. */
 function icct_mib_upload_path($upload, $index)
 {
@@ -193,7 +203,7 @@ function icct_mib_text($text){
 }
 function icct_mib_preview($upload,$typeId,$allowUnresolved=false){
     require_once __DIR__.'/mib_offline_parser.php';
-    $types=icct_nms_device_types();if(!is_string($typeId)||!isset($types[$typeId]))throw new InvalidArgumentException('Select a device type.');
+    $types=icct_mib_device_types();if(!is_string($typeId)||!isset($types[$typeId]))throw new InvalidArgumentException('Select a device type.');
     $names=$upload['name']??[];if(!is_array($names)||!count($names)||count($names)>8)throw new InvalidArgumentException('Upload 1–8 MIB files including dependencies.');
     $files=[];$texts=[];$total=0;
     foreach($names as $i=>$name){
@@ -228,7 +238,7 @@ function icct_mib_preview($upload,$typeId,$allowUnresolved=false){
     return ['id'=>bin2hex(random_bytes(16)),'type_id'=>$typeId,'type_name'=>$types[$typeId]['name'],'category_id'=>$types[$typeId]['category_id'],'files'=>array_values($files),'records'=>$records,'parse_error'=>$error,'dependencies'=>$dependencies,'parser'=>'plugin-php','created'=>time(),'owner'=>icct_backend_current_user_id()];
 }
 function icct_mib_preview_native($upload,$typeId,$allowUnresolved=false){
-    $types=icct_nms_device_types();if(!is_string($typeId)||!isset($types[$typeId]))throw new InvalidArgumentException('Select a device type.');
+    $types=icct_mib_device_types();if(!is_string($typeId)||!isset($types[$typeId]))throw new InvalidArgumentException('Select a device type.');
     $names=$upload['name']??[];if(!is_array($names)||!count($names)||count($names)>8)throw new InvalidArgumentException('Upload 1–8 MIB files including dependencies.');
     $dir=icct_mib_private_directory();
     $files=[];$symbols=[];$total=0;
@@ -315,7 +325,7 @@ function icct_mib_collection_options($record,$names){
 }
 function icct_mib_profiles(){return db_fetch_assoc('SELECT id,name,step,heartbeat FROM data_source_profiles ORDER BY step DESC,id')?:[];}
 function icct_mib_plan($preview,$input){
-    $types=icct_nms_device_types();$type=$input['type_id']??'';
+    $types=icct_mib_device_types();$type=$input['type_id']??'';
     if(!is_string($type)||!isset($types[$type]))throw new InvalidArgumentException('Select an existing device type.');
     $options=[];foreach(['data','graph','device'] as $key)$options[$key]=!empty($input['create_'.$key]);
     if(!empty($preview['parse_error'])&&array_filter($options))throw new InvalidArgumentException('Resolve the missing dependencies before creating templates. Save the files only, upload the dependencies, then review again.');
@@ -485,7 +495,7 @@ function icct_mib_save($preview,$plan){
     icct_backend_require_management(3);
     require_once $config['base_path'].'/lib/template.php';
     if(($preview['owner']??0)!==icct_backend_current_user_id()||time()-($preview['created']??0)>3600)throw new InvalidArgumentException('This upload review expired. Upload again.');
-    $types=icct_nms_device_types();if(!isset($types[$plan['type_id']])||$types[$plan['type_id']]['name']!==$plan['type_name']||(int)$types[$plan['type_id']]['category_id']!==(int)$plan['category_id'])throw new InvalidArgumentException('Device type changed. Review again.');
+    $types=icct_mib_device_types();if(!isset($types[$plan['type_id']])||$types[$plan['type_id']]['name']!==$plan['type_name']||(int)$types[$plan['type_id']]['category_id']!==(int)$plan['category_id'])throw new InvalidArgumentException('Device type changed. Review again.');
     $id=$preview['id'];$lock='icct_mib_templates';
     if((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',[$lock])!==1)throw new RuntimeException('Template creation is busy. Retry shortly.');
     try{
@@ -612,7 +622,7 @@ function icct_mib_wizard_reparse($id,$preview){
 /** Edit repository metadata under the same lock used by generation and removal. */
 function icct_mib_repository_edit($id,$name,$typeId){
     icct_backend_require_management(3);
-    $name=icct_mib_name($name);$types=icct_nms_device_types();
+    $name=icct_mib_name($name);$types=icct_mib_device_types();
     if(!is_string($typeId)||!isset($types[$typeId]))throw new InvalidArgumentException('Choose a saved device type.');
     if((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,10)',['icct_mib_templates'])!==1)throw new RuntimeException('Repository is busy. Retry shortly.');
     try{

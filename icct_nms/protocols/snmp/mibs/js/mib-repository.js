@@ -101,6 +101,8 @@ if(review){
  document.querySelectorAll('[data-mib-upload-form]').forEach(form=>form.addEventListener('submit',event=>{
   event.preventDefault();if(busy||!form.reportValidity())return;
   const files=[...form.querySelector('[type=file]').files];if(!files.length)return;
+  const fileError=files.length!==1?'Select one MIB file.':!(/\.(mib|my|txt)$/i.test(files[0].name))?'Select a .mib, .my or .txt MIB file.':files[0].size>1048576?'The MIB file must be no larger than 1 MiB.':'';
+  if(fileError){error.textContent=fileError;error.hidden=false;if(!dialog.open)dialog.showModal();return;}
   busy=true;returnFocus=form.querySelector('[type=submit]');returnFocus.disabled=true;title.textContent='Uploading MIB';error.hidden=true;if(chooser)chooser.hidden=true;progress.hidden=false;bar.value=0;
   filename.textContent='Uploading “'+files.map(file=>file.name).join(', ')+'”';count.textContent='Uploading file…';if(!dialog.open)dialog.showModal();
   const body=new FormData(form);body.set('upload_response','json');

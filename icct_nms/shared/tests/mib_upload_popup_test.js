@@ -53,3 +53,8 @@ assert.equal(failed.elements['#mibUploadError'].textContent,'Invalid MIB fixture
 assert.equal(failed.elements['#mibUploadError'].hidden,false);assert.equal(failed.submit.disabled,false);
 assert.equal(failed.elements['#mibUploadChooser'].hidden,false);
 console.log('PASS: asynchronous endpoint, named-action collision, byte progress, scanning state, actual OID count, summary, both next-step choices and retryable errors.');
+
+for(const files of [[{name:'bad.php'}],[{name:'one.mib'},{name:'two.mib'}],[{name:'large.txt',size:1048577}]]){
+ const invalid=fixture();invalid.form.querySelector=selector=>selector==='[type=file]'?{files}:invalid.submit;invalid.form.events.submit({preventDefault(){}});assert.equal(invalid.requests.length,0,'Invalid file rejected before transfer');assert.equal(invalid.elements['#mibUploadError'].hidden,false);
+}
+console.log('PASS: single-file, extension and size validation before upload.');

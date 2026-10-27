@@ -9,10 +9,10 @@
 <?php if($mode==='upload'): ?>
 <form method="post" enctype="multipart/form-data" class="mib-editor" data-mib-upload-form>
 <?php icct_nms_token(); ?><input type="hidden" name="action" value="upload">
-<h2>Upload MIB files</h2><div class="protocol-grid cols-2">
-<label class="field"><span class="field-label">Device Type *</span><select name="type_id" required><option value="">Select device type</option><?php foreach($types as $key=>$type): ?><option value="<?= icct_nms_h($key) ?>"><?= icct_nms_h($type['name']) ?></option><?php endforeach; ?></select></label>
-<label class="field"><span class="field-label">MIB Files *</span><input type="file" name="mibs[]" accept=".mib,.my,.txt" multiple required></label></div>
-<p>Bundled dependencies and saved database modules are loaded from the plugin folder automatically. You can also upload the main MIB and its dependencies together. Up to 8 files; 1 MiB per file and 4 MiB total. Parsing runs locally without contacting a device.</p>
+<h2>Upload MIB file</h2><div class="protocol-grid">
+
+<label class="field"><span class="field-label">MIB File *</span><input type="file" name="mibs[]" accept=".mib,.my,.txt" required></label></div>
+<p>Bundled dependencies and saved database modules are loaded from the plugin folder automatically. Select one .mib, .my or .txt file, up to 1 MiB. Upload any missing dependencies separately. Parsing runs locally without contacting a device.</p>
 <details class="mib-object"><summary><strong>Download sample MIB files</strong></summary><div class="mib-object-body"><p>Save each link as a .txt or .my file, then upload it here.</p><ul>
 <li><a href="shared/assets/mibs/IF-MIB.txt" download>IF-MIB</a> — interface counters and status.</li>
 <li><a href="shared/assets/mibs/IP-MIB.txt" download>IP-MIB</a> — IPv4 / IPv6 IP information.</li>

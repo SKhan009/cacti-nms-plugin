@@ -18,6 +18,17 @@ db_execute("DELETE did FROM data_input_data did JOIN data_input_fields f ON f.id
 $types=icct_nms_device_types();$type=array_key_first($types);$path=__DIR__ . '/../../shared/assets/mibs/IF-MIB.txt';
 $preview=icct_mib_preview(['name'=>['IF-MIB.txt'],'tmp_name'=>[$path],'error'=>[UPLOAD_ERR_OK]],$type);
 check(count($preview['records'])>30,'IF-MIB parses multiple full object definitions');
+foreach([['name'=>[]],['name'=>['one.mib','two.txt']],['name'=>['bad.php']],['name'=>['bad.mib.php']]] as $invalidUpload){try{icct_mib_validate_upload_selection($invalidUpload);throw new LogicException('Invalid file selection accepted');}catch(InvalidArgumentException $e){check(true,'Upload rejects invalid extension or multiple files');}}
+icct_mib_validate_upload_selection(['name'=>['VENDOR.MIB']]);check(true,'Uppercase MIB extension accepted');
+$unassignedPreview=icct_mib_preview(['name'=>['IF-MIB.txt'],'tmp_name'=>[$path],'error'=>[UPLOAD_ERR_OK]],'__mib_unassigned__');
+$unassignedIndex=null;foreach($unassignedPreview['records'] as $i=>$object)if($object['numeric']&&!$object['table']){$unassignedPreview['records'][$i]['base_oid']='1.3.6.1.4.1.32473.98765.900';$unassignedPreview['records'][$i]['oid']='1.3.6.1.4.1.32473.98765.900.0';$unassignedIndex=$i;break;}
+$unassignedPlan=icct_mib_plan($unassignedPreview,['type_id'=>'__mib_unassigned__','template_name'=>'Unassigned upload QA']);
+$unassignedBundle=icct_mib_save($unassignedPreview,$unassignedPlan);
+check($unassignedBundle['type_name']==='Not assigned'&&(int)$unassignedBundle['category_id']===0&&empty($unassignedBundle['rows']),'Single-file upload saves without assigning a device type or creating templates');
+$unassignedBundle=icct_mib_generation_save($unassignedBundle['id'],2,$unassignedIndex);$unassignedBundle=icct_mib_generation_save($unassignedBundle['id'],3);$unassignedBundle=icct_mib_generation_save($unassignedBundle['id'],4);
+check($unassignedBundle['host_template_id']>0&&$unassignedBundle['type_name']==='Not assigned','Uploads without a device type generate native Cacti data, graph and device templates');
+
+
 $nativeMethods=icct_mib_collection_names();
 check(icct_mib_collection_options(['table'=>false],$nativeMethods)===['get'=>$nativeMethods['get']],'Scalar collection shows only the installed Cacti GET method');
 check(array_keys(icct_mib_collection_options(['table'=>true],$nativeMethods))===['indexed','get'],'Table collection shows installed native methods without an Auto option');

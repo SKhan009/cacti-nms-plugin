@@ -5,8 +5,9 @@
 <?php if(!empty($uploadChooser)): ?>
 <form method="post" action="protocols/snmp/mibs/controllers/mib_repository.php" enctype="multipart/form-data" data-mib-upload-form id="mibUploadChooser">
 <?php icct_nms_token(); ?><input type="hidden" name="action" value="upload">
-<label class="field"><span class="field-label">Device Type *</span><select name="type_id" required><option value="">Select device type</option><?php foreach($types as $key=>$type): ?><option value="<?= icct_nms_h($key) ?>"><?= icct_nms_h($type['name']) ?></option><?php endforeach; ?></select></label>
-<label class="field"><span class="field-label">MIB Files *</span><input type="file" name="mibs[]" accept=".mib,.my,.txt" multiple required></label>
+
+<label class="field"><span class="field-label">MIB File *</span><input type="file" name="mibs[]" accept=".mib,.my,.txt" required></label>
+<p class="mib-upload-file-help">.mib, .my or .txt · Maximum 1 MiB</p>
 <div class="mib-upload-actions"><button class="button" type="button" data-mib-upload-close>Cancel</button><button class="button primary" type="submit">Upload</button></div>
 </form>
 <?php endif; ?>
