@@ -144,12 +144,20 @@ search.addEventListener('input',filter);type.addEventListener('change',filter);s
  function selection(){let count=0;rows.forEach(row=>{const checked=row.querySelector('input').checked;if(checked)count++;form.querySelector('[data-generation-panel="'+row.dataset.generationRow+'"]').querySelectorAll('input,select').forEach(input=>input.disabled=!checked);});button.disabled=count===0;document.querySelector('#mibGenerationSelected').textContent=count+' OIDs selected';}
  if(review){
   form.noValidate=true;
+  panels.forEach(panel=>{
+   const help={'Data Source - Template Name *':'Name saved in native Cacti data templates.','Collection Method':'Auto chooses SNMP GET for scalars and indexed SNMP for table columns.','Polling Interval / Cacti Profile':'Collection profiles configured in Cacti.','Data Source Active':'Enable or disable this Cacti data source template.','Polling OID *':'Numeric OID parsed from the MIB.','Data Source Type':'How RRDTool interprets the collected value.','Units':'Units declared by the MIB, when available.','RRD Minimum (U = unknown)':'Use the MIB bound or U for an unknown minimum.','RRD Maximum (U = unknown)':'Use the MIB bound or U for an unknown maximum.'};
+   panel.querySelectorAll('.field-label').forEach(label=>{const explanation=help[label.textContent.trim()];if(!explanation)return;const icon=document.createElement('span');icon.className='mib-field-help';icon.textContent='ⓘ';icon.title=explanation;icon.setAttribute('aria-label',explanation);label.append(icon);});
+   const tabs=[...panel.querySelectorAll('[data-generation-tab]')];
+   function activateTab(tab){tabs.forEach(item=>item.setAttribute('aria-selected',String(item===tab)));panel.querySelectorAll('[data-generation-tab-panel]').forEach(item=>item.hidden=item.dataset.generationTabPanel!==tab.dataset.generationTab);}
+   tabs.forEach((tab,index)=>{tab.addEventListener('click',()=>activateTab(tab));tab.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const next=tabs[event.key==='Home'?0:event.key==='End'?tabs.length-1:(index+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length];activateTab(next);next.focus();});});
+   const active=panel.querySelector('[role=switch]');if(active)active.addEventListener('change',()=>panel.querySelector('[data-active-label]').textContent=active.checked?'Enabled':'Disabled');
+  });
   rows.forEach(row=>{row.querySelector('button').addEventListener('click',()=>openPanel(row.dataset.generationRow));row.querySelector('input').addEventListener('change',selection);});selection();
   document.querySelector('#mibGenerationSearch').addEventListener('input',event=>{const term=event.target.value.trim().toLowerCase();let count=0;rows.forEach(row=>{row.hidden=!row.dataset.search.includes(term);if(!row.hidden)count++;});document.querySelector('#mibGenerationNoMatches').hidden=count>0;});
  }
  form.addEventListener('submit',async event=>{
   event.preventDefault();if(busy||button.disabled)return;
-  if(review)for(const input of form.querySelectorAll('[data-generation-panel] input,[data-generation-panel] select'))if(!input.disabled&&!input.checkValidity()){openPanel(input.closest('[data-generation-panel]').dataset.generationPanel);input.reportValidity();return;}
+  if(review)for(const input of form.querySelectorAll('[data-generation-panel] input,[data-generation-panel] select'))if(!input.disabled&&!input.checkValidity()){const panel=input.closest('[data-generation-panel]');openPanel(panel.dataset.generationPanel);panel.querySelector('[data-generation-tab=data]').click();input.reportValidity();return;}
   busy=true;button.disabled=true;error.hidden=true;progress.hidden=false;spinner.hidden=false;bar.removeAttribute('value');status.textContent='Generation in progress... Please wait for the results.';
   const body=new FormData(form);body.set('generation_response','json');
   if(review){const payload={selected:{},records:{}};for(const [name,value] of [...body]){let match=name.match(/^selected\[(\d+)\]$/);if(match){payload.selected[match[1]]=value;body.delete(name);continue;}match=name.match(/^records\[(\d+)\]\[(\w+)\]$/);if(match){payload.records[match[1]]??={};payload.records[match[1]][match[2]]=value;body.delete(name);}}body.set('review_payload',JSON.stringify(payload));}

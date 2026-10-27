@@ -338,6 +338,7 @@ function icct_mib_plan($preview,$input){
         $record['oid']=$oid;$record['label']=icct_mib_name($r['label']??$record['label']);
         $record['data_name']=icct_mib_name($r['data_name']??($name.' - '.$record['label']),190);$record['graph_name']=icct_mib_name($r['graph_name']??($name.' - '.$record['label']),190);
         $record['units']=trim($r['units']??$record['units']);if(strlen($record['units'])>20)throw new InvalidArgumentException('Units must be at most 20 characters.');
+        $active=(string)($r['active']??'1');if(!in_array($active,['0','1'],true))throw new InvalidArgumentException('Choose a valid data source active state.');$record['active']=$active;
         $record['ds_type']=(int)($r['ds_type']??$record['ds_type']);if(!in_array($record['ds_type'],[1,2,3,4],true))throw new InvalidArgumentException('Choose a data source type.');
         foreach(['min','max'] as $limit){$v=trim($r[$limit]??$record[$limit]??'U');if($v!==''&&$v!=='U'&&(!is_numeric($v)||!is_finite((float)$v)))throw new InvalidArgumentException('Use a number or U for RRD bounds.');$record[$limit]=$v===''?'U':$v;}
         if($record['min']!=='U'&&$record['max']!=='U'&&(float)$record['min']>(float)$record['max'])throw new InvalidArgumentException('Minimum cannot exceed maximum.');
@@ -419,6 +420,7 @@ function icct_mib_native_metric($record,$options,$existing=[]){
     if(!$data||!$rrd||!$field)throw new RuntimeException('The duplicated data template is incomplete.');
     $ds=substr(trim(preg_replace('/[^a-z0-9]+/','_',strtolower($record['label'])),'_'),0,19)?:'reading';
     icct_mib_write("UPDATE data_template_data SET name=?,data_source_profile_id=?,rrd_step=?,t_data_source_profile_id='',t_rrd_step='' WHERE id=?",['|host_description| - '.$record['label'],$record['profile_id'],$record['polling_interval'],$data]);
+    icct_mib_write("UPDATE data_template_data SET active=?,t_active='' WHERE id=?",[($record['active']??true)?'on':'',$data]);
     icct_mib_write("UPDATE data_template_rrd SET rrd_heartbeat=?,t_rrd_heartbeat='' WHERE id=?",[$record['heartbeat'],$rrd]);
     icct_mib_write("UPDATE data_template_rrd SET data_source_name=?,data_source_type_id=?,rrd_minimum=?,rrd_maximum=?,t_rrd_minimum='',t_rrd_maximum='' WHERE id=?",[$ds,$record['ds_type'],$record['min'],$record['max'],$rrd]);
     if(($record['resolved_method']??'get')==='indexed'){

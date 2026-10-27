@@ -149,9 +149,10 @@ foreach($generationPreview['records'] as $i=>$candidate)if($candidate['numeric']
 $generated=icct_mib_save($generationPreview,icct_mib_plan($generationPreview,['type_id'=>$type,'template_name'=>'QA Automatic Generation']));
 check(icct_mib_generation_results($generated,2)===[],'No success results before generation is committed');
 try{icct_mib_generation_save($generated['id'],2,$generationIndex,['generation_review'=>1,'selected'=>[]]);throw new LogicException('Empty review accepted');}catch(InvalidArgumentException $e){check(icct_mib_wizard_get($generated['id'])['rows']===[],'Empty review does not create native templates');}
-$generated=icct_mib_generation_save($generated['id'],2,$generationIndex,['selected'=>[$generationIndex=>1],'records'=>[$generationIndex=>['data_name'=>'QA Reviewed Generation Data']]]);$generatedData=$generated['rows'][0]['data_template_id'];
+$generated=icct_mib_generation_save($generated['id'],2,$generationIndex,['selected'=>[$generationIndex=>1],'records'=>[$generationIndex=>['data_name'=>'QA Reviewed Generation Data','active'=>'0']]]);$generatedData=$generated['rows'][0]['data_template_id'];
 check(count($generated['rows'])===1&&$generatedData>0&&!$generated['rows'][0]['graph_template_id'],'Create generates only the selected OID data template');
 check(db_fetch_cell_prepared('SELECT name FROM data_template WHERE id=?',[$generatedData])==='QA Reviewed Generation Data','Generation saves the reviewed per-OID settings');
+check(db_fetch_cell_prepared('SELECT active FROM data_template_data WHERE data_template_id=? AND local_data_id=0',[$generatedData])==='','Reviewed Data Source Active state is saved in native Cacti');
 check(icct_mib_generation_results($generated,2)[0]['id']===$generatedData,'Generation results reference the saved native template');
 try{icct_mib_generation_save($generated['id'],2,$generationIndex);throw new LogicException('Duplicate Generate accepted');}catch(InvalidArgumentException $e){check(true,'Repeated Generate cannot duplicate data templates');}
 $generated=icct_mib_generation_save($generated['id'],3);
