@@ -1,6 +1,9 @@
-<div class="titlebar"><h1>MIB Repository</h1><?php if($management&&$mode==='list'): ?><a class="button primary" href="<?= icct_nms_h(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ?>?upload=1">Upload MIB</a><?php elseif($mode!=='list'): ?><a class="button" href="protocols/snmp/mibs/controllers/mib_repository.php">Back to MIB Files</a><?php endif; ?></div>
+<?php if($mode==='list'&&!isset($_GET['files'])&&!$deletedId): ?>
+<div class="titlebar mib-browser-titlebar"><div><p class="breadcrumb"><a href="dashboard/controllers/topology.php">Dashboard</a> / MIB Repository</p><h1>MIB Repository</h1></div><div class="mib-browser-title-actions"><a class="mib-browser-files" href="protocols/snmp/mibs/controllers/mib_repository.php?files=1" aria-label="Manage MIB files" title="Manage MIB files"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h7l2 3h9v11H3z"/></svg></a><?php if($management): ?><a class="button primary" href="protocols/snmp/mibs/controllers/mib_repository.php?upload=1">Upload</a><?php endif; ?></div></div>
+<?php require __DIR__.'/mib_browser.php';return;endif; ?>
+<div class="titlebar"><h1>MIB Repository</h1><?php if($management&&$mode==='list'): ?><a class="button primary" href="<?= icct_nms_h(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ?>?upload=1">Upload MIB</a><?php elseif($mode!=='list'): ?><a class="button" href="protocols/snmp/mibs/controllers/mib_repository.php">Back to MIB Repository</a><?php endif; ?></div>
 <?php if($deletedId): ?><form method="post" class="mib-editor"><?php icct_nms_token(); ?><input type="hidden" name="action" value="restore"><input type="hidden" name="bundle_id" value="<?= icct_nms_h($deletedId) ?>">MIB upload removed. <button class="button" type="submit">Undo</button></form><?php endif; ?>
-<nav class="presets-tabs" aria-label="MIB repository sections"><a href="protocols/snmp/mibs/controllers/mib_repository.php" aria-current="page">MIB Files</a></nav>
+<nav class="presets-tabs" aria-label="MIB repository sections"><a href="protocols/snmp/mibs/controllers/mib_repository.php">MIB Browser</a><a href="protocols/snmp/mibs/controllers/mib_repository.php?files=1" aria-current="page">MIB Files</a></nav>
 <?php if($mode==='upload'): ?>
 <form method="post" enctype="multipart/form-data" class="mib-editor">
 <?php icct_nms_token(); ?><input type="hidden" name="action" value="upload">

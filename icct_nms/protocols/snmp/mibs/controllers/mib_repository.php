@@ -4,6 +4,7 @@ require_once dirname(__DIR__, 4) . '/shared/services/bootstrap.php';
 require_once dirname(__DIR__, 4) . '/inventory/services/inventory.php';
 require_once dirname(__DIR__, 4) . '/presets/services/device_type_service.php';
 require_once dirname(__DIR__, 4) . '/protocols/snmp/mibs/services/mib_repository_service.php';
+require_once dirname(__DIR__, 4) . '/protocols/snmp/mibs/services/mib_browser_service.php';
 require_once dirname(__DIR__, 4) . '/shared/services/forms.php';
 $error='';$notice='';$mode='list';$preview=null;$plan=null;$reviewValues=[];$deletedId='';
 // Initialization failures must stop before the shared header calls backend services.

@@ -1,0 +1,24 @@
+<?php
+require __DIR__.'/../../protocols/snmp/mibs/services/mib_browser_service.php';
+function db_fetch_assoc($sql){return [['id'=>11]];}
+function icct_mib_objects($bundle){return $bundle['objects'];}
+function icct_mib_file($bundle,$index){return $bundle['files'][$index]['content'];}
+$object=['symbol'=>'TEST-MIB::reading','kind'=>'OBJECT-TYPE','base_oid'=>'1.3.6.1.2.1.1.1','oid'=>'1.3.6.1.2.1.1.1.0','syntax'=>'INTEGER','access'=>'read-only','description'=>'A device reading.','table'=>false];
+$bundle=['id'=>'fixture','name'=>'Fixture','objects'=>[$object,array_replace($object,['symbol'=>'TEST-MIB::other','base_oid'=>'1.3.6.1.2.1.2.1','oid'=>'1.3.6.1.2.1.2.1.0'])],
+    'files'=>[['module'=>'TEST-MIB','name'=>'test.mib','content'=>"reading OBJECT-TYPE\nSYNTAX INTEGER\nMAX-ACCESS read-only\nSTATUS current\nDESCRIPTION \"A device reading.\"\nDEFVAL { 3 }\n::= { system 1 }\n"]],
+    'rows'=>[['symbol'=>'TEST-MIB::reading','data_template_id'=>11],['symbol'=>'TEST-MIB::other','data_template_id'=>99]]];
+$data=icct_mib_browser_data([$bundle]);
+if(count($data['records'])!==2||$data['warnings'])throw new RuntimeException('Repository records lost');
+if(!$data['records'][0]['created']||$data['records'][1]['created'])throw new RuntimeException('Deleted/nonexistent Cacti template shown as existing');
+if($data['records'][0]['status']!=='current'||$data['records'][0]['defval']!=='3'||$data['records'][1]['status']!=='')throw new RuntimeException('Source metadata wrong or fabricated');
+$ids=[];$walk=function($node)use(&$walk,&$ids){foreach($node['records'] as $id)$ids[]=$id;foreach($node['children'] as $child)$walk($child);};$walk($data['tree']);sort($ids);
+if($ids!==[0,1])throw new RuntimeException('Tree lost OID records');
+if(icct_mib_browser_tree([])['children'])throw new RuntimeException('Empty repository invented objects');
+$unsafe=icct_mib_browser_tree([['name'=>'Invalid','base_oid'=>'<script>']]);
+if($unsafe['children'])throw new RuntimeException('Invalid OID accepted into tree');
+echo "PASS: numeric OID tree, source metadata, empty repository and native Cacti data-source existence.\n";
+$indexed=$bundle;$indexed['objects']=[array_replace($object,['symbol'=>'TEST-MIB::entry','base_oid'=>'1.3.6.1.2.1.2.2.1']),array_replace($object,['symbol'=>'TEST-MIB::counter','base_oid'=>'1.3.6.1.2.1.2.2.1.10'])];
+$indexed['files'][0]['content']="entry OBJECT-TYPE\nSYNTAX Entry\nSTATUS current\nINDEX { ifIndex }\n::= { table 1 }\ncounter OBJECT-TYPE\nSYNTAX Counter32\nSTATUS current\n::= { entry 10 }\n";
+$indexedData=icct_mib_browser_data([$indexed]);
+if($indexedData['records'][1]['indexes']!=='ifIndex')throw new RuntimeException('Table column did not inherit the MIB row index');
+echo "PASS: table column inherits its actual MIB INDEX declaration.\n";

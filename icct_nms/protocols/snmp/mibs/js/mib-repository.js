@@ -64,3 +64,30 @@ function render(){const limit=Number(size.value),pages=Math.max(1,Math.ceil(filt
 function filter(){page=1;filtered=rows.filter(row=>(!type.value||row.dataset.type===type.value)&&row.textContent.toLowerCase().includes(search.value.trim().toLowerCase()));render();}
 search.addEventListener('input',filter);type.addEventListener('change',filter);size.addEventListener('change',filter);pageSelect.addEventListener('change',()=>{page=Number(pageSelect.value);render();});previous.addEventListener('click',()=>{page--;render();});next.addEventListener('click',()=>{page++;render();});filter();
 })();
+
+// Search and inspect the saved repository without changing template selections.
+(()=>{'use strict';
+ const source=document.querySelector('#mibBrowserData');if(!source)return;
+ const records=JSON.parse(source.textContent),tree=document.querySelector('#mibBrowserTree'),search=document.querySelector('#mibBrowserSearch'),leaves=[...tree.querySelectorAll('[data-mib-node]')],branches=[...tree.querySelectorAll('details')],empty=document.querySelector('#mibBrowserEmpty');
+ let selected=null,priorOpen=null;
+ function select(id){
+  const record=records[id];if(!record)return;selected=id;
+  leaves.forEach(leaf=>{const active=Number(leaf.dataset.mibNode)===id;leaf.classList.toggle('selected',active);leaf.setAttribute('aria-pressed',String(active));});
+  document.querySelector('#mibBrowserName').textContent=record.name;
+  document.querySelectorAll('[data-mib-property]').forEach(cell=>{const value=record[cell.dataset.mibProperty];cell.textContent=value===undefined||value===null||value===''?'—':String(value);});
+  const badge=document.querySelector('#mibBrowserBadge');badge.hidden=false;badge.classList.toggle('not-created',!record.created);badge.querySelector('span').textContent=record.created?'Data Source Exists':'Data Source Not Created';
+  const state=leaves.find(leaf=>Number(leaf.dataset.mibNode)===id)?.querySelector('.mib-browser-state svg');if(state)badge.querySelector('svg').replaceWith(state.cloneNode(true));
+  const configure=document.querySelector('#mibBrowserConfigure');if(configure){configure.hidden=false;configure.href='protocols/snmp/mibs/controllers/mib_repository.php?wizard='+encodeURIComponent(record.bundle);}
+ }
+ leaves.forEach(leaf=>leaf.addEventListener('click',()=>select(Number(leaf.dataset.mibNode))));
+ search.addEventListener('input',()=>{
+  const query=search.value.trim().toLowerCase();if(query&&!priorOpen)priorOpen=branches.map(branch=>branch.open);
+  let count=0;
+  leaves.forEach(leaf=>{const record=records[Number(leaf.dataset.mibNode)];leaf.hidden=![record.name,record.module,record.base_oid].join(' ').toLowerCase().includes(query);if(!leaf.hidden)count++;});
+  [...branches].reverse().forEach(branch=>{branch.hidden=![...branch.querySelectorAll('[data-mib-node]')].some(leaf=>!leaf.hidden);if(query&&!branch.hidden)branch.open=true;});
+  if(!query&&priorOpen){branches.forEach((branch,i)=>branch.open=priorOpen[i]);priorOpen=null;}
+  empty.hidden=count>0;
+  if(count&&!leaves.some(leaf=>!leaf.hidden&&Number(leaf.dataset.mibNode)===selected))select(Number(leaves.find(leaf=>!leaf.hidden).dataset.mibNode));
+ });
+ if(leaves.length)select(Number(leaves[0].dataset.mibNode));
+})();
