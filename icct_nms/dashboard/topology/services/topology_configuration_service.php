@@ -32,6 +32,15 @@ function icct_nms_connection_delete($key){
 function icct_nms_discovery_current($snapshot,$host){
     return $host && !empty($host['enabled']) && !empty($host['collection_enabled']) && $snapshot['status']==='success' && in_array($snapshot['protocol'],icct_backend_nd_host_methods($host),true) && hash_equals(icct_backend_nd_hash($host),(string)($snapshot['config_hash']??'')) && strtotime($snapshot['succeeded_at']??'')>=time()-(int)$host['stale_seconds'];
 }
+/** Normalize collector address objects and legacy strings for display and matching. */
+function icct_nms_discovery_addresses($values){
+    $addresses=[];
+    foreach($values as $value){
+        $address=is_array($value)?($value['address']??''):$value;
+        if(is_string($address)&&filter_var($address,FILTER_VALIDATE_IP))$addresses[$address]=$address;
+    }
+    return array_values($addresses);
+}
 function icct_nms_topology_discovery_rows($devices){
     $rows=[];$hosts=array_column(icct_backend_nd_hosts(),null,'id');
     foreach($devices as $device){
@@ -43,7 +52,7 @@ function icct_nms_topology_discovery_rows($devices){
             $data=json_decode($snapshot['data_json'],true)??[];
             $items=array_merge($data['neighbors']??[],$data['endpoints']??[]);
             $fresh=icct_nms_discovery_current($snapshot,$hosts[$device['id']]??null);
-            foreach($items as $item){if(isset($item['present'])&&!$item['present'])continue;$rows[]=['reporter_id'=>(int)$device['id'],'name'=>$item['remote_name']??($item['peer_label']??($item['ip']??($item['mac']??'Unknown'))),'address'=>implode(', ',$item['management_addresses']??(isset($item['ip'])?[$item['ip']]:[])),'reporter'=>$device['description'],'protocol'=>strtoupper($snapshot['protocol']),'port'=>$item['local_port']??($item['interface']??''),'remote_port'=>$item['remote_port']??'','status'=>$fresh?'Current':'Stale','last_check'=>$snapshot['succeeded_at']??'','detail'=>in_array($snapshot['protocol'],['lldp','cdp'])?'Neighbour adjacency':($snapshot['protocol']==='arp'?'IP neighbour observation':'Learned MAC; direct link unconfirmed')];}
+            foreach($items as $item){if(isset($item['present'])&&!$item['present'])continue;$rows[]=['reporter_id'=>(int)$device['id'],'name'=>$item['remote_name']??($item['peer_label']??($item['ip']??($item['mac']??'Unknown'))),'address'=>implode(', ',icct_nms_discovery_addresses($item['management_addresses']??(isset($item['ip'])?[$item['ip']]:[]))),'reporter'=>$device['description'],'protocol'=>strtoupper($snapshot['protocol']),'port'=>$item['local_port']??($item['interface']??''),'remote_port'=>$item['remote_port']??'','status'=>$fresh?'Current':'Stale','last_check'=>$snapshot['succeeded_at']??'','detail'=>in_array($snapshot['protocol'],['lldp','cdp'])?'Neighbour adjacency':($snapshot['protocol']==='arp'?'IP neighbour observation':'Learned MAC; direct link unconfirmed')];}
         }
     }
     return $rows;

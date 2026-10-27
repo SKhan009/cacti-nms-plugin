@@ -54,7 +54,7 @@ function icct_nms_topology_data($mapData) {
         if(count($candidates)>1)continue;
         if(!$candidates){
             $candidates=[];
-            foreach(array_merge([$neighbor['peer_label']??'', $neighbor['remote_name']??''],$neighbor['management_addresses']??[]) as $value)if(is_string($value))$candidates=array_merge($candidates,$index[strtolower(trim($value))]??[]);
+            foreach(array_merge([$neighbor['peer_label']??'', $neighbor['remote_name']??''],icct_nms_discovery_addresses($neighbor['management_addresses']??[])) as $value)if(is_string($value))$candidates=array_merge($candidates,$index[strtolower(trim($value))]??[]);
             $candidates=array_values(array_unique(array_diff($candidates,[$id])));
         }
         if(count($candidates)!==1)continue;

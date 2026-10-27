@@ -62,3 +62,13 @@ echo "Short code labels, manual short names and fixed central switch passed.\n";
 
 if($diagram["devices"][0]["diagnostics"]!==["ping"=>"Ping ICMP"]||$diagram["devices"][1]["diagnostics"]!==[])throw new LogicException("Topology diagnostics ignored per-device selection");
 echo "Per-device diagnostics synchronized with topology actions.\n";
+
+// Collector management addresses use objects; legacy snapshots use strings.
+$snapshots=[1=>[$makeSnapshot(['neighbors'=>[['present'=>true,'management_addresses'=>[['family'=>1,'address'=>'192.0.2.2']],'local_port'=>'Gi2','remote_port'=>'Eth2']]])]];
+$addressMap=$map;$addressMap['unlocated'][1]['address']='192.0.2.2';
+$addressDiagram=icct_nms_topology_data($addressMap);
+if(count($addressDiagram['links'])!==1||$addressDiagram['links'][0]['target']!==2)throw new LogicException('Structured management address did not resolve topology neighbour');
+$connectionRows=icct_nms_topology_discovery_rows([['id'=>1,'description'=>'Reporter']]);
+if(count($connectionRows)!==1||$connectionRows[0]['address']!=='192.0.2.2')throw new LogicException('Structured management address not displayed in Device Connections');
+if(icct_nms_discovery_addresses([['address'=>'2001:db8::2'],'192.0.2.2',['address'=>'192.0.2.2'],['address'=>'invalid']])!==['2001:db8::2','192.0.2.2'])throw new LogicException('Management address validation or deduplication failed');
+echo "Structured and legacy management addresses resolve links and display without array warnings.\n";
