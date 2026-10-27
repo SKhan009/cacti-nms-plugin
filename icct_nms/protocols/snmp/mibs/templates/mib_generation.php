@@ -11,7 +11,9 @@ if(!$generationDone)try{icct_mib_generation_input($generationBundle,$generationS
 <?php icct_nms_token(); ?><input type="hidden" name="action" value="generate"><input type="hidden" name="bundle_id" value="<?= icct_nms_h($generationBundle['id']) ?>"><input type="hidden" name="stage" value="<?= $generationStage ?>"><?php if(isset($generationObject)): ?><input type="hidden" name="object" value="<?= $generationObject ?>"><?php endif; ?>
 <?php if($generationStage===2&&!$generationDone&&!$generationError&&!isset($generationReadyToken)): require __DIR__.'/mib_generation_review.php'; else: ?>
 <?php if(isset($generationReadyToken)): ?><input type="hidden" name="ready_token" value="<?= icct_nms_h($generationReadyToken) ?>"><?php endif; ?>
-<button type="submit" id="mibGenerate" <?= $generationDone||$generationError?'disabled':'' ?>>Generate</button><?php endif; ?>
+<?php if(!$generationDone): ?><button type="submit" id="mibGenerate" <?= $generationError?'disabled':'' ?>>Generate</button><?php endif; ?>
+<?php if(isset($generationReadyToken)&&!$generationDone): ?><div class="mib-generation-ready-actions"><span><?= count($generationSelected??[]) ?> OIDs selected</span><?php if(!empty($readyDraft['review']['selection_token'])): ?><a href="protocols/snmp/mibs/controllers/mib_repository.php?generate=<?= icct_nms_h($generationBundle['id']) ?>&amp;stage=2&amp;selection=<?= icct_nms_h($readyDraft['review']['selection_token']) ?>">Review Settings</a><?php endif; ?></div><?php endif; ?>
+<?php endif; ?>
 </form>
 <p id="mibGenerationError" class="notice error" role="alert" <?= $generationError?'':'hidden' ?>><?= icct_nms_h($generationError) ?></p>
 <section id="mibGenerationProgress" class="<?= $generationDone?'complete':'' ?>" <?= $generationDone?'':'hidden' ?> aria-label="Generation results" aria-busy="false">

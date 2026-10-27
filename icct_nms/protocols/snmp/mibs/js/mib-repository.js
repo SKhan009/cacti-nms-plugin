@@ -133,6 +133,7 @@ if(review){
 (()=>{'use strict';
  const form=document.querySelector('#mibGenerationForm');if(!form)return;
  const button=document.querySelector('#mibGenerate'),progress=document.querySelector('#mibGenerationProgress'),status=document.querySelector('#mibGenerationStatus'),bar=document.querySelector('#mibGenerationBar'),error=document.querySelector('#mibGenerationError'),spinner=document.querySelector('.mib-generation-spinner');let busy=false;
+ if(!button)return; // A committed stage has results and navigation, no generation action.
  const review=form.querySelector('.mib-generation-review'),rows=[...form.querySelectorAll('[data-generation-row]')],panels=[...form.querySelectorAll('[data-generation-panel]')];
  function openPanel(id){panels.forEach(panel=>panel.hidden=panel.dataset.generationPanel!==id);rows.forEach(row=>{const active=row.dataset.generationRow===id;row.classList.toggle('active',active);row.querySelector('button').setAttribute('aria-expanded',String(active));});document.querySelector('#mibGenerationEmpty').hidden=true;}
  function collection(panel){const method=panel.querySelector('[name$="[collection_method]"]'),index=panel.querySelector('[data-mib-index]'),oid=panel.querySelector('[data-base-oid]');if(!method||!oid)return;const indexed=method.value==='indexed';oid.readOnly=indexed;if(index){index.closest('.field').hidden=indexed;index.disabled=method.disabled||indexed;if(indexed){index.value='';oid.value=oid.dataset.baseOid;}}}

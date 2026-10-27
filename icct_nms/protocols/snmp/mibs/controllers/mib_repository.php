@@ -28,10 +28,11 @@ try{
         if($action==='select_oids'){
             icct_backend_require_management(3);$selectionBundle=icct_mib_wizard_get($_POST['bundle_id']??'');
             $eligible=icct_mib_generation_input($selectionBundle,2)['selected'];$chosen=icct_mib_review_input($_POST)['selected']??[];
-            if(!is_array($chosen))throw new InvalidArgumentException('Choose supported OIDs.');$chosen=array_intersect_key($chosen,$eligible);
-            if(!$chosen)throw new InvalidArgumentException('Select at least one uncreated numeric OID.');
+            $chosenReview=icct_mib_generation_prepare($eligible,['selected'=>$chosen,'records'=>[]],true);$chosen=$chosenReview['selected'];
             $token=bin2hex(random_bytes(16));$_SESSION['icct_mib_selection_'.$token]=['id'=>$selectionBundle['id'],'selected'=>$chosen,'time'=>time()];
-            icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?generate='.$selectionBundle['id'].'&stage=2&selection='.$token);
+            // Step 1 only saves the selection. Step 2 starts with an explicit Generate action.
+            $readyToken=icct_mib_generation_draft_put($selectionBundle['id'],'ready',['values'=>$chosenReview,'object'=>null,'selection_token'=>$token]);
+            icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?generate='.$selectionBundle['id'].'&stage=2&ready='.$readyToken);
         }elseif($action==='edit_repository'){
             icct_mib_repository_edit($_POST['bundle_id']??'',$_POST['name']??'',$_POST['type_id']??'');
             icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?updated=1');
