@@ -45,6 +45,9 @@ db_execute_prepared('INSERT INTO graph_local (id,host_id,graph_template_id) VALU
 $gg=db_fetch_row_prepared('SELECT * FROM graph_templates_graph WHERE graph_template_id=? AND local_graph_id=0',[$graphId]);unset($gg['id']);$gg['local_graph_id']=$localGraph;sql_save($gg,'graph_templates_graph');
 foreach(db_fetch_assoc_prepared('SELECT * FROM graph_templates_item WHERE graph_template_id=? AND local_graph_id=0',[$graphId]) as $item){unset($item['id']);$item['local_graph_id']=$localGraph;if($item['task_item_id'])$item['task_item_id']=$localRrd;sql_save($item,'graph_templates_item');}
 $fetched=icct_mib_device_inputs($preview,$qaHost)[$metricKey][0]??[];
+require_once __DIR__.'/../../protocols/snmp/mibs/services/mib_usage_service.php';
+$usage=icct_mib_repository_usage([$bundle])[$bundle['id']];
+check($usage['data_sources']>=1&&in_array($qaHost,array_map('intval',array_column($usage['devices'],'id')),true),'MIB file usage resolves actual native data sources and device associations');
 check(($fetched['oid']??'')===$plan['records'][0]['oid']&&(int)($fetched['graph_type']??0)===5&&(int)($fetched['cf']??0)===3,'Device instance OID and native graph item settings fetched together');
 check(($fetched['statistics']??'')==='0'&&($fetched['threshold_high']??'')=='80'&&($fetched['threshold_low']??'')=='0','Native graph statistics and threshold lines remain synchronized');
 db_execute_prepared('DELETE FROM data_input_data WHERE data_template_data_id=?',[$newInput]);
