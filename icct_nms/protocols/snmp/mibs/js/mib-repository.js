@@ -80,15 +80,26 @@ if(review){
   if(fileError){error.textContent=fileError;error.hidden=false;if(!dialog.open)dialog.showModal();return;}
   busy=true;returnFocus=form.querySelector('[type=submit]');returnFocus.disabled=true;title.textContent='Uploading MIB';error.hidden=true;if(chooser)chooser.hidden=true;progress.hidden=false;bar.value=0;
   filename.textContent='Uploading “'+files.map(file=>file.name).join(', ')+'”';count.textContent='Uploading file…';if(!dialog.open)dialog.showModal();
-  const body=new FormData(form);body.set('upload_response','json');
-  const xhr=new XMLHttpRequest();xhr.open('POST',new URL(form.getAttribute('action')||location.href,document.baseURI).href,true);xhr.responseType='json';xhr.timeout=180000;xhr.setRequestHeader('Accept','application/json');
+  const body=new FormData(form);body.set('upload_response','json');body.set('upload_progress','1');
+  const xhr=new XMLHttpRequest();xhr.open('POST',new URL(form.getAttribute('action')||location.href,document.baseURI).href,true);xhr.responseType='text';xhr.timeout=180000;xhr.setRequestHeader('Accept','application/json');
   function fail(message){busy=false;returnFocus.disabled=false;title.textContent='Upload MIB';if(chooser)chooser.hidden=false;progress.hidden=true;error.textContent=message;error.hidden=false;if(!dialog.open)dialog.showModal();}
-  xhr.upload.addEventListener('progress',event=>{if(event.lengthComputable){bar.value=event.loaded/event.total*100;count.textContent='Uploading file: '+Math.round(bar.value)+'%';}});
+  let received=0,pending='',streamResult=null,scanTotal=0;
+  function readUpdates(){
+   const text=xhr.responseText||'';pending+=text.slice(received);received=text.length;
+   let newline;while((newline=pending.indexOf('\n'))>=0){const line=pending.slice(0,newline).trim();pending=pending.slice(newline+1);if(!line)continue;let update;try{update=JSON.parse(line);}catch(_){continue;}
+    if(update.type==='complete'||update.type==='error'){streamResult=update;continue;}
+    if(update.type!=='progress')continue;
+    if(update.phase==='scan'&&Number.isInteger(update.processed)&&Number.isInteger(update.total)&&update.total>=0&&update.processed>=0&&update.processed<=update.total){scanTotal=update.total;bar.max=Math.max(1,update.total);bar.value=update.processed;count.textContent=update.processed+'/'+update.total+' OIDs Uploaded & Scanned';filename.textContent='Scanning “'+files[0].name+'”'+(update.symbol?' — '+update.symbol:'');}
+    else if(typeof update.message==='string'){count.textContent=update.message;if(update.phase==='save'&&scanTotal)count.textContent=scanTotal+'/'+scanTotal+' OIDs scanned. Saving MIB file…';}
+   }
+  }
+  xhr.addEventListener('progress',readUpdates);
+  xhr.upload.addEventListener('progress',event=>{if(event.lengthComputable){bar.max=100;bar.value=event.loaded/event.total*100;count.textContent='Uploading file: '+Math.round(bar.value)+'%';}});
   xhr.upload.addEventListener('load',()=>{bar.removeAttribute('value');count.textContent='File uploaded. Scanning OIDs…';});
   xhr.addEventListener('load',()=>{
-   const result=xhr.response;if(xhr.status<200||xhr.status>=300||!result?.ok){fail(result?.error||'Upload could not be completed. Check the file and your session, then retry.');return;}
+   readUpdates();let result=streamResult;try{if(!result)result=typeof xhr.response==='object'?xhr.response:JSON.parse(xhr.responseText||xhr.response||'null');}catch(_){}if(xhr.status<200||xhr.status>=300||!result?.ok){fail(result?.error||'Upload could not be completed. Check the file and your session, then retry.');return;}
    const next=new URL(result.redirect,document.baseURI);if(next.origin!==location.origin||!next.pathname.endsWith('/protocols/snmp/mibs/controllers/mib_repository.php')){fail('The upload returned an invalid destination. Reopen the MIB Repository.');return;}
-   bar.value=100;const total=Number(result.object_count)||0;count.textContent=total+'/'+total+' OIDs Uploaded & Scanned';title.textContent='MIB Uploaded';
+   bar.max=100;bar.value=100;const total=Number(result.object_count)||0;count.textContent=total+'/'+total+' OIDs Uploaded & Scanned';title.textContent='MIB Uploaded';
    const repository=new URL(result.repository||'protocols/snmp/mibs/controllers/mib_repository.php',document.baseURI);
    if(repository.origin!==location.origin||repository.pathname!==next.pathname){fail('The upload returned an invalid repository destination.');return;}
    const summary=result.summary||{name:files.map(file=>file.name).join(', '),object_count:total,supported_count:0,existing_count:0,can_configure:false};

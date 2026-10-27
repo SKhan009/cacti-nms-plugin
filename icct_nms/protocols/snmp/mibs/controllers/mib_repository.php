@@ -7,6 +7,7 @@ require_once dirname(__DIR__, 4) . '/protocols/snmp/mibs/services/mib_repository
 require_once dirname(__DIR__, 4) . '/protocols/snmp/mibs/services/mib_browser_service.php';
 require_once dirname(__DIR__, 4) . '/protocols/snmp/mibs/services/mib_generation_service.php';
 require_once dirname(__DIR__, 4) . '/shared/services/forms.php';
+$uploadStream=$_SERVER['REQUEST_METHOD']==='POST'&&($_POST['action']??'')==='upload'&&($_POST['upload_progress']??'')==='1';
 $uploadJson=$_SERVER['REQUEST_METHOD']==='POST'&&($_POST['action']??'')==='upload'&&($_POST['upload_response']??'')==='json';
 $generationJson=$_SERVER['REQUEST_METHOD']==='POST'&&in_array(($_POST['action']??''),['generate','prepare_generation'],true)&&($_POST['generation_response']??'')==='json';
 $error='';$notice='';$mode='list';$preview=null;$plan=null;$reviewValues=[];$deletedId='';
@@ -63,10 +64,19 @@ try{
             icct_mib_wizard_save($wizardBundle['id'],icct_mib_review_input($_POST));
             icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?wizard='.$wizardBundle['id'].'&saved_step=1');
         }elseif($action==='upload'){
-            $mode='upload';icct_mib_validate_upload_selection($_FILES['mibs']??[]);$draft=icct_mib_preview($_FILES['mibs']??[], '__mib_unassigned__',true);
+            $mode='upload';icct_mib_validate_upload_selection($_FILES['mibs']??[]);$uploadProgress=null;
+            if($uploadStream){
+                header('Content-Type: application/x-ndjson; charset=utf-8');header('Cache-Control: no-store');header('X-Accel-Buffering: no');
+                while(ob_get_level()>0)ob_end_flush();
+                $uploadProgress=function($event){echo json_encode(['type'=>'progress']+$event,JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE)."\n";flush();};
+                $uploadProgress(['phase'=>'validate','message'=>'File uploaded. Validating MIB definitions…']);
+            }
+            $draft=icct_mib_preview($_FILES['mibs']??[], '__mib_unassigned__',true,$uploadProgress);
             $filePlan=icct_mib_plan($draft,['type_id'=>$draft['type_id'],'template_name'=>icct_mib_default_name($draft)]);
-            $uploadSummary=$uploadJson?icct_mib_upload_summary($draft):null;
+            $uploadSummary=($uploadJson||$uploadStream)?icct_mib_upload_summary($draft):null;
+            if($uploadProgress)$uploadProgress(['phase'=>'save','message'=>'OIDs scanned. Saving the MIB file…']);
             $stored=icct_mib_save($draft,$filePlan);
+            if($uploadStream){echo json_encode(['type'=>'complete']+['ok'=>true,'object_count'=>count($draft['records']),'summary'=>$uploadSummary,'redirect'=>'protocols/snmp/mibs/controllers/mib_repository.php?select='.$stored['id'],'repository'=>'protocols/snmp/mibs/controllers/mib_repository.php'],JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE)."\n";flush();exit;}
             if($uploadJson){header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>true,'object_count'=>count($draft['records']),'summary'=>$uploadSummary,'redirect'=>'protocols/snmp/mibs/controllers/mib_repository.php?select='.$stored['id'],'repository'=>'protocols/snmp/mibs/controllers/mib_repository.php'],JSON_THROW_ON_ERROR);exit;}
             icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?wizard='.$stored['id']);
         }elseif($action==='reparse'){
@@ -121,7 +131,7 @@ try{
     }elseif(isset($_GET['saved']))$notice='MIB files and selected templates saved.';
     if(isset($_GET['updated']))$notice='Repository details saved.';
     if(isset($_GET['deleted'])&&is_string($_GET['deleted'])&&preg_match('/^[a-f0-9]{32}$/D',$_GET['deleted'])&&$management)$deletedId=$_GET['deleted'];
-}catch(Throwable $e){if($uploadJson||$generationJson){http_response_code(400);header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>false,'error'=>$e->getMessage()],JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE);exit;}$error=$e->getMessage();if(($mode==='wizard'&&!isset($wizardBundle))||($mode==='generation'&&(!isset($generationBundle)||!isset($generationStage))))$mode='list';}
+}catch(Throwable $e){if($uploadStream){if(!headers_sent()){http_response_code(400);header('Content-Type: application/x-ndjson; charset=utf-8');header('Cache-Control: no-store');}echo json_encode(['type'=>'error','ok'=>false,'error'=>$e->getMessage()],JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE)."\n";flush();exit;}if($uploadJson||$generationJson){http_response_code(400);header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>false,'error'=>$e->getMessage()],JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE);exit;}$error=$e->getMessage();if(($mode==='wizard'&&!isset($wizardBundle))||($mode==='generation'&&(!isset($generationBundle)||!isset($generationStage))))$mode='list';}
 try { if($mode==='wizard'&&isset($wizardBundle)){
     $wizardBundle=icct_mib_wizard_get($wizardBundle['id']);$wizardObjects=icct_mib_objects($wizardBundle);
     $wizardStep=min(4,1+(int)($wizardBundle['wizard_step']??(!empty($wizardBundle['rows'])?3:0)));

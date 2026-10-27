@@ -18,6 +18,10 @@ db_execute("DELETE did FROM data_input_data did JOIN data_input_fields f ON f.id
 $types=icct_nms_device_types();$type=array_key_first($types);$path=__DIR__ . '/../../shared/assets/mibs/IF-MIB.txt';
 $preview=icct_mib_preview(['name'=>['IF-MIB.txt'],'tmp_name'=>[$path],'error'=>[UPLOAD_ERR_OK]],$type);
 check(count($preview['records'])>30,'IF-MIB parses multiple full object definitions');
+$scanEvents=[];$scanPreview=icct_mib_preview(['name'=>['IF-MIB.txt'],'tmp_name'=>[$path],'error'=>[UPLOAD_ERR_OK]],$type,false,function($event)use(&$scanEvents){$scanEvents[]=$event;});
+$scanCounts=array_values(array_filter($scanEvents,fn($event)=>$event['phase']==='scan'));$lastScan=end($scanCounts);
+check($scanCounts[0]['processed']===0&&$lastScan['processed']===count($scanPreview['records'])&&$lastScan['total']===count($scanPreview['records'])&&array_column($scanCounts,'processed')===range(0,count($scanPreview['records'])),'Live scan progress reports each actual parsed OID without simulated counts');
+
 foreach([['name'=>[]],['name'=>['one.mib','two.txt']],['name'=>['bad.php']],['name'=>['bad.mib.php']]] as $invalidUpload){try{icct_mib_validate_upload_selection($invalidUpload);throw new LogicException('Invalid file selection accepted');}catch(InvalidArgumentException $e){check(true,'Upload rejects invalid extension or multiple files');}}
 icct_mib_validate_upload_selection(['name'=>['VENDOR.MIB']]);check(true,'Uppercase MIB extension accepted');
 $unassignedPreview=icct_mib_preview(['name'=>['IF-MIB.txt'],'tmp_name'=>[$path],'error'=>[UPLOAD_ERR_OK]],'__mib_unassigned__');

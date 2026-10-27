@@ -110,8 +110,10 @@ final class IcctMibOfflineParser {
         if(!$resolved)throw new RuntimeException('Unsupported syntax: '.$key.'.');
         return $this->syntax($owner,$resolved,$seen).substr($syntax,strlen($name));
     }
-    public function records(array $requested):array {
-        $records=[];
+    public function records(array $requested,?callable $progress=null):array {
+        $records=[];$total=0;
+        foreach($requested as $module)foreach($this->modules[$module]['defs'] as $def)if(in_array($def['kind'],['OBJECT-TYPE','NOTIFICATION-TYPE','TRAP-TYPE'],true))$total++;
+        if($progress)$progress(['phase'=>'scan','processed'=>0,'total'=>$total]);
         foreach($requested as $module)foreach($this->modules[$module]['defs'] as $name=>$def){
             if(!in_array($def['kind'],['OBJECT-TYPE','NOTIFICATION-TYPE','TRAP-TYPE'],true))continue;
             if(count($records)>=512)throw new RuntimeException('Limit: 512 object definitions per upload. Split larger modules.');
@@ -126,6 +128,7 @@ final class IcctMibOfflineParser {
             $numeric=$def['kind']==='OBJECT-TYPE'&&in_array($access,['read-only','read-write','read-create'],true)&&preg_match('/^(INTEGER|Integer32|Unsigned32|Gauge32|Counter32|Counter64|TimeTicks)\b/',$syntax);
             $enum=str_contains($syntax,'{');$counter=(bool)preg_match('/^Counter(?:32|64)\b/',$syntax);
             $records[]=['symbol'=>$module.'::'.$name,'kind'=>$def['kind'],'base_oid'=>$oid,'oid'=>$table?$oid:$oid.'.0','syntax'=>$syntax,'access'=>$access,'description'=>trim(preg_replace('/\s+/',' ',$this->clause($body,'DESCRIPTION'))),'units'=>$this->clause($body,'UNITS'),'table'=>$table,'index_description'=>$table?$indexDescription:'Scalar instance .0','numeric'=>(bool)$numeric,'enum'=>$enum,'ds_type'=>$counter?2:1,'label'=>$name]+icct_mib_bounds($syntax)+['reason'=>!$numeric?'Metadata / nonnumeric object':($table?'Table object':($enum?'Numeric enumeration: review state mapping':'Readable numeric scalar'))];
+            if($progress)$progress(['phase'=>'scan','processed'=>count($records),'total'=>$total,'symbol'=>$module.'::'.$name]);
         }
         return $records;
     }

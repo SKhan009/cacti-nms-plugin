@@ -58,3 +58,10 @@ for(const files of [[{name:'bad.php'}],[{name:'one.mib'},{name:'two.mib'}],[{nam
  const invalid=fixture();invalid.form.querySelector=selector=>selector==='[type=file]'?{files}:invalid.submit;invalid.form.events.submit({preventDefault(){}});assert.equal(invalid.requests.length,0,'Invalid file rejected before transfer');assert.equal(invalid.elements['#mibUploadError'].hidden,false);
 }
 console.log('PASS: single-file, extension and size validation before upload.');
+
+const live=fixture();live.form.events.submit({preventDefault(){}});const liveRequest=live.requests[0];
+liveRequest.responseText=JSON.stringify({type:'progress',phase:'scan',processed:2,total:4,symbol:'TEST-MIB::reading'})+'\n';liveRequest.events.progress();
+assert.equal(live.elements['#mibUploadCount'].textContent,'2/4 OIDs Uploaded & Scanned');assert.equal(live.elements['#mibUploadBar'].value,2);assert.equal(live.elements['#mibUploadBar'].max,4);
+const partial=JSON.stringify({type:'progress',phase:'scan',processed:3,total:4});liveRequest.responseText+=partial.slice(0,12);liveRequest.events.progress();assert.equal(live.elements['#mibUploadBar'].value,2);liveRequest.responseText+=partial.slice(12)+'\n';liveRequest.events.progress();assert.equal(live.elements['#mibUploadBar'].value,3);
+liveRequest.responseText+=JSON.stringify({type:'progress',phase:'save',message:'Saving MIB file…'})+'\n';liveRequest.events.progress();assert.match(live.elements['#mibUploadCount'].textContent,/Saving MIB file/);assert.equal(live.navigations.length,0);
+console.log('PASS: server scan counts stream live, partial chunks buffer correctly, and saving does not claim success.');

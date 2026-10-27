@@ -201,7 +201,7 @@ function icct_mib_text($text){
     }
     return $text;
 }
-function icct_mib_preview($upload,$typeId,$allowUnresolved=false){
+function icct_mib_preview($upload,$typeId,$allowUnresolved=false,$progress=null){
     require_once __DIR__.'/mib_offline_parser.php';
     $types=icct_mib_device_types();if(!is_string($typeId)||!isset($types[$typeId]))throw new InvalidArgumentException('Select a device type.');
     $names=$upload['name']??[];if(!is_array($names)||!count($names)||count($names)>8)throw new InvalidArgumentException('Upload 1–8 MIB files including dependencies.');
@@ -215,6 +215,7 @@ function icct_mib_preview($upload,$typeId,$allowUnresolved=false){
         $module=$m[1];if(isset($files[$module]))throw new InvalidArgumentException('Duplicate MIB module.');
         $files[$module]=['name'=>basename($name),'module'=>$module,'bytes'=>$size,'sha256'=>hash('sha256',$content),'content'=>$content];$texts[$module]=$text;
     }
+    if($progress)$progress(['phase'=>'dependencies','message'=>'File uploaded. Resolving local MIB dependencies…']);
     $requested=array_keys($files);$catalog=[];
     foreach(icct_mib_list() as $bundle)foreach($bundle['files'] as $i=>$file)if(!isset($catalog[$file['module']]))$catalog[$file['module']]=[$bundle,$i];
     $queue=$requested;$missing=[];$dependencies=[];$loadedBytes=0;
@@ -233,7 +234,7 @@ function icct_mib_preview($upload,$typeId,$allowUnresolved=false){
     $error='';$records=[];
     try{
         if($missing)throw new RuntimeException('Missing MIB dependencies: '.implode(', ',array_keys($missing)).'. Upload these modules to the MIB Repository. Internet access is not required.');
-        $records=(new IcctMibOfflineParser($texts))->records($requested);
+        $records=(new IcctMibOfflineParser($texts))->records($requested,$progress);
     }catch(RuntimeException $e){if(!$allowUnresolved)throw $e;$error=$e->getMessage();}
     return ['id'=>bin2hex(random_bytes(16)),'type_id'=>$typeId,'type_name'=>$types[$typeId]['name'],'category_id'=>$types[$typeId]['category_id'],'files'=>array_values($files),'records'=>$records,'parse_error'=>$error,'dependencies'=>$dependencies,'parser'=>'plugin-php','created'=>time(),'owner'=>icct_backend_current_user_id()];
 }
