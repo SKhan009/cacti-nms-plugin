@@ -2,6 +2,7 @@
 $generationObjects=icct_mib_objects($generationBundle);
 $generationSelection=icct_mib_generation_input($generationBundle,2,$generationObject??null)['selected'];
 $generationNativeDefaults=[];foreach($generationBundle['rows'] as $row)if(isset($row['object_index']))$generationNativeDefaults[$row['object_index']]=$row['settings']??[];
+if(isset($generationSelected))$generationSelection=array_intersect_key($generationSelection,$generationSelected);
 $generationProfiles=array_column(icct_mib_profiles(),'name','id');$collectionNames=icct_mib_collection_names();
 ?>
 <input type="hidden" name="generation_review" value="1"><div class="mib-generation-review">
@@ -39,4 +40,4 @@ if($object['table'])icct_nms_input('Instance Index (Specific GET)',$prefix.'[ins
 </div></div><div role="tabpanel" id="mibFaultFields<?= $i ?>" aria-labelledby="mibFaultTab<?= $i ?>" data-generation-tab-panel="fault" hidden><?php require __DIR__.'/mib_fault_presets.php'; ?></div>
 </section><?php endforeach; ?>
 </div></div>
-<footer class="mib-generation-review-footer"><p id="mibGenerationSelected" aria-live="polite"><?= count($generationSelection) ?> OIDs selected</p><button class="button" type="button" disabled>Previous ←</button><button class="button primary" type="submit" id="mibGenerate">Next →</button></footer>
+<footer class="mib-generation-review-footer"><p id="mibGenerationSelected" aria-live="polite"><?= count($generationSelection) ?> OIDs selected</p><a class="button" href="protocols/snmp/mibs/controllers/mib_repository.php?select=<?= icct_nms_h($generationBundle['id']) ?>">Previous ←</a><button class="button primary" type="submit" id="mibGenerate">Next →</button></footer>

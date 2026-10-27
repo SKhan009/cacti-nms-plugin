@@ -72,7 +72,7 @@ if(review){
   document.querySelectorAll('[data-mib-property]').forEach(cell=>{const value=record[cell.dataset.mibProperty];cell.textContent=value===undefined||value===null||value===''?'—':String(value);});
   const badge=document.querySelector('#mibBrowserBadge');badge.hidden=false;badge.dataset.sourceState=record.source_state;badge.querySelector('span').textContent=record.source_status;badge.title=record.source_count?record.created_count+' of '+record.source_count+' supported OIDs created':'';
   const state=leaves.find(leaf=>Number(leaf.dataset.mibNode)===id)?.querySelector('.mib-browser-state svg');if(state)badge.querySelector('svg').replaceWith(state.cloneNode(true));
-  const create=document.querySelector('#mibBrowserCreate');if(create){create.disabled=!record.can_create;create.title=record.can_create?'Open Step 2 — Data Source Generation':(record.source_state==='exists'?'Data sources already exist.':'This object has no supported numeric OIDs.');create.onclick=()=>location.assign('protocols/snmp/mibs/controllers/mib_repository.php?generate='+encodeURIComponent(record.bundle)+'&stage=2&object='+encodeURIComponent(record.object_index));}
+  const create=document.querySelector('#mibBrowserCreate');if(create){create.disabled=!record.can_create;create.title=record.can_create?'Open Step 2 — Data Source Generation':(record.source_state==='exists'?'Data sources already exist.':'This object has no supported numeric OIDs.');create.onclick=()=>location.assign('protocols/snmp/mibs/controllers/mib_repository.php?select='+encodeURIComponent(record.bundle)+'&object='+encodeURIComponent(record.object_index));}
  }
  leaves.forEach(leaf=>leaf.addEventListener('click',()=>select(Number(leaf.dataset.mibNode))));
  search.addEventListener('input',()=>{
@@ -207,4 +207,14 @@ if(review){
  list.querySelectorAll('[data-repository-edit]').forEach(button=>button.addEventListener('click',()=>{const editor=document.getElementById('mib-edit-'+button.dataset.repositoryEdit);editor.hidden=!editor.hidden;button.setAttribute('aria-expanded',String(!editor.hidden));if(!editor.hidden)editor.querySelector('[name=name]').focus();}));
  list.querySelectorAll('[data-repository-cancel]').forEach(button=>button.addEventListener('click',()=>{const editor=button.closest('[data-list-editor]');editor.querySelector('form').reset();editor.hidden=true;const trigger=list.querySelector('[data-repository-edit="'+editor.dataset.listEditor+'"]');trigger.setAttribute('aria-expanded','false');trigger.focus();}));
  render();
+})();
+
+(()=>{'use strict';
+ const form=document.querySelector('#mibSelectionForm');if(!form)return;
+ const source=document.querySelector('#mibBrowserData'),records=JSON.parse(source.textContent),boxes=[...form.querySelectorAll('[data-tree-selection]')],selected=new Set(),next=document.querySelector('#mibSelectionNext'),payload=document.querySelector('#mibSelectionPayload');
+ function targets(index){const record=records[index];return records.filter(item=>item.numeric&&item.can_create&&(item.object_index===record.object_index||(item.module===record.module&&item.base_oid.startsWith(record.base_oid+'.'))));}
+ function sync(){boxes.forEach(box=>{const items=targets(Number(box.dataset.treeSelection)),count=items.filter(item=>selected.has(item.object_index)).length;box.checked=items.length>0&&count===items.length;box.indeterminate=count>0&&count<items.length;});const values={};selected.forEach(index=>values[index]=1);payload.value=JSON.stringify({selected:values,records:{}});next.disabled=!selected.size;document.querySelector('#mibTreeSelectionCount').textContent=selected.size+' OIDs selected';}
+ boxes.forEach(box=>box.addEventListener('change',()=>{targets(Number(box.dataset.treeSelection)).forEach(item=>box.checked?selected.add(item.object_index):selected.delete(item.object_index));sync();}));
+ if(source.dataset.initialObject!==''){const index=records.findIndex(item=>item.object_index===Number(source.dataset.initialObject));if(index>=0)targets(index).forEach(item=>selected.add(item.object_index));}
+ form.addEventListener('submit',event=>{sync();if(!selected.size)event.preventDefault();});sync();
 })();

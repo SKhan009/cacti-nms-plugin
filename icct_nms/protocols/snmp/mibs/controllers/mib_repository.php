@@ -14,7 +14,8 @@ $error='';$notice='';$mode='list';$preview=null;$plan=null;$reviewValues=[];$del
 try { icct_nms_backend(); } catch (Throwable $e) { icct_nms_failure($e); }
 try{
     $management=is_realm_allowed(3);$types=icct_nms_device_types();$bundles=icct_mib_list();
-    if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['files']))icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php');
+    if(isset($_GET['repository']))$repositoryBundle=icct_mib_wizard_get($_GET['repository']);
+    if(isset($_GET['browse'])){$repositoryBundle=icct_mib_wizard_get($_GET['browse']);$bundles=[$repositoryBundle];$mode='browse';$initialObject=isset($_GET['object'])?icct_backend_topology_integer($_GET['object'],0,511,'OID'):null;}
     if(isset($_GET['download'])){
         $bundle=null;foreach($bundles as $candidate)if($candidate['id']===($_GET['download']??''))$bundle=$candidate;
         if(!$bundle)throw new InvalidArgumentException('MIB upload not found.');$index=icct_nms_id($_GET['file']??0);$content=icct_mib_file($bundle,$index);
@@ -24,7 +25,17 @@ try{
     if($draft && ($draft['owner']!==icct_backend_current_user_id()||time()-$draft['created']>3600)){unset($_SESSION['icct_mib_draft'],$_SESSION['icct_mib_plan'],$_SESSION['icct_mib_values']);$draft=null;}
     if($_SERVER['REQUEST_METHOD']==='POST'){
         icct_nms_post();$action=$_POST['action']??'';
-        if(in_array($action,['delete','restore'],true)){
+        if($action==='select_oids'){
+            icct_backend_require_management(3);$selectionBundle=icct_mib_wizard_get($_POST['bundle_id']??'');
+            $eligible=icct_mib_generation_input($selectionBundle,2)['selected'];$chosen=icct_mib_review_input($_POST)['selected']??[];
+            if(!is_array($chosen))throw new InvalidArgumentException('Choose supported OIDs.');$chosen=array_intersect_key($chosen,$eligible);
+            if(!$chosen)throw new InvalidArgumentException('Select at least one uncreated numeric OID.');
+            $token=bin2hex(random_bytes(16));$_SESSION['icct_mib_selection_'.$token]=['id'=>$selectionBundle['id'],'selected'=>$chosen,'time'=>time()];
+            icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?generate='.$selectionBundle['id'].'&stage=2&selection='.$token);
+        }elseif($action==='edit_repository'){
+            icct_mib_repository_edit($_POST['bundle_id']??'',$_POST['name']??'',$_POST['type_id']??'');
+            icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?updated=1');
+        }elseif(in_array($action,['delete','restore'],true)){
             icct_mib_set_deleted($_POST['bundle_id']??'', $action==='delete');
             icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php'.($action==='delete'?'?deleted='.rawurlencode($_POST['bundle_id']):''));
         }elseif($action==='generate'){
@@ -44,7 +55,7 @@ try{
             $filePlan=icct_mib_plan($draft,['type_id'=>$draft['type_id'],'template_name'=>icct_mib_default_name($draft)]);
             $uploadSummary=$uploadJson?icct_mib_upload_summary($draft):null;
             $stored=icct_mib_save($draft,$filePlan);
-            if($uploadJson){header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>true,'object_count'=>count($draft['records']),'summary'=>$uploadSummary,'redirect'=>'protocols/snmp/mibs/controllers/mib_repository.php?generate='.$stored['id'],'repository'=>'protocols/snmp/mibs/controllers/mib_repository.php'],JSON_THROW_ON_ERROR);exit;}
+            if($uploadJson){header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>true,'object_count'=>count($draft['records']),'summary'=>$uploadSummary,'redirect'=>'protocols/snmp/mibs/controllers/mib_repository.php?select='.$stored['id'],'repository'=>'protocols/snmp/mibs/controllers/mib_repository.php'],JSON_THROW_ON_ERROR);exit;}
             icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?wizard='.$stored['id']);
         }elseif($action==='reparse'){
             $bundle=null;foreach($bundles as $candidate)if($candidate['id']===($_POST['bundle_id']??''))$bundle=$candidate;
@@ -68,17 +79,28 @@ try{
     }elseif(isset($_GET['upload'])){icct_backend_require_management(3);$mode='upload';}
     elseif(isset($_GET['review'])||isset($_GET['confirm'])){
         icct_backend_require_management(3);if(!$draft)throw new InvalidArgumentException('Upload a MIB first.');$preview=$draft;$reviewValues=$_SESSION['icct_mib_values']??[];$plan=$_SESSION['icct_mib_plan']??null;$mode=isset($_GET['confirm'])&&$plan?'confirm':'review';
+    }elseif(isset($_GET['select'])){
+        icct_backend_require_management(3);$mode='selection';$selectionBundle=icct_mib_wizard_get($_GET['select']);$bundles=[$selectionBundle];
+        $initialObject=isset($_GET['object'])?icct_backend_topology_integer($_GET['object'],0,511,'OID'):null;
     }elseif(isset($_GET['generate'])){
         icct_backend_require_management(3);$mode='generation';$generationBundle=icct_mib_wizard_get($_GET['generate']);
         $generationStage=isset($_GET['object'])?2:(isset($_GET['stage'])?icct_backend_topology_integer($_GET['stage'],2,4,'Generation stage'):min(4,(int)($generationBundle['wizard_step']??0)+2));
         if($generationStage>(int)($generationBundle['wizard_step']??0)+2)throw new InvalidArgumentException('Complete the previous generation stage first.');
         $generationObject=isset($_GET['object'])?icct_backend_topology_integer($_GET['object'],0,511,'OID'):null;
+        if(isset($_GET['selection'])){
+            $selectionKey=(string)$_GET['selection'];if(!preg_match('/^[a-f0-9]{32}$/D',$selectionKey)){$mode='list';throw new InvalidArgumentException('Invalid OID selection.');}
+            $savedSelection=$_SESSION['icct_mib_selection_'.$selectionKey]??null;
+            if(!$savedSelection||$savedSelection['id']!==$generationBundle['id']||time()-$savedSelection['time']>3600){$mode='list';throw new InvalidArgumentException('OID selection expired. Select the OIDs again.');}
+            $generationSelected=$savedSelection['selected'];
+        }
+
     }elseif(isset($_GET['wizard'])){
         icct_backend_require_management(3);$mode='wizard';$wizardBundle=icct_mib_wizard_get($_GET['wizard']);
     }elseif(isset($_GET['inspect'])){
         $inspection=null;foreach($bundles as $candidate)if($candidate['id']===$_GET['inspect'])$inspection=$candidate;
         if(!$inspection)throw new InvalidArgumentException('MIB upload not found.');$objects=icct_mib_objects($inspection);$mode='inspect';
     }elseif(isset($_GET['saved']))$notice='MIB files and selected templates saved.';
+    if(isset($_GET['updated']))$notice='Repository details saved.';
     if(isset($_GET['deleted'])&&is_string($_GET['deleted'])&&preg_match('/^[a-f0-9]{32}$/D',$_GET['deleted'])&&$management)$deletedId=$_GET['deleted'];
 }catch(Throwable $e){if($uploadJson||$generationJson){http_response_code(400);header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>false,'error'=>$e->getMessage()],JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE);exit;}$error=$e->getMessage();if(($mode==='wizard'&&!isset($wizardBundle))||($mode==='generation'&&(!isset($generationBundle)||!isset($generationStage))))$mode='list';}
 try { if($mode==='wizard'&&isset($wizardBundle)){
