@@ -28,7 +28,6 @@ $renderTree=function($node,$depth=0)use(&$renderTree,$browser,$icon){
 <div class="mib-browser-detail">
 <div class="mib-browser-detail-heading"><h2 id="mibBrowserName">Select an OID</h2><div class="mib-browser-detail-actions"><span id="mibBrowserBadge" class="mib-browser-badge" hidden><?= $icon('exists') ?><span></span></span><?php if($management): ?><button type="button" class="button" id="mibBrowserCreate" disabled>Create</button><?php endif; ?></div></div>
 <table class="mib-browser-properties" aria-label="Selected OID details"><tbody><?php foreach(['name'=>'Name','base_oid'=>'OID','module'=>'MIB','syntax'=>'Syntax','access'=>'Access','status'=>'Status','defval'=>'Defval','indexes'=>'Indexes','description'=>'Description'] as $key=>$label): ?><tr><th scope="row"><?= $label ?></th><td data-mib-property="<?= $key ?>">—</td></tr><?php endforeach; ?></tbody></table>
-<?php if($management): ?><a class="mib-browser-configure" id="mibBrowserConfigure" hidden>Configure Templates →</a><?php endif; ?>
 <?php foreach($browser['warnings'] as $warning): ?><p class="notice error"><?= icct_nms_h($warning) ?></p><?php endforeach; ?>
 </div></section>
 <script type="application/json" id="mibBrowserData"><?= json_encode($browser['records'],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>

@@ -73,7 +73,6 @@ if(review){
   const badge=document.querySelector('#mibBrowserBadge');badge.hidden=false;badge.classList.toggle('not-created',!record.created);badge.querySelector('span').textContent=record.created?'Data Source Exists':'Data Source Not Created';
   const state=leaves.find(leaf=>Number(leaf.dataset.mibNode)===id)?.querySelector('.mib-browser-state svg');if(state)badge.querySelector('svg').replaceWith(state.cloneNode(true));
   const create=document.querySelector('#mibBrowserCreate');if(create){create.disabled=!record.numeric||record.created;create.title=record.created?'A data source already exists.':(!record.numeric?'This object cannot create a numeric Cacti data source.':'Create data source and graph templates');create.onclick=()=>location.assign('protocols/snmp/mibs/controllers/mib_repository.php?generate='+encodeURIComponent(record.bundle)+'&object='+encodeURIComponent(record.object_index));}
-  const configure=document.querySelector('#mibBrowserConfigure');if(configure){configure.hidden=!record.created;configure.href='protocols/snmp/mibs/controllers/mib_repository.php?wizard='+encodeURIComponent(record.bundle);}
  }
  leaves.forEach(leaf=>leaf.addEventListener('click',()=>select(Number(leaf.dataset.mibNode))));
  search.addEventListener('input',()=>{
