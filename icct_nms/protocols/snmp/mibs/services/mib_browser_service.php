@@ -53,6 +53,12 @@ function icct_mib_browser_data($bundles){
         if(!isset($unique[$key])||$record['created'])$unique[$key]=$record;
     }
     $records=array_values($unique);
+    foreach($records as $i=>&$record){
+        $targets=icct_mib_creation_targets($records,$i);$created=0;foreach($targets as $target)if(!empty($records[$target]['created']))$created++;
+        $record['source_count']=count($targets);$record['created_count']=$created;$record['can_create']=count($targets)>$created;
+        $record['source_state']=!$targets?'unsupported':($created===count($targets)?'exists':($created?'partial':'missing'));
+        $record['source_status']=['unsupported'=>'Data Source Not Supported','exists'=>'Data Source Exists','partial'=>'Data Sources Partly Created','missing'=>'Data Source Not Created'][$record['source_state']];
+    }unset($record);
     // Columns inherit their row's INDEX/AUGMENTS declaration from the saved MIB.
     foreach($records as &$record)if($record['indexes']===''){
         $closest='';
@@ -83,4 +89,12 @@ function icct_mib_upload_summary($preview){
     $records=$preview['records'];$supported=count(array_filter($records,fn($record)=>!empty($record['numeric'])));
     $existing=icct_mib_existing_source_indexes($records);
     return ['name'=>implode(', ',array_column($preview['files'],'module')),'object_count'=>count($records),'supported_count'=>$supported,'existing_count'=>count($existing),'can_configure'=>empty($preview['parse_error'])&&$supported>count($existing),'parse_error'=>$preview['parse_error']??''];
+}
+
+/** A table/entry opens the supported columns beneath it; a leaf opens itself. */
+function icct_mib_creation_targets($objects,$index){
+    if(!is_int($index)||!isset($objects[$index]))throw new InvalidArgumentException('Choose a valid MIB object.');
+    $parent=$objects[$index];$module=explode('::',$parent['symbol'])[0];$prefix=($parent['base_oid']??'').'.';$targets=[];
+    foreach($objects as $i=>$object)if(!empty($object['numeric'])&&($i===$index||(explode('::',$object['symbol'])[0]===$module&&str_starts_with($object['base_oid']??'',$prefix))))$targets[]=$i;
+    return $targets;
 }

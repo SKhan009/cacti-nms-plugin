@@ -70,9 +70,9 @@ if(review){
   leaves.forEach(leaf=>{const active=Number(leaf.dataset.mibNode)===id;leaf.classList.toggle('selected',active);leaf.setAttribute('aria-pressed',String(active));});
   document.querySelector('#mibBrowserName').textContent=record.name;
   document.querySelectorAll('[data-mib-property]').forEach(cell=>{const value=record[cell.dataset.mibProperty];cell.textContent=value===undefined||value===null||value===''?'—':String(value);});
-  const badge=document.querySelector('#mibBrowserBadge');badge.hidden=false;badge.classList.toggle('not-created',!record.created);badge.querySelector('span').textContent=record.created?'Data Source Exists':'Data Source Not Created';
+  const badge=document.querySelector('#mibBrowserBadge');badge.hidden=false;badge.dataset.sourceState=record.source_state;badge.querySelector('span').textContent=record.source_status;badge.title=record.source_count?record.created_count+' of '+record.source_count+' supported OIDs created':'';
   const state=leaves.find(leaf=>Number(leaf.dataset.mibNode)===id)?.querySelector('.mib-browser-state svg');if(state)badge.querySelector('svg').replaceWith(state.cloneNode(true));
-  const create=document.querySelector('#mibBrowserCreate');if(create){create.disabled=!record.numeric||record.created;create.title=record.created?'A data source already exists.':(!record.numeric?'This object cannot create a numeric Cacti data source.':'Create data source and graph templates');create.onclick=()=>location.assign('protocols/snmp/mibs/controllers/mib_repository.php?generate='+encodeURIComponent(record.bundle)+'&object='+encodeURIComponent(record.object_index));}
+  const create=document.querySelector('#mibBrowserCreate');if(create){create.disabled=!record.can_create;create.title=record.can_create?'Open Step 2 — Data Source Generation':(record.source_state==='exists'?'Data sources already exist.':'This object has no supported numeric OIDs.');create.onclick=()=>location.assign('protocols/snmp/mibs/controllers/mib_repository.php?generate='+encodeURIComponent(record.bundle)+'&stage=2&object='+encodeURIComponent(record.object_index));}
  }
  leaves.forEach(leaf=>leaf.addEventListener('click',()=>select(Number(leaf.dataset.mibNode))));
  search.addEventListener('input',()=>{

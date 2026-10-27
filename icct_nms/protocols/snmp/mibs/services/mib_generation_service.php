@@ -5,8 +5,8 @@ function icct_mib_generation_input($bundle,$stage,$object=null){
     $input=['step'=>$stage-1,'type_id'=>$bundle['type_id'],'template_name'=>$bundle['name'],'selected'=>[],'records'=>[]];
     if($stage===2){
         $objects=icct_mib_objects($bundle);$existing=icct_mib_existing_source_indexes($objects);
-        if($object!==null&&(!is_int($object)||!isset($objects[$object])||empty($objects[$object]['numeric'])))throw new InvalidArgumentException('Choose a readable numeric OID to create a data source.');
-        foreach($objects as $i=>$record)if(($object===null||$object===$i)&&!empty($record['numeric'])&&!isset($existing[$i]))$input['selected'][$i]=1;
+        $targets=$object===null?array_keys($objects):icct_mib_creation_targets($objects,$object);
+        foreach($targets as $i)if(!empty($objects[$i]['numeric'])&&!isset($existing[$i]))$input['selected'][$i]=1;
         if(!$input['selected'])throw new InvalidArgumentException('No new supported OIDs remain. Existing Cacti data sources will not be duplicated.');
     }
     return $input;
