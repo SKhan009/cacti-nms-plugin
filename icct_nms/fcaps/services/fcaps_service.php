@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../../ports/services/port_monitoring_service.php';
-/** Device-owned thresholds. Graph rendering limits are not changed by fault rules. */
+/** Device thresholds include template presets and explicit device overrides. */
 function icct_nms_fault_catalogue() {
     return db_fetch_assoc("SELECT DISTINCT gt.id AS template_id,gt.name AS template_name,dtr.id AS metric_id,dtr.data_template_id,dtr.data_source_name,dtr.rrd_minimum,dtr.rrd_maximum FROM graph_templates gt JOIN graph_templates_item gti ON gti.graph_template_id=gt.id AND gti.local_graph_id=0 JOIN data_template_rrd dtr ON dtr.id=gti.task_item_id WHERE dtr.local_data_id=0 ORDER BY gt.name,dtr.data_source_name");
 }
@@ -54,7 +54,10 @@ function icct_nms_fault_parameters($id) {
 }
 function icct_nms_fault_rules($id) {
     $rules=json_decode((string)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['fault_rules_'.$id]),true);
-    return is_array($rules)?$rules:[];
+    $rules=is_array($rules)?$rules:[];$overrides=array_fill_keys(array_filter(array_column($rules,'preset_key')),true);
+    $presets=db_fetch_assoc_prepared("SELECT DISTINCT m.meta_value FROM graph_templates gt JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT('graph_fault_presets_',gt.id) WHERE EXISTS(SELECT 1 FROM host_graph hg WHERE hg.graph_template_id=gt.id AND hg.host_id=?) OR EXISTS(SELECT 1 FROM graph_local gl WHERE gl.graph_template_id=gt.id AND gl.host_id=?)",[$id,$id]);
+    foreach($presets?:[] as $preset)foreach(json_decode($preset['meta_value'],true)?:[] as $rule)if(!isset($overrides[$rule['preset_key']??'']))$rules[]=$rule;
+    return $rules;
 }
 function icct_nms_fault_validate($rules,$catalogue,$associated) {
     if (!is_array($rules) || count($rules)>100) throw new InvalidArgumentException('Use no more than 100 fault rules.');
@@ -84,13 +87,13 @@ function icct_nms_fault_validate($rules,$catalogue,$associated) {
         if($bounds['minimum']===null && $bounds['maximum']===null)throw new InvalidArgumentException('Enter at least one minimum or maximum threshold.');
         if($bounds['minimum']!==null && $bounds['maximum']!==null && $bounds['minimum']>=$bounds['maximum'])throw new InvalidArgumentException('Minimum must be less than maximum.');
         $condition=$rule['condition'] ?? ($bounds['minimum']!==null&&$bounds['maximum']!==null?'outside':($bounds['minimum']!==null?'below':'above'));
-        if(!in_array($condition,['above','below','outside','equals','not_equals'],true))throw new InvalidArgumentException('Choose a supported condition.');
-        if($condition==='below'&&$bounds['minimum']===null)throw new InvalidArgumentException('Enter the lower threshold.');
-        if(in_array($condition,['above','equals','not_equals'],true)&&$bounds['maximum']===null)throw new InvalidArgumentException('Enter the threshold or numeric status code.');
+        if(!in_array($condition,['above','below','at_or_above','at_or_below','outside','equals','not_equals'],true))throw new InvalidArgumentException('Choose a supported condition.');
+        if(in_array($condition,['below','at_or_below'],true)&&$bounds['minimum']===null)throw new InvalidArgumentException('Enter the lower threshold.');
+        if(in_array($condition,['above','at_or_above','equals','not_equals'],true)&&$bounds['maximum']===null)throw new InvalidArgumentException('Enter the threshold or numeric status code.');
         if($condition==='outside'&&($bounds['minimum']===null||$bounds['maximum']===null))throw new InvalidArgumentException('Enter both range limits.');
         $severity=$rule['severity'] ?? '';if(!in_array($severity,['Information','Minor','Warning','Major','Critical'],true))throw new InvalidArgumentException('Select a fault severity.');
         $text=[];
-        foreach(['name'=>120,'corrective_action'=>1000,'email_recipients'=>1000] as $key=>$limit) {
+        foreach(['name'=>120,'description'=>1000,'corrective_action'=>1000,'email_recipients'=>1000] as $key=>$limit) {
             $value=$rule[$key] ?? '';
             if(!is_string($value) || strlen($value)>$limit || strpos($value,"\0")!==false)throw new InvalidArgumentException('Invalid fault '.str_replace('_',' ',$key).'.');
             $text[$key]=trim($value);
@@ -100,14 +103,15 @@ function icct_nms_fault_validate($rules,$catalogue,$associated) {
         foreach($recipients as $email)if(!filter_var($email,FILTER_VALIDATE_EMAIL))throw new InvalidArgumentException('Enter valid email recipients separated by commas.');
         if(!empty($rule['email']) && !$recipients)throw new InvalidArgumentException('Enter a recipient when Email is selected.');
         $text['email_recipients']=implode(', ',array_unique($recipients));
-        $out[]=['template_id'=>$template,'metric_id'=>$metric,'source'=>$source,'parameter'=>trim($parameter),'units'=>trim($units),'oid'=>$oid,'scale'=>(float)$scale,'condition'=>$condition]+$bounds+$text+['severity'=>$severity,'enabled'=>!empty($rule['enabled']),'email'=>!empty($rule['email']),'audio'=>!empty($rule['audio'])];
+        $presetKey=$rule['preset_key']??'';if(!is_string($presetKey)||($presetKey!==''&&!preg_match('/^[a-f0-9]{64}$/D',$presetKey)))throw new InvalidArgumentException('Invalid fault preset reference.');
+        $out[]=['preset_key'=>$presetKey,'template_id'=>$template,'metric_id'=>$metric,'source'=>$source,'parameter'=>trim($parameter),'units'=>trim($units),'oid'=>$oid,'scale'=>(float)$scale,'condition'=>$condition]+$bounds+$text+['severity'=>$severity,'enabled'=>!empty($rule['enabled']),'email'=>!empty($rule['email']),'audio'=>!empty($rule['audio'])];
     }
     return $out;
 }
 function icct_nms_save_faults($id,$input) {
     icct_backend_require_management(3);icct_backend_require_device_access($id);
     $rules=json_decode((string)($input['fault_rules'] ?? ''),true,512,JSON_THROW_ON_ERROR);
-    $associated=array_map('intval',array_column(db_fetch_assoc_prepared('SELECT graph_template_id FROM host_graph WHERE host_id=?',[$id]),'graph_template_id'));
+    $associated=array_map('intval',array_column(db_fetch_assoc_prepared('SELECT graph_template_id FROM host_graph WHERE host_id=? UNION SELECT graph_template_id FROM graph_local WHERE host_id=?',[$id,$id]),'graph_template_id'));
     $rules=icct_nms_fault_validate($rules,icct_nms_fault_catalogue(),$associated);
     icct_backend_category_execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',['fault_rules_'.$id,json_encode($rules,JSON_THROW_ON_ERROR)]);
 }
@@ -116,6 +120,8 @@ function icct_nms_fault_state($rule,$value) {
     if ($value===null || !is_numeric($value) || !is_finite((float)$value))return 'Unknown';
     $condition=$rule['condition'] ?? 'outside';
     switch($condition) {
+        case 'at_or_above':$alarm=$value>=$rule['maximum'];break;
+        case 'at_or_below':$alarm=$value<=$rule['minimum'];break;
         case 'above':$alarm=$value>$rule['maximum'];break;
         case 'below':$alarm=$value<$rule['minimum'];break;
         case 'equals':$alarm=(float)$value===(float)$rule['maximum'];break;
@@ -129,7 +135,7 @@ function icct_backend_collect_faults() {
     require_once $config['base_path'].'/lib/rrd.php';
     require_once $config['base_path'].'/lib/snmp.php';
     $collector=icct_backend_inventory_collector_id();$now=time();$interval=max(60,(int)read_config_option('poller_interval'));
-    $hosts=db_fetch_assoc_prepared("SELECT h.* FROM host h JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT('fault_rules_',h.id) WHERE h.deleted='' AND h.disabled='' AND h.poller_id=?",[$collector]);
+    $hosts=db_fetch_assoc_prepared("SELECT h.* FROM host h WHERE h.deleted='' AND h.disabled='' AND h.poller_id=? AND (EXISTS(SELECT 1 FROM plugin_icct_nms_meta m WHERE m.meta_key=CONCAT('fault_rules_',h.id)) OR EXISTS(SELECT 1 FROM host_graph hg JOIN plugin_icct_nms_meta p ON p.meta_key=CONCAT('graph_fault_presets_',hg.graph_template_id) WHERE hg.host_id=h.id) OR EXISTS(SELECT 1 FROM graph_local gl JOIN plugin_icct_nms_meta p ON p.meta_key=CONCAT('graph_fault_presets_',gl.graph_template_id) WHERE gl.host_id=h.id))",[$collector]);
     foreach($hosts as $host) {
         $id=(int)$host['id'];$rules=icct_nms_fault_rules($id);$results=[];$cache=[];$snmpCache=[];$snmpDeadline=microtime(true)+min(60,max(10,$interval/3));
         foreach($rules as $number=>$rule) {
@@ -147,7 +153,7 @@ function icct_backend_collect_faults() {
                 continue;
             }
             // Bind the chosen template source to actual graphs on this host; never poll another host's data.
-            $sources=db_fetch_assoc_prepared('SELECT DISTINCT gl.id AS graph_id,gtg.title_cache,dtr.local_data_id,dtr.data_source_name FROM graph_local gl JOIN host_graph hg ON hg.host_id=gl.host_id AND hg.graph_template_id=gl.graph_template_id JOIN graph_templates_graph gtg ON gtg.local_graph_id=gl.id JOIN graph_templates_item gti ON gti.local_graph_id=gl.id JOIN data_template_rrd dtr ON dtr.id=gti.task_item_id JOIN data_template_rrd origin ON origin.id=? AND origin.data_template_id=dtr.data_template_id AND origin.data_source_name=dtr.data_source_name WHERE gl.host_id=? AND gl.graph_template_id=?',[$rule['metric_id'],$id,$rule['template_id']]);
+            $sources=db_fetch_assoc_prepared('SELECT DISTINCT gl.id AS graph_id,gtg.title_cache,dtr.local_data_id,dtr.data_source_name FROM graph_local gl JOIN graph_templates_graph gtg ON gtg.local_graph_id=gl.id JOIN graph_templates_item gti ON gti.local_graph_id=gl.id JOIN data_template_rrd dtr ON dtr.id=gti.task_item_id JOIN data_template_rrd origin ON origin.id=? AND origin.data_template_id=dtr.data_template_id AND origin.data_source_name=dtr.data_source_name WHERE gl.host_id=? AND gl.graph_template_id=?',[$rule['metric_id'],$id,$rule['template_id']]);
             if(!$sources)$results[]=['rule'=>$number,'graph_id'=>0,'graph'=>'No graph instance yet','value'=>null,'sample_time'=>0,'state'=>$rule['enabled']?'Unknown':'Disabled'];
             foreach($sources as $source) {
                 $key=(int)$source['local_data_id'];$value=null;$sample=0;

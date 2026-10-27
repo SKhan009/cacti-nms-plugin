@@ -36,7 +36,7 @@ icct_nms_input('RRD Maximum (U = unknown)',$prefix.'[max]',$r['max']??$object['m
 if($object['table'])icct_nms_input('Instance Index (Specific GET)',$prefix.'[instance_index]',$r['instance_index']??'','text','maxlength="128" placeholder="Required for a specific table instance"');
 ?>
 <input type="hidden" name="<?= $prefix ?>[label]" value="<?= icct_nms_h($r['label']??$object['label']) ?>">
-</div></div><div role="tabpanel" id="mibFaultFields<?= $i ?>" aria-labelledby="mibFaultTab<?= $i ?>" data-generation-tab-panel="fault" hidden><h3>Device Fault Configuration</h3><p>Apply this template to a device, then configure its alarm conditions and severity in the device’s FCAPS section.</p><p>Alarm thresholds are device-specific and are not inferred from RRD minimum and maximum values.</p><a class="button" href="inventory/controllers/inventory.php">Open Inventory</a></div>
+</div></div><div role="tabpanel" id="mibFaultFields<?= $i ?>" aria-labelledby="mibFaultTab<?= $i ?>" data-generation-tab-panel="fault" hidden><?php require __DIR__.'/mib_fault_presets.php'; ?></div>
 </section><?php endforeach; ?>
 </div></div>
 <footer class="mib-generation-review-footer"><p id="mibGenerationSelected" aria-live="polite"><?= count($generationSelection) ?> OIDs selected</p><button class="button" type="button" disabled>Previous ←</button><button class="button primary" type="submit" id="mibGenerate">Next →</button></footer>

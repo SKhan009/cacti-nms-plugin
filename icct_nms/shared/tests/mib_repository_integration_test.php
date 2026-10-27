@@ -149,7 +149,7 @@ foreach($generationPreview['records'] as $i=>$candidate)if($candidate['numeric']
 $generated=icct_mib_save($generationPreview,icct_mib_plan($generationPreview,['type_id'=>$type,'template_name'=>'QA Automatic Generation']));
 check(icct_mib_generation_results($generated,2)===[],'No success results before generation is committed');
 try{icct_mib_generation_save($generated['id'],2,$generationIndex,['generation_review'=>1,'selected'=>[]]);throw new LogicException('Empty review accepted');}catch(InvalidArgumentException $e){check(icct_mib_wizard_get($generated['id'])['rows']===[],'Empty review does not create native templates');}
-$generated=icct_mib_generation_save($generated['id'],2,$generationIndex,['selected'=>[$generationIndex=>1],'records'=>[$generationIndex=>['data_name'=>'QA Reviewed Generation Data','active'=>'0']]]);$generatedData=$generated['rows'][0]['data_template_id'];
+$generated=icct_mib_generation_save($generated['id'],2,$generationIndex,['selected'=>[$generationIndex=>1],'records'=>[$generationIndex=>['data_name'=>'QA Reviewed Generation Data','active'=>'0','fault_presets'=>[['name'=>'QA Sensor High','threshold'=>'75','condition'=>'at_or_above','severity'=>'Critical','enabled'=>true,'description'=>'Sensor high','corrective_action'=>'Check sensor']]]]]);$generatedData=$generated['rows'][0]['data_template_id'];
 check(count($generated['rows'])===1&&$generatedData>0&&!$generated['rows'][0]['graph_template_id'],'Create generates only the selected OID data template');
 check(db_fetch_cell_prepared('SELECT name FROM data_template WHERE id=?',[$generatedData])==='QA Reviewed Generation Data','Generation saves the reviewed per-OID settings');
 check(db_fetch_cell_prepared('SELECT active FROM data_template_data WHERE data_template_id=? AND local_data_id=0',[$generatedData])==='','Reviewed Data Source Active state is saved in native Cacti');
@@ -157,6 +157,24 @@ check(icct_mib_generation_results($generated,2)[0]['id']===$generatedData,'Gener
 try{icct_mib_generation_save($generated['id'],2,$generationIndex);throw new LogicException('Duplicate Generate accepted');}catch(InvalidArgumentException $e){check(true,'Repeated Generate cannot duplicate data templates');}
 $generated=icct_mib_generation_save($generated['id'],3);
 check($generated['rows'][0]['data_template_id']===$generatedData&&$generated['rows'][0]['graph_template_id']>0,'Graph generation reuses the selected native data template');
+require_once __DIR__.'/../../fcaps/services/fcaps_service.php';
+$presetGraph=$generated['rows'][0]['graph_template_id'];
+check((bool)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['graph_fault_presets_'.$presetGraph]),'Fault presets travel with the generated graph template');
+db_execute_prepared('INSERT INTO host_graph(host_id,graph_template_id) VALUES(?,?)',[$qaHost,$presetGraph]);
+$inherited=array_values(array_filter(icct_nms_fault_rules($qaHost),fn($rule)=>($rule['template_id']??0)===$presetGraph));
+check(count($inherited)===1&&$inherited[0]['corrective_action']==='Check sensor'&&icct_nms_fault_state($inherited[0],75)==='Critical'&&icct_nms_fault_state($inherited[0],74)==='Normal','Associated device inherits inclusive fault preset and auto clears below threshold');
+check(!array_filter(icct_nms_fault_rules(999999),fn($rule)=>($rule['template_id']??0)===$presetGraph),'Preset does not leak to an unrelated device');
+$validatedPreset=icct_nms_fault_validate($inherited,icct_nms_fault_catalogue(),[$presetGraph]);
+check($validatedPreset[0]['preset_key']===$inherited[0]['preset_key']&&$validatedPreset[0]['description']==='Sensor high','Device FCAPS validation retains preset identity and description');
+$originalFaults=db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['fault_rules_'.$qaHost]);$override=$inherited[0];$override['enabled']=false;
+db_execute_prepared('REPLACE INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['fault_rules_'.$qaHost,json_encode([$override])]);
+$overridden=array_values(array_filter(icct_nms_fault_rules($qaHost),fn($rule)=>($rule['template_id']??0)===$presetGraph));
+check(count($overridden)===1&&!$overridden[0]['enabled'],'Device override disables inherited preset without duplication');
+if($originalFaults!==false&&$originalFaults!==null)db_execute_prepared('REPLACE INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',['fault_rules_'.$qaHost,$originalFaults]);else db_execute_prepared('DELETE FROM plugin_icct_nms_meta WHERE meta_key=?',['fault_rules_'.$qaHost]);
+db_execute_prepared('DELETE FROM host_graph WHERE host_id=? AND graph_template_id=?',[$qaHost,$presetGraph]);
+db_execute_prepared('INSERT INTO graph_local(id,host_id,graph_template_id) VALUES(?,?,?)',[9000022,$qaHost,$presetGraph]);
+check(count(array_filter(icct_nms_fault_rules($qaHost),fn($rule)=>($rule['template_id']??0)===$presetGraph))===1,'Native indexed graph instances inherit presets without a host_graph entry');
+db_execute_prepared('DELETE FROM graph_local WHERE id=?',[9000022]);
 $generated=icct_mib_generation_save($generated['id'],4);
 check($generated['host_template_id']>0&&(int)db_fetch_cell_prepared('SELECT COUNT(*) FROM host_template_graph WHERE host_template_id=? AND graph_template_id=?',[$generated['host_template_id'],$generated['rows'][0]['graph_template_id']])===1,'Device generation associates the saved native graph');
 $remaining=icct_mib_generation_input($generated,2);$nextIndex=array_key_first($remaining['selected']);

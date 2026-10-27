@@ -1,0 +1,18 @@
+<?php
+$faultCards=$r['fault_presets']??[];
+if(!$faultCards)$faultCards=[['name'=>$object['label'].' - Low Threshold','condition'=>'at_or_below','severity'=>'Major'],['name'=>$object['label'].' - High Threshold','condition'=>'at_or_above','severity'=>'Critical']];
+$renderFaultCard=function($preset=[])use($object){ ?>
+<article class="mib-fault-card" data-fault-card>
+<header><div><strong data-fault-title><?= icct_nms_h($preset['name']??'New Fault Preset') ?></strong><small><?= icct_nms_h($object['symbol']) ?></small></div><span class="mib-fault-enabled" data-fault-status>Disabled</span><button type="button" data-fault-edit aria-label="Edit fault preset" title="Edit fault preset"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-1 5 5-1L21 7l-4-4L4 16zm10-10 4 4"/></svg></button><button type="button" data-fault-remove aria-label="Remove fault preset">×</button></header>
+<div class="mib-fault-summary"><div><span>Comparator</span><strong data-fault-preview="condition"></strong></div><div><span>Threshold</span><strong data-fault-preview="threshold">Not configured</strong></div><div><span>Units</span><strong><?= icct_nms_h($object['units']?:'Not specified') ?></strong></div><div><span>Severity</span><strong class="mib-fault-severity" data-fault-preview="severity"></strong></div><div class="mib-fault-description"><span>Description</span><p data-fault-preview="description">—</p></div><div class="mib-fault-description"><span>Fix</span><p data-fault-preview="corrective_action">—</p></div></div>
+<div class="mib-fault-fields protocol-grid cols-2" hidden>
+<label class="field"><span class="field-label">Alarm Name</span><input data-fault-field="name" maxlength="120" value="<?= icct_nms_h($preset['name']??'') ?>"></label>
+<label class="field"><span class="field-label">Enabled</span><input type="checkbox" data-fault-field="enabled" <?= !empty($preset['enabled'])?'checked':'' ?>></label>
+<label class="field"><span class="field-label">Comparator</span><select data-fault-field="condition"><?php foreach(['at_or_below'=>'≤ At or below','at_or_above'=>'≥ At or above','below'=>'< Below','above'=>'> Above','equals'=>'= Equals','not_equals'=>'≠ Not equal'] as $value=>$label): ?><option value="<?= $value ?>" <?= ($preset['condition']??'above')===$value?'selected':'' ?>><?= $label ?></option><?php endforeach; ?></select></label>
+<label class="field"><span class="field-label">Threshold</span><input type="number" step="any" data-fault-field="threshold" value="<?= icct_nms_h($preset['threshold']??'') ?>"></label>
+<label class="field"><span class="field-label">Severity</span><select data-fault-field="severity"><?php foreach(['Information','Minor','Warning','Major','Critical'] as $severity): ?><option <?= ($preset['severity']??'Major')===$severity?'selected':'' ?>><?= $severity ?></option><?php endforeach; ?></select></label>
+<label class="field"><span class="field-label">Description</span><textarea data-fault-field="description" maxlength="1000"><?= icct_nms_h($preset['description']??'') ?></textarea></label>
+<label class="field"><span class="field-label">Fix</span><textarea data-fault-field="corrective_action" maxlength="1000"><?= icct_nms_h($preset['corrective_action']??'') ?></textarea></label>
+</div></article>
+<?php }; ?>
+<div data-fault-presets><input type="hidden" data-fault-payload name="<?= $prefix ?>[fault_presets]" value="[]"><div data-fault-cards><?php foreach($faultCards as $preset)$renderFaultCard($preset); ?></div><button type="button" class="button" data-fault-add>+ Add Fault Preset</button><template data-fault-template><?php $renderFaultCard(); ?></template></div>

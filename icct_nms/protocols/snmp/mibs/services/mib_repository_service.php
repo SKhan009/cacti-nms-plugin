@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__.'/mib_fault_presets_service.php';
 /** Offline MIB repository and reviewed native Cacti templates. Parser adapted from the NMS reference. */
 function icct_mib_upload_path($upload, $index)
 {
@@ -317,7 +318,7 @@ function icct_mib_plan($preview,$input){
         $record+=icct_mib_bounds($record['syntax']??'');
         if(empty($input['selected'][$i]))continue;
         if(!$record['numeric'])throw new InvalidArgumentException('Only readable numeric objects can create polling templates.');
-        $r=$input['records'][$i]??[];$record['collection_method']=$r['collection_method']??'auto';$record['resolved_method']=icct_mib_collection($record,$r);$oid=ltrim(trim($r['oid']??$record['oid']),'.');
+        $r=$input['records'][$i]??[];$record['fault_presets']=icct_mib_fault_presets($r['fault_presets']??[]);$record['collection_method']=$r['collection_method']??'auto';$record['resolved_method']=icct_mib_collection($record,$r);$oid=ltrim(trim($r['oid']??$record['oid']),'.');
         $index=trim($r['instance_index']??'');
         if($record['resolved_method']==='indexed'&&($index!==''||($oid!==''&&$oid!==$record['base_oid'])))throw new InvalidArgumentException($record['symbol'].': Indexed SNMP uses the base OID; choose Specific Instance GET for an instance.');
         if($record['resolved_method']==='get'&&$record['table']&&$index===''&&($oid===''||$oid===$record['base_oid']))throw new InvalidArgumentException($record['symbol'].': Specific Instance GET requires a full instance OID or index.');
@@ -463,6 +464,7 @@ function icct_mib_native_metric($record,$options,$existing=[]){
         if(!$queryGraph)throw new RuntimeException('Could not link indexed graph template.');
         icct_mib_write('INSERT INTO snmp_query_graph_rrd(snmp_query_graph_id,data_template_id,data_template_rrd_id,snmp_field_name) VALUES(?,?,?,?)',[$queryGraph,$pair['data_template_id'],$rrd,'reading']);$pair['snmp_query_graph_id']=$queryGraph;
     }
+    icct_mib_store_fault_presets($graphId,$rrd,$record);
     return $pair;
 }
 function icct_mib_save($preview,$plan){
