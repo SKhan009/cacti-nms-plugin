@@ -23,7 +23,6 @@ $renderTree=function($node,$depth=0)use(&$renderTree,$browser,$icon,$mibSelectin
     }
 };
 ?>
-<?php if(isset($repositoryBundle)): ?><p class="mib-list-context"><a href="protocols/snmp/mibs/controllers/mib_repository.php?repository=<?= icct_nms_h($repositoryBundle['id']) ?>">MIB List</a> / Tree View</p><?php endif; ?>
 <section class="mib-repository-browser" aria-label="MIB browser">
 <aside class="mib-browser-sidebar" aria-label="MIB tree">
 <label class="mib-browser-search"><?= $icon('search') ?><input type="search" id="mibBrowserSearch" aria-label="Search MIB name or OID" placeholder="Search With MIB Name or OID Number"></label>
