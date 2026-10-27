@@ -1,6 +1,7 @@
 <?php
 require __DIR__.'/../../protocols/snmp/mibs/services/mib_browser_service.php';
-function db_fetch_assoc($sql){return [['id'=>11]];}
+function db_fetch_assoc($sql){return $sql==='SELECT id FROM data_template'?[['id'=>11]]:($GLOBALS['nativeSources']??[]);}
+function icct_mib_list(){return [];}
 function icct_mib_objects($bundle){return $bundle['objects'];}
 function icct_mib_file($bundle,$index){return $bundle['files'][$index]['content'];}
 $object=['symbol'=>'TEST-MIB::reading','kind'=>'OBJECT-TYPE','base_oid'=>'1.3.6.1.2.1.1.1','oid'=>'1.3.6.1.2.1.1.1.0','syntax'=>'INTEGER','access'=>'read-only','description'=>'A device reading.','table'=>false];
@@ -22,3 +23,12 @@ $indexed['files'][0]['content']="entry OBJECT-TYPE\nSYNTAX Entry\nSTATUS current
 $indexedData=icct_mib_browser_data([$indexed]);
 if($indexedData['records'][1]['indexes']!=='ifIndex')throw new RuntimeException('Table column did not inherit the MIB row index');
 echo "PASS: table column inherits its actual MIB INDEX declaration.\n";
+
+$preview=['records'=>[array_replace($object,['numeric'=>true]),array_replace($object,['numeric'=>true,'table'=>true,'base_oid'=>'1.3.6.1.2.1.2.1']),array_replace($object,['numeric'=>false])],'files'=>[['module'=>'TEST-MIB']],'parse_error'=>''];
+$nativeSources=[['data_template_id'=>11,'oid'=>'.1.3.6.1.2.1.1.1.0'],['data_template_id'=>11,'oid'=>'1.3.6.1.2.1.2.10.5']];
+$summary=icct_mib_upload_summary($preview);
+if($summary['object_count']!==3||$summary['supported_count']!==2||$summary['existing_count']!==1||!$summary['can_configure'])throw new RuntimeException('Upload summary counts or OID boundary match failed');
+$nativeSources[]=['data_template_id'=>11,'oid'=>'1.3.6.1.2.1.2.1.7'];
+if(icct_mib_upload_summary($preview)['can_configure'])throw new RuntimeException('All-existing MIB offered duplicate automatic creation');
+$preview['parse_error']='Missing dependency';if(icct_mib_upload_summary($preview)['can_configure'])throw new RuntimeException('Unresolved MIB offered automatic configuration');
+echo "PASS: actual upload counts, existing native OIDs, boundary-safe instance matching and no duplicate automatic selection.\n";

@@ -53,3 +53,27 @@ function icct_mib_browser_data($bundles){
     }unset($record);
     return ['records'=>$records,'tree'=>icct_mib_browser_tree($records),'warnings'=>$warnings];
 }
+
+/** Match saved native SNMP definitions without creating or modifying templates. */
+function icct_mib_existing_source_indexes($records){
+    $sources=db_fetch_assoc("SELECT DISTINCT dt.id AS data_template_id,did.value AS oid FROM data_template dt JOIN data_template_data dtd ON dtd.data_template_id=dt.id JOIN data_input_data did ON did.data_template_data_id=dtd.id JOIN data_input_fields f ON f.id=did.data_input_field_id WHERE f.data_name='oid' AND did.value<>''")?:[];
+    $sources=array_merge($sources,db_fetch_assoc('SELECT DISTINCT dl.data_template_id,pi.arg1 AS oid FROM poller_item pi JOIN data_local dl ON dl.id=pi.local_data_id JOIN data_template dt ON dt.id=dl.data_template_id WHERE pi.action=0')?:[]);
+    $native=array_fill_keys(array_column(db_fetch_assoc('SELECT id FROM data_template')?:[],'id'),true);
+    foreach(icct_mib_list() as $bundle)foreach($bundle['rows'] as $row)if(!empty($row['data_template_id'])&&isset($native[$row['data_template_id']]))$sources[]=['data_template_id'=>$row['data_template_id'],'oid'=>$row['oid']??''];
+    $found=[];
+    foreach($records as $i=>$record){
+        if(empty($record['numeric']))continue;
+        $base=$record['base_oid']??'';if($base==='')continue;
+        foreach($sources as $source){
+            $oid=ltrim(trim((string)($source['oid']??'')),'.');
+            $matches=!empty($record['table'])?($oid===$base||(str_starts_with($oid,$base.'.')&&preg_match('/^[0-9]+(?:\.[0-9]+)*$/D',substr($oid,strlen($base)+1)))):$oid===$base.'.0';
+            if($matches){$found[$i]=(int)$source['data_template_id'];break;}
+        }
+    }
+    return $found;
+}
+function icct_mib_upload_summary($preview){
+    $records=$preview['records'];$supported=count(array_filter($records,fn($record)=>!empty($record['numeric'])));
+    $existing=icct_mib_existing_source_indexes($records);
+    return ['name'=>implode(', ',array_column($preview['files'],'module')),'object_count'=>count($records),'supported_count'=>$supported,'existing_count'=>count($existing),'can_configure'=>empty($preview['parse_error'])&&$supported>count($existing),'parse_error'=>$preview['parse_error']??''];
+}

@@ -31,8 +31,9 @@ try{
         }elseif($action==='upload'){
             $mode='upload';$draft=icct_mib_preview($_FILES['mibs']??[], $_POST['type_id']??'',true);
             $filePlan=icct_mib_plan($draft,['type_id'=>$draft['type_id'],'template_name'=>icct_mib_default_name($draft)]);
+            $uploadSummary=$uploadJson?icct_mib_upload_summary($draft):null;
             $stored=icct_mib_save($draft,$filePlan);
-            if($uploadJson){header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>true,'object_count'=>count($draft['records']),'redirect'=>'protocols/snmp/mibs/controllers/mib_repository.php?wizard='.$stored['id']],JSON_THROW_ON_ERROR);exit;}
+            if($uploadJson){header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>true,'object_count'=>count($draft['records']),'summary'=>$uploadSummary,'redirect'=>'protocols/snmp/mibs/controllers/mib_repository.php?wizard='.$stored['id'].'&automatic=1','repository'=>'protocols/snmp/mibs/controllers/mib_repository.php'],JSON_THROW_ON_ERROR);exit;}
             icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?wizard='.$stored['id']);
         }elseif($action==='reparse'){
             $bundle=null;foreach($bundles as $candidate)if($candidate['id']===($_POST['bundle_id']??''))$bundle=$candidate;
@@ -68,6 +69,10 @@ try { if($mode==='wizard'&&isset($wizardBundle)){
     $wizardBundle=icct_mib_wizard_get($wizardBundle['id']);$wizardObjects=icct_mib_objects($wizardBundle);
     $wizardStep=min(4,1+(int)($wizardBundle['wizard_step']??(!empty($wizardBundle['rows'])?3:0)));
     $wizardValues=$_SERVER['REQUEST_METHOD']==='POST'?icct_mib_review_input($_POST):[];
+    if($wizardStep===1&&isset($_GET['automatic'])&&$_SERVER['REQUEST_METHOD']!=='POST'){
+        $existingSources=icct_mib_existing_source_indexes($wizardObjects);$wizardValues=['selected'=>[]];
+        foreach($wizardObjects as $i=>$object)if(!empty($object['numeric'])&&!isset($existingSources[$i]))$wizardValues['selected'][$i]=1;
+    }
     if(isset($_GET['saved_step']))$notice='Step saved successfully.';
 }
 } catch(Throwable $e){$error=$e->getMessage();$mode='list';}

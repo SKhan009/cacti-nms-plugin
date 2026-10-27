@@ -95,10 +95,14 @@ search.addEventListener('input',filter);type.addEventListener('change',filter);s
 (()=>{'use strict';
  const dialog=document.querySelector('#mibUploadDialog');if(!dialog)return;
  const title=document.querySelector('#mibUploadTitle'),chooser=document.querySelector('#mibUploadChooser'),progress=document.querySelector('#mibUploadProgress'),bar=document.querySelector('#mibUploadBar'),count=document.querySelector('#mibUploadCount'),filename=document.querySelector('#mibUploadFilename'),error=document.querySelector('#mibUploadError');
- let busy=false,returnFocus=null;
- document.querySelectorAll('[data-mib-upload-open]').forEach(link=>link.addEventListener('click',event=>{if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||event.button!==0)return;event.preventDefault();returnFocus=link;if(!busy){title.textContent='Upload MIB';if(chooser)chooser.hidden=false;progress.hidden=true;error.hidden=true;}dialog.showModal();}));
+ const intro=document.querySelector('#mibUploadIntro'),nextStep=document.querySelector('#mibUploadNext'),nextForm=document.querySelector('#mibUploadNextForm'),proceed=document.querySelector('#mibUploadProceed');
+ let busy=false,returnFocus=null,completed=null;
+ function choice(){proceed.textContent=nextForm.querySelector('[name=upload_next]:checked').value==='repository'?'Save':'Proceed';}
+ nextForm.addEventListener('change',choice);
+ nextForm.addEventListener('submit',event=>{event.preventDefault();if(!completed)return;const repository=nextForm.querySelector('[name=upload_next]:checked').value==='repository';location.assign(repository?completed.repository.href:completed.configure.href);});
+ document.querySelectorAll('[data-mib-upload-open]').forEach(link=>link.addEventListener('click',event=>{if(event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||event.button!==0)return;event.preventDefault();returnFocus=link;if(!busy&&!completed){title.textContent='Upload MIB';if(chooser)chooser.hidden=false;progress.hidden=true;error.hidden=true;}dialog.showModal();}));
  dialog.querySelectorAll('[data-mib-upload-close]').forEach(button=>button.addEventListener('click',()=>dialog.close()));
- dialog.addEventListener('close',()=>{if(returnFocus?.isConnected)returnFocus.focus();});
+ dialog.addEventListener('close',()=>{if(completed){location.assign(completed.repository.href);return;}if(returnFocus?.isConnected)returnFocus.focus();});
  document.querySelectorAll('[data-mib-upload-form]').forEach(form=>form.addEventListener('submit',event=>{
   event.preventDefault();if(busy||!form.reportValidity())return;
   const files=[...form.querySelector('[type=file]').files];if(!files.length)return;
@@ -113,7 +117,17 @@ search.addEventListener('input',filter);type.addEventListener('change',filter);s
    const result=xhr.response;if(xhr.status<200||xhr.status>=300||!result?.ok){fail(result?.error||'Upload could not be completed. Check the file and your session, then retry.');return;}
    const next=new URL(result.redirect,document.baseURI);if(next.origin!==location.origin||!next.pathname.endsWith('/protocols/snmp/mibs/controllers/mib_repository.php')){fail('The upload returned an invalid destination. Reopen the MIB Repository.');return;}
    bar.value=100;const total=Number(result.object_count)||0;count.textContent=total+'/'+total+' OIDs Uploaded & Scanned';title.textContent='MIB Uploaded';
-   setTimeout(()=>location.assign(next.href),700);
+   const repository=new URL(result.repository||'protocols/snmp/mibs/controllers/mib_repository.php',document.baseURI);
+   if(repository.origin!==location.origin||repository.pathname!==next.pathname){fail('The upload returned an invalid repository destination.');return;}
+   const summary=result.summary||{name:files.map(file=>file.name).join(', '),object_count:total,supported_count:0,existing_count:0,can_configure:false};
+   completed={configure:next,repository};
+   setTimeout(()=>{
+    busy=false;returnFocus.disabled=false;progress.hidden=true;intro.hidden=true;nextStep.hidden=false;dialog.classList.add('mib-upload-next-step');title.textContent='MIB Upload Successful — Choose Next Step';
+    nextStep.querySelectorAll('[data-upload-summary]').forEach(cell=>cell.textContent=String(summary[cell.dataset.uploadSummary]??'—'));
+    const automatic=nextForm.querySelector('[value=automatic]'),repositoryChoice=nextForm.querySelector('[value=repository]');automatic.disabled=!summary.can_configure;automatic.checked=!!summary.can_configure;repositoryChoice.checked=!summary.can_configure;choice();
+    if(summary.parse_error){error.textContent=summary.parse_error;error.hidden=false;}
+    if(!dialog.open)dialog.showModal();
+   },700);
   });
   xhr.addEventListener('error',()=>fail('The connection was interrupted. Reopen the MIB Repository to check whether the file was saved before retrying.'));
   xhr.addEventListener('timeout',()=>fail('The upload response timed out. Reopen the MIB Repository to check whether the file was saved before retrying.'));
