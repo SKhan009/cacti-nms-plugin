@@ -63,3 +63,6 @@
 .mib-configuration-view .active>.mib-generation-step-icon{background:white;border-style:solid}
 
 .mib-upload-file-help{font-size:12px;color:#777;margin:8px 0 16px}
+
+/* Match the same full-width action and compact completion list in every stage. */
+#mibGenerationForm>#mibGenerate{display:block;box-sizing:border-box;min-height:42px;padding:10px 16px;font-size:14px;border-radius:0}#mibGenerationForm>#mibGenerate:disabled{background:#fff;border-color:#ddd;color:#bbb}.mib-generation-description{display:flex;align-items:center;justify-content:space-between;gap:12px}.mib-generation-description>.mib-generation-check{width:16px;height:16px;font-size:11px}.mib-generation-results .mib-generation-check{width:18px;height:18px;font:12px/1 Arial,sans-serif}.mib-generation-results li{gap:12px;margin:12px 0}.mib-generation-results{margin-top:16px}#mibGenerationBar{height:7px}.mib-generation-results+.mib-generation-next{margin-top:18px}
