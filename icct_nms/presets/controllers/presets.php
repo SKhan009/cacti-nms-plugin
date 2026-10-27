@@ -25,7 +25,7 @@ try {
     icct_nms_backend();
     $management = is_realm_allowed(3);
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $segmentName = is_string($_POST['segment_name'] ?? '') ? $_POST['segment_name'] : '';
+        $segmentName = is_string($_POST['segment_name'] ?? null) ? $_POST['segment_name'] : '';
         $editing = $activePreset === 'segment' && ($_POST['action'] ?? '') !== 'delete_segment';
         $typeEditing = $activePreset === 'device-type' && ($_POST['action'] ?? '') !== 'delete_type';
         $rackEditing=$activePreset==='rack-config' && ($_POST['action'] ?? '')!=='delete_rack_profile';$rackValues=$_POST;
