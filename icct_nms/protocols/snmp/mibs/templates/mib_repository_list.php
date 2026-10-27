@@ -28,7 +28,7 @@ $filterLabels=['type'=>'Device Type','module'=>'MIB Module'];
 <td class="mib-used-devices"><?php foreach($usage['devices'] as $device): ?><a href="inventory/controllers/device.php?id=<?= (int)$device['id'] ?>&amp;view=1"><?= icct_nms_h($device['description']) ?></a><?php endforeach; ?><?php if(!$usage['devices']): ?><span>Not used</span><?php endif; ?></td><td><?= icct_nms_h($bundle['created_at']) ?></td>
 <td><div class="row-actions">
 <?php if($management): ?><a href="<?= $listUrl ?>?select=<?= icct_nms_h($id) ?>" aria-label="Edit <?= icct_nms_h($fileNames) ?>" title="Edit"><?= $svg('edit') ?></a><?php endif; ?>
-<a href="<?= $listUrl ?>?browse=<?= icct_nms_h($id) ?>" aria-label="View <?= icct_nms_h($fileNames) ?>" title="View"><?= $svg('view') ?></a>
+<a href="<?= $listUrl ?>?view=<?= icct_nms_h($id) ?>" aria-label="View <?= icct_nms_h($fileNames) ?>" title="View"><?= $svg('view') ?></a>
 <?php if($management): ?><form method="post"><?php icct_nms_token(); ?><input type="hidden" name="action" value="delete"><input type="hidden" name="bundle_id" value="<?= icct_nms_h($id) ?>"><button type="submit" class="icon-button" aria-label="Delete <?= icct_nms_h($fileNames) ?>" title="Delete"><?= $svg('delete') ?></button></form><?php endif; ?>
 <?php foreach($bundle['files'] as $index=>$file): ?><a href="<?= $listUrl ?>?download=<?= icct_nms_h($id) ?>&amp;file=<?= (int)$index ?>" aria-label="Download <?= icct_nms_h($file['name']) ?>" title="Download <?= icct_nms_h($file['name']) ?>"><?= $svg('download') ?></a><?php endforeach; ?>
 </div></td></tr>

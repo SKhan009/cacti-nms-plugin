@@ -14,8 +14,8 @@ $error='';$notice='';$mode='list';$preview=null;$plan=null;$reviewValues=[];$del
 try { icct_nms_backend(); } catch (Throwable $e) { icct_nms_failure($e); }
 try{
     $management=is_realm_allowed(3);$types=icct_nms_device_types();$bundles=icct_mib_list();
-    if(isset($_GET['repository'])){$legacyBundle=icct_mib_wizard_get($_GET['repository']);icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?browse='.$legacyBundle['id']);}
-    if(isset($_GET['browse'])){$repositoryBundle=icct_mib_wizard_get($_GET['browse']);$bundles=[$repositoryBundle];$mode='browse';$initialObject=isset($_GET['object'])?icct_backend_topology_integer($_GET['object'],0,511,'OID'):null;}
+    if(isset($_GET['repository'])){$legacyBundle=icct_mib_wizard_get($_GET['repository']);icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?view='.$legacyBundle['id']);}
+    if(isset($_GET['browse'])){$legacyBundle=icct_mib_wizard_get($_GET['browse']);icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?view='.$legacyBundle['id']);}
     if(isset($_GET['download'])){
         $bundle=null;foreach($bundles as $candidate)if($candidate['id']===($_GET['download']??''))$bundle=$candidate;
         if(!$bundle)throw new InvalidArgumentException('MIB upload not found.');$index=icct_nms_id($_GET['file']??0);$content=icct_mib_file($bundle,$index);
@@ -110,6 +110,8 @@ try{
             $generationSelected=$savedSelection['selected'];
         }
 
+    }elseif(isset($_GET['view'])){
+        $viewBundle=icct_mib_wizard_get($_GET['view']);$viewStage=icct_backend_topology_integer($_GET['stage']??1,1,4,'View step');$mode='configuration_view';
     }elseif(isset($_GET['wizard'])){
         icct_backend_require_management(3);$mode='wizard';$wizardBundle=icct_mib_wizard_get($_GET['wizard']);
     }elseif(isset($_GET['inspect'])){

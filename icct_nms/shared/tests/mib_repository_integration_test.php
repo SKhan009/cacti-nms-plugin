@@ -219,6 +219,14 @@ icct_mib_wizard_reparse($stored['id'],$resolved);
 check(icct_mib_wizard_get($stored['id'])['object_count']===1&&icct_mib_file($stored,0)===$main,'Dependency reparse refreshes saved file in place');
 
 
+// Read-only mode renders all saved steps without mutation controls or a tree.
+$viewBundle=$generated;$viewTemplate=__DIR__.'/../../protocols/snmp/mibs/templates/mib_configuration_view.php';
+foreach([1,2,3,4] as $viewStage){ob_start();require $viewTemplate;$viewHtml=ob_get_clean();check(strpos($viewHtml,'<form')===false&&strpos($viewHtml,'<input')===false&&strpos($viewHtml,'data-fault-edit')===false&&strpos($viewHtml,'mib-browser')===false,'Read-only step '.$viewStage.' contains no editing forms or MIB tree');}
+$viewStage=2;ob_start();require $viewTemplate;$viewHtml=ob_get_clean();check(strpos($viewHtml,'QA Reviewed Generation Data')!==false&&strpos($viewHtml,'QA Sensor High')!==false,'Read-only data step shows saved native data source and fault preset');
+$viewStage=3;ob_start();require $viewTemplate;$viewHtml=ob_get_clean();check(strpos($viewHtml,'Template unavailable')===false&&strpos($viewHtml,'Graph Legend')!==false,'Read-only graph step resolves the saved native graph');
+$viewStage=4;ob_start();require $viewTemplate;$viewHtml=ob_get_clean();check(strpos($viewHtml,'Associated Graph Templates')!==false&&strpos($viewHtml,'Template unavailable')===false,'Read-only device step shows the saved device template and graph associations');
+$viewBundle['rows']=[];$viewBundle['host_template_id']=0;$viewStage=2;ob_start();require $viewTemplate;$viewHtml=ob_get_clean();check(strpos($viewHtml,'No data sources have been generated')!==false,'Read-only mode does not invent templates for an ungenerated stage');
+
 // Optional RRD execution uses an isolated folder and never writes the installation's RRA directory.
 if(getenv('ICCT_QA_RRD')==='1'){
     $rrdQaDir=sys_get_temp_dir().'/icct-mib-rrd-'.bin2hex(random_bytes(8));mkdir($rrdQaDir,0700);$config['rra_path']=$rrdQaDir;
