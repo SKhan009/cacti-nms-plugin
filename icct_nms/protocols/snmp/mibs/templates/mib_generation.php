@@ -9,7 +9,8 @@ if(!$generationDone)try{icct_mib_generation_input($generationBundle,$generationS
 <nav class="mib-generation-stepper" aria-label="MIB generation steps"><?php foreach([1=>"Upload MIBs",2=>'Data Source Generation',3=>'Graph Template Generation',4=>'Device Template Generation'] as $number=>$label): $complete=$number===1||$generationCompleted>=$number-1; ?><div class="<?= $complete?'complete':($number===$generationStage?'active':'') ?>" <?= $number===$generationStage?'aria-current="step"':'' ?>><span class="mib-generation-step-icon" aria-hidden="true"><?= $complete?'✓':'' ?></span><strong><?= $label ?></strong><small><?= $number ?>/4</small></div><?php endforeach; ?></nav>
 <form method="post" id="mibGenerationForm" action="protocols/snmp/mibs/controllers/mib_repository.php">
 <?php icct_nms_token(); ?><input type="hidden" name="action" value="generate"><input type="hidden" name="bundle_id" value="<?= icct_nms_h($generationBundle['id']) ?>"><input type="hidden" name="stage" value="<?= $generationStage ?>"><?php if(isset($generationObject)): ?><input type="hidden" name="object" value="<?= $generationObject ?>"><?php endif; ?>
-<button type="submit" id="mibGenerate" <?= $generationDone||$generationError?'disabled':'' ?>>Generate</button>
+<?php if($generationStage===2&&!$generationDone&&!$generationError): require __DIR__.'/mib_generation_review.php'; else: ?>
+<button type="submit" id="mibGenerate" <?= $generationDone||$generationError?'disabled':'' ?>>Generate</button><?php endif; ?>
 </form>
 <p id="mibGenerationError" class="notice error" role="alert" <?= $generationError?'':'hidden' ?>><?= icct_nms_h($generationError) ?></p>
 <section id="mibGenerationProgress" class="<?= $generationDone?'complete':'' ?>" <?= $generationDone?'':'hidden' ?> aria-label="Generation results">

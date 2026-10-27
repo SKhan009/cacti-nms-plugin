@@ -30,7 +30,7 @@ try{
             $mode='generation';$generationBundle=icct_mib_wizard_get($_POST['bundle_id']??'');
             $generationStage=icct_backend_topology_integer($_POST['stage']??'',2,4,'Generation stage');
             $generationObject=isset($_POST['object'])&&$_POST['object']!==''?icct_backend_topology_integer($_POST['object'],0,511,'OID'):null;
-            $generationBundle=icct_mib_generation_save($generationBundle['id'],$generationStage,$generationObject);
+            $generationBundle=icct_mib_generation_save($generationBundle['id'],$generationStage,$generationObject,icct_mib_review_input($_POST));
             $generationNext='protocols/snmp/mibs/controllers/mib_repository.php?generate='.$generationBundle['id'].'&stage='.$generationStage;
             if($generationJson){header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>true,'redirect'=>$generationNext],JSON_THROW_ON_ERROR);exit;}
             icct_nms_redirect($generationNext);

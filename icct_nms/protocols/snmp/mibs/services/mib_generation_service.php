@@ -11,9 +11,15 @@ function icct_mib_generation_input($bundle,$stage,$object=null){
     }
     return $input;
 }
-function icct_mib_generation_save($id,$stage,$object=null){
+function icct_mib_generation_save($id,$stage,$object=null,$review=[]){
     icct_backend_require_management(3);$bundle=icct_mib_wizard_get($id);
     $input=icct_mib_generation_input($bundle,$stage,$object);
+    if($stage===2&&(array_key_exists('selected',$review)||!empty($review['generation_review']))){
+        if(!is_array($review['selected']??[])||!is_array($review['records']??[]))throw new InvalidArgumentException('Invalid OID review.');
+        $input['selected']=array_intersect_key($review['selected']??[],$input['selected']);
+        if(!$input['selected'])throw new InvalidArgumentException('Select at least one supported OID.');
+        $input['records']=array_intersect_key($review['records']??[],$input['selected']);
+    }
     // A later Create starts a new batch while preserving earlier template associations.
     if($stage===2&&!empty($bundle['rows'])){
         $upload=['name'=>[],'stored_content'=>[]];
@@ -21,7 +27,7 @@ function icct_mib_generation_save($id,$stage,$object=null){
         $preview=icct_mib_preview($upload,$bundle['type_id'],true);
         $objects=icct_mib_objects($bundle);$label=$object!==null?$objects[$object]['label']:'Additional OIDs';
         $bundle=icct_mib_save($preview,icct_mib_plan($preview,['type_id'=>$bundle['type_id'],'template_name'=>$bundle['name'].' - '.$label]));
-        $input=icct_mib_generation_input($bundle,$stage,$object);$id=$bundle['id'];
+        $input['template_name']=$bundle['name'];$id=$bundle['id'];
     }
     return icct_mib_wizard_save($id,$input);
 }

@@ -139,9 +139,20 @@ search.addEventListener('input',filter);type.addEventListener('change',filter);s
 (()=>{'use strict';
  const form=document.querySelector('#mibGenerationForm');if(!form)return;
  const button=document.querySelector('#mibGenerate'),progress=document.querySelector('#mibGenerationProgress'),status=document.querySelector('#mibGenerationStatus'),bar=document.querySelector('#mibGenerationBar'),error=document.querySelector('#mibGenerationError'),spinner=document.querySelector('.mib-generation-spinner');let busy=false;
+ const review=form.querySelector('.mib-generation-review'),rows=[...form.querySelectorAll('[data-generation-row]')],panels=[...form.querySelectorAll('[data-generation-panel]')];
+ function openPanel(id){panels.forEach(panel=>panel.hidden=panel.dataset.generationPanel!==id);rows.forEach(row=>{const active=row.dataset.generationRow===id;row.classList.toggle('active',active);row.querySelector('button').setAttribute('aria-expanded',String(active));});document.querySelector('#mibGenerationEmpty').hidden=true;}
+ function selection(){let count=0;rows.forEach(row=>{const checked=row.querySelector('input').checked;if(checked)count++;form.querySelector('[data-generation-panel="'+row.dataset.generationRow+'"]').querySelectorAll('input,select').forEach(input=>input.disabled=!checked);});button.disabled=count===0;document.querySelector('#mibGenerationSelected').textContent=count+' OIDs selected';}
+ if(review){
+  form.noValidate=true;
+  rows.forEach(row=>{row.querySelector('button').addEventListener('click',()=>openPanel(row.dataset.generationRow));row.querySelector('input').addEventListener('change',selection);});selection();
+  document.querySelector('#mibGenerationSearch').addEventListener('input',event=>{const term=event.target.value.trim().toLowerCase();let count=0;rows.forEach(row=>{row.hidden=!row.dataset.search.includes(term);if(!row.hidden)count++;});document.querySelector('#mibGenerationNoMatches').hidden=count>0;});
+ }
  form.addEventListener('submit',async event=>{
-  event.preventDefault();if(busy||button.disabled)return;busy=true;button.disabled=true;error.hidden=true;progress.hidden=false;spinner.hidden=false;bar.removeAttribute('value');status.textContent='Generation in progress... Please wait for the results.';
+  event.preventDefault();if(busy||button.disabled)return;
+  if(review)for(const input of form.querySelectorAll('[data-generation-panel] input,[data-generation-panel] select'))if(!input.disabled&&!input.checkValidity()){openPanel(input.closest('[data-generation-panel]').dataset.generationPanel);input.reportValidity();return;}
+  busy=true;button.disabled=true;error.hidden=true;progress.hidden=false;spinner.hidden=false;bar.removeAttribute('value');status.textContent='Generation in progress... Please wait for the results.';
   const body=new FormData(form);body.set('generation_response','json');
+  if(review){const payload={selected:{},records:{}};for(const [name,value] of [...body]){let match=name.match(/^selected\[(\d+)\]$/);if(match){payload.selected[match[1]]=value;body.delete(name);continue;}match=name.match(/^records\[(\d+)\]\[(\w+)\]$/);if(match){payload.records[match[1]]??={};payload.records[match[1]][match[2]]=value;body.delete(name);}}body.set('review_payload',JSON.stringify(payload));}
   try{
    const response=await fetch(new URL(form.getAttribute('action'),document.baseURI),{method:'POST',credentials:'same-origin',headers:{Accept:'application/json'},body});
    if(!response.headers.get('content-type')?.includes('application/json'))throw Error('Your session expired. Reopen the MIB Repository to check the saved stage.');
