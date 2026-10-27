@@ -14,6 +14,7 @@ $error='';$notice='';$mode='list';$preview=null;$plan=null;$reviewValues=[];$del
 try { icct_nms_backend(); } catch (Throwable $e) { icct_nms_failure($e); }
 try{
     $management=is_realm_allowed(3);$types=icct_nms_device_types();$bundles=icct_mib_list();
+    if($_SERVER['REQUEST_METHOD']==='GET'&&isset($_GET['files']))icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php');
     if(isset($_GET['download'])){
         $bundle=null;foreach($bundles as $candidate)if($candidate['id']===($_GET['download']??''))$bundle=$candidate;
         if(!$bundle)throw new InvalidArgumentException('MIB upload not found.');$index=icct_nms_id($_GET['file']??0);$content=icct_mib_file($bundle,$index);
