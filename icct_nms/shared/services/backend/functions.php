@@ -27,10 +27,22 @@ function icct_backend_device_status_name($device)
     if ($updated === '' || $updated === '0000-00-00 00:00:00') {
         return 'Pending';
     }
-    if (!icct_backend_parameter_is_fresh($updated)) {
+    if (!icct_backend_device_is_fresh($device)) {
         return 'Stale';
     }
     return icct_backend_host_status_name((int) $device['status']);
+}
+
+/** Cacti schedules host checks when that host's poller items are due. */
+function icct_backend_device_is_fresh($device)
+{
+    $seen=strtotime((string)($device['last_updated']??''));$now=time();
+    if($seen===false||$seen>$now)return false;
+    $step=array_key_exists('polling_step',$device)?$device['polling_step']:db_fetch_cell_prepared('SELECT MIN(rrd_step) FROM poller_item WHERE host_id=? AND rrd_step>0',[(int)($device['id']??0)]);
+    $interval=icct_backend_poller_interval();
+    // Hosts without scheduled items use Cacti's configured scheduler cadence.
+    $cadence=is_numeric($step)&&(int)$step>0?(int)$step:max($interval,(int)read_config_option('cron_interval'));
+    return $now-$seen<=max(120,max($interval,$cadence)*2);
 }
 
 /** Reused Inventory service: host status name. */
