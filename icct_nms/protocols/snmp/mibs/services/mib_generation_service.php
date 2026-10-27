@@ -38,3 +38,22 @@ function icct_mib_generation_results($bundle,$stage){
     else foreach($bundle['rows'] as $row)$results[]=['name'=>$row['name'],'oid'=>$row['oid'],'id'=>(int)$row[$stage===2?'data_template_id':'graph_template_id'],'kind'=>$label];
     return $results;
 }
+
+/** Session-bound review snapshots never write Cacti templates. */
+function icct_mib_generation_draft_get($token,$id,$phase){
+    if(!is_string($token)||!preg_match('/^[a-f0-9]{32}$/D',$token))throw new InvalidArgumentException('Review expired. Select the OIDs again.');
+    $draft=$_SESSION['icct_mib_generation_'.$token]??null;
+    if(!$draft||$draft['id']!==$id||$draft['phase']!==$phase||time()-$draft['time']>3600)throw new InvalidArgumentException('Review expired. Select the OIDs again.');
+    return $draft;
+}
+function icct_mib_generation_draft_put($id,$phase,$review){
+    foreach($_SESSION as $key=>$value)if(strpos($key,'icct_mib_generation_')===0&&is_array($value)&&time()-($value['time']??0)>3600)unset($_SESSION[$key]);
+    $token=bin2hex(random_bytes(16));$_SESSION['icct_mib_generation_'.$token]=['id'=>$id,'phase'=>$phase,'time'=>time(),'review'=>$review];return $token;
+}
+function icct_mib_generation_prepare($original,$review,$confirmed){
+    if(!is_array($review['selected']??null)||!is_array($review['records']??null))throw new InvalidArgumentException('Invalid OID review.');
+    $selected=array_intersect_key($review['selected'],$original);
+    if(!$selected)throw new InvalidArgumentException('Select at least one supported OID.');
+    if(array_diff_key($original,$selected)&&!$confirmed)throw new InvalidArgumentException('Confirm the unchecked OIDs before continuing.');
+    return ['selected'=>$selected,'records'=>array_intersect_key($review['records'],$selected)];
+}

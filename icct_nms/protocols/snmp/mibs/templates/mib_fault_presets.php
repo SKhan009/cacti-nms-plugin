@@ -15,4 +15,4 @@ $renderFaultCard=function($preset=[])use($object){ ?>
 <label class="field"><span class="field-label">Fix</span><textarea data-fault-field="corrective_action" maxlength="1000"><?= icct_nms_h($preset['corrective_action']??'') ?></textarea></label>
 </div></article>
 <?php }; ?>
-<div data-fault-presets><input type="hidden" data-fault-payload name="<?= $prefix ?>[fault_presets]" value="[]"><div data-fault-cards><?php foreach($faultCards as $preset)$renderFaultCard($preset); ?></div><button type="button" class="button" data-fault-add>+ Add Fault Preset</button><template data-fault-template><?php $renderFaultCard(); ?></template></div>
+<div data-fault-presets><input type="hidden" data-fault-payload name="<?= $prefix ?>[fault_presets]" value="[]"><div class="mib-fault-toolbar"><button type="button" class="button" data-fault-add>+ Add Fault</button></div><div data-fault-cards><?php foreach($faultCards as $preset)$renderFaultCard($preset); ?></div><template data-fault-template><?php $renderFaultCard(); ?></template></div>

@@ -162,19 +162,30 @@ if(review){
   rows.forEach(row=>{row.querySelector('button').addEventListener('click',()=>openPanel(row.dataset.generationRow));row.querySelector('input').addEventListener('change',selection);});selection();
   document.querySelector('#mibGenerationSearch').addEventListener('input',event=>{const term=event.target.value.trim().toLowerCase();let count=0;rows.forEach(row=>{row.hidden=!row.dataset.search.includes(term);if(!row.hidden)count++;});document.querySelector('#mibGenerationNoMatches').hidden=count>0;});
  }
+ let exclusionsConfirmed=false;
+ const confirmDialog=document.querySelector('#mibExclusionConfirm');
+ if(confirmDialog){
+  confirmDialog.querySelectorAll('[data-exclusion-cancel]').forEach(control=>control.addEventListener('click',()=>confirmDialog.close()));
+  confirmDialog.querySelector('[data-exclusion-continue]').addEventListener('click',()=>{exclusionsConfirmed=true;confirmDialog.close();form.requestSubmit(button);});
+  rows.forEach(row=>row.querySelector('input').addEventListener('change',()=>exclusionsConfirmed=false));
+ }
  form.addEventListener('submit',async event=>{
   event.preventDefault();if(busy||button.disabled)return;
   if(review)for(const input of form.querySelectorAll('[data-generation-panel] input,[data-generation-panel] select'))if(!input.disabled&&!input.checkValidity()){const panel=input.closest('[data-generation-panel]');openPanel(panel.dataset.generationPanel);panel.querySelector('[data-generation-tab='+input.closest('[data-generation-tab-panel]').dataset.generationTabPanel+']').click();input.reportValidity();return;}
-  busy=true;button.disabled=true;error.hidden=true;progress.hidden=false;spinner.hidden=false;bar.removeAttribute('value');status.textContent='Generation in progress... Please wait for the results.';
+  const excluded=rows.filter(row=>!row.querySelector('input').checked);
+  if(review&&excluded.length&&!exclusionsConfirmed){const list=confirmDialog.querySelector('[data-excluded-oids]');list.replaceChildren(...excluded.map(row=>{const item=document.createElement('li');const label=row.querySelector('button>span:last-child');item.textContent=label.firstChild.textContent.trim()+' ('+label.querySelector('small').textContent+')';return item;}));confirmDialog.showModal();return;}
+  busy=true;button.disabled=true;error.hidden=true;
+  if(!review){progress.hidden=false;progress.setAttribute('aria-busy','true');spinner.hidden=false;bar.removeAttribute('value');status.textContent='Please wait till the generation completes.';document.querySelector('#mibGenerationCaption').textContent='Creating templates in Cacti…';}
+
   const body=new FormData(form);body.set('generation_response','json');
-  if(review){const payload={selected:{},records:{}};for(const [name,value] of [...body]){let match=name.match(/^selected\[(\d+)\]$/);if(match){payload.selected[match[1]]=value;body.delete(name);continue;}match=name.match(/^records\[(\d+)\]\[(\w+)\]$/);if(match){payload.records[match[1]]??={};payload.records[match[1]][match[2]]=value;body.delete(name);}}body.set('review_payload',JSON.stringify(payload));}
+  if(review){body.set('action','prepare_generation');body.set('exclusions_confirmed',exclusionsConfirmed?'1':'0');const payload={selected:{},records:{}};for(const [name,value] of [...body]){let match=name.match(/^selected\[(\d+)\]$/);if(match){payload.selected[match[1]]=value;body.delete(name);continue;}match=name.match(/^records\[(\d+)\]\[(\w+)\]$/);if(match){payload.records[match[1]]??={};payload.records[match[1]][match[2]]=value;body.delete(name);}}body.set('review_payload',JSON.stringify(payload));}
   try{
    const response=await fetch(new URL(form.getAttribute('action'),document.baseURI),{method:'POST',credentials:'same-origin',headers:{Accept:'application/json'},body});
    if(!response.headers.get('content-type')?.includes('application/json'))throw Error('Your session expired. Reopen the MIB Repository to check the saved stage.');
    const result=await response.json();if(!response.ok||!result.ok)throw Error(result.error||'Could not generate templates.');
    const next=new URL(result.redirect,document.baseURI);if(next.origin!==location.origin||!next.pathname.endsWith('/protocols/snmp/mibs/controllers/mib_repository.php'))throw Error('Invalid generation destination.');
    location.assign(next.href);
-  }catch(failure){busy=false;button.disabled=false;spinner.hidden=true;progress.hidden=true;error.textContent=failure.message;error.hidden=false;}
+  }catch(failure){busy=false;button.disabled=false;spinner.hidden=true;progress.hidden=true;progress.setAttribute('aria-busy','false');error.textContent=failure.message;error.hidden=false;}
  });
 })();
 

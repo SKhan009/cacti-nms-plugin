@@ -3,9 +3,10 @@ $generationObjects=icct_mib_objects($generationBundle);
 $generationSelection=icct_mib_generation_input($generationBundle,2,$generationObject??null)['selected'];
 $generationNativeDefaults=[];foreach($generationBundle['rows'] as $row)if(isset($row['object_index']))$generationNativeDefaults[$row['object_index']]=$row['settings']??[];
 if(isset($generationSelected))$generationSelection=array_intersect_key($generationSelection,$generationSelected);
+$generationReviewToken=icct_mib_generation_draft_put($generationBundle['id'],'review',['selected'=>$generationSelection,'object'=>$generationObject??null]);
 $generationProfiles=array_column(icct_mib_profiles(),'name','id');$collectionNames=icct_mib_collection_names();
 ?>
-<input type="hidden" name="generation_review" value="1"><div class="mib-generation-review">
+<input type="hidden" name="review_token" value="<?= icct_nms_h($generationReviewToken) ?>"><input type="hidden" name="generation_review" value="1"><div class="mib-generation-review">
 <aside class="mib-generation-objects" aria-label="Data source OIDs">
 <h2><?= icct_nms_h(implode(', ',array_column($generationBundle['files'],'module'))) ?> (<?= count($generationSelection) ?> OIDs)</h2>
 <label class="mib-generation-search"><span aria-hidden="true">⌕</span><input type="search" id="mibGenerationSearch" aria-label="Search data source OIDs" placeholder="Search With Display Name or OID"></label>
@@ -41,3 +42,9 @@ if($object['table'])icct_nms_input('Instance Index (Specific GET)',$prefix.'[ins
 </section><?php endforeach; ?>
 </div></div>
 <footer class="mib-generation-review-footer"><p id="mibGenerationSelected" aria-live="polite"><?= count($generationSelection) ?> OIDs selected</p><a class="button" href="protocols/snmp/mibs/controllers/mib_repository.php?select=<?= icct_nms_h($generationBundle['id']) ?>">Previous ←</a><button class="button primary" type="submit" id="mibGenerate">Next →</button></footer>
+
+<dialog id="mibExclusionConfirm" aria-labelledby="mibExclusionTitle">
+<div class="mib-confirm-heading"><h2 id="mibExclusionTitle">Confirm OID selection</h2><button type="button" data-exclusion-cancel aria-label="Close confirmation">×</button></div>
+<p>The following unchecked OIDs will not have data sources created:</p><ul data-excluded-oids></ul><p>Continue with the selected OIDs?</p>
+<div class="mib-confirm-actions"><button type="button" class="button" data-exclusion-cancel>Cancel</button><button type="button" class="button primary" data-exclusion-continue>Continue</button></div>
+</dialog>

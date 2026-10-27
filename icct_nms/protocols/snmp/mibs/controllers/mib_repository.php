@@ -8,7 +8,7 @@ require_once dirname(__DIR__, 4) . '/protocols/snmp/mibs/services/mib_browser_se
 require_once dirname(__DIR__, 4) . '/protocols/snmp/mibs/services/mib_generation_service.php';
 require_once dirname(__DIR__, 4) . '/shared/services/forms.php';
 $uploadJson=$_SERVER['REQUEST_METHOD']==='POST'&&($_POST['action']??'')==='upload'&&($_POST['upload_response']??'')==='json';
-$generationJson=$_SERVER['REQUEST_METHOD']==='POST'&&($_POST['action']??'')==='generate'&&($_POST['generation_response']??'')==='json';
+$generationJson=$_SERVER['REQUEST_METHOD']==='POST'&&in_array(($_POST['action']??''),['generate','prepare_generation'],true)&&($_POST['generation_response']??'')==='json';
 $error='';$notice='';$mode='list';$preview=null;$plan=null;$reviewValues=[];$deletedId='';
 // Initialization failures must stop before the shared header calls backend services.
 try { icct_nms_backend(); } catch (Throwable $e) { icct_nms_failure($e); }
@@ -38,11 +38,22 @@ try{
         }elseif(in_array($action,['delete','restore'],true)){
             icct_mib_set_deleted($_POST['bundle_id']??'', $action==='delete');
             icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php'.($action==='delete'?'?deleted='.rawurlencode($_POST['bundle_id']):''));
+        }elseif($action==='prepare_generation'){
+            icct_backend_require_management(3);$generationBundle=icct_mib_wizard_get($_POST['bundle_id']??'');
+            $snapshot=icct_mib_generation_draft_get($_POST['review_token']??'',$generationBundle['id'],'review');
+            $review=icct_mib_generation_prepare($snapshot['review']['selected'],icct_mib_review_input($_POST),($_POST['exclusions_confirmed']??'')==='1');
+            $readyToken=icct_mib_generation_draft_put($generationBundle['id'],'ready',['values'=>$review,'object'=>$snapshot['review']['object']??null]);
+            $generationNext='protocols/snmp/mibs/controllers/mib_repository.php?generate='.$generationBundle['id'].'&stage=2&ready='.$readyToken;
+            if($generationJson){header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>true,'redirect'=>$generationNext],JSON_THROW_ON_ERROR);exit;}
+            icct_nms_redirect($generationNext);
         }elseif($action==='generate'){
             $mode='generation';$generationBundle=icct_mib_wizard_get($_POST['bundle_id']??'');
             $generationStage=icct_backend_topology_integer($_POST['stage']??'',2,4,'Generation stage');
             $generationObject=isset($_POST['object'])&&$_POST['object']!==''?icct_backend_topology_integer($_POST['object'],0,511,'OID'):null;
-            $generationBundle=icct_mib_generation_save($generationBundle['id'],$generationStage,$generationObject,icct_mib_review_input($_POST));
+            $generationReview=icct_mib_review_input($_POST);
+            if($generationStage===2){$readyToken=$_POST['ready_token']??'';$snapshot=icct_mib_generation_draft_get($readyToken,$generationBundle['id'],'ready');$generationReview=$snapshot['review']['values'];$generationObject=$snapshot['review']['object'];}
+            $generationBundle=icct_mib_generation_save($generationBundle['id'],$generationStage,$generationObject,$generationReview);
+            if($generationStage===2)unset($_SESSION['icct_mib_generation_'.$readyToken]);
             $generationNext='protocols/snmp/mibs/controllers/mib_repository.php?generate='.$generationBundle['id'].'&stage='.$generationStage;
             if($generationJson){header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode(['ok'=>true,'redirect'=>$generationNext],JSON_THROW_ON_ERROR);exit;}
             icct_nms_redirect($generationNext);
@@ -87,6 +98,11 @@ try{
         $generationStage=isset($_GET['object'])?2:(isset($_GET['stage'])?icct_backend_topology_integer($_GET['stage'],2,4,'Generation stage'):min(4,(int)($generationBundle['wizard_step']??0)+2));
         if($generationStage>(int)($generationBundle['wizard_step']??0)+2)throw new InvalidArgumentException('Complete the previous generation stage first.');
         $generationObject=isset($_GET['object'])?icct_backend_topology_integer($_GET['object'],0,511,'OID'):null;
+        if(isset($_GET['ready'])){
+            try{$generationReadyToken=(string)$_GET['ready'];$readyDraft=icct_mib_generation_draft_get($generationReadyToken,$generationBundle['id'],'ready');}
+            catch(Throwable $e){$mode='list';throw $e;}
+            $generationStage=2;$generationSelected=$readyDraft['review']['values']['selected'];$generationObject=$readyDraft['review']['object'];
+        }
         if(isset($_GET['selection'])){
             $selectionKey=(string)$_GET['selection'];if(!preg_match('/^[a-f0-9]{32}$/D',$selectionKey)){$mode='list';throw new InvalidArgumentException('Invalid OID selection.');}
             $savedSelection=$_SESSION['icct_mib_selection_'.$selectionKey]??null;
