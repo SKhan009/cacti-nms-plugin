@@ -173,7 +173,22 @@ check(db_fetch_cell_prepared('SELECT name FROM data_template WHERE id=?',[$gener
 check(db_fetch_cell_prepared('SELECT active FROM data_template_data WHERE data_template_id=? AND local_data_id=0',[$generatedData])==='','Reviewed Data Source Active state is saved in native Cacti');
 check(icct_mib_generation_results($generated,2)[0]['id']===$generatedData,'Generation results reference the saved native template');
 try{icct_mib_generation_save($generated['id'],2,$generationIndex);throw new LogicException('Duplicate Generate accepted');}catch(InvalidArgumentException $e){check(true,'Repeated Generate cannot duplicate data templates');}
+// An old browser tab must never create the remaining metrics implicitly or partially.
+$beforeBundles=count(icct_mib_list());$beforeData=(int)db_fetch_cell('SELECT COUNT(*) FROM data_template');
+$newIndexes=array_keys(icct_mib_generation_input($generated,2)['selected']);$freshIndex=$newIndexes[0];
+$invalidAttempts=[
+ ['object'=>null,'review'=>[]],
+ ['object'=>null,'review'=>['selected'=>[$generationIndex=>1,$freshIndex=>1],'records'=>[]]],
+ ['object'=>$freshIndex,'review'=>['selected'=>[$freshIndex=>1],'records'=>[$freshIndex=>['data_name'=>'QA Reviewed Generation Data']]]],
+ ['object'=>$freshIndex,'review'=>['selected'=>[$freshIndex=>1],'records'=>[$freshIndex=>['min'=>'100','max'=>'0']]]],
+];
+if(count($newIndexes)>1)$invalidAttempts[]=['object'=>null,'review'=>['selected'=>[$newIndexes[0]=>1,$newIndexes[1]=>1],'records'=>[$newIndexes[0]=>['data_name'=>'Repeated batch name'],$newIndexes[1]=>['data_name'=>'repeated batch name']]]];
+foreach($invalidAttempts as $attempt){try{icct_mib_generation_save($generated['id'],2,$attempt['object'],$attempt['review']);throw new LogicException('Invalid or repeated generation accepted');}catch(InvalidArgumentException $e){check(count(icct_mib_list())===$beforeBundles&&(int)db_fetch_cell('SELECT COUNT(*) FROM data_template')===$beforeData,'Repeat, stale selection, duplicate name or invalid bounds rejected without saving any batch');}}
+check((int)db_fetch_cell_prepared('SELECT IS_FREE_LOCK(?)',['icct_mib_templates'])===1,'Generation releases the lock after rejected requests');
 $generated=icct_mib_generation_save($generated['id'],3);
+$graphCount=(int)db_fetch_cell('SELECT COUNT(*) FROM graph_templates');
+try{icct_mib_generation_save($generated['id'],3);throw new LogicException('Repeated graph generation accepted');}catch(InvalidArgumentException $e){check((int)db_fetch_cell('SELECT COUNT(*) FROM graph_templates')===$graphCount,'Repeated graph generation creates no duplicate graph templates');}
+
 check($generated['rows'][0]['data_template_id']===$generatedData&&$generated['rows'][0]['graph_template_id']>0,'Graph generation reuses the selected native data template');
 require_once __DIR__.'/../../fcaps/services/fcaps_service.php';
 $presetGraph=$generated['rows'][0]['graph_template_id'];
@@ -195,6 +210,8 @@ check(count(array_filter(icct_nms_fault_rules($qaHost),fn($rule)=>($rule['templa
 db_execute_prepared('DELETE FROM graph_local WHERE id=?',[9000022]);
 $generated=icct_mib_generation_save($generated['id'],4);
 check($generated['host_template_id']>0&&(int)db_fetch_cell_prepared('SELECT COUNT(*) FROM host_template_graph WHERE host_template_id=? AND graph_template_id=?',[$generated['host_template_id'],$generated['rows'][0]['graph_template_id']])===1,'Device generation associates the saved native graph');
+$deviceTemplateCount=(int)db_fetch_cell('SELECT COUNT(*) FROM host_template');
+try{icct_mib_generation_save($generated['id'],4);throw new LogicException('Repeated device generation accepted');}catch(InvalidArgumentException $e){check((int)db_fetch_cell('SELECT COUNT(*) FROM host_template')===$deviceTemplateCount,'Repeated device generation creates no duplicate device template');}
 $remaining=icct_mib_generation_input($generated,2);$nextIndex=array_key_first($remaining['selected']);
 $additional=icct_mib_generation_save($generated['id'],2,$nextIndex);
 check($additional['id']!==$generated['id']&&count($additional['rows'])===1&&icct_mib_wizard_get($generated['id'])['host_template_id']===$generated['host_template_id'],'Another Create preserves previous generated template associations');

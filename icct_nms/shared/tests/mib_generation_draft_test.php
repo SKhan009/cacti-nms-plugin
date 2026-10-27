@@ -9,6 +9,8 @@ $result=icct_mib_generation_prepare($original,$review,true);
 check(array_keys($result['selected'])===[2],'Only checked OID remains');
 check(array_keys($result['records'])===[2]&&$result['records'][2]['data_name']==='Kept settings','Edits retained and unchecked records removed');
 rejects(fn()=>icct_mib_generation_prepare($original,['selected'=>[],'records'=>[]],true),'Empty selection rejected');
+rejects(fn()=>icct_mib_generation_prepare($original,['selected'=>[2=>1,999=>1],'records'=>[]],true),'Unknown or stale OIDs cannot silently disappear');
+rejects(fn()=>icct_mib_generation_prepare($original,['selected'=>[2=>'invalid'],'records'=>[]],true),'Invalid selection flag rejected');
 $token=icct_mib_generation_draft_put('bundle','ready',['values'=>$result,'object'=>null]);
 check(icct_mib_generation_draft_get($token,'bundle','ready')['review']['values']===$result,'Draft round trip');
 rejects(fn()=>icct_mib_generation_draft_get($token,'other','ready'),'Bundle isolation');

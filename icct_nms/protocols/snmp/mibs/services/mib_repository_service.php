@@ -392,6 +392,12 @@ function icct_mib_native_query($record,$inputId){
     if(!$id)throw new RuntimeException('Could not register native Cacti SNMP query.');
     return $id;
 }
+/** Validate names before any native template or repository batch is written. */
+function icct_mib_validate_template_names($names,$table){
+    if(!in_array($table,['data_template','graph_templates','host_template'],true))throw new InvalidArgumentException('Invalid template type.');
+    if(count($names)!==count(array_unique(array_map('strtolower',$names))))throw new InvalidArgumentException('Template names must be unique.');
+    foreach($names as $name)if(db_fetch_cell_prepared('SELECT id FROM '.$table.' WHERE name=?',[$name]))throw new InvalidArgumentException('Template already exists: '.$name.'. Use the saved template or choose another name.');
+}
 /** Prevent another upload from creating the same polling definition under a new name. */
 function icct_mib_validate_duplicates($records){
     $known=[];
@@ -553,9 +559,8 @@ function icct_mib_wizard_save($id,$input){
         $values['create_data']=1;$values['create_graph']=$step>=2?1:0;$values['create_device']=$step===3?1:0;
         $plan=icct_mib_plan(['records'=>$objects,'parse_error'=>$bundle['parse_error']??''],$values);
         $names=$step===1?array_column($plan['records'],'data_name'):($step===2?array_column($plan['records'],'graph_name'):[$plan['name']]);
-        if(count($names)!==count(array_unique(array_map('strtolower',$names))))throw new InvalidArgumentException('Template names must be unique.');
         $table=[1=>'data_template',2=>'graph_templates',3=>'host_template'][$step];
-        foreach($names as $name)if(db_fetch_cell_prepared('SELECT id FROM '.$table.' WHERE name=?',[$name]))throw new InvalidArgumentException('Template already exists: '.$name.'. Choose another name.');
+        icct_mib_validate_template_names($names,$table);
         if($step===1)icct_mib_validate_duplicates($plan['records']);
         if(!db_execute('START TRANSACTION'))throw new RuntimeException('Cannot begin saving this step.');
         try{
