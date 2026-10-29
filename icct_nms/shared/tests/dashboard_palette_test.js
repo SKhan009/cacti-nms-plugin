@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const source=fs.readFileSync(path.join(__dirname,'../../dashboard/widgets/js/dashboard.js'),'utf8');
+const context={};vm.runInNewContext(source.slice(source.indexOf('const names='),source.indexOf('const select='))+';globalThis.result={colors,alarmSegmentColor};',context);
+const {colors,alarmSegmentColor}=context.result;
+assert.deepEqual({...colors},{Critical:'#f94144',Major:'#f3722b',Minor:'#f7961e',Warning:'#42aa8b',Information:'#277da2'});
+const segments={'Power':'#7086fd','Security':'#6ed195','LOS':'#ffad4d','VSAT':'#05dbfa','Voice / Video':'#9989fc','Computers':'#1d94ff','Fire Prevention':'#ff928a','Network':'#3bc3e0'};
+for(const [name,color] of Object.entries(segments))assert.equal(alarmSegmentColor(name),color,name+' must match the screenshot');
+const names=Object.keys(segments);assert.deepEqual(names.map(alarmSegmentColor),names.slice().reverse().map(alarmSegmentColor).reverse(),'Count sorting must not reassign segment colors');
+assert.equal(alarmSegmentColor('VOICE/VIDEO'),segments['Voice / Video']);
+assert.equal(alarmSegmentColor('Custom segment'),alarmSegmentColor('Custom segment'),'Other configured segments have stable colors');
+console.log('PASS: reference severity/segment palettes and stable segment colors after sorting.');
