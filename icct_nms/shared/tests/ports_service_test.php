@@ -12,7 +12,7 @@ expectPorts(count($ports)===2 && $ports[0]['name']==='Gi1/0/1' && $ports[0]['con
 expectPorts(icct_backend_ports_status($ports[0],true)==='In use','Live link not in use');
 expectPorts(icct_backend_ports_status($ports[1],true)==='Disabled','Admin-down interface marked available');
 expectPorts(icct_backend_ports_status(['admin'=>1,'oper'=>2],true)==='Available (link down)','Enabled down link not available');
-expectPorts(icct_backend_ports_status(['admin'=>1,'oper'=>5],true)==='Unknown','Dormant interface misreported');
+expectPorts(icct_backend_ports_status(['admin'=>1,'oper'=>5],true)==='Dormant','Dormant interface misreported');
 $host=['id'=>2,'hostname'=>'test-host','poller_id'=>1,'disabled'=>'','snmp_version'=>2,'snmp_community'=>'test'];
 $snapshot=['time'=>time(),'signature'=>icct_backend_ports_signature($host),'ports'=>$ports,'error'=>''];
 expectPorts(icct_backend_ports_view($host)['fresh'],'Fresh observation rejected');
@@ -68,3 +68,13 @@ expectPorts(!empty($slots['chassis'][1]['placeholder'])&&!isset($slots['chassis'
 
 expectPorts(icct_nms_port_management_addresses([['address'=>'192.0.2.10','family'=>4],['address'=>'2001:db8::1','family'=>6],'192.0.2.10','invalid',[]])===['192.0.2.10','2001:db8::1'],'Structured LLDP/CDP management addresses lost or invalid addresses accepted');
 echo "Structured and legacy neighbour management addresses passed.\n";
+
+$loop=icct_backend_ports_linux_parse(json_encode([
+ ['ifindex'=>1,'ifname'=>'lo','flags'=>['LOOPBACK','UP','LOWER_UP'],'operstate'=>'UNKNOWN','link_type'=>'loopback'],
+ ['ifindex'=>2,'ifname'=>'eth0','flags'=>['UP','LOWER_UP'],'operstate'=>'UNKNOWN','link_type'=>'ether'],
+ ['ifindex'=>3,'ifname'=>'lo-down','flags'=>['LOOPBACK','UP'],'operstate'=>'UNKNOWN','link_type'=>'loopback'],
+ ['ifindex'=>4,'ifname'=>'lo-disabled','flags'=>['LOOPBACK'],'operstate'=>'DOWN','link_type'=>'loopback']
+]));
+expectPorts($loop[0]['oper']===1&&$loop[0]['oper_note']==='Up (loopback)'&&$loop[0]['reported_operstate']==='UNKNOWN','Active Linux loopback must use observed admin and carrier flags while retaining the raw state');
+expectPorts($loop[1]['oper']===4&&$loop[2]['oper']===4&&$loop[3]['oper']===2,'Unknown physical, unconfirmed loopback and down interfaces must not be fabricated as Up');
+echo "Linux loopback carrier interpretation preserves unknown physical and down interface states.\n";

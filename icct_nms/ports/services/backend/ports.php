@@ -44,7 +44,9 @@ function icct_backend_ports_linux_parse($json) {
     foreach($rows as $row){
         if(!is_array($row)||!is_int($row['ifindex']??null)||$row['ifindex']<1||!is_string($row['ifname']??null))continue;
         $flags=$row['flags']??[];$state=strtoupper($row['operstate']??'UNKNOWN');
-        $ports[]=['index'=>$row['ifindex'],'name'=>$row['ifname'],'description'=>$row['ifname'],'alias'=>$row['ifalias']??'','admin'=>in_array('UP',$flags,true)?1:2,'oper'=>['UP'=>1,'DOWN'=>2,'DORMANT'=>5,'LOWERLAYERDOWN'=>7][$state]??4,'connector'=>($row['link_type']??'')==='loopback'?2:null,'type'=>($row['link_type']??'')==='loopback'?24:6,'speed_bps'=>null,'high_speed_mbps'=>null,'last_change_ticks'=>null];
+        $loopback=($row['link_type']??'')==='loopback';
+        $loopbackActive=$loopback&&$state==='UNKNOWN'&&in_array('UP',$flags,true)&&in_array('LOWER_UP',$flags,true);
+        $ports[]=['index'=>$row['ifindex'],'name'=>$row['ifname'],'description'=>$row['ifname'],'alias'=>$row['ifalias']??'','admin'=>in_array('UP',$flags,true)?1:2,'oper'=>$loopbackActive?1:(['UP'=>1,'DOWN'=>2,'TESTING'=>3,'NOTPRESENT'=>6,'DORMANT'=>5,'LOWERLAYERDOWN'=>7][$state]??4),'oper_note'=>$loopbackActive?'Up (loopback)':'','reported_operstate'=>$state,'connector'=>($row['link_type']??'')==='loopback'?2:null,'type'=>($row['link_type']??'')==='loopback'?24:6,'speed_bps'=>null,'high_speed_mbps'=>null,'last_change_ticks'=>null];
     }
     return $ports;
 }
@@ -53,7 +55,7 @@ function icct_backend_ports_local() {
     foreach(glob('/sys/class/net/*')?:[] as $path){
         if(!is_readable($path.'/ifindex'))continue;$read=static function($field)use($path){return is_readable($path.'/'.$field)?trim(file_get_contents($path.'/'.$field)):'';};
         $index=(int)$read('ifindex');if($index<1)continue;$name=basename($path);$flags=hexdec($read('flags'));
-        $port=icct_backend_ports_linux_parse(json_encode([['ifindex'=>$index,'ifname'=>$name,'flags'=>($flags&1)?['UP']:[],'operstate'=>$read('operstate'),'link_type'=>$read('type')==='772'?'loopback':'ether','ifalias'=>$read('ifalias')]]))[0];
+        $port=icct_backend_ports_linux_parse(json_encode([['ifindex'=>$index,'ifname'=>$name,'flags'=>array_merge(($flags&1)?['UP']:[],(($flags&1)&&$read('type')==='772'&&$read('carrier')==='1')?['LOWER_UP']:[]),'operstate'=>$read('operstate'),'link_type'=>$read('type')==='772'?'loopback':'ether','ifalias'=>$read('ifalias')]]))[0];
         $port['connector']=is_dir($path.'/device')?1:($port['type']===24?2:null);
         $ports[]=$port;
     }
@@ -94,7 +96,7 @@ function icct_backend_ports_status($port,$fresh) {
     if (($port['admin'] ?? null)===2) return 'Disabled';
     if (($port['oper'] ?? null)===1) return 'In use';
     if (($port['admin'] ?? null)===1 && ($port['oper'] ?? null)===2) return 'Available (link down)';
-    return 'Unknown';
+    return [3=>'Testing',5=>'Dormant',6=>'Not present',7=>'Lower layer down'][$port['oper']??0]??'Unknown';
 }
 /** Display observed physical connectors; preset capacity is not interface inventory. */
 function icct_nms_port_slots($ports,$count) {
