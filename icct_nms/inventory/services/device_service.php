@@ -208,6 +208,19 @@ function icct_nms_native_values($old, $input, $fields)
  */
 function icct_nms_save_snmp($id, $old, $input)
 {
+    // The UI omits disabled reachability controls. Keep their native values.
+    $availability = (string)($input['availability_method'] ?? '');
+    $hidden = !in_array($availability, ['1','3','4'], true) ? ['ping_method'] : [];
+    if ($availability === '0') $hidden = array_merge($hidden, ['ping_timeout','ping_retries']);
+    $v3 = (string)($input['snmp_version'] ?? '') === '3';
+    $security = (string)($input['snmp_security_level'] ?? '');
+    if (!$v3 || $security === 'noAuthNoPriv') $hidden = array_merge($hidden, ['snmp_auth_protocol','snmp_password']);
+    if (!$v3 || in_array($security, ['noAuthNoPriv','authNoPriv'], true)) $hidden = array_merge($hidden, ['snmp_priv_protocol','snmp_priv_passphrase']);
+    foreach ($hidden as $field) {
+        if (!array_key_exists($field, $input) && array_key_exists($field, $old)) {
+            $input[$field] = in_array($field, ['snmp_auth_protocol','snmp_priv_protocol'], true) && $old[$field] === '' ? '[None]' : $old[$field];
+        }
+    }
     foreach (['snmp_password' => 'snmp_password_confirm', 'snmp_priv_passphrase' => 'snmp_priv_confirm'] as $secret => $confirm) {
         if (isset($input[$confirm]) && ($input[$secret] ?? '') !== $input[$confirm]) {
             throw new InvalidArgumentException('SNMP replacement passphrases must match their confirmation.');

@@ -3,7 +3,7 @@
 $listUrl='protocols/snmp/mibs/controllers/mib_repository.php';
 require_once __DIR__.'/../services/mib_usage_service.php';$fileUsage=icct_mib_repository_usage($bundles);
 $svg=function($name){
-    $paths=['edit'=>'M4 16v4h4L20 8l-4-4zM14 6l4 4','view'=>'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
+    $paths=['create'=>'M12 4v16M4 12h16','edit'=>'M4 16v4h4L20 8l-4-4zM14 6l4 4','view'=>'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
         'delete'=>'M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7','download'=>'M12 3v12M7 10l5 5 5-5M4 15v6h16v-6'];
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="'.$paths[$name].'"/></svg>';
 };
@@ -21,15 +21,15 @@ $filterLabels=['type'=>'Device Type','module'=>'MIB Module'];
 <th scope="col" aria-sort="ascending"><button type="button" data-list-sort>File Name <span>↑</span></button></th>
 <?php foreach(['No. of OIDs','Data Sources Created','Used by Devices','Date','Actions'] as $heading): ?><th scope="col"><?= $heading ?></th><?php endforeach; ?>
 </tr></thead><tbody>
-<?php foreach($bundles as $bundle): $id=$bundle['id'];$modules=implode(', ',array_column($bundle['files'],'module'));$fileNames=implode(', ',array_column($bundle['files'],'name'));$usage=$fileUsage[$id]; ?>
+<?php foreach($bundles as $bundle): $id=$bundle['id'];$modules=implode(', ',array_column($bundle['files'],'module'));$fileNames=implode(', ',array_column($bundle['files'],'name'));$usage=$fileUsage[$id];$pending=$management?icct_mib_staging_pending($id):null; ?>
 <tr data-list-row data-name="<?= icct_nms_h($fileNames) ?>" data-type="<?= icct_nms_h($bundle['type_name']) ?>" data-modules="<?= icct_nms_h(json_encode(array_column($bundle['files'],'module'),JSON_THROW_ON_ERROR)) ?>" data-module="<?= icct_nms_h($modules) ?>" data-search="<?= icct_nms_h($fileNames.' '.$bundle['type_name'].' '.$modules.' '.implode(' ',array_column($usage['devices'],'description'))) ?>">
 <td class="mib-file-name"><?php foreach($bundle['files'] as $file): ?><span><?= icct_nms_h($file['name']) ?></span><?php endforeach; ?><?php if(!empty($bundle['parse_error'])): ?><small class="mib-list-error"><?= icct_nms_h($bundle['parse_error']) ?></small><?php endif; ?></td>
 <td><?= (int)$bundle['object_count'] ?></td><td><span class="mib-source-count <?= $usage['data_sources']?'has-sources':'' ?>"><?= (int)$usage['data_sources'] ?></span></td>
 <td class="mib-used-devices"><?php foreach($usage['devices'] as $device): ?><a href="inventory/controllers/device.php?id=<?= (int)$device['id'] ?>&amp;view=1"><?= icct_nms_h($device['description']) ?></a><?php endforeach; ?><?php if(!$usage['devices']): ?><span>Not used</span><?php endif; ?></td><td><?= icct_nms_h($bundle['created_at']) ?></td>
 <td><div class="row-actions">
-<?php if($management): ?><a href="<?= $listUrl ?>?select=<?= icct_nms_h($id) ?>" aria-label="Edit <?= icct_nms_h($fileNames) ?>" title="Edit"><?= $svg('edit') ?></a><?php endif; ?>
+<?php if($management): $configurationAction=$pending?'Resume':($usage['data_sources']>0?'Edit':'Create');$configurationUrl=$pending?$listUrl.'?generate='.rawurlencode($id).'&stage=2&review_prepared=1&ready='.$pending['token']:$listUrl.($usage['data_sources']>0?'?generate=':'?select=').rawurlencode($id).($usage['data_sources']>0?'&stage=2&review_prepared=1':''); ?><a href="<?= icct_nms_h($configurationUrl) ?>" aria-label="<?= $configurationAction ?> <?= icct_nms_h($fileNames) ?>" title="<?= $pending?'Resume prepared configuration':$configurationAction ?>"><?= $svg($pending?'edit':strtolower($configurationAction)) ?></a><?php endif; ?>
 <a href="<?= $listUrl ?>?view=<?= icct_nms_h($id) ?>" aria-label="View <?= icct_nms_h($fileNames) ?>" title="View"><?= $svg('view') ?></a>
-<?php if($management): ?><form method="post"><?php icct_nms_token(); ?><input type="hidden" name="action" value="delete"><input type="hidden" name="bundle_id" value="<?= icct_nms_h($id) ?>"><button type="submit" class="icon-button" aria-label="Delete <?= icct_nms_h($fileNames) ?>" title="Delete"><?= $svg('delete') ?></button></form><?php endif; ?>
+<?php if($management): ?><form method="post" data-mib-delete data-mib-file="<?= icct_nms_h($fileNames) ?>"><?php icct_nms_token(); ?><input type="hidden" name="action" value="delete"><input type="hidden" name="delete_confirmed" value="0"><input type="hidden" name="bundle_id" value="<?= icct_nms_h($id) ?>"><button type="submit" class="icon-button" aria-label="Delete <?= icct_nms_h($fileNames) ?>" title="Delete"><?= $svg('delete') ?></button></form><?php endif; ?>
 <?php foreach($bundle['files'] as $index=>$file): ?><a href="<?= $listUrl ?>?download=<?= icct_nms_h($id) ?>&amp;file=<?= (int)$index ?>" aria-label="Download <?= icct_nms_h($file['name']) ?>" title="Download <?= icct_nms_h($file['name']) ?>"><?= $svg('download') ?></a><?php endforeach; ?>
 </div></td></tr>
 

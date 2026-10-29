@@ -1,3 +1,26 @@
+// Show recoverable removal in the shared success toast, outside the filter layout.
+(()=>{'use strict';
+ const form=document.querySelector('#mibUndoForm');if(!form)return;
+ icctToast({title:'MIB file deleted',text:'The file was removed from the repository.',duration:12000,action:{label:'Undo',onClick:()=>HTMLFormElement.prototype.submit.call(form)}});
+})();
+
+// Block the delete POST until the shared project dialog is explicitly accepted.
+(()=>{'use strict';
+ document.querySelectorAll('[data-mib-delete]').forEach(form=>{
+  let pending=false;
+  form.addEventListener('submit',async event=>{
+   event.preventDefault();if(pending)return;pending=true;
+   try{
+    const accepted=await icctShowMessage({title:'Delete MIB file',text:`Delete “${form.dataset.mibFile}” from the repository? You can restore it with Undo. Generated Cacti templates will be retained.`,confirm:true,danger:true,accept:'Delete'});
+    if(!accepted)return;
+    form.querySelector('[name=delete_confirmed]').value='1';
+    form.querySelector('[type=submit]').disabled=true;
+    HTMLFormElement.prototype.submit.call(form);
+   }finally{pending=false;}
+  });
+ });
+})();
+
 // Use the same local filtering and page controls as the Inventory table.
 (()=>{'use strict';
  const list=document.querySelector('[data-mib-saved-list]');if(!list)return;

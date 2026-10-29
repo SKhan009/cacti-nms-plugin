@@ -54,12 +54,13 @@ function icct_mib_generation_results($bundle,$stage){
 function icct_mib_generation_draft_get($token,$id,$phase){
     if(!is_string($token)||!preg_match('/^[a-f0-9]{32}$/D',$token))throw new InvalidArgumentException('Review expired. Select the OIDs again.');
     $draft=$_SESSION['icct_mib_generation_'.$token]??null;
-    if(!$draft||$draft['id']!==$id||$draft['phase']!==$phase||time()-$draft['time']>3600)throw new InvalidArgumentException('Review expired. Select the OIDs again.');
+    if(!$draft||$draft['id']!==$id||$draft['phase']!==$phase||time()-($draft['last_access']??$draft['time'])>14400)throw new InvalidArgumentException('Review expired. Select the OIDs again.');
+    $draft['last_access']=time();$_SESSION['icct_mib_generation_'.$token]=$draft;
     return $draft;
 }
 function icct_mib_generation_draft_put($id,$phase,$review){
-    foreach($_SESSION as $key=>$value)if(strpos($key,'icct_mib_generation_')===0&&is_array($value)&&time()-($value['time']??0)>3600)unset($_SESSION[$key]);
-    $token=bin2hex(random_bytes(16));$_SESSION['icct_mib_generation_'.$token]=['id'=>$id,'phase'=>$phase,'time'=>time(),'review'=>$review];return $token;
+    foreach($_SESSION as $key=>$value)if(strpos($key,'icct_mib_generation_')===0&&is_array($value)&&time()-($value['last_access']??$value['time']??0)>14400)unset($_SESSION[$key]);
+    $token=bin2hex(random_bytes(16));$_SESSION['icct_mib_generation_'.$token]=['id'=>$id,'phase'=>$phase,'time'=>time(),'last_access'=>time(),'review'=>$review];return $token;
 }
 function icct_mib_generation_prepare($original,$review,$confirmed){
     if(!is_array($review['selected']??null)||!is_array($review['records']??null))throw new InvalidArgumentException('Invalid OID review.');

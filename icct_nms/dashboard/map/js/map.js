@@ -35,10 +35,12 @@
     var status = document.getElementById('icctMapStatus');
     var originalStatus = status.textContent;
     var stateError = '';
+    var mapError = '';
     function showStatus() {
-        status.textContent = [originalStatus, stateError].filter(Boolean).join(' ');
+        status.textContent = [originalStatus, mapError, stateError].filter(Boolean).join(' ');
     }
     map.setMaxBounds(indiaBounds);
+    showStatus();
     // Only India polygons are drawn; surrounding countries and ocean tiles are omitted.
     map.createPane('statePolygons');
     map.getPane('statePolygons').style.zIndex = 350;
@@ -54,16 +56,12 @@
             pane: 'statePolygons',
             attribution: 'States: geoBoundaries / DataMeet (CC BY 2.5 IN)',
             style: function (feature) {
-                return {color: '#7d898d', weight: 1, fillColor: feature.properties.color, fillOpacity: 0.65};
+                return {color: '#8a8a8a', weight: 1, fillColor: '#dedede', fillOpacity: 1};
             },
             onEachFeature: function (feature, layer) {
                 var name = document.createElement('span'); name.textContent = feature.properties.name;
                 layer.bindTooltip(name, {sticky: true});
-                var point = feature.properties.label_coordinates;
-                if (!point) return;
-                var label = document.createElement('span'); label.textContent = feature.properties.name;
-                labels.push(L.marker([point[1], point[0]], {pane: 'stateLabels', interactive: false,
-                    keyboard: false, icon: L.divIcon({className: 'icct-state-label', html: label, iconSize: null})}).addTo(map));
+
             }
         }).addTo(map);
         function placeLabels() {
@@ -115,9 +113,9 @@
         var up = site.devices.every(function (d) { return d.status === 'Up'; });
         var label = document.createElement('span');
         label.textContent = site.name;
-        markers[site.id] = L.circleMarker(site.coordinates, {radius: 10, color: '#fff', weight: 2,
+        markers[site.id] = L.circleMarker(site.coordinates, {radius: 5, color: '#fff', weight: 1,
             fillColor: down ? '#c83232' : up ? '#21864a' : site.devices.every(d=>d.status==='Disabled') ? '#777' : '#aa740a', fillOpacity: 1}).addTo(map)
-            .bindTooltip(label, {direction: 'top', permanent: false, className: 'icct-map-site-label', offset: [0, -10]}).on('click',function(){ showSite(site); });
+            .bindTooltip(label, {direction: 'top', permanent: true, className: 'icct-map-site-label', offset: [0, -5]}).on('click',function(){ showSite(site); });
         markers[site.id].on('add',function(){labelSiteMarker(markers[site.id],site.name);});
         labelSiteMarker(markers[site.id],site.name);
     });

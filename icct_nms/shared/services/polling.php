@@ -16,4 +16,11 @@ function icct_nms_poller_bottom()
     } catch (Throwable $error) {
         cacti_log('ICCT NMS collector: ' . $error->getMessage(), false, 'ICCT NMS');
     }
+    try {
+        icct_nms_backend();
+        icct_backend_syslog_collect_availability_events();
+    } catch (Throwable $error) {
+        cacti_log('ICCT NMS availability event bridge: ' . $error->getMessage(), false, 'ICCT NMS');
+    }
+
 }

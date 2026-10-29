@@ -391,6 +391,7 @@ CREATE TABLE IF NOT EXISTS `plugin_icct_nms_syslog_devices` (
 CREATE TABLE IF NOT EXISTS `plugin_icct_nms_syslog_events` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `host_id` mediumint(8) unsigned NOT NULL,
+  `event_origin` varchar(16) NOT NULL DEFAULT 'syslog',
   `event_time` datetime NOT NULL,
   `received_at` datetime NOT NULL,
   `last_seen` datetime NOT NULL,
@@ -415,7 +416,8 @@ CREATE TABLE IF NOT EXISTS `plugin_icct_nms_syslog_events` (
   KEY `severity_time` (`nms_severity`,`event_time`),
   KEY `ack_time` (`acknowledged`,`event_time`),
   KEY `fingerprint_time` (`fingerprint`,`last_seen`),
-  KEY `source_time` (`source_ip`,`event_time`)
+  KEY `source_time` (`source_ip`,`event_time`),
+  KEY `origin_time` (`event_origin`,`event_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE IF NOT EXISTS `plugin_icct_nms_syslog_ingest_state` (
@@ -448,3 +450,165 @@ CREATE TABLE IF NOT EXISTS `plugin_icct_nms_port_alarm_events` (
   PRIMARY KEY (`id`),
   KEY `device_history` (`host_id`,`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS `plugin_icct_nms_syslog_availability_state` (
+  `host_id` mediumint(8) unsigned NOT NULL,
+  `last_status` tinyint(3) unsigned NOT NULL DEFAULT 0,
+  `last_disabled` tinyint(3) unsigned NOT NULL DEFAULT 0,
+  `initialized_at` datetime NOT NULL,
+  `last_changed_at` datetime DEFAULT NULL,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`host_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+
+
+CREATE TABLE IF NOT EXISTS `plugin_icct_nms_ntp_devices` (
+  `host_id` mediumint(8) unsigned NOT NULL,
+  `enabled` tinyint(3) unsigned NOT NULL DEFAULT 1,
+  `target_address` varchar(255) NOT NULL,
+  `port` smallint(5) unsigned NOT NULL DEFAULT 123,
+  `version` tinyint(3) unsigned NOT NULL DEFAULT 4,
+  `timeout_seconds` tinyint(3) unsigned NOT NULL DEFAULT 3,
+  `poll_interval` int(10) unsigned NOT NULL DEFAULT 300,
+  `maximum_offset_ms` decimal(12,3) NOT NULL DEFAULT 100.000,
+  `maximum_jitter_ms` decimal(12,3) NOT NULL DEFAULT 50.000,
+  `maximum_delay_ms` decimal(12,3) NOT NULL DEFAULT 250.000,
+  `expected_source` varchar(255) NOT NULL DEFAULT '',
+  `updated_by` int(10) unsigned NOT NULL DEFAULT 0,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`host_id`),
+  KEY `enabled_poll` (`enabled`,`poll_interval`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE IF NOT EXISTS `plugin_icct_nms_ntp_state` (
+  `host_id` mediumint(8) unsigned NOT NULL,
+  `status` varchar(24) NOT NULL DEFAULT 'unknown',
+  `reachable` tinyint(3) unsigned NOT NULL DEFAULT 0,
+  `synchronized` tinyint(3) unsigned NOT NULL DEFAULT 0,
+  `selected_source` varchar(255) NOT NULL DEFAULT '',
+  `stratum` tinyint(3) unsigned DEFAULT NULL,
+  `leap_indicator` tinyint(3) unsigned DEFAULT NULL,
+  `reference_id` varchar(64) NOT NULL DEFAULT '',
+  `offset_ms` decimal(14,3) DEFAULT NULL,
+  `jitter_ms` decimal(14,3) DEFAULT NULL,
+  `delay_ms` decimal(14,3) DEFAULT NULL,
+  `dispersion_ms` decimal(14,3) DEFAULT NULL,
+  `last_attempt` datetime DEFAULT NULL,
+  `last_success` datetime DEFAULT NULL,
+  `last_error` varchar(512) NOT NULL DEFAULT '',
+  `sample_count` int(10) unsigned NOT NULL DEFAULT 0,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`host_id`),
+  KEY `status_updated` (`status`,`updated_at`),
+  KEY `last_success` (`last_success`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE IF NOT EXISTS `plugin_icct_nms_ntp_samples` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `host_id` mediumint(8) unsigned NOT NULL,
+  `observed_at` datetime NOT NULL,
+  `reachable` tinyint(3) unsigned NOT NULL DEFAULT 0,
+  `synchronized` tinyint(3) unsigned NOT NULL DEFAULT 0,
+  `stratum` tinyint(3) unsigned DEFAULT NULL,
+  `leap_indicator` tinyint(3) unsigned DEFAULT NULL,
+  `reference_id` varchar(64) NOT NULL DEFAULT '',
+  `offset_ms` decimal(14,3) DEFAULT NULL,
+  `jitter_ms` decimal(14,3) DEFAULT NULL,
+  `delay_ms` decimal(14,3) DEFAULT NULL,
+  `dispersion_ms` decimal(14,3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `host_time` (`host_id`,`observed_at`),
+  KEY `observed_at` (`observed_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE IF NOT EXISTS `plugin_icct_nms_ntp_events` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `host_id` mediumint(8) unsigned NOT NULL,
+  `event_key` varchar(32) NOT NULL,
+  `severity` varchar(16) NOT NULL,
+  `state` varchar(16) NOT NULL,
+  `message` varchar(512) NOT NULL,
+  `opened_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `closed_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `host_event` (`host_id`,`event_key`,`state`),
+  KEY `state_time` (`state`,`updated_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE IF NOT EXISTS `plugin_icct_nms_netflow_devices` (
+  `host_id` mediumint(8) unsigned NOT NULL,
+  `enabled` tinyint(3) unsigned NOT NULL DEFAULT 1,
+  `exporter_address` varchar(255) NOT NULL,
+  `version` tinyint(3) unsigned NOT NULL DEFAULT 9,
+  `sampling_rate` int(10) unsigned NOT NULL DEFAULT 1,
+  `active_timeout` int(10) unsigned NOT NULL DEFAULT 300,
+  `inactive_timeout` int(10) unsigned NOT NULL DEFAULT 15,
+  `updated_by` int(10) unsigned NOT NULL DEFAULT 0,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`host_id`),
+  UNIQUE KEY `exporter_address` (`exporter_address`),
+  KEY `enabled` (`enabled`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE IF NOT EXISTS `plugin_icct_nms_netflow_state` (
+  `host_id` mediumint(8) unsigned NOT NULL,
+  `status` varchar(24) NOT NULL DEFAULT 'unknown',
+  `last_attempt` datetime DEFAULT NULL,
+  `last_success` datetime DEFAULT NULL,
+  `last_data_at` datetime DEFAULT NULL,
+  `last_error` varchar(512) NOT NULL DEFAULT '',
+  `collector_path` varchar(512) NOT NULL DEFAULT '',
+  `live_start` datetime DEFAULT NULL,
+  `live_end` datetime DEFAULT NULL,
+  `total_bytes` bigint(20) unsigned NOT NULL DEFAULT 0,
+  `total_packets` bigint(20) unsigned NOT NULL DEFAULT 0,
+  `total_flows` bigint(20) unsigned NOT NULL DEFAULT 0,
+  `top_json` mediumtext NOT NULL,
+  `anomaly_status` varchar(16) NOT NULL DEFAULT 'normal',
+  `anomaly_reason` varchar(512) NOT NULL DEFAULT '',
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`host_id`),
+  KEY `status_updated` (`status`,`updated_at`),
+  KEY `last_data_at` (`last_data_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE IF NOT EXISTS `plugin_icct_nms_netflow_buckets` (
+  `host_id` mediumint(8) unsigned NOT NULL,
+  `bucket_start` datetime NOT NULL,
+  `total_bytes` bigint(20) unsigned NOT NULL DEFAULT 0,
+  `total_packets` bigint(20) unsigned NOT NULL DEFAULT 0,
+  `total_flows` bigint(20) unsigned NOT NULL DEFAULT 0,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`host_id`,`bucket_start`),
+  KEY `bucket_start` (`bucket_start`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE IF NOT EXISTS `plugin_icct_nms_netflow_metrics` (
+  `host_id` mediumint(8) unsigned NOT NULL,
+  `bucket_start` datetime NOT NULL,
+  `dimension` varchar(16) NOT NULL,
+  `key_hash` char(64) NOT NULL,
+  `key_text` varchar(512) NOT NULL,
+  `bytes` bigint(20) unsigned NOT NULL DEFAULT 0,
+  `packets` bigint(20) unsigned NOT NULL DEFAULT 0,
+  `flows` bigint(20) unsigned NOT NULL DEFAULT 0,
+  PRIMARY KEY (`host_id`,`bucket_start`,`dimension`,`key_hash`),
+  KEY `dimension_time` (`dimension`,`bucket_start`),
+  KEY `host_dimension_time` (`host_id`,`dimension`,`bucket_start`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+
+CREATE TABLE IF NOT EXISTS `plugin_icct_nms_netflow_events` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `host_id` mediumint(8) unsigned NOT NULL,
+  `event_key` varchar(32) NOT NULL,
+  `severity` varchar(16) NOT NULL,
+  `state` varchar(16) NOT NULL,
+  `message` varchar(512) NOT NULL,
+  `opened_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `closed_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `host_event` (`host_id`,`event_key`,`state`),
+  KEY `state_time` (`state`,`updated_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;

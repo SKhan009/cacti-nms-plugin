@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const source=fs.readFileSync(path.join(__dirname,'../../protocols/snmp/mibs/js/mib-tree.js'),'utf8');
+const start=source.indexOf("(()=>{'use strict';\n const form=document.querySelector('#mibSelectionForm')");
+const records=[{object_index:0,base_oid:'1.2.3',numeric:false},{object_index:1,base_oid:'1.2.3.1',numeric:true},{object_index:2,base_oid:'1.2.3.2',numeric:true},{object_index:3,base_oid:'1.2.30.1',numeric:true},{object_index:4,base_oid:'1.2.3.3',numeric:true,bundle:'other'}].map(item=>({bundle:'test',module:'QA-MIB',can_create:true,...item}));
+const choices=records.map((record,index)=>({dataset:{treeSelection:String(index)},checked:false,disabled:false,events:{},addEventListener(type,fn){this.events[type]=fn;}}));
+const form={events:{},querySelectorAll:()=>choices,addEventListener(type,fn){this.events[type]=fn;}},payload={},count={},next={},data={textContent:JSON.stringify(records),dataset:{initialObject:''}};
+vm.runInNewContext(source.slice(start),{document:{querySelector(selector){return {'#mibSelectionForm':form,'#mibBrowserData':data,'#mibSelectionNext':next,'#mibSelectionPayload':payload,'#mibTreeSelectionCount':count}[selector]||null;}}});
+choices[0].checked=true;choices[0].events.change();
+assert.deepEqual(JSON.parse(payload.value).selected,{'1':1,'2':1},'Parent selects only numeric descendants in the same module and bundle with an exact OID boundary');
+choices[1].checked=false;choices[1].events.change();
+assert.equal(choices[0].indeterminate,true);assert.deepEqual(JSON.parse(payload.value).selected,{'2':1});
+choices[0].checked=false;choices[0].events.change();assert.equal(next.disabled,true);assert.deepEqual(JSON.parse(payload.value).selected,{});
+console.log('PASS: parent selection, partial state, independent child removal, OID boundaries and bundle isolation.');

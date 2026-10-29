@@ -26,7 +26,6 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
         <link rel="stylesheet" href="shared/css/inventory.css?v=<?= substr(hash_file('sha256', __DIR__ . '/../css/inventory.css'), 0, 12) ?>" />
         <?php if (!empty($mibRepositoryPage)&&($mode??'')==='list'): ?><link rel="stylesheet" href="protocols/snmp/mibs/css/mib-list.css?v=<?= substr(hash_file('sha256',__DIR__.'/../../protocols/snmp/mibs/css/mib-list.css'),0,12) ?>"><?php endif; ?>
         <?php if (!empty($mibRepositoryPage)): ?><link rel="stylesheet" href="protocols/snmp/mibs/css/mib-wizard.css?v=<?= substr(hash_file('sha256',__DIR__.'/../../protocols/snmp/mibs/css/mib-wizard.css'),0,12) ?>"><?php endif; ?>
-        <?php if ($title === "Syslog Console"): ?><link rel="stylesheet" href="protocols/syslog/css/syslog.css?v=<?= substr(hash_file('sha256', __DIR__ . '/../../protocols/syslog/css/syslog.css'),0,12) ?>"><?php endif; ?>
         <?php if (!empty($mapPage)): ?>
         <link rel="stylesheet" href="shared/assets/vendor/leaflet/leaflet.css">
         <link rel="stylesheet" href="dashboard/map/css/map.css?v=<?= substr(hash_file('sha256',__DIR__ . '/../../dashboard/map/css/map.css'),0,12) ?>">
@@ -42,7 +41,6 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
                     <a href="inventory/controllers/inventory.php">Inventory</a>
                     <a href="dashboard/topology/controllers/topology_configuration.php">Topology Configuration</a>
                     <a href="protocols/snmp/mibs/controllers/mib_repository.php">MIB Repository</a>
-                    <a href="protocols/syslog/controllers/syslog.php">Syslog Console</a>
                     <a href="presets/controllers/presets.php#segment">Presets</a>
                 </nav>
             </div>

@@ -18,7 +18,7 @@ function icctInlineMessage({title, text, danger = false, context}) {
   body.textContent = text;
   feedback.replaceChildren(heading, body);
 }
-function icctToast({title = 'Success', text}) {
+function icctToast({title = 'Success', text, action = null, duration = 6000}) {
   let region = document.querySelector('#toast-region');
   if (!region) {
     region = document.createElement('div');region.id = 'toast-region';
@@ -29,10 +29,17 @@ function icctToast({title = 'Success', text}) {
   const heading = document.createElement('strong'), body = document.createElement('span'), close = document.createElement('button');
   heading.textContent = title;body.textContent = text;
   close.type = 'button';close.textContent = '×';close.setAttribute('aria-label', 'Dismiss notification');
-  toast.append(heading, body, close);region.append(toast);
+  toast.append(heading, body, close);
+  if (action) {
+    const actionButton = document.createElement('button');
+    actionButton.type = 'button';actionButton.className = 'notification-toast-action';actionButton.textContent = action.label;
+    actionButton.addEventListener('click', () => {actionButton.disabled = true;action.onClick();});
+    toast.append(actionButton);
+  }
+  region.append(toast);
   let timer;
   const dismiss = () => {clearTimeout(timer);toast.remove();};
-  const schedule = () => {clearTimeout(timer);timer = setTimeout(dismiss, 6000);};
+  const schedule = () => {clearTimeout(timer);timer = setTimeout(dismiss, duration);};
   close.addEventListener('click', dismiss);
   toast.addEventListener('mouseenter', () => clearTimeout(timer));toast.addEventListener('mouseleave', schedule);
   toast.addEventListener('focusin', () => clearTimeout(timer));toast.addEventListener('focusout', schedule);

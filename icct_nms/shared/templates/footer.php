@@ -56,6 +56,7 @@
 <script src="dashboard/topology/js/topology-configuration.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../dashboard/topology/js/topology-configuration.js'),0,12) ?>" defer></script>
 <?php endif; ?>
 <?php if (!empty($mibRepositoryPage)): ?>
+<script src="protocols/snmp/mibs/js/mib-upload.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../protocols/snmp/mibs/js/mib-upload.js'),0,12) ?>" defer></script>
 <?php if(($mode??'')==='selection'): ?><script src="protocols/snmp/mibs/js/mib-tree.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../protocols/snmp/mibs/js/mib-tree.js'),0,12) ?>" defer></script><?php endif; ?>
 <?php if(($mode??'')==='list'): ?><script src="protocols/snmp/mibs/js/mib-list.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../protocols/snmp/mibs/js/mib-list.js'),0,12) ?>" defer></script><?php endif; ?>
 <script src="protocols/snmp/mibs/js/mib-repository.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../protocols/snmp/mibs/js/mib-repository.js'),0,12) ?>" defer></script>

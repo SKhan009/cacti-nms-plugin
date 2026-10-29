@@ -180,10 +180,10 @@
   font-weight: 600;
   text-align: center;
 }
-.severity-critical { background: #ffd7d9; color: #8d1117; }
-.severity-major { background: #ffe0c2; color: #8c3f00; }
-.severity-warning { background: #fff1b8; color: #6d5500; }
-.severity-info { background: #dce8ff; color: #184a9c; }
+.severity-critical { background: #f94144; color: #161616; }
+.severity-major { background: #f3722b; color: #161616; }
+.severity-warning { background: #42aa8b; color: #161616; }
+.severity-info { background: #277da2; color: #fff; }
 .severity-debug { background: #e7e7e7; color: #555; }
 .syslog-message { max-width: 520px; }
 .syslog-message details summary {
@@ -270,3 +270,5 @@
 #syslog-table { font-size: 14px; background: #fff; }
 #syslog-table th, #syslog-table td { border: 1px solid #d4d4d4; background: #fff; }
 #syslog-table th { font-size: 14px; }
+
+.severity-minor { background: #f7961e; color: #161616; }

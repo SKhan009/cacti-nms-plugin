@@ -5,6 +5,9 @@
  let selected=null,priorOpen=null;
  function select(id){
   const record=records[id];if(!record)return;selected=id;
+  document.querySelector('#mibBrowserPlaceholder').hidden=true;
+  document.querySelector('#mibBrowserContent').hidden=false;
+  document.querySelector('.mib-browser-detail').classList.remove('is-empty');
   leaves.forEach(leaf=>{const active=Number(leaf.dataset.mibNode)===id;leaf.classList.toggle('selected',active);leaf.setAttribute('aria-pressed',String(active));});
   document.querySelector('#mibBrowserName').textContent=record.name;
   document.querySelectorAll('[data-mib-property]').forEach(cell=>{const value=record[cell.dataset.mibProperty];cell.textContent=value===undefined||value===null||value===''?'—':String(value);});
@@ -23,19 +26,16 @@
   empty.hidden=count>0;
   if(count&&!leaves.some(leaf=>!leaf.hidden&&Number(leaf.dataset.mibNode)===selected))select(Number(leaves.find(leaf=>!leaf.hidden).dataset.mibNode));
  });
- if(leaves.length){const initial=source.dataset.initialObject;const target=initial===''?null:records.findIndex(record=>record.object_index===Number(initial));select(target!==null&&target>=0?target:Number(leaves[0].dataset.mibNode));}
+ if(leaves.length&&source.dataset.initialObject!==''){const initial=source.dataset.initialObject;const target=initial===''?null:records.findIndex(record=>record.object_index===Number(initial));select(target!==null&&target>=0?target:Number(leaves[0].dataset.mibNode));}
 })();
 
 (()=>{'use strict';
  const form=document.querySelector('#mibSelectionForm');if(!form)return;
- const source=document.querySelector('#mibBrowserData'),records=JSON.parse(source.textContent),boxes=[...form.querySelectorAll('[data-tree-selection]')],selected=new Set(),next=document.querySelector('#mibSelectionNext'),payload=document.querySelector('#mibSelectionPayload');
- function targets(index){const record=records[index];return records.filter(item=>item.numeric&&item.can_create&&(item.object_index===record.object_index||(item.module===record.module&&item.base_oid.startsWith(record.base_oid+'.'))));}
- function sync(){boxes.forEach(box=>{const items=targets(Number(box.dataset.treeSelection)),count=items.filter(item=>selected.has(item.object_index)).length;box.checked=items.length>0&&count===items.length;box.indeterminate=count>0&&count<items.length;});const values={};selected.forEach(index=>values[index]=1);payload.value=JSON.stringify({selected:values,records:{}});next.disabled=!selected.size;document.querySelector('#mibTreeSelectionCount').textContent=selected.size+' OIDs selected';}
- boxes.forEach(box=>box.addEventListener('change',()=>{targets(Number(box.dataset.treeSelection)).forEach(item=>box.checked?selected.add(item.object_index):selected.delete(item.object_index));sync();}));
- // Restore the selection count alongside browser-restored checkbox state.
- function restoreSelection(){selected.clear();boxes.filter(box=>box.checked&&!box.disabled).forEach(box=>targets(Number(box.dataset.treeSelection)).forEach(item=>selected.add(item.object_index)));sync();}
- window.addEventListener('pageshow',restoreSelection);
- boxes.filter(box=>box.checked&&!box.disabled).forEach(box=>targets(Number(box.dataset.treeSelection)).forEach(item=>selected.add(item.object_index)));
- if(source.dataset.initialObject!==''){const index=records.findIndex(item=>item.object_index===Number(source.dataset.initialObject));if(index>=0)targets(index).forEach(item=>selected.add(item.object_index));}
+ const source=document.querySelector('#mibBrowserData'),records=JSON.parse(source.textContent),radios=[...form.querySelectorAll('[data-tree-selection]')],selected=new Set(),next=document.querySelector('#mibSelectionNext'),payload=document.querySelector('#mibSelectionPayload');
+ const restored=document.querySelector('#mibRestoredSelection');if(restored)JSON.parse(restored.textContent).forEach(index=>selected.add(Number(index)));
+ const initial=source.dataset.initialObject;if(initial!==''){const record=records.find(item=>item.object_index===Number(initial));if(record?.numeric&&record.can_create)selected.add(record.object_index);}
+ function targets(choice){const parent=records[Number(choice.dataset.treeSelection)];return records.filter(item=>item.numeric&&item.can_create&&item.bundle===parent.bundle&&item.module===parent.module&&(item.object_index===parent.object_index||(parent.base_oid&&item.base_oid.startsWith(parent.base_oid+'.'))));}
+ function sync(){radios.forEach(choice=>{const items=targets(choice),count=items.filter(item=>selected.has(item.object_index)).length;choice.checked=items.length>0&&count===items.length;choice.indeterminate=count>0&&count<items.length;});const values={};selected.forEach(index=>values[index]=1);payload.value=JSON.stringify({selected:values,records:{}});next.disabled=!selected.size;document.querySelector('#mibTreeSelectionCount').textContent=selected.size+' OIDs selected';}
+ radios.forEach(choice=>choice.addEventListener('change',()=>{if(choice.disabled)return;const include=choice.checked;targets(choice).forEach(record=>include?selected.add(record.object_index):selected.delete(record.object_index));sync();}));
  form.addEventListener('submit',event=>{sync();if(!selected.size)event.preventDefault();});sync();
 })();

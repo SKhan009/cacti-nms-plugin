@@ -7,7 +7,7 @@
 <div class="dashboard-grid"><section class="icct-map-panel" data-widget="topology">
 <div class="icct-map-toolbar">
 <div class="icct-view-tabs" role="tablist" aria-label="Dashboard views">
-<?php foreach (['topology'=>'Topology','rack'=>'Rack View','image'=>'Image View'] as $key=>$label): ?><button type="button" role="tab" id="icct-view-<?= $key ?>" aria-controls="icct-panel-<?= $key ?>" aria-selected="<?= $key===$dashboardView?'true':'false' ?>" tabindex="<?= $key===$dashboardView?'0':'-1' ?>" data-view="<?= $key ?>"><?= $label ?></button><?php endforeach; ?>
+<?php foreach (['topology'=>'Topology','rack'=>'Rack View','image'=>'Image View','map'=>'Map View'] as $key=>$label): ?><button type="button" role="tab" id="icct-view-<?= $key ?>" aria-controls="icct-panel-<?= $key ?>" aria-selected="<?= $key===$dashboardView?'true':'false' ?>" tabindex="<?= $key===$dashboardView?'0':'-1' ?>" data-view="<?= $key ?>"><?= $label ?></button><?php endforeach; ?>
 </div>
 <div class="icct-map-counts" aria-label="Device status totals"><span>Total: <?= $mapData['counts']['total'] ?></span><span class="online">Online: <?= $mapData['counts']['online'] ?></span><span class="offline">Offline: <?= $mapData['counts']['offline'] ?></span><span class="disabled">Disabled: <?= $mapData['counts']['disabled'] ?></span></div>
 </div>
@@ -57,5 +57,5 @@
 <div id="mapSiteAlarms" class="topology-summary-alarms"></div>
 <nav class="topology-summary-links map-site-links" aria-label="Site actions"><a id="mapSiteTopology" href="dashboard/controllers/topology.php">View Topology <span aria-hidden="true">→</span></a><button type="button" disabled title="Site chat is not configured.">Chat <span aria-hidden="true">→</span></button></nav>
 </dialog>
-<script type="application/json" id="icctMapData" data-summary-url="dashboard/controllers/topology.php"><?= json_encode($mapData+['states'=>'shared/assets/maps/india-states.json','tiles'=>null],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
+<script type="application/json" id="icctMapData" data-summary-url="dashboard/controllers/topology.php"><?= json_encode($mapData+['states'=>'shared/assets/maps/india-states.json','tiles'=>$mapConfigured?'dashboard/controllers/topology.php?map_tile=1':null],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
 </section>

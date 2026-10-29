@@ -5,7 +5,7 @@ $syslogFilters=icct_backend_syslog_filters($syslog);
 $syslogHelp=static function($label,$help){ ?><span class="field-info" tabindex="0" role="img" aria-label="Information about <?= icct_nms_h($label) ?>" data-tooltip="<?= icct_nms_h($help) ?>"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span><?php };
 ?>
 <?php if(empty($presetMode)): ?>
-<input type="hidden" name="source_address" value="<?= icct_nms_h($syslog['source_address'] ?? $host['hostname']) ?>">
+<input type="hidden" name="source_address" value="<?= icct_nms_h($syslog['source_address'] ?? $host['hostname'] ?? $values['hostname'] ?? $old['hostname'] ?? '') ?>">
 <input type="hidden" name="transport" value="<?= icct_nms_h($syslog['transport'] ?? 'both') ?>">
 <?php endif; ?>
 <div class="protocol-grid cols-2 syslog-settings">
@@ -27,6 +27,5 @@ $syslogHelp=static function($label,$help){ ?><span class="field-info" tabindex="
 <div class="syslog-keyword-box"><div class="syslog-keyword-chips"></div><input type="text" class="syslog-keyword-input" aria-label="Add match string" placeholder="Add match string" maxlength="148"></div>
 </div>
 <div class="protocol-actions split-actions">
-<?php if(empty($presetMode)): ?><a class="button" href="protocols/syslog/controllers/syslog.php?host_id=<?= (int)$id ?>">Open Syslog Console</a><?php endif; ?>
 <button class="button primary" type="submit">Save</button>
 </div>

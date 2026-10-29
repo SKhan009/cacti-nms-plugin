@@ -21,6 +21,7 @@ function icct_nms_schema_install()
     icct_nms_schema_sites_migration();
     icct_nms_schema_rack_catalogue_migration();
     icct_nms_schema_missing_preset_racks();
+    icct_nms_schema_syslog_availability_migration();
     if (
         !db_execute_prepared(
             'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
@@ -148,6 +149,29 @@ function icct_nms_schema_mtr_background_migration() {
     ] as [$table,$column,$definition]) {
         if (!db_fetch_cell("SHOW COLUMNS FROM plugin_icct_nms_".$table." LIKE '".$column."'")) {
             icct_nms_schema_execute("ALTER TABLE plugin_icct_nms_".$table." ADD ".$column." ".$definition);
+        }
+    }
+}
+
+/** Syslog-only additive upgrade; safe to rerun on an existing installation. */
+function icct_nms_schema_syslog_availability_migration() {
+    if (!db_execute('CREATE TABLE IF NOT EXISTS `plugin_icct_nms_syslog_availability_state` (
+  `host_id` mediumint(8) unsigned NOT NULL,
+  `last_status` tinyint(3) unsigned NOT NULL DEFAULT 0,
+  `last_disabled` tinyint(3) unsigned NOT NULL DEFAULT 0,
+  `initialized_at` datetime NOT NULL,
+  `last_changed_at` datetime DEFAULT NULL,
+  `updated_at` datetime NOT NULL,
+  PRIMARY KEY (`host_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;')) throw new RuntimeException('Syslog availability state migration failed.');
+    if (!db_fetch_cell("SHOW COLUMNS FROM plugin_icct_nms_syslog_events LIKE 'event_origin'")) {
+        if (!db_execute("ALTER TABLE plugin_icct_nms_syslog_events ADD event_origin VARCHAR(16) NOT NULL DEFAULT 'syslog' AFTER host_id")) {
+            throw new RuntimeException('Syslog event-origin migration failed.');
+        }
+    }
+    if (!db_fetch_cell("SHOW INDEX FROM plugin_icct_nms_syslog_events WHERE Key_name='origin_time'")) {
+        if (!db_execute("ALTER TABLE plugin_icct_nms_syslog_events ADD KEY origin_time(event_origin,event_time)")) {
+            throw new RuntimeException('Syslog event-origin index migration failed.');
         }
     }
 }

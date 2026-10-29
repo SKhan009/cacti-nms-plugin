@@ -9,7 +9,7 @@ require __DIR__ . '/../../protocols/syslog/services/backend/syslog.php';
 function check($condition,$message){if(!$condition)throw new RuntimeException($message);}
 $r=['source_ip'=>'192.0.2.10','hostname'=>'test','input_name'=>'icct-udp','severity_code'=>3,'facility_code'=>1,'message'=>'test message','timestamp'=>'2026-10-05T12:30:00Z'];
 check(icct_backend_syslog_ingest($r,$reason)==='inserted','Valid mapped event');
-check($writes[0][1][11]==='major','Severity mapping');
+check($writes[0][1][12]==='major','Severity mapping');
 $existing=true;check(icct_backend_syslog_ingest($r,$reason)==='repeated','Duplicate aggregation');$existing=false;
 check(icct_backend_syslog_ingest(array_replace($r,['severity_code'=>7]),$reason)==='dropped'&&$reason==='severity-filtered','Severity filter');
 check(icct_backend_syslog_ingest(array_replace($r,['input_name'=>'icct-tcp']),$reason)==='dropped','Transport filter');

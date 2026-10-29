@@ -105,7 +105,14 @@ function icct_nms_save_graph_association($id, $input)
         "REPLACE INTO host_graph(host_id,graph_template_id) VALUES(?,?)",
         [$id, $templateId],
     );
+    // Native automation may create the graph; activation is idempotent and also
+    // covers MIB graph-only templates without a generated device template.
     automation_hook_graph_template($id, $templateId);
+    icct_backend_device_activate_imported_templates(
+        $id,
+        (int)db_fetch_cell_prepared('SELECT host_template_id FROM host WHERE id=?', [$id]),
+        $templateId,
+    );
     api_plugin_hook_function("add_graph_template_to_host", [
         "host_id" => $id,
         "graph_template_id" => $templateId,

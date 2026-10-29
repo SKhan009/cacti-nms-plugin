@@ -16,7 +16,11 @@ check(icct_mib_generation_draft_get($token,'bundle','ready')['review']['values']
 rejects(fn()=>icct_mib_generation_draft_get($token,'other','ready'),'Bundle isolation');
 rejects(fn()=>icct_mib_generation_draft_get($token,'bundle','review'),'Phase isolation');
 rejects(fn()=>icct_mib_generation_draft_get('../','bundle','ready'),'Invalid token rejected');
-$_SESSION['icct_mib_generation_'.$token]['time']=time()-3601;
+$_SESSION['icct_mib_generation_'.$token]['time']=time()-7200;
+$_SESSION['icct_mib_generation_'.$token]['last_access']=time()-60;
+check(icct_mib_generation_draft_get($token,'bundle','ready')['review']['values']===$result,'Active review survives the original one-hour creation limit');
+check($_SESSION['icct_mib_generation_'.$token]['last_access']>=time()-1,'Review access renews the inactivity lease');
+$_SESSION['icct_mib_generation_'.$token]['last_access']=time()-14401;
 rejects(fn()=>icct_mib_generation_draft_get($token,'bundle','ready'),'Expired draft rejected');
 check(icct_mib_generation_prepare($original,['selected'=>$original,'records'=>[]],false)['selected']===$original,'Unchanged selection needs no confirmation');
 echo "Passed $checks generation draft checks.\n";

@@ -6,7 +6,7 @@ $base=['source'=>'snmp','parameter'=>'Battery temperature','oid'=>'1.3.6.1.4.1.9
 function icct_backend_inventory_collector_id(){return 1;}
 function read_config_option($key){return $key==='poller_interval'?300:1;}
 function icct_backend_protocol_enabled($id,$protocol){if($id!==5||$protocol!=='snmp')throw new RuntimeException('Incorrect host');return $GLOBALS['enabled'];}
-function db_fetch_assoc_prepared($sql,$args){if(str_contains($sql,'SELECT h.*'))return [$GLOBALS['host']];throw new RuntimeException('Direct SNMP incorrectly requires a graph');}
+function db_fetch_assoc_prepared($sql,$args){if(str_starts_with($sql,"SELECT DISTINCT m.meta_value"))return [];if(str_contains($sql,'SELECT h.*'))return [$GLOBALS['host']];throw new RuntimeException('Direct SNMP incorrectly requires a graph');}
 function db_fetch_cell_prepared($sql,$args){return json_encode($GLOBALS['rules']);}
 function icct_backend_category_execute($sql,$args){$GLOBALS['writes'][]=$args;}
 function cacti_snmp_get(...$args){if($args[0]!=='192.0.2.15'||$args[1]!=='private-fixture')throw new RuntimeException('Incorrect device credentials');$GLOBALS['reads']++;return $GLOBALS['response'];}

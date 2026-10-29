@@ -9,6 +9,7 @@ foreach (
         "api_automation.php",
         "api_tree.php",
         "api_graph.php",
+        "api_data_source.php",
         "data_query.php",
         "template.php",
         "utility.php",

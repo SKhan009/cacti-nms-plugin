@@ -14,9 +14,11 @@ function icct_nms_device($id){global $fixtureHost;if($id===99)throw new RuntimeE
 function icct_backend_require_management($realm){}
 function icct_nms_metadata($id){return [];}
 function db_fetch_row_prepared($sql,$args){return [];}
+function db_fetch_assoc_prepared($sql,$args){return [];}
 function db_fetch_cell_prepared($sql,$args){return str_contains($sql,'GET_LOCK')||str_contains($sql,'RELEASE_LOCK')?1:'tester';}
 function icct_nms_discovery_assignment($id){return [];}
 function icct_backend_serial_assignment($id){return [];}
+function icct_backend_syslog_assignment($id){return [];}
 function icct_backend_protocol_enabled($id,$protocol){return true;}
 function icct_nms_graph_associations($id){return [['id'=>4]];}
 function icct_nms_meta($key){global $records;return $records[$key] ?? '';}

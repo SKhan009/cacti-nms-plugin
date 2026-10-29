@@ -2,26 +2,11 @@
 <?php if($mode==='selection'&&isset($selectionBundle)):require __DIR__.'/mib_selection.php';return;endif; ?>
 <?php if($mode==='generation'&&isset($generationBundle)):require __DIR__.'/mib_generation.php';return;endif; ?>
 <?php if($mode==='list'): ?>
-<div class="titlebar mib-browser-titlebar"><div><p class="breadcrumb"><a href="dashboard/controllers/topology.php">Dashboard</a> / MIB Repository</p><h1><?= isset($repositoryBundle)?icct_nms_h($repositoryBundle['name']):'MIB Repository' ?></h1></div><div class="mib-browser-title-actions"><?php if(isset($repositoryBundle)): ?><a class="button" href="protocols/snmp/mibs/controllers/mib_repository.php">Back to Repository</a><?php endif; ?><?php if($management): ?><a class="button primary" href="protocols/snmp/mibs/controllers/mib_repository.php?upload=1" data-mib-upload-open>Upload</a><?php endif; ?></div></div>
-<?php if($deletedId): ?><form method="post" class="mib-editor"><?php icct_nms_token(); ?><input type="hidden" name="action" value="restore"><input type="hidden" name="bundle_id" value="<?= icct_nms_h($deletedId) ?>">MIB upload removed. <button class="button" type="submit">Undo</button></form><?php endif; ?>
-<?php require __DIR__.'/mib_repository_list.php';if($management){$uploadChooser=true;require __DIR__.'/mib_upload_dialog.php';}return;endif; ?>
+<div class="titlebar mib-browser-titlebar"><div><p class="breadcrumb"><a href="dashboard/controllers/topology.php">Dashboard</a> / MIB Repository</p><h1><?= isset($repositoryBundle)?icct_nms_h($repositoryBundle['name']):'MIB Repository' ?></h1></div><div class="mib-browser-title-actions"><?php if(isset($repositoryBundle)): ?><a class="button" href="protocols/snmp/mibs/controllers/mib_repository.php">Back to Repository</a><?php endif; ?><?php if($management): ?><button class="button primary" type="button" data-mib-upload-open>Upload</button><?php endif; ?></div></div>
+<?php if($deletedId): ?><form method="post" id="mibUndoForm" hidden><?php icct_nms_token(); ?><input type="hidden" name="action" value="restore"><input type="hidden" name="bundle_id" value="<?= icct_nms_h($deletedId) ?>"></form><?php endif; ?>
+<?php if($bundles){require __DIR__.'/mib_repository_list.php';}else{require __DIR__.'/mib_browser.php';}if($management){$uploadChooser=true;require __DIR__.'/mib_upload_dialog.php';}return;endif; ?>
 <div class="titlebar"><h1>MIB Repository</h1><?php if($management&&$mode==='list'): ?><a class="button primary" href="<?= icct_nms_h(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ?>?upload=1">Upload MIB</a><?php elseif($mode!=='list'): ?><a class="button" href="protocols/snmp/mibs/controllers/mib_repository.php">Back to MIB Repository</a><?php endif; ?></div>
-<?php if($mode==='upload'): ?>
-<form method="post" enctype="multipart/form-data" class="mib-editor" data-mib-upload-form>
-<?php icct_nms_token(); ?><input type="hidden" name="action" value="upload">
-<h2>Upload MIB file</h2><div class="protocol-grid">
-
-<label class="field"><span class="field-label">MIB File *</span><input type="file" name="mibs[]" accept=".mib,.my,.txt" required></label></div>
-<p>Bundled dependencies and saved database modules are loaded from the plugin folder automatically. Select one .mib, .my or .txt file, up to 1 MiB. Upload any missing dependencies separately. Parsing runs locally without contacting a device.</p>
-<details class="mib-object"><summary><strong>Download sample MIB files</strong></summary><div class="mib-object-body"><p>Save each link as a .txt or .my file, then upload it here.</p><ul>
-<li><a href="shared/assets/mibs/IF-MIB.txt" download>IF-MIB</a> — interface counters and status.</li>
-<li><a href="shared/assets/mibs/IP-MIB.txt" download>IP-MIB</a> — IPv4 / IPv6 IP information.</li>
-<li><a href="shared/assets/mibs/BRIDGE-MIB.txt" download>BRIDGE-MIB</a> — bridge and learned MAC information.</li>
-<li><a href="shared/assets/mibs/CISCO-ENTITY-SENSOR-MIB.txt" download>CISCO-ENTITY-SENSOR-MIB</a> — Cisco sensor values. Bundled dependencies: <a href="shared/assets/mibs/ENTITY-MIB.txt" download>ENTITY-MIB</a>, <a href="shared/assets/mibs/CISCO-TC.txt" download>CISCO-TC</a> and <a href="shared/assets/mibs/CISCO-SMI.txt" download>CISCO-SMI</a>.</li>
-</ul><p>Other imports must also be available in the repository or the plugin’s bundled MIB folder. Downloading a vendor MIB does not mean your device supports every object in it.</p></div></details>
-<div class="type-editor-actions"><a class="button" href="protocols/snmp/mibs/controllers/mib_repository.php">Cancel</a><button class="button primary">Save File and Continue</button></div></form>
-<?php $uploadChooser=false;require __DIR__.'/mib_upload_dialog.php'; ?>
-<?php elseif($mode==='wizard'): require __DIR__.'/mib_wizard.php'; ?>
+<?php if($mode==='wizard'): require __DIR__.'/mib_wizard.php'; ?>
 <?php elseif($mode==='review'&&$preview): $base=$reviewValues['template_name']??icct_mib_default_name($preview); ?>
 <form method="post" class="mib-editor" id="mibReview" novalidate>
 <?php icct_nms_token(); ?><input type="hidden" name="action" value="review"><input type="hidden" name="draft_id" value="<?= icct_nms_h($preview['id']) ?>">

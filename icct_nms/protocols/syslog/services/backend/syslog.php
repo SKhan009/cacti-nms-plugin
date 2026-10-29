@@ -28,6 +28,14 @@ function icct_backend_syslog_severity_labels()
     ];
 }
 
+function icct_backend_syslog_event_origin_labels()
+{
+    return [
+        'syslog' => 'Device Syslog',
+        'availability' => 'Availability',
+    ];
+}
+
 function icct_backend_syslog_nms_severity($severity)
 {
     $severity = (int) $severity;
@@ -227,10 +235,11 @@ function icct_backend_syslog_ingest(array $record, &$reason = null)
 
     icct_backend_syslog_execute(
         'INSERT INTO plugin_icct_nms_syslog_events
-        (host_id,event_time,received_at,last_seen,source_ip,source_host,transport,facility_code,facility,severity_code,severity,nms_severity,program,message,fingerprint)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        (host_id,event_origin,event_time,received_at,last_seen,source_ip,source_host,transport,facility_code,facility,severity_code,severity,nms_severity,program,message,fingerprint)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [
             (int) $assignment['host_id'],
+            'syslog',
             $event_time,
             $now,
             $now,
@@ -259,6 +268,121 @@ function icct_backend_syslog_bindings()
         "FROM plugin_icct_nms_syslog_devices d INNER JOIN host h ON h.id=d.host_id " .
         "WHERE h.deleted='' ORDER BY h.description,h.id"
     );
+}
+
+/** Return the normalized availability state for transition comparison. */
+function icct_backend_syslog_availability_state_name($status, $disabled)
+{
+    if ((int)$disabled === 1) return 'Disabled';
+    return icct_backend_host_status_name((int)$status);
+}
+
+/** Pure transition policy; returns null when no operator-relevant availability change occurred. */
+function icct_backend_syslog_availability_transition($oldStatus, $oldDisabled, $newStatus, $newDisabled)
+{
+    $oldName = icct_backend_syslog_availability_state_name($oldStatus, $oldDisabled);
+    $newName = icct_backend_syslog_availability_state_name($newStatus, $newDisabled);
+    if ($oldName === $newName) return null;
+
+    $severity = 6; // informational
+    if ($newName === 'Down' || $newName === 'Error') $severity = 3;
+    elseif ($newName === 'Recovering' || $newName === 'Unknown') $severity = 4;
+    elseif ($newName === 'Disabled') $severity = 5;
+    elseif ($newName === 'Up' && in_array($oldName, ['Down','Error','Recovering','Unknown'], true)) $severity = 5;
+
+    return [
+        'old' => $oldName,
+        'new' => $newName,
+        'severity_code' => $severity,
+        'message' => 'Device availability changed from ' . $oldName . ' to ' . $newName . '.',
+    ];
+}
+
+function icct_backend_syslog_generated_source(array $row)
+{
+    foreach ([(string)($row['source_address'] ?? ''), (string)($row['hostname'] ?? '')] as $candidate) {
+        $candidate = trim($candidate);
+        if ($candidate !== '' && filter_var($candidate, FILTER_VALIDATE_IP) !== false) return $candidate;
+    }
+    return '0.0.0.0';
+}
+
+/** Store a system-generated availability event in the same searchable event console without pretending it was wire Syslog. */
+function icct_backend_syslog_store_availability_event(array $row, array $transition)
+{
+    $hostId = (int)$row['host_id'];
+    $severityCode = (int)$transition['severity_code'];
+    $labels = icct_backend_syslog_severity_labels();
+    $severity = strtolower((string)($labels[$severityCode] ?? 'Informational'));
+    $nmsSeverity = icct_backend_syslog_nms_severity($severityCode);
+    $now = date('Y-m-d H:i:s');
+    $sourceIp = icct_backend_syslog_generated_source($row);
+    $sourceHost = substr(trim((string)($row['hostname'] ?? '')), 0, 255);
+    $message = (string)$transition['message'];
+    $fingerprint = hash('sha256', implode('|', [$hostId, 'availability', $transition['old'], $transition['new']]));
+    icct_backend_syslog_execute(
+        'INSERT INTO plugin_icct_nms_syslog_events
+        (host_id,event_origin,event_time,received_at,last_seen,source_ip,source_host,transport,facility_code,facility,severity_code,severity,nms_severity,program,message,fingerprint)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        [$hostId,'availability',$now,$now,$now,$sourceIp,$sourceHost,'internal',3,'System daemon',$severityCode,$severity,$nmsSeverity,'ICCT_AVAILABILITY',$message,$fingerprint]
+    );
+}
+
+/**
+ * Correlate Cacti's authoritative host status into the Syslog/Event console.
+ * This is intentionally not called "received Syslog": a powered-off device cannot transmit a packet.
+ * The poller hook records the transition after Cacti changes host.status.
+ */
+function icct_backend_syslog_collect_availability_events()
+{
+    $summary = ['checked'=>0,'initialized'=>0,'events'=>0,'unchanged'=>0,'skipped'=>0];
+    $lock = 'icct_syslog_availability_' . substr(hash('sha256', (string)db_fetch_cell('SELECT DATABASE()')), 0, 32);
+    if ((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,0)', [$lock]) !== 1) {
+        $summary['skipped'] = 1;
+        return $summary;
+    }
+    try {
+        icct_backend_syslog_execute('START TRANSACTION', []);
+        $rows = db_fetch_assoc(
+            "SELECT h.id AS host_id,d.source_address,h.description,h.hostname,h.status,h.disabled,h.status_event_count,h.status_fail_date,h.status_rec_date
+             FROM host h INNER JOIN plugin_icct_nms_syslog_devices d ON d.host_id=h.id AND d.enabled=1
+             WHERE h.deleted='' ORDER BY h.id"
+        );
+        if ($rows === false) throw new IcctSyslogStorageException('Availability device lookup failed.');
+        foreach ((array)$rows as $row) {
+            $hostId = (int)$row['host_id'];
+            if ($hostId < 1 || !icct_backend_protocol_enabled($hostId, 'syslog')) continue;
+            $summary['checked']++;
+            $newStatus = (int)$row['status'];
+            $newDisabled = trim((string)($row['disabled'] ?? '')) !== '' ? 1 : 0;
+            $state = db_fetch_row_prepared('SELECT * FROM plugin_icct_nms_syslog_availability_state WHERE host_id=? FOR UPDATE', [$hostId]);
+            if ($state === false) throw new IcctSyslogStorageException('Availability state lookup failed.');
+            if (!$state) {
+                icct_backend_syslog_execute(
+                    'INSERT INTO plugin_icct_nms_syslog_availability_state(host_id,last_status,last_disabled,initialized_at,last_changed_at,updated_at) VALUES(?,?,?,NOW(),NULL,NOW())',
+                    [$hostId,$newStatus,$newDisabled]
+                );
+                $summary['initialized']++;
+                // Start with a baseline; installing this feature must not fabricate historical events.
+                continue;
+            }
+            $transition = icct_backend_syslog_availability_transition((int)$state['last_status'], (int)$state['last_disabled'], $newStatus, $newDisabled);
+            if (!$transition) { $summary['unchanged']++; continue; }
+            icct_backend_syslog_store_availability_event($row, $transition);
+            icct_backend_syslog_execute(
+                'UPDATE plugin_icct_nms_syslog_availability_state SET last_status=?,last_disabled=?,last_changed_at=NOW(),updated_at=NOW() WHERE host_id=?',
+                [$newStatus,$newDisabled,$hostId]
+            );
+            $summary['events']++;
+        }
+        icct_backend_syslog_execute('COMMIT', []);
+    } catch (Throwable $error) {
+        db_execute_prepared('ROLLBACK', []);
+        throw $error;
+    } finally {
+        db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)', [$lock]);
+    }
+    return $summary;
 }
 
 function icct_backend_syslog_worker_state($source_path)
@@ -511,6 +635,10 @@ function icct_backend_syslog_events(array $allowed_host_ids, array $filters, $li
     if (!empty($filters['severity'])) {
         $where[] = 'e.nms_severity=?';
         $params[] = (string) $filters['severity'];
+    }
+    if (!empty($filters['origin'])) {
+        $where[] = 'e.event_origin=?';
+        $params[] = (string) $filters['origin'];
     }
     if (($filters['ack'] ?? '') === 'yes') {
         $where[] = 'e.acknowledged=1';
