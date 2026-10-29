@@ -2,6 +2,10 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Inventory designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
+## Version 1.2.12
+
+Dashboard Image View now renders the connected topology using each device's assigned Device Type image. Upload an image in Presets → Device Types, then assign that type to a device. When no image is uploaded, the node retains its name, status and alarm count without substituting an icon. Image View shares the topology's discovered/manual links, positions, status colors, alarm counts, zoom, summary and layout controls. The normal topology, rack and geographic map retain their own display settings.
+
 ## Version 1.2.11
 
 This update adds saved MIB template editing, aligned read-only views and empty states, matching Syslog severity colors, and device save fixes for hidden SNMP controls and multi-protocol defaults. Syslog availability transitions are stored separately from received messages. NTP and NetFlow tables are included for compatibility; their monitoring modules remain pending.

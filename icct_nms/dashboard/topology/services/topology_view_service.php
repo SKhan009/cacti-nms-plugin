@@ -35,7 +35,8 @@ function icct_nms_topology_data($mapData) {
         $device['discovery']=icct_nms_device_discovery_summary($device['id'],$discoveryHosts[$device['id']]??null);
         $device['short_name']=trim((string)($host['short_name']??'')) ?: icct_backend_short_name_generate($device['name'],$host['device_type']??'',(int)$device['id']);
         $device['network_asset']=icct_nms_type_icon_asset('device');
-        foreach($types as $type) if((int)$type['category_id']===(int)($host['category_id']??0) && $type['name']===($host['device_type']??'')){$device['network_asset']=icct_nms_type_asset($type,'network');break;}
+        $device['image_asset']='';
+        foreach($types as $type) if((int)$type['category_id']===(int)($host['category_id']??0) && $type['name']===($host['device_type']??'')){$device['network_asset']=icct_nms_type_asset($type,'network');$device['image_asset']=icct_nms_type_asset($type,'image');break;}
         foreach([$device['name'],$device['address'],$host['snmp_sysName']??''] as $value)$addIdentity($value,$device['id']);
         $rows=db_fetch_assoc_prepared("SELECT data_json,protocol,status,succeeded_at,config_hash FROM plugin_icct_nms_discovery_snapshots WHERE host_id=? AND protocol IN ('cdp','lldp') AND status='success'",[$device['id']]);
         foreach($rows as $row){

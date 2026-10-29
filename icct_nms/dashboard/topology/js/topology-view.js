@@ -1,10 +1,13 @@
 (function(){
 'use strict';
 const source=document.querySelector('#topologyData');if(!source)return;
-const data=JSON.parse(source.textContent),stage=document.querySelector('#topologyStage'),canvas=document.querySelector('#topologyCanvas'),cards=document.querySelector('#topologyDevices'),svg=document.querySelector('#topologyLinks'),panel=document.querySelector('#icct-panel-topology'),save=document.querySelector('#topologySave'),message=document.querySelector('#topologyMessage'),dialog=document.querySelector('#topologyDraftDialog');
+const data=JSON.parse(source.textContent),stage=document.querySelector('#topologyStage'),canvas=document.querySelector('#topologyCanvas'),cards=document.querySelector('#topologyDevices'),svg=document.querySelector('#topologyLinks'),surface=document.querySelector('#topologySurface'),save=document.querySelector('#topologySave'),message=document.querySelector('#topologyMessage'),dialog=document.querySelector('#topologyDraftDialog');
+let panel=document.querySelector('#icct-panel-topology'),view='topology';
+function assetForDevice(device){return view==='image' ? (device.image_asset||'') : (device.network_asset||'');}
 let editing=false,busy=false,scale=1,dirty=false,pending=null,bypass=false,drag=null;
-const devices=data.devices,positions={},core=devices.find(d=>Number(d.id)===Number(data.core_id));
-const others=devices.filter(d=>d!==core),cols=Math.max(4,Math.ceil(Math.sqrt(others.length*1.15))),rows=Math.ceil(others.length/cols);
+function isCoreDevice(device){return Number(device.id)===Number(data.core_id);}
+const devices=data.devices,positions={},core=devices.find(isCoreDevice);
+const others=devices.filter(d=>!isCoreDevice(d)),cols=Math.max(4,Math.ceil(Math.sqrt(others.length*1.15))),rows=Math.ceil(others.length/cols);
 others.forEach((d,i)=>{const row=Math.floor(i/cols),col=i%cols;positions[d.id]=[.08+col*.84/Math.max(1,cols-1),row<Math.ceil(rows/2)? .08+row*.32/Math.max(1,Math.ceil(rows/2)-1):.60+(row-Math.ceil(rows/2))*.32/Math.max(1,rows-Math.ceil(rows/2)-1)];});
 if(core)positions[core.id]=[.5,.5];
 Object.entries(data.layout).forEach(([id,p])=>{if(positions[id]&&Number(id)!==Number(core?.id))positions[id]=p;});
@@ -14,7 +17,7 @@ function el(tag,cls,text){const e=document.createElement(tag);e.className=cls;if
 function showDevice(d, refreshed=false){
  const detail=document.querySelector('#topologyDeviceDialog');document.querySelector('#topologyDeviceTitle').textContent=d.name;document.querySelector('#topologyDeviceAddress').textContent=d.address;
  const state=document.querySelector('#topologyDeviceStatus');state.className='device-status '+window.icctStatusClass(d.status);state.textContent=d.status==='Up'?'Online':d.status==='Down'?'Offline':d.status;
- const image=document.querySelector('#topologyDeviceImage');image.hidden=!d.network_asset;if(d.network_asset)image.src=d.network_asset;else image.removeAttribute('src');image.alt=d.name;
+ const image=document.querySelector('#topologyDeviceImage');image.hidden=!assetForDevice(d);if(assetForDevice(d))image.src=assetForDevice(d);else image.removeAttribute('src');image.alt=d.name;
  const summary=document.querySelector('#topologyDeviceSummary');summary.replaceChildren();Object.entries(d.summary||{}).forEach(([label,value])=>{const row=el('div','');row.append(el('dt','',label),el('dd','',value===null||value===''?'—':String(value)));summary.append(row);});
  const capacity=document.querySelector('#topologyDeviceCapacity');capacity.replaceChildren();['Switching Capacity (Tbps)','Forwarding Rate (Bpps)','Hardware Redundancy (W)','Table Scale (TCAM / FIB)'].forEach(label=>{const row=el('div','');row.append(el('dt','',label),el('dd','',d.capacity?.[label]===null||d.capacity?.[label]===undefined?'—':Number(d.capacity[label]).toLocaleString(undefined,{maximumFractionDigits:3})));capacity.append(row);});
  const alarms=document.querySelector('#topologyDeviceAlarms');alarms.replaceChildren();Object.entries(severityColors).forEach(([severity,color])=>{const badge=el('span',''),dot=el('i','');dot.style.background=color;badge.append(dot,document.createTextNode((severity==='Warning'?'Warn':severity==='Information'?'Info':severity)+': '+(d.fault_counts?.[severity]||0)));alarms.append(badge);});
@@ -30,21 +33,21 @@ function render(){
  const w=canvas.clientWidth,h=canvas.clientHeight;
  // Fit dense inventories without changing the saved device coordinates.
  const sizes={square:[52,52],rectangle:[64,52],wide:[156,44],tall:[44,72]};
- const dimensions=devices.map(d=>{const shape=d.shape||(d===core?'wide':'rectangle');const size=sizes[shape]||sizes.rectangle;return d.network_asset?[size[0],d.network_asset.includes('/uploads/')?(shape==='tall'?92:76):(shape==='tall'?76:shape==='wide'?52:60)]:size;});
+ const dimensions=devices.map(d=>{const shape=d.shape||(isCoreDevice(d)?'wide':'rectangle');const size=sizes[shape]||sizes.rectangle;return assetForDevice(d)?[size[0],assetForDevice(d).includes('/uploads/')?(shape==='tall'?92:76):(shape==='tall'?76:shape==='wide'?52:60)]:size;});
  const maxWidth=Math.max(1,...dimensions.map(s=>s[0])),maxHeight=Math.max(1,...dimensions.map(s=>s[1]));
  const halfRows=Math.ceil(rows/2),rowGap=halfRows>1?h*.32/(halfRows-1):h*.20;
  const densityScale=devices.length>20?Math.min(1,(w*.84/Math.max(1,cols-1)-8)/maxWidth,(rowGap-8)/maxHeight):1;
  canvas.style.setProperty('--topology-device-scale',String(Math.max(.15,densityScale)));
- devices.forEach(d=>{const card=el('div','topology-device '+window.icctStatusClass(d.status)+' shape-'+(['square','rectangle','wide','tall'].includes(d.shape)?d.shape:(d===core?'wide':'rectangle')));card.dataset.deviceId=d.id;card.classList.toggle('fixed-core',d===core);card.tabIndex=0;card.setAttribute('role','button');card.setAttribute('aria-label',d.name+' · '+d.status);card.title=d.name+' · '+d.status;card.style.left=(positions[d.id][0]*100)+'%';card.style.top=(positions[d.id][1]*100)+'%';card.classList.toggle('has-device-image',!!d.network_asset?.includes('/uploads/'));card.classList.toggle('has-device-asset',!!d.network_asset);const heading=el('div','topology-device-heading');heading.append(el('strong','',d.short_name||d.name));card.append(heading);if(d.network_asset){const icon=el('img','topology-device-icon');icon.src=d.network_asset;icon.alt='';icon.draggable=false;icon.addEventListener('error',()=>{icon.hidden=true;card.classList.remove('has-device-image','has-device-asset');});card.append(icon);}const badge=el('span','topology-alarm',String(d.fault_count||0));badge.style.background=d.alarm?severityColors[d.alarm.severity]||'#aaa':'white';badge.title=d.alarm?d.alarm.severity+': '+d.alarm.message:'No active fault';card.append(badge);
+ devices.forEach(d=>{const card=el('div','topology-device '+window.icctStatusClass(d.status)+' shape-'+(['square','rectangle','wide','tall'].includes(d.shape)?d.shape:(isCoreDevice(d)?'wide':'rectangle')));card.dataset.deviceId=d.id;card.classList.toggle('fixed-core',isCoreDevice(d));card.tabIndex=0;card.setAttribute('role','button');card.setAttribute('aria-label',d.name+' · '+d.status);card.title=d.name+' · '+d.status;card.style.left=(positions[d.id][0]*100)+'%';card.style.top=(positions[d.id][1]*100)+'%';card.classList.toggle('has-device-image',!!assetForDevice(d)?.includes('/uploads/'));card.classList.toggle('has-device-asset',!!assetForDevice(d));const heading=el('div','topology-device-heading');heading.append(el('strong','',d.short_name||d.name));card.append(heading);if(assetForDevice(d)){const icon=el('img','topology-device-icon');icon.src=assetForDevice(d);icon.alt='';icon.draggable=false;icon.addEventListener('error',()=>{icon.hidden=true;card.classList.remove('has-device-image','has-device-asset');});card.append(icon);}const badge=el('span','topology-alarm',String(d.fault_count||0));badge.style.background=d.alarm?severityColors[d.alarm.severity]||'#aaa':'white';badge.title=d.alarm?d.alarm.severity+': '+d.alarm.message:'No active fault';card.append(badge);
  card.addEventListener('click',()=>{if(!editing&&!busy)showDevice(d);});
- card.addEventListener('pointerdown',e=>{if(!editing||busy||d===core||e.button!==0)return;e.preventDefault();drag={id:d.id,card};card.setPointerCapture(e.pointerId);card.classList.add('dragging');});
+ card.addEventListener('pointerdown',e=>{if(!editing||busy||isCoreDevice(d)||e.button!==0)return;e.preventDefault();drag={id:d.id,card};card.setPointerCapture(e.pointerId);card.classList.add('dragging');});
  card.addEventListener('pointermove',e=>{if(!drag||drag.id!==d.id)return;const rect=canvas.getBoundingClientRect();positions[d.id]=[Math.max(.05,Math.min(.95,(e.clientX-rect.left)/rect.width)),Math.max(.07,Math.min(.93,(e.clientY-rect.top)/rect.height))];card.style.left=positions[d.id][0]*100+'%';card.style.top=positions[d.id][1]*100+'%';lines();});
  function finish(){if(!drag)return;drag=null;card.classList.remove('dragging');dirty=JSON.stringify(positions)!==JSON.stringify(saved);controls();}
  card.addEventListener('pointerup',finish);card.addEventListener('pointercancel',finish);
- card.addEventListener('keydown',e=>{if(!editing&&['Enter',' '].includes(e.key)){e.preventDefault();showDevice(d);return;}if(!editing||busy||d===core||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const p=positions[d.id];p[0]=Math.max(.05,Math.min(.95,p[0]+(e.key==='ArrowLeft'?-.01:e.key==='ArrowRight'?.01:0)));p[1]=Math.max(.07,Math.min(.93,p[1]+(e.key==='ArrowUp'?-.01:e.key==='ArrowDown'?.01:0)));dirty=true;render();cards.querySelector('[data-device-id="'+d.id+'"]').focus();});cards.append(card);});
+ card.addEventListener('keydown',e=>{if(!editing&&['Enter',' '].includes(e.key)){e.preventDefault();showDevice(d);return;}if(!editing||busy||isCoreDevice(d)||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const p=positions[d.id];p[0]=Math.max(.05,Math.min(.95,p[0]+(e.key==='ArrowLeft'?-.01:e.key==='ArrowRight'?.01:0)));p[1]=Math.max(.07,Math.min(.93,p[1]+(e.key==='ArrowUp'?-.01:e.key==='ArrowDown'?.01:0)));dirty=true;render();cards.querySelector('[data-device-id="'+d.id+'"]').focus();});cards.append(card);});
  svg.setAttribute('viewBox','0 0 '+w+' '+h);lines();controls();
 }
-const linkTip=el('div','topology-link-tooltip');linkTip.id='topologyLinkTooltip';linkTip.setAttribute('role','tooltip');linkTip.hidden=true;panel.append(linkTip);
+const linkTip=el('div','topology-link-tooltip');linkTip.id='topologyLinkTooltip';linkTip.setAttribute('role','tooltip');linkTip.hidden=true;surface.append(linkTip);
 let activeLink=null,linkRequest=0,linkTimer=null;
 function hideLink(){clearTimeout(linkTimer);linkRequest++;activeLink?.classList.remove('active-link');activeLink=null;linkTip.hidden=true;}
 function bandwidth(value){if(value===null||value===undefined)return 'Unavailable';const units=['bps','Kbps','Mbps','Gbps','Tbps'];let n=Number(value),i=0;while(n>=1000&&i<4){n/=1000;i++;}return n.toLocaleString(undefined,{maximumFractionDigits:2})+' '+units[i];}
@@ -117,6 +120,13 @@ async function refreshTopology(){
  }catch(error){message.textContent=error.message;}
 }
 setInterval(refreshTopology,30000);
-document.addEventListener('icct:before-view-change',event=>{if(event.detail.tab.dataset.view==='topology')setTimeout(refreshTopology,0);});
+function selectTopologyView(next){
+ if(!['topology','image'].includes(next))return;
+ view=next;panel=document.querySelector('#icct-panel-'+next);
+ panel.append(surface);surface.dataset.view=next;hideLink();render();
+ setTimeout(refreshTopology,0);
+}
+document.addEventListener('icct:view-change',event=>selectTopologyView(event.detail.view));
+selectTopologyView(document.querySelector('.icct-view-tabs [aria-selected="true"]')?.dataset.view||'topology');
 alarmTotals();render();
 })();

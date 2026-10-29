@@ -58,3 +58,10 @@ if($minimal['category_id']!==0 || $minimal['icon']!=='device' || $minimal['physi
 icct_nms_save_device_type(['action'=>'delete_type','type_id'=>array_key_first($catalogue)]);
 if($catalogue) throw new RuntimeException('Delete failed');
 echo "Device type validation, visibility and persistence tests passed.\n";
+
+$typeImage=['icon'=>'device','image'=>'uploads/'.str_repeat('a',32).'.png','display_modes'=>['network'=>'icon','rack'=>'none','map'=>'icon']];
+if(icct_nms_type_asset($typeImage,'image')!=='shared/assets/images/device-types/'.$typeImage['image'])throw new RuntimeException('Image View must use the selected type upload');
+if(icct_nms_type_asset($typeImage,'network')!==icct_nms_type_icon_asset('device')||icct_nms_type_asset($typeImage,'rack')!=='')throw new RuntimeException('Image View changed another view visibility');
+$typeImage['image']='../../unsafe.png';if(icct_nms_type_asset($typeImage,'image')!=='')throw new RuntimeException('Invalid image path was accepted');
+$typeImage['image']='';if(icct_nms_type_asset($typeImage,'image')!=='')throw new RuntimeException('Missing image must not use an icon fallback');
+echo "Image View selects the uploaded type image with no icon fallback and independent view settings.\n";

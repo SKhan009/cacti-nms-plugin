@@ -28,6 +28,7 @@ function icct_nms_fault_observations($host){return $host['id']===1?[['state'=>'C
 function db_fetch_assoc_prepared($sql,$args){if(isset($GLOBALS['snapshots']))return $GLOBALS['snapshots'][$args[0]]??[];return $args[0]===1?[['protocol'=>'lldp','status'=>'success','config_hash'=>'test','succeeded_at'=>date('Y-m-d H:i:s'),'data_json'=>json_encode(['neighbors'=>[['present'=>true,'peer_label'=>'Switch'],['present'=>false,'peer_label'=>'Sensor'],['present'=>true,'management_addresses'=>['127.0.0.1']]]])]]:[];}
 $diagram=icct_nms_topology_data(['unlocated'=>[['id'=>1,'name'=>'Host','address'=>'127.0.0.1'],['id'=>2,'name'=>'Switch','address'=>'127.0.0.1'],['id'=>3,'name'=>'Sensor','address'=>'127.0.0.1']],'sites'=>[]]);
 if(count($diagram['links'])!==1||$diagram['links'][0]['target']!==2)throw new LogicException('Ambiguous or absent neighbour linked');
+if($diagram['devices'][0]['image_asset']!=='shared/assets/image-switch.svg'||$diagram['devices'][0]['network_asset']!=='shared/assets/network-switch.svg')throw new LogicException('Image View must resolve the assigned type independently of standard topology');
 if($diagram['devices'][0]['fault_count']!==2)throw new LogicException('Fault counts are incomplete');
 echo "Topology neighbour resolution and actual fault counts passed.\n";
 

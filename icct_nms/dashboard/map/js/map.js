@@ -132,6 +132,7 @@
         if(destination.searchParams.has('site_id') && tab.dataset.view==='map'){destination.searchParams.delete('site_id');window.location.assign(destination.href);return;}
         if(updateUrl && destination.href!==window.location.href)history.pushState(null,'',destination.href);
         tabs.forEach(function (item) { var selected = item === tab; item.setAttribute('aria-selected', String(selected)); item.tabIndex = selected ? 0 : -1; document.getElementById(item.getAttribute('aria-controls')).hidden = !selected; });
+        document.dispatchEvent(new CustomEvent('icct:view-change', {detail: {view: tab.dataset.view}}));
         status.hidden = tab.dataset.view !== 'map';
         document.querySelector('.icct-map-credits').hidden = tab.dataset.view !== 'map';
         if (tab.dataset.view === 'map') { map.invalidateSize({pan: false}); if (countryView) fitIndia(); }

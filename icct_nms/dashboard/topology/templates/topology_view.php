@@ -1,3 +1,4 @@
+<div id="topologySurface">
 <div class="topology-actions" hidden><button class="button" id="topologyDiscard" type="button">Discard</button><button class="button primary" id="topologySave" type="button" disabled>Save</button></div>
 <p id="topologyMessage" role="status"></p>
 <div class="topology-layout">
@@ -17,3 +18,4 @@
 <div id="topologyDeviceAlarms" class="topology-summary-alarms"></div>
 <nav id="topologyDeviceLinks" class="topology-summary-links" aria-label="Device sections"></nav>
 </dialog>
+</div>

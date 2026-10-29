@@ -7,7 +7,7 @@
 <div class="dashboard-grid"><section class="icct-map-panel" data-widget="topology">
 <div class="icct-map-toolbar">
 <div class="icct-view-tabs" role="tablist" aria-label="Dashboard views">
-<?php foreach (['topology'=>'Topology','rack'=>'Rack View','image'=>'Image View','map'=>'Map View'] as $key=>$label): ?><button type="button" role="tab" id="icct-view-<?= $key ?>" aria-controls="icct-panel-<?= $key ?>" aria-selected="<?= $key===$dashboardView?'true':'false' ?>" tabindex="<?= $key===$dashboardView?'0':'-1' ?>" data-view="<?= $key ?>"><?= $label ?></button><?php endforeach; ?>
+<?php foreach (['topology'=>'Topology','image'=>'Image View','rack'=>'Rack View','map'=>'Map View'] as $key=>$label): ?><button type="button" role="tab" id="icct-view-<?= $key ?>" aria-controls="icct-panel-<?= $key ?>" aria-selected="<?= $key===$dashboardView?'true':'false' ?>" tabindex="<?= $key===$dashboardView?'0':'-1' ?>" data-view="<?= $key ?>"><?= $label ?></button><?php endforeach; ?>
 </div>
 <div class="icct-map-counts" aria-label="Device status totals"><span>Total: <?= $mapData['counts']['total'] ?></span><span class="online">Online: <?= $mapData['counts']['online'] ?></span><span class="offline">Offline: <?= $mapData['counts']['offline'] ?></span><span class="disabled">Disabled: <?= $mapData['counts']['disabled'] ?></span></div>
 </div>
@@ -21,16 +21,12 @@
 <button id="icctMapFullscreen" type="button" aria-label="Toggle map fullscreen" title="Fullscreen">⛶</button>
 </div>
 </div>
-<?php $scopedDeviceIds=array_column($mapData['unlocated'],'id');foreach($mapData['sites'] as $scopeSite)$scopedDeviceIds=array_merge($scopedDeviceIds,array_column($scopeSite['devices'],'id')); $viewDevices=array_values(array_filter(icct_nms_inventory(),static fn($device)=>in_array((int)$device['id'],$scopedDeviceIds,true))); $viewTypes=icct_nms_device_types(); ?>
 <?php foreach (['topology','rack','image'] as $view): ?>
 <div class="icct-view-panel icct-device-view" id="icct-panel-<?= $view ?>" role="tabpanel" aria-labelledby="icct-view-<?= $view ?>" <?= $view===$dashboardView?'':'hidden' ?>>
 <?php if ($view==='rack'): ?>
 <?php require __DIR__ . '/../../rack-view/templates/rack_view.php'; ?>
 <?php elseif ($view==='topology'): require __DIR__ . '/../../topology/templates/topology_view.php'; ?>
-<?php else: ?><div class="icct-device-cards">
-<?php foreach ($viewDevices as $device): $asset=''; foreach ($viewTypes as $type) if ((int)$type['category_id']===(int)$device['category_id'] && $type['name']===$device['device_type']) { $asset=icct_nms_type_asset($type,$view==='image'?'map':'network'); break; } ?>
-<a class="icct-device-card" href="inventory/controllers/device.php?id=<?= (int)$device['id'] ?>"><?php if ($asset): ?><img src="<?= icct_nms_h($asset) ?>" alt=""><?php endif; ?><strong><?= icct_nms_h($device['description']) ?></strong><span><?= icct_nms_h($device['site_name'] ?: 'Unassigned site') ?></span><span class="device-status <?= icct_nms_status_class($device['status_label']) ?>"><?= icct_nms_h($device['status_label']) ?></span></a>
-<?php endforeach; ?></div><?php endif; ?>
+<?php else: ?><!-- The shared topology surface moves here when Image View is selected. --><?php endif; ?>
 </div>
 <?php endforeach; ?>
 <details class="icct-map-credits" hidden><summary title="Map credits" aria-label="Map credits">ⓘ</summary><span>Leaflet. State boundaries: geoBoundaries / DataMeet (CC BY 2.5 IN).</span></details>

@@ -57,6 +57,8 @@ function icct_nms_device_types() {
     return $types;
 }
 function icct_nms_type_asset($type,$view='network') {
+    // Image View uses uploaded type images only; other views keep their configured visibility.
+    if ($view==='image') return preg_match('/^uploads\/[a-f0-9]{32}\.(png|jpg|webp)$/D',$type['image'] ?? '') ? 'shared/assets/images/device-types/'.$type['image'] : '';
     $mode=$type['display_modes'][$view] ?? 'icon';
     if ($mode==='none') return '';
     if ($mode==='image' && preg_match('/^uploads\/[a-f0-9]{32}\.(png|jpg|webp)$/D',$type['image'] ?? '')) return 'shared/assets/images/device-types/'.$type['image'];
