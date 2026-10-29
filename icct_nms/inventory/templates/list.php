@@ -176,7 +176,7 @@
                                 $d["description"],
                             ) ?>"
                         >
-                            ∿
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h4l3-9 6 18 3-9h4"/></svg>
                         </a>
                         <?php if ($management): ?>
                         <a href="inventory/controllers/device.php?id=<?= $id ?>" aria-label="Edit <?= icct_nms_h(
