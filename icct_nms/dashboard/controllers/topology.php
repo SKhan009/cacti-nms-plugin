@@ -12,6 +12,7 @@ require_once dirname(__DIR__, 2) . '/dashboard/topology/services/topology_summar
 require_once dirname(__DIR__, 2) . '/dashboard/topology/services/topology_link_service.php';
 require_once dirname(__DIR__, 2) . '/dashboard/topology/services/topology_mtr_service.php';
 require_once dirname(__DIR__, 2) . '/dashboard/widgets/services/dashboard_service.php';
+require_once dirname(__DIR__, 2) . '/dashboard/widgets/services/lnms_service.php';
 try {
     icct_nms_backend();
     if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['dashboard_preferences'])){
@@ -63,7 +64,9 @@ try {
     $dashboardPreferences['dashboards'][$dashboardPreferences['selected']]['site_id']=$dashboardSiteId;
     if(isset($_GET['topology_readings'])){header('Content-Type: application/json');header('Cache-Control: no-store');echo json_encode(icct_nms_topology_data($mapData),JSON_THROW_ON_ERROR);exit;}
     $dashboardReadings=icct_nms_dashboard_readings($mapData);
-    $dashboardReadings['center']=icct_nms_dashboard_server();
+    $dashboardReadings['lnms']=icct_nms_lnms_data();
+    $dashboardReadings['center']=$dashboardReadings['lnms']['center'];
+    $mapData['lnms']=$dashboardReadings['lnms'];
     if(isset($_GET['dashboard_readings'])){header('Content-Type: application/json');header('Cache-Control: no-store');echo json_encode($dashboardReadings,JSON_THROW_ON_ERROR);exit;}
     $mapConfigured=!empty($config['nms_geoserver_wms_url']) && !empty($config['nms_geoserver_layer']);
 } catch (Throwable $error) { icct_nms_failure($error); }

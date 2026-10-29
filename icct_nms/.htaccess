@@ -1,5 +1,6 @@
 # Existing bookmarks and cached forms retain their query strings and POST bodies.
 RewriteEngine On
+RewriteRule ^$ dashboard/controllers/topology.php [END]
 RewriteRule ^topology\.php$ dashboard/controllers/topology.php [END]
 RewriteRule ^topology_configuration\.php$ dashboard/topology/controllers/topology_configuration.php [END]
 RewriteRule ^inventory\.php$ inventory/controllers/inventory.php [END]

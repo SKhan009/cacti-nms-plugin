@@ -157,29 +157,30 @@ document.addEventListener('pointercancel',()=>{if(!cardDrag?.native)endCardDrag(
 document.addEventListener('keydown',e=>{if(e.key==='Escape')endCardDrag(false);});
 window.addEventListener('blur',()=>endCardDrag(false));
 function radar(){
- const radar=document.querySelector('#birdsRadar'),origin=readings.center||{name:'Cacti server',status:'Unknown',coordinates:null},sites=readings.sites.filter(site=>Number(site.id)!==Number(origin.site_id));radar.replaceChildren();
+ const radar=document.querySelector('#birdsRadar'),lnms=readings.lnms||{nodes:[],center:null},origin=lnms.center||{name:'LNMS not configured',status:'Unknown',coordinates:null},sites=lnms.nodes.filter(node=>Number(node.id)!==Number(origin.id));radar.replaceChildren();
+ const note=document.querySelector('#birdsLnmsStatus');if(note)note.textContent=sites.length?sites.length+' configured remote poller(s) · status from Cacti heartbeats':'This LNMS · no remote pollers configured';
  const cx=160,cy=160,r=115,geographic=Array.isArray(origin.coordinates);
- radar.append(svg('title',{},geographic?'Site bearings from the Cacti server':'Logical site arrangement — Cacti server location is not configured'));
+ radar.append(svg('title',{},geographic?'LNMS poller bearings from the local server':'Configured LNMS pollers — logical positions, not physical distance'));
  for(let i=1;i<=9;i++)radar.append(svg('circle',{cx,cy,r:r*i/9,fill:'none',stroke:i%3===0?'#447cf4':'#c8d6ff','stroke-width':i%3===0?1.5:.7}));
  for(let degrees=0;degrees<360;degrees+=10){const angle=degrees*Math.PI/180,x=cx+Math.sin(angle)*(r+15),y=cy-Math.cos(angle)*(r+15);radar.append(svg('line',{x1:cx,y1:cy,x2:cx+Math.sin(angle)*r,y2:cy-Math.cos(angle)*r,stroke:degrees%30===0?'#447cf4':'#c8d6ff','stroke-width':degrees%30===0?1.4:.6}));if(degrees%30===0)radar.append(svg('text',{x,y:y+3,fill:'#95b0ff','text-anchor':'middle',transform:`rotate(${degrees},${x},${y})`},degrees));}
  const points=sites.map((site,index)=>{
-  if(!geographic)return {site,distance:null,angle:(-60+index*360/Math.max(1,sites.length))*Math.PI/180};
+  if(!geographic||!Array.isArray(site.coordinates))return {site,distance:null,angle:(-60+index*360/Math.max(1,sites.length))*Math.PI/180};
   const [a,b]=origin.coordinates.map(v=>v*Math.PI/180),[c,d]=site.coordinates.map(v=>v*Math.PI/180),delta=d-b,hav=Math.sin((c-a)/2)**2+Math.cos(a)*Math.cos(c)*Math.sin(delta/2)**2;
   return {site,distance:6371*2*Math.atan2(Math.sqrt(Math.min(1,hav)),Math.sqrt(Math.max(0,1-hav))),angle:Math.atan2(Math.sin(delta)*Math.cos(c),Math.cos(a)*Math.sin(c)-Math.sin(a)*Math.cos(c)*Math.cos(delta))};
  });
  const max=Math.max(1,...points.map(p=>p.distance||0));
  function dot(site,x,y,isCenter,distance){
-  const group=svg('g',isCenter?{}:{tabindex:0,role:'button','aria-label':site.name+' · '+site.status});
-  group.append(svg('title',{},site.name+' · '+site.status+(distance===null?' · Logical position':distance===undefined?'': ' · '+distance.toFixed(1)+' km from Cacti server')));
+  const group=svg('g',{tabindex:0,role:'button','aria-label':site.name+' · '+site.status});
+  group.append(svg('title',{},site.name+' · '+(site.address||'')+' · '+site.status+(distance===null?' · Logical position':distance===undefined?'': ' · '+distance.toFixed(1)+' km from Cacti server')));
   group.append(svg('circle',{cx:x,cy:y,r:10,fill:'transparent',stroke:'none','pointer-events':'all'}));
   if(isCenter)group.append(svg('circle',{cx:x,cy:y,r:13,fill:'white',stroke:'#447cf4','stroke-width':1.5}));
   group.append(svg('circle',{cx:x,cy:y,r:5,fill:site.status==='Online'?'#2dc658':site.status==='Offline'?'#ff4148':site.status==='Disabled'?'#999':'#ffb14e',stroke:'white','stroke-width':.6}));
   const right=!isCenter&&x>=cx,label=site.name.length>20?site.name.slice(0,19)+'…':site.name;
   group.append(svg('text',{x:x+(right?8:-8),y:y+3,'text-anchor':right?'start':'end','font-weight':700,fill:'#252525'},label));
-  if(!isCenter){function open(){document.dispatchEvent(new CustomEvent('icct:show-site',{detail:site.id}));}group.addEventListener('click',open);group.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();open();}});}
+  if(site.id){function open(){document.dispatchEvent(new CustomEvent('icct:show-lnms',{detail:site.id}));}group.addEventListener('click',open);group.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();open();}});}
   radar.append(group);
  }
- points.forEach(({site,distance,angle})=>{const radius=geographic?distance/max*r*.72:r*.58;dot(site,cx+Math.sin(angle)*radius,cy-Math.cos(angle)*radius,false,distance);});
+ points.forEach(({site,distance,angle})=>{const radius=distance!==null?distance/max*r*.72:r*.58;dot(site,cx+Math.sin(angle)*radius,cy-Math.cos(angle)*radius,false,distance);});
  dot(origin,cx,cy,true);
 }
 function alarms(){const chart=document.querySelector('#alarmDonut'),legend=document.querySelector('#alarmLegend');chart.replaceChildren();legend.replaceChildren();const values=Object.entries(readings[mode]),total=values.reduce((s,[k,v])=>s+v,0),radius=59,circumference=2*Math.PI*radius;chart.append(svg('circle',{cx:90,cy:90,r:radius,fill:'none',stroke:'#eceef2','stroke-width':29}));let offset=0;values.forEach(([name,count],i)=>{const color=mode==='severity'?colors[name]:alarmSegmentColor(name);if(count>0){const length=count/total*circumference;chart.append(svg('circle',{cx:90,cy:90,r:radius,fill:'none',stroke:color,'stroke-width':29,'stroke-dasharray':length+' '+(circumference-length),'stroke-dashoffset':-offset,transform:'rotate(-90 90 90)'}));offset+=length;}const item=element('li'),dot=element('i');dot.style.background=color;item.append(dot,element('span',name),element('b',String(count)));item.title=name+': '+count;legend.append(item);});chart.append(svg('text',{x:90,y:98,'text-anchor':'middle','font-size':26,fill:'#222'},total));chart.setAttribute('aria-label',total+' active alarms grouped by '+(mode==='severity'?'severity':'segment'));const note=document.querySelector('#alarmNote');note.textContent=total?'':'No active alarms.';note.hidden=total>0;}
@@ -242,7 +243,7 @@ let refreshPending=false;
 async function refreshReadings(manual=false){
  if(refreshPending||(!manual&&document.hidden))return;
  refreshPending=true;const button=document.querySelector('#birdsRefresh');button.disabled=true;
- try{const url=siteUrl(data.site_id);url.searchParams.set('dashboard_readings','1');const response=await fetch(url,{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw Error();const next=await response.json();readings=next;document.dispatchEvent(new CustomEvent('icct:alarm-readings',{detail:next.device_alarms||[]}));radar();alarms();workflowCharts();frequentAlarms();recentAlarms();portsOverview();problematicDevices();packCards();if(manual)reportStatus();}
+ try{const url=siteUrl(data.site_id);url.searchParams.set('dashboard_readings','1');const response=await fetch(url,{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw Error();const next=await response.json();readings=next;if(next.lnms)document.dispatchEvent(new CustomEvent('icct:lnms-readings',{detail:next.lnms}));document.dispatchEvent(new CustomEvent('icct:alarm-readings',{detail:next.device_alarms||[]}));radar();alarms();workflowCharts();frequentAlarms();recentAlarms();portsOverview();problematicDevices();packCards();if(manual)reportStatus();}
  catch(e){reportStatus('Widget refresh failed. Showing last received readings.');}
  finally{refreshPending=false;button.disabled=false;}
 }

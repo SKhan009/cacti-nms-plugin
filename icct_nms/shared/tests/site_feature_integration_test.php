@@ -20,11 +20,14 @@ require_once __DIR__.'/../../dashboard/topology/services/topology_summary_servic
 require_once __DIR__.'/../../dashboard/topology/services/topology_link_service.php';
 require_once __DIR__.'/../../dashboard/topology/services/topology_mtr_service.php';
 require_once __DIR__.'/../../dashboard/widgets/services/dashboard_service.php';
+require_once __DIR__.'/../../dashboard/widgets/services/lnms_service.php';
 require_once __DIR__.'/../../presets/services/rack_preset_service.php';
 require_once __DIR__.'/../../shared/services/forms.php';
 icct_nms_backend();
-$mapData=icct_nms_map_data();$dashboardSites=icct_nms_dashboard_sites($mapData);$dashboardSiteId=0;$dashboardPreferences=icct_nms_dashboard_preferences();$dashboardReadings=icct_nms_dashboard_readings($mapData);$dashboardReadings['center']=icct_nms_dashboard_server();$dashboardView='rack';$mapConfigured=false;
+$mapData=icct_nms_map_data();$dashboardSites=icct_nms_dashboard_sites($mapData);$dashboardSiteId=0;$dashboardPreferences=icct_nms_dashboard_preferences();$dashboardReadings=icct_nms_dashboard_readings($mapData);$dashboardReadings['lnms']=icct_nms_lnms_data();$dashboardReadings['center']=$dashboardReadings['lnms']['center'];$dashboardView='rack';$mapConfigured=false;
 ob_start();include __DIR__ . '/../../dashboard/map/templates/map.php';$html=ob_get_clean();
+if(!preg_match('/<script[^>]*id="icctMapData"[^>]*>(.*?)<\/script>/s',$html,$mapJson))throw new RuntimeException('Missing LNMS map payload');
+$payload=json_decode($mapJson[1],true,512,JSON_THROW_ON_ERROR);if(isset($payload['sites'])||!isset($payload['lnms']['nodes']))throw new RuntimeException('Geographic map must receive LNMS pollers, not device sites');
 if(strpos($html,'id="dashboardSite"')!==false||strpos($html,'id="rackViewSite"')!==false||preg_match('/Node Configuration|Select node|>Node<|dashboardNode|rackViewNode/',$html))throw new RuntimeException('Removed feature still rendered');
 $before=db_fetch_assoc('SELECT host_id,rack_id,start_unit,unit_height FROM plugin_icct_nms_rack_devices ORDER BY host_id');
 $choices=icct_nms_device_rack_choices();$rackData=icct_nms_rack_view_data();

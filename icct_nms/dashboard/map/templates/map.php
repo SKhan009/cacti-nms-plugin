@@ -9,11 +9,12 @@
 <div class="icct-view-tabs" role="tablist" aria-label="Dashboard views">
 <?php foreach (['topology'=>'Topology','image'=>'Image View','rack'=>'Rack View','map'=>'Map View'] as $key=>$label): ?><button type="button" role="tab" id="icct-view-<?= $key ?>" aria-controls="icct-panel-<?= $key ?>" aria-selected="<?= $key===$dashboardView?'true':'false' ?>" tabindex="<?= $key===$dashboardView?'0':'-1' ?>" data-view="<?= $key ?>"><?= $label ?></button><?php endforeach; ?>
 </div>
-<div class="icct-map-counts" aria-label="Device status totals"><span>Total: <?= $mapData['counts']['total'] ?></span><span class="online">Online: <?= $mapData['counts']['online'] ?></span><span class="offline">Offline: <?= $mapData['counts']['offline'] ?></span><span class="disabled">Disabled: <?= $mapData['counts']['disabled'] ?></span></div>
+<div id="dashboardStatusCounts" class="icct-map-counts" aria-label="Device status totals"><span>Total: <?= $mapData['counts']['total'] ?></span><span class="online">Online: <?= $mapData['counts']['online'] ?></span><span class="offline">Offline: <?= $mapData['counts']['offline'] ?></span><span class="disabled">Disabled: <?= $mapData['counts']['disabled'] ?></span></div>
 </div>
 <p id="icctMapStatus" role="status" hidden></p>
 <div class="icct-view-panel" id="icct-panel-map" role="tabpanel" aria-labelledby="icct-view-map" <?= $dashboardView==='map'?'':'hidden' ?>>
-<div id="icctSiteMap" aria-label="Map of Cacti sites"></div>
+<div id="icctSiteMap" aria-label="Map of LNMS and configured remote pollers"></div>
+<div id="lnmsLocationNotice" class="lnms-location-notice" role="status"></div>
 <div class="icct-map-controls" aria-label="Map controls">
 <button id="icctMapZoomIn" type="button" aria-label="Zoom in" title="Zoom in">+</button>
 <button id="icctMapZoomOut" type="button" aria-label="Zoom out" title="Zoom out">−</button>
@@ -34,7 +35,7 @@
 <aside class="dashboard-widgets" id="dashboardWidgets">
 <?php foreach(['birds'=>'Birds Eye View','alarms'=>'Alarm Overview','ack'=>'Ack Overview','escalation'=>'Escalation Overview','frequent'=>'Top 10 Frequent Alarms by Count','recent'=>'Recent Alarms (25)','ports'=>'Device Interface (Ports) Overview','problematic'=>'Problematic Devices by Active Alarms Count'] as $key=>$label): ?>
 <section class="dashboard-card" data-widget="<?= $key ?>"><header><button type="button" class="widget-grip" draggable="true" aria-label="Move <?= $label ?> widget" title="Drag to reorder; use arrow keys to move">⠿</button><h2><?= $label ?></h2><?php if($key==='problematic'): ?><button type="button" class="widget-icon" id="problematicExpand" aria-label="Expand Problematic Devices" aria-pressed="false" title="Expand"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M3 3l7 7M16 21h5v-5M21 21l-7-7"/></svg></button><?php endif; ?><?php if($key==='ports'): ?><button type="button" class="widget-icon" id="portsExpand" aria-label="Expand Ports Overview" aria-pressed="false" title="Expand"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M3 3l7 7M16 21h5v-5M21 21l-7-7"/></svg></button><?php endif; ?><?php if($key==='recent'): ?><button type="button" class="widget-icon" id="recentExpand" aria-label="Expand Recent Alarms" aria-pressed="false" title="Expand"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M3 3l7 7M16 21h5v-5M21 21l-7-7"/></svg></button><?php endif; ?><?php if($key==='birds'): ?><button type="button" class="widget-icon" id="birdsRefresh" aria-label="Refresh Birds Eye View" title="Refresh">↻</button><?php endif; ?><button type="button" class="widget-icon" data-remove-widget="<?= $key ?>" aria-label="Remove <?= $label ?> widget" title="Remove widget"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 9v9M14 9v9"/></svg></button></header>
-<?php if($key==='birds'): ?><div class="birds-content"><svg id="birdsRadar" viewBox="0 0 320 320" role="group" aria-label="Birds Eye View centered on the Cacti server"></svg></div>
+<?php if($key==='birds'): ?><div class="birds-content"><p id="birdsLnmsStatus" class="lnms-radar-status" role="status"></p><svg id="birdsRadar" viewBox="0 0 320 320" role="group" aria-label="Birds Eye View centered on the Cacti server"></svg></div>
 <?php elseif($key==='problematic'): ?><div class="problematic-content"><fieldset class="problematic-filters" aria-label="Problematic device severities"><?php foreach(['Critical'=>'Critical','Major'=>'Major','Minor'=>'Minor','Warning'=>'Warn','Information'=>'Info'] as $severity=>$text): ?><label><input type="checkbox" data-problematic-severity="<?= $severity ?>" <?= in_array($severity,['Critical','Major'],true)?'checked':'' ?>><?= $text ?></label><?php endforeach; ?></fieldset><div class="problematic-total"><span>Total Problematic Devices</span><p><strong id="problematicCount">0</strong><span id="problematicDeviceTotal">/0</span></p></div><h3>Devices by Active Alarm Count</h3><table class="problematic-table" aria-label="Devices by active alarm count"><thead class="sr-only"><tr><th>Device</th><th>Active alarms</th></tr></thead><tbody id="problematicDevices"></tbody></table></div>
 <?php elseif($key==='ports'): ?><div class="ports-overview-content" id="portsOverview"></div>
 <?php elseif($key==='recent'): ?><div class="recent-content" id="recentAlarms"></div>
@@ -47,11 +48,10 @@
 <div id="dashboardPortTooltip" class="dashboard-port-tooltip" role="tooltip" hidden></div>
 <form id="dashboardToken" hidden><?php icct_nms_token(); ?></form>
 <script type="application/json" id="dashboardData"><?= json_encode(['preferences'=>$dashboardPreferences,'readings'=>$dashboardReadings,'site_id'=>$dashboardSiteId,'user'=>icct_backend_current_user_id()],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
-<dialog id="mapSiteDialog" class="topology-device-dialog map-site-dialog" aria-labelledby="mapSiteTitle">
-<header class="topology-summary-heading"><div><h2 id="mapSiteTitle"></h2><p id="mapSiteCoordinates"></p></div><span id="mapSiteStatus" class="device-status"></span><form method="dialog"><button class="button" aria-label="Close site summary">×</button></form></header>
-<dl id="mapSiteCounts" class="topology-capacity map-site-counts"></dl>
-<div id="mapSiteAlarms" class="topology-summary-alarms"></div>
-<nav class="topology-summary-links map-site-links" aria-label="Site actions"><a id="mapSiteTopology" href="dashboard/controllers/topology.php">View Topology <span aria-hidden="true">→</span></a><button type="button" disabled title="Site chat is not configured.">Chat <span aria-hidden="true">→</span></button></nav>
+<dialog id="lnmsNodeDialog" class="topology-device-dialog" aria-labelledby="lnmsNodeTitle">
+<header class="topology-summary-heading"><div><h2 id="lnmsNodeTitle"></h2><p id="lnmsNodeAddress"></p></div><span id="lnmsNodeStatus" class="device-status"></span><form method="dialog"><button class="button" aria-label="Close LNMS summary">×</button></form></header>
+<dl id="lnmsNodeDetails" class="topology-summary"></dl>
+<a id="lnmsCollectorLink" class="button" hidden>View Cacti Collector</a>
 </dialog>
-<script type="application/json" id="icctMapData" data-summary-url="dashboard/controllers/topology.php"><?= json_encode($mapData+['states'=>'shared/assets/maps/india-states.json','tiles'=>$mapConfigured?'dashboard/controllers/topology.php?map_tile=1':null],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
+<script type="application/json" id="icctMapData" data-summary-url="dashboard/controllers/topology.php"><?= json_encode(['lnms'=>$dashboardReadings['lnms']??['nodes'=>[],'counts'=>[]],'states'=>'shared/assets/maps/india-states.json'],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
 </section>

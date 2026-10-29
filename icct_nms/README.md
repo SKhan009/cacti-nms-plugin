@@ -2,6 +2,10 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Inventory designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
+## Version 1.2.13
+
+Map View and Birds Eye View now show this LNMS and Cacti's configured remote pollers. The local LNMS is the radar center; availability comes from native poller heartbeats. Assign each poller to a native site under Presets → Site → LNMS / Remote Poller Locations. Only sites with valid coordinates are plotted geographically. Missing locations remain explicit; IP addresses and installation URLs never create guessed coordinates. The radar uses labeled logical positions when geographic information is incomplete. No Bluetooth, subnet scan, internet geolocation or device-site demo markers are used. The plugin root URL opens the dashboard.
+
 ## Version 1.2.12
 
 Dashboard Image View now renders the connected topology using each device's assigned Device Type image. Upload an image in Presets → Device Types, then assign that type to a device. When no image is uploaded, the node retains its name, status and alarm count without substituting an icon. Image View shares the topology's discovered/manual links, positions, status colors, alarm counts, zoom, summary and layout controls. The normal topology, rack and geographic map retain their own display settings.
@@ -147,20 +151,18 @@ $config['nms_geoserver_layer'] = 'nms:countries';
 
 Cacti authenticates both the page and WMS image endpoint under the existing ICCT view realm. Bounded EPSG:3857 PNG requests use only the configured upstream URL and layer; request parameters cannot select a server. No change to the GeoServer service or security configuration is required.
 
-Native Cacti sites provide coordinates and grouping; ICCT inventory supplies only devices permitted for the current account. Default 0,0 and invalid coordinates remain unlocated. Editing the native site or device site assignment is reflected on refresh. Device Type map visibility chooses the popup icon/image. Disabled, stale and pending devices remain visible as Other rather than being counted online. Counts cover all permitted inventory; site markers cover only located devices.
-
-Site selection opens device details. Fit sites, India overview, zoom, refresh and fullscreen controls are available. Device details stay in the map popup, with actions for only the device’s saved diagnostic methods. Multiple devices at a site get a popup selector. The popup shows current availability, segment, serial number, response time, supported fresh CPU/memory RRD measurements, private current-user ping measurements and current threshold alarms. Unsupported or stale measurements remain unavailable. Packet loss is never inferred from Cacti availability. No live diagnostics or device writes occur when viewing the map.
+Map View draws the configured Cacti pollers at their assigned native sites. Counts show LNMS poller availability, not inventory device counts. Poller address, role, site and last heartbeat are available in each node summary. Management users can open the native Cacti collector settings. Unlocated pollers remain listed with a link to their summary. Native inventory data and measurement services remain in use for the device topology and its summaries.
 
 CPU sources are explicit cpu_percent / 5min_cpu or 100 − ssCpuIdle. Memory is memory_percent or (mem_total − mem_free) / mem_total. Reads use only graphs the account can access, fresh AVERAGE data before CDEF/VDEF transformations. Arbitrary graph names, load averages and unknown units are not treated as percentage measurements. Ping output is parsed on the server, checked against its current device/profile/collector signature and retained privately by request owner; no raw output or credentials are sent to the map.
 
 Tests: `plugins/icct_nms/shared/tests/map_service_test.php` covers authorized grouping, hidden devices, unlocated records, counts, coordinate bounds, safe WMS parameters and valid percentage conversion. Browser checks covered the live GeoServer image, Bengaluru and Delhi popups, Fit sites, India overview and error-free console. A restricted interactive account was unavailable; device filtering uses the shared native ACL and is covered by the regression fixture.
 
-Dashboard views use a compact Topology / Rack View / Image View / Map View switcher. Topology currently shows permitted device cards; Rack View shows saved device placements; Image View shows preset assets. Map credits are available through the information control below the map. The map toolbar no longer includes site selection or the unlocated-device list.
+Dashboard views use a Topology / Image View / Rack View / Map View switcher. Topology shows authorized connected devices; Image View uses uploaded type images without an icon fallback; Rack View shows saved placements. Map View and Birds Eye View are scoped to LNMS pollers. Map credits remain available through the information control.
 
 
 Add/Edit Device keeps only Rack Name and Placement in the Rack. Reusable rack presets appear at the selected site even before they are instantiated. Selecting a preset limits placement choices to its units-per-rack count. On save, the preset is instantiated directly at that site; existing matching racks are reused. Capacity and occupied-unit checks remain authoritative.
 
-Map View now draws only the locally served India state boundaries on white. The overview includes island territories, limits zoom-out to the full India view, and restricts panning to India bounds. GeoServer country/ocean raster overlays are omitted from this view; the authenticated WMS relay remains available for compatibility.
+Map View uses locally served India state boundaries on white and fits configured LNMS locations. Poller coordinates are not clamped to India. GeoServer country/ocean raster overlays are omitted from this view; the authenticated WMS relay remains available for compatibility.
 
 ### Rack placement
 

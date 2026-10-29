@@ -16,3 +16,16 @@
 <div class="site-table-wrap"><table class="action-table site-table"><thead><tr><th>Site Name</th><th>City</th><th>State</th><th>Country</th><th>Timezone</th><th>Devices</th><th>Actions</th></tr></thead><tbody>
 <?php foreach ($sites as $site): ?><tr data-site-row data-site-search="<?= icct_nms_h(mb_strtolower(implode(' ',[$site['name'],$site['city'],$site['country']]))) ?>"><td><?= icct_nms_h($site['name']) ?></td><?php foreach (['city','state','country','timezone','devices'] as $field): ?><td><?= icct_nms_h($site[$field]!=='' && $site[$field]!==null ? $site[$field] : '—') ?></td><?php endforeach; ?><td><?php if ($management): ?><button type="button" class="icon-button" data-edit-site="<?= icct_nms_h(json_encode($site,JSON_THROW_ON_ERROR)) ?>" aria-label="Edit <?= icct_nms_h($site['name']) ?>"><svg class="icct-edit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5L8 21l-5 1 1-5ZM14 5l5 5"/></svg></button><?php endif; ?></td></tr><?php endforeach; ?>
 </tbody></table></div><p id="site-empty" class="empty-state" <?= $sites?'hidden':'' ?>>No sites found.</p></section>
+
+<section class="lnms-site-settings">
+<h2>LNMS / Remote Poller Locations</h2>
+<p>Assign each Cacti poller to its physical site. Map View and Birds Eye View use these coordinates; IP addresses do not provide physical location.</p>
+<?php $lnmsSites=db_fetch_assoc('SELECT id,name FROM sites ORDER BY name,id');$lnmsAssignments=icct_nms_lnms_site_assignments(); ?>
+<form method="post">
+<?php icct_nms_token(); ?><input type="hidden" name="action" value="save_lnms_sites">
+<div class="site-table-wrap"><table class="site-table"><thead><tr><th>LNMS / Poller</th><th>Hostname / IP Address</th><th>Site</th></tr></thead><tbody>
+<?php foreach(db_fetch_assoc('SELECT id,name,hostname FROM poller ORDER BY id') as $lnmsPoller): ?>
+<tr><td><?= icct_nms_h($lnmsPoller['name']) ?></td><td><?= icct_nms_h($lnmsPoller['hostname']) ?></td><td><select name="poller_sites[<?= (int)$lnmsPoller['id'] ?>]" aria-label="Site for <?= icct_nms_h($lnmsPoller['name']) ?>" <?= $management?'':'disabled' ?>><option value="0">Unassigned</option><?php foreach($lnmsSites as $lnmsSite): ?><option value="<?= (int)$lnmsSite['id'] ?>" <?= (int)($lnmsAssignments[$lnmsPoller['id']]??0)===(int)$lnmsSite['id']?'selected':'' ?>><?= icct_nms_h($lnmsSite['name']) ?></option><?php endforeach; ?></select></td></tr>
+<?php endforeach; ?></tbody></table></div>
+<?php if($management): ?><div class="type-editor-actions"><button class="button primary" type="submit">Save LNMS Locations</button></div><?php endif; ?>
+</form></section>

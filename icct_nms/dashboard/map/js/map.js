@@ -29,7 +29,7 @@
         var refit = countryView;
         map.invalidateSize({pan: false});
 
-        if (refit) fitIndia();
+        if (refit) fitLnms();
     });
     resizeObserver.observe(document.getElementById('icctSiteMap'));
     var status = document.getElementById('icctMapStatus');
@@ -39,7 +39,7 @@
     function showStatus() {
         status.textContent = [originalStatus, mapError, stateError].filter(Boolean).join(' ');
     }
-    map.setMaxBounds(indiaBounds);
+    // LNMS sites may be outside India; do not clamp registered poller coordinates.
     showStatus();
     // Only India polygons are drawn; surrounding countries and ocean tiles are omitted.
     map.createPane('statePolygons');
@@ -80,48 +80,51 @@
     }).catch(function () {
         stateError = 'Local state boundaries unavailable.'; showStatus();
     });
-    const siteDialog=document.querySelector('#mapSiteDialog');
-    const alarmColors={Critical:'#ff4148',Major:'#ff7226',Minor:'#ff9b17',Warning:'#43aa91',Information:'#277f9b'};
-    function labelSiteMarker(marker,name){const element=marker.getElement();if(element){element.setAttribute('role','button');element.setAttribute('tabindex','0');element.setAttribute('aria-label','Site '+name);element.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();marker.fire('click');}});}}
-    function siteElement(tag,text){const element=document.createElement(tag);if(text!==undefined)element.textContent=text;return element;}
-    function siteSummary(site){
-        const counts={total:site.devices.length,online:0,offline:0,disabled:0,other:0},fault_counts={};
-        Object.keys(alarmColors).forEach(severity=>fault_counts[severity]=0);
-        site.devices.forEach(device=>{counts[device.status==='Up'?'online':device.status==='Down'?'offline':device.status==='Disabled'?'disabled':'other']++;Object.keys(alarmColors).forEach(severity=>fault_counts[severity]+=Number(device.fault_counts?.[severity]||0));});
-        return {...site,counts,fault_counts,status:counts.offline?'Offline':counts.online===counts.total?'Online':counts.disabled===counts.total?'Disabled':'Other'};
+    let lnms=data.lnms||{nodes:[],counts:{}};
+    const deviceCounts=document.querySelector('#dashboardStatusCounts').innerHTML;
+    let activeView=new URL(location.href).searchParams.get('view')||'topology';
+    const nodeDialog=document.querySelector('#lnmsNodeDialog');
+    function showLnms(node){
+        document.querySelector('#lnmsNodeTitle').textContent=node.name;
+        document.querySelector('#lnmsNodeAddress').textContent=node.address;
+        const badge=document.querySelector('#lnmsNodeStatus');badge.textContent=node.status;badge.className='device-status '+({Online:'online',Offline:'offline',Disabled:'disabled'}[node.status]||'other');
+        const details=document.querySelector('#lnmsNodeDetails');details.replaceChildren();
+        const fields={'LNMS URL':node.local?new URL(node.lnms_path,location.origin).href:'Configured remote Cacti poller','Role':node.local?'This LNMS':'Remote Cacti poller','Site':node.site_name,'Last heartbeat':node.last_seen||'Not received','Coordinates':node.coordinates?node.coordinates.join(', '):'Not configured'};
+        Object.entries(fields).forEach(([name,value])=>{const row=document.createElement('div'),label=document.createElement('dt'),content=document.createElement('dd');label.textContent=name;content.textContent=value;row.append(label,content);details.append(row);});
+        const link=document.querySelector('#lnmsCollectorLink');link.hidden=!node.collector_url;if(node.collector_url)link.href=node.collector_url;
+        if(!nodeDialog.open)nodeDialog.showModal();
     }
-    function renderSite(site){
-        document.querySelector('#mapSiteTitle').textContent=site.name;
-        document.querySelector('#mapSiteCoordinates').textContent=site.coordinates.map((value,index)=>Math.abs(value).toFixed(4)+'° '+(index===0?(value<0?'S':'N'):(value<0?'W':'E'))).join(', ');
-        const status=document.querySelector('#mapSiteStatus');status.textContent=site.status;status.className='device-status '+(site.status==='Online'?'online':site.status==='Offline'?'offline':site.status==='Disabled'?'disabled':'other');
-        const counts=document.querySelector('#mapSiteCounts');counts.replaceChildren();
-        [['Total Devices','total'],['Online','online'],['Offline','offline'],['Disabled','disabled']].forEach(([label,key])=>{const row=siteElement('div');row.append(siteElement('dt',label),siteElement('dd',String(site.counts[key])));counts.append(row);});
-        const alarms=document.querySelector('#mapSiteAlarms');alarms.replaceChildren();Object.entries(alarmColors).forEach(([severity,color])=>{const badge=siteElement('span'),dot=siteElement('i');dot.style.background=color;badge.append(dot,document.createTextNode((severity==='Warning'?'Warn':severity==='Information'?'Info':severity)+': '+String(site.fault_counts[severity]||0).padStart(2,'0')));alarms.append(badge);});
-        document.querySelector('#mapSiteTopology').href='dashboard/controllers/topology.php?site_id='+encodeURIComponent(site.id)+'&view=topology';
+    document.addEventListener('icct:show-lnms',event=>{const node=lnms.nodes.find(n=>Number(n.id)===Number(event.detail));if(node)showLnms(node);});
+    const markers={};
+    function statusTotals(){
+        const target=document.querySelector('#dashboardStatusCounts');
+        if(activeView!=='map'){target.innerHTML=deviceCounts;target.setAttribute('aria-label','Device status totals');return;}
+        target.replaceChildren();target.setAttribute('aria-label','LNMS poller status totals');
+        for(const [label,key] of [['LNMS','total'],['Online','online'],['Offline','offline'],['Disabled','disabled']]){const span=document.createElement('span');span.className=key;span.textContent=label+': '+(lnms.counts[key]||0);target.append(span);}
     }
-    function showSite(site){
-        if(!siteDialog)return;
-        siteDialog.dataset.siteId=String(site.id);renderSite(siteSummary(site));if(!siteDialog.open)siteDialog.showModal();
-        const endpoint=document.querySelector('#icctMapData').dataset.summaryUrl;if(!endpoint)return;
-        siteDialog.dataset.summaryState='loading';
-        fetch(endpoint+'?site_summary='+encodeURIComponent(site.id),{credentials:'same-origin',cache:'no-store'}).then(response=>{if(!response.ok)throw new Error('Site unavailable');return response.json();}).then(site=>{if(siteDialog.open&&siteDialog.dataset.siteId===String(site.id)){renderSite(site);siteDialog.dataset.summaryState='current';}}).catch(()=>{if(siteDialog.dataset.siteId===String(site.id))siteDialog.dataset.summaryState='unavailable';});
+    function drawLnms(){
+        Object.values(markers).forEach(marker=>marker.remove());Object.keys(markers).forEach(key=>delete markers[key]);
+        const notice=document.querySelector('#lnmsLocationNotice');notice.replaceChildren();
+        const missing=lnms.nodes.filter(node=>!node.coordinates);
+        if(missing.length){const text=document.createElement('p');text.textContent='Location not configured for '+missing.length+' LNMS poller(s). Assign a site with coordinates in Presets → Site.';notice.append(text);}
+        lnms.nodes.forEach(node=>{
+            if(!node.coordinates){const button=document.createElement('button');button.type='button';button.className='button';button.textContent=node.name+' · '+node.address+' · '+node.status;button.addEventListener('click',()=>showLnms(node));notice.append(button);return;}
+            const label=document.createElement('span');label.textContent=node.name;
+            markers[node.id]=L.circleMarker(node.coordinates,{radius:node.local?7:5,color:'#fff',weight:1,fillColor:({Online:'#21864a',Offline:'#c83232',Disabled:'#777'})[node.status]||'#aa740a',fillOpacity:1}).addTo(map).bindTooltip(label,{direction:'top',permanent:true,className:'icct-map-site-label',offset:[0,-5]}).on('click',()=>showLnms(node));
+            labelSiteMarker(markers[node.id],node.name+' · '+node.address+' · '+node.status);
+        });
+        notice.hidden=!missing.length;statusTotals();
     }
-    document.addEventListener('icct:show-site',event=>{const site=data.sites.find(s=>Number(s.id)===Number(event.detail));if(site)showSite(site);});
-    var markers = {};
-    data.sites.forEach(function (site) {
-        var down = site.devices.some(function (d) { return d.status === 'Down'; });
-        var up = site.devices.every(function (d) { return d.status === 'Up'; });
-        var label = document.createElement('span');
-        label.textContent = site.name;
-        markers[site.id] = L.circleMarker(site.coordinates, {radius: 5, color: '#fff', weight: 1,
-            fillColor: down ? '#c83232' : up ? '#21864a' : site.devices.every(d=>d.status==='Disabled') ? '#777' : '#aa740a', fillOpacity: 1}).addTo(map)
-            .bindTooltip(label, {direction: 'top', permanent: true, className: 'icct-map-site-label', offset: [0, -5]}).on('click',function(){ showSite(site); });
-        markers[site.id].on('add',function(){labelSiteMarker(markers[site.id],site.name);});
-        labelSiteMarker(markers[site.id],site.name);
-    });
+    function fitLnms(){
+        const points=lnms.nodes.filter(node=>node.coordinates).map(node=>node.coordinates);
+        if(points.length){map.setMinZoom(2);map.fitBounds(L.latLngBounds(points),{padding:[36,36],maxZoom:10,animate:false});countryView=true;}
+        else fitIndia();
+    }
+    document.addEventListener('icct:lnms-readings',event=>{lnms=event.detail;drawLnms();});
+    drawLnms();
     document.getElementById('icctMapZoomIn').addEventListener('click', function () { map.zoomIn(); });
     document.getElementById('icctMapZoomOut').addEventListener('click', function () { map.zoomOut(); });
-    document.getElementById('icctMapFit').addEventListener('click', function () { map.closePopup(); fitIndia(); });
+    document.getElementById('icctMapFit').addEventListener('click', function () { map.closePopup(); fitLnms(); });
     document.getElementById('icctMapFullscreen').addEventListener('click', function () { if (document.fullscreenElement) document.exitFullscreen(); else document.querySelector('.icct-map-panel').requestFullscreen().catch(function () { status.textContent = 'Fullscreen is unavailable in this browser.'; }); });
     var tabs = Array.from(document.querySelectorAll('.icct-view-tabs [role="tab"]'));
     function selectView(tab, updateUrl=true) {
@@ -132,10 +135,11 @@
         if(destination.searchParams.has('site_id') && tab.dataset.view==='map'){destination.searchParams.delete('site_id');window.location.assign(destination.href);return;}
         if(updateUrl && destination.href!==window.location.href)history.pushState(null,'',destination.href);
         tabs.forEach(function (item) { var selected = item === tab; item.setAttribute('aria-selected', String(selected)); item.tabIndex = selected ? 0 : -1; document.getElementById(item.getAttribute('aria-controls')).hidden = !selected; });
+        activeView=tab.dataset.view;statusTotals();
         document.dispatchEvent(new CustomEvent('icct:view-change', {detail: {view: tab.dataset.view}}));
         status.hidden = tab.dataset.view !== 'map';
         document.querySelector('.icct-map-credits').hidden = tab.dataset.view !== 'map';
-        if (tab.dataset.view === 'map') { map.invalidateSize({pan: false}); if (countryView) fitIndia(); }
+        if (tab.dataset.view === 'map') { map.invalidateSize({pan: false}); if (countryView) fitLnms(); }
     }
     window.addEventListener('popstate',function(){const view=new URL(window.location.href).searchParams.get('view')||'topology';selectView(tabs.find(tab=>tab.dataset.view===view)||tabs[0],false);});
     const initialView=new URL(window.location.href).searchParams.get('view')||'topology';
