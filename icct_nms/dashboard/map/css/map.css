@@ -297,3 +297,11 @@
 .icct-map-site-label.leaflet-tooltip{background:transparent;border:0;box-shadow:none;color:#222;font-size:10px;font-weight:600;padding:0;white-space:nowrap}.icct-map-site-label.leaflet-tooltip:before{display:none}
 
 .lnms-location-notice{position:absolute;z-index:500;left:12px;right:48px;bottom:12px;padding:12px;background:#fff;border:1px solid #ddd;max-height:150px;overflow:auto;font-size:13px}.lnms-location-notice[hidden]{display:none}.lnms-location-notice p{margin:0 0 8px}.lnms-location-notice .button{display:inline-block;margin:4px 8px 0 0;font-size:12px}.lnms-radar-status{padding:12px 16px 0;margin:0;color:#626262;font-size:12px;line-height:1.4}
+
+/* Compact interface grid and four-row toggletip from the project reference. */
+.ports-device-row{grid-template-columns:42% minmax(0,1fr);gap:0;padding:8px 0}
+.port-dots{gap:6px;padding:6px 0 6px 12px;min-height:26px;align-content:center}
+.dashboard-port-tooltip{width:520px;background:#f4f4f4;border:0;border-radius:2px;padding:12px 18px;box-shadow:0 4px 16px #0002;color:#252525;line-height:22px}
+.dashboard-port-tooltip dl{grid-template-columns:36% minmax(0,1fr);gap:0}
+.dashboard-port-tooltip dt{padding:5px 12px 5px 0;color:#252525}
+.dashboard-port-tooltip dd{padding:5px 0 5px 12px;border-left:1px solid #ccc}
