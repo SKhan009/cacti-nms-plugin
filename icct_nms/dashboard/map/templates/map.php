@@ -13,8 +13,8 @@
 </div>
 <p id="icctMapStatus" role="status" hidden></p>
 <div class="icct-view-panel" id="icct-panel-map" role="tabpanel" aria-labelledby="icct-view-map" <?= $dashboardView==='map'?'':'hidden' ?>>
-<div id="icctSiteMap" aria-label="Map of LNMS and configured remote pollers"></div>
-<div id="lnmsLocationNotice" class="lnms-location-notice" role="status"></div>
+<div id="icctSiteMap" aria-label="Map of configured devices"></div>
+<div id="lnmsLocationNotice" class="lnms-location-notice" role="status" hidden></div>
 <div class="icct-map-controls" aria-label="Map controls">
 <button id="icctMapZoomIn" type="button" aria-label="Zoom in" title="Zoom in">+</button>
 <button id="icctMapZoomOut" type="button" aria-label="Zoom out" title="Zoom out">−</button>
@@ -49,7 +49,7 @@
 <form id="dashboardToken" hidden><?php icct_nms_token(); ?></form>
 <script type="application/json" id="dashboardData"><?= json_encode(['preferences'=>$dashboardPreferences,'readings'=>$dashboardReadings,'site_id'=>$dashboardSiteId,'user'=>icct_backend_current_user_id()],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
 <dialog id="lnmsNodeDialog" class="topology-device-dialog" aria-labelledby="lnmsNodeTitle">
-<header class="topology-summary-heading"><div><h2 id="lnmsNodeTitle"></h2><p id="lnmsNodeAddress"></p></div><span id="lnmsNodeStatus" class="device-status"></span><form method="dialog"><button class="button" aria-label="Close LNMS summary">×</button></form></header>
+<header class="topology-summary-heading"><div><h2 id="lnmsNodeTitle"></h2><p id="lnmsNodeAddress"></p></div><span id="lnmsNodeStatus" class="device-status"></span><form method="dialog"><button class="button" aria-label="Close device summary">×</button></form></header>
 <dl id="lnmsNodeDetails" class="topology-summary"></dl>
 <a id="lnmsCollectorLink" class="button" hidden>View Cacti Collector</a>
 </dialog>

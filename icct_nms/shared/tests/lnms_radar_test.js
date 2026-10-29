@@ -12,6 +12,6 @@ assert(groups[0].children.find(n=>n.tag==='title').textContent.includes('km from
 groups[0].events.click();assert.equal(events[0].name,'icct:show-lnms');assert.equal(events[0].detail,2);
 assert.equal(groups[1].children.find(n=>n.tag==='circle'&&n.attrs.r===5).attrs.fill,'#2dc658','Healthy local heartbeat shows green');
 context.readings.lnms.center.coordinates=null;context.readings.lnms.nodes=[center];vm.runInContext('radar()',context);
-groups=radar.children.filter(n=>n.tag==='g');assert.equal(groups.length,1);assert(note.textContent.includes('no remote pollers configured'));
+groups=radar.children.filter(n=>n.tag==='g');assert.equal(groups.length,1);assert.equal(note.textContent,'');assert.equal(note.hidden,true);
 assert(!JSON.stringify(radar).includes('Ordinary device site'));
 console.log('PASS: LNMS-only radar, heartbeat colors, real bearings, node summary actions and no invented remote sites.');

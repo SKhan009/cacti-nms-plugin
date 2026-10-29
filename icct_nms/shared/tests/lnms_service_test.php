@@ -16,7 +16,7 @@ $now=time();
 check(icct_nms_lnms_poller_status(['disabled'=>'on'],300,$now)==='Disabled','Disabled native pollers are represented');
 check(icct_nms_lnms_poller_status(['last_update'=>'0000-00-00 00:00:00'],300,$now)==='Unknown','Missing heartbeat is not reported online');
 check(icct_nms_lnms_poller_status(['last_update'=>date('Y-m-d H:i:s',$now+120)],300,$now)==='Unknown','Future heartbeat does not fabricate availability');
-$d=icct_nms_lnms_data();check(count($d['nodes'])===2&&$d['center']['id']===1,'Only configured pollers appear; this LNMS is the center');
+$d=icct_nms_lnms_data();check($d['center']['name']==='10.1.0.10'&&$d['nodes'][1]['name']==='10.2.0.10','Display names come from configured device endpoints without an LNMS prefix');check(count($d['nodes'])===2&&$d['center']['id']===1,'Only configured pollers appear; this LNMS is the center');
 check($d['nodes'][0]['coordinates']===null&&$d['nodes'][0]['site_id']===null,'No geolocation is guessed from IP or an unrelated device');
 check($d['counts']['online']===1&&$d['counts']['offline']===1,'Heartbeat freshness determines native poller availability');
 icct_nms_lnms_save_sites(['poller_sites'=>[1=>'7',2=>'8']]);$d=icct_nms_lnms_data();

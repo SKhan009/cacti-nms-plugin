@@ -89,7 +89,7 @@
         document.querySelector('#lnmsNodeAddress').textContent=node.address;
         const badge=document.querySelector('#lnmsNodeStatus');badge.textContent=node.status;badge.className='device-status '+({Online:'online',Offline:'offline',Disabled:'disabled'}[node.status]||'other');
         const details=document.querySelector('#lnmsNodeDetails');details.replaceChildren();
-        const fields={'LNMS URL':node.local?new URL(node.lnms_path,location.origin).href:'Configured remote Cacti poller','Role':node.local?'This LNMS':'Remote Cacti poller','Site':node.site_name,'Last heartbeat':node.last_seen||'Not received','Coordinates':node.coordinates?node.coordinates.join(', '):'Not configured'};
+        const fields={'Last heartbeat':node.last_seen||'Not received'};
         Object.entries(fields).forEach(([name,value])=>{const row=document.createElement('div'),label=document.createElement('dt'),content=document.createElement('dd');label.textContent=name;content.textContent=value;row.append(label,content);details.append(row);});
         const link=document.querySelector('#lnmsCollectorLink');link.hidden=!node.collector_url;if(node.collector_url)link.href=node.collector_url;
         if(!nodeDialog.open)nodeDialog.showModal();
@@ -99,21 +99,19 @@
     function statusTotals(){
         const target=document.querySelector('#dashboardStatusCounts');
         if(activeView!=='map'){target.innerHTML=deviceCounts;target.setAttribute('aria-label','Device status totals');return;}
-        target.replaceChildren();target.setAttribute('aria-label','LNMS poller status totals');
-        for(const [label,key] of [['LNMS','total'],['Online','online'],['Offline','offline'],['Disabled','disabled']]){const span=document.createElement('span');span.className=key;span.textContent=label+': '+(lnms.counts[key]||0);target.append(span);}
+        target.replaceChildren();target.setAttribute('aria-label','Device status totals');
+        for(const [label,key] of [['Total','total'],['Online','online'],['Offline','offline'],['Disabled','disabled']]){const span=document.createElement('span');span.className=key;span.textContent=label+': '+(lnms.counts[key]||0);target.append(span);}
     }
     function drawLnms(){
         Object.values(markers).forEach(marker=>marker.remove());Object.keys(markers).forEach(key=>delete markers[key]);
-        const notice=document.querySelector('#lnmsLocationNotice');notice.replaceChildren();
-        const missing=lnms.nodes.filter(node=>!node.coordinates);
-        if(missing.length){const text=document.createElement('p');text.textContent='Location not configured for '+missing.length+' LNMS poller(s). Assign a site with coordinates in Presets → Site.';notice.append(text);}
+        const notice=document.querySelector('#lnmsLocationNotice');notice.replaceChildren();notice.hidden=true;
         lnms.nodes.forEach(node=>{
-            if(!node.coordinates){const button=document.createElement('button');button.type='button';button.className='button';button.textContent=node.name+' · '+node.address+' · '+node.status;button.addEventListener('click',()=>showLnms(node));notice.append(button);return;}
+            if(!node.coordinates)return;
             const label=document.createElement('span');label.textContent=node.name;
             markers[node.id]=L.circleMarker(node.coordinates,{radius:node.local?7:5,color:'#fff',weight:1,fillColor:({Online:'#21864a',Offline:'#c83232',Disabled:'#777'})[node.status]||'#aa740a',fillOpacity:1}).addTo(map).bindTooltip(label,{direction:'top',permanent:true,className:'icct-map-site-label',offset:[0,-5]}).on('click',()=>showLnms(node));
             labelSiteMarker(markers[node.id],node.name+' · '+node.address+' · '+node.status);
         });
-        notice.hidden=!missing.length;statusTotals();
+        statusTotals();
     }
     function fitLnms(){
         const points=lnms.nodes.filter(node=>node.coordinates).map(node=>node.coordinates);

@@ -157,10 +157,10 @@ document.addEventListener('pointercancel',()=>{if(!cardDrag?.native)endCardDrag(
 document.addEventListener('keydown',e=>{if(e.key==='Escape')endCardDrag(false);});
 window.addEventListener('blur',()=>endCardDrag(false));
 function radar(){
- const radar=document.querySelector('#birdsRadar'),lnms=readings.lnms||{nodes:[],center:null},origin=lnms.center||{name:'LNMS not configured',status:'Unknown',coordinates:null},sites=lnms.nodes.filter(node=>Number(node.id)!==Number(origin.id));radar.replaceChildren();
- const note=document.querySelector('#birdsLnmsStatus');if(note)note.textContent=sites.length?sites.length+' configured remote poller(s) · status from Cacti heartbeats':'This LNMS · no remote pollers configured';
+ const radar=document.querySelector('#birdsRadar'),lnms=readings.lnms||{nodes:[],center:null},origin=lnms.center||{name:'Device not configured',status:'Unknown',coordinates:null},sites=lnms.nodes.filter(node=>Number(node.id)!==Number(origin.id));radar.replaceChildren();
+ const note=document.querySelector('#birdsLnmsStatus');if(note){note.textContent='';note.hidden=true;}
  const cx=160,cy=160,r=115,geographic=Array.isArray(origin.coordinates);
- radar.append(svg('title',{},geographic?'LNMS poller bearings from the local server':'Configured LNMS pollers — logical positions, not physical distance'));
+ radar.append(svg('title',{},geographic?'Device bearings from the local server':'Configured devices — logical positions, not physical distance'));
  for(let i=1;i<=9;i++)radar.append(svg('circle',{cx,cy,r:r*i/9,fill:'none',stroke:i%3===0?'#447cf4':'#c8d6ff','stroke-width':i%3===0?1.5:.7}));
  for(let degrees=0;degrees<360;degrees+=10){const angle=degrees*Math.PI/180,x=cx+Math.sin(angle)*(r+15),y=cy-Math.cos(angle)*(r+15);radar.append(svg('line',{x1:cx,y1:cy,x2:cx+Math.sin(angle)*r,y2:cy-Math.cos(angle)*r,stroke:degrees%30===0?'#447cf4':'#c8d6ff','stroke-width':degrees%30===0?1.4:.6}));if(degrees%30===0)radar.append(svg('text',{x,y:y+3,fill:'#95b0ff','text-anchor':'middle',transform:`rotate(${degrees},${x},${y})`},degrees));}
  const points=sites.map((site,index)=>{
