@@ -4,7 +4,7 @@
 
 ## Version 1.2.15
 
-The Alarms eye action opens a dedicated full-page view with the Figma summary labels, Acknowledgement & Remarks, and Alarm History/Escalation tabs. Back navigation, acknowledgement/escalation controls and detail CSV export use the same saved alarm and device permissions as the list. Tab selection survives a reload, dates use `DD-MM-YYYY HH:mm:ss` in Asia/Kolkata, and the page refreshes saved data every 30 seconds.
+The Alarms eye action opens a dedicated full-page view with the Figma summary labels, Acknowledgement & Remarks, and Alarm History/Escalation tabs. Back navigation and detail CSV export use the same saved alarm and device permissions as the list. Acknowledgement and escalation actions are available from the list; the detail header contains only Export. Missing history fields are left blank. Tab selection survives a reload, dates use `DD-MM-YYYY HH:mm:ss` in Asia/Kolkata, and the page refreshes saved data every 30 seconds.
 
 History now captures immutable event-time severity, Description, Fix, acknowledgement and occurrence count. Editing a rule's text records a new details event without rewriting older snapshots. Upgrading starts a current-observation baseline for existing alarms; older events without captured content remain marked as unavailable. Run the native plugin upgrade to add the snapshot column before using this view.
 

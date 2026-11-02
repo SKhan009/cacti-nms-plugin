@@ -1,6 +1,7 @@
 <?php
 $alarm=$alarmDetail['alarm'];$ack=$alarmDetail['acknowledgement'];
 $detailValue=static fn($value)=>icct_nms_h(trim((string)$value)!==''?$value:'-');
+$tableValue=static fn($value)=>icct_nms_h(trim((string)$value)!==''?$value:'');
 $severityNames=['Warning'=>'Warn','Information'=>'Info'];
 $severityColors=['Critical'=>'#f94144','Major'=>'#f3722b','Minor'=>'#f7961e','Warning'=>'#42aa8b','Information'=>'#277da2'];
 ?>
@@ -8,7 +9,7 @@ $severityColors=['Critical'=>'#f94144','Major'=>'#f3722b','Minor'=>'#f7961e','Wa
 <header class="alarm-detail-heading">
 <a href="alarms/controllers/alarms.php" class="alarm-back" aria-label="Back to Alarms">←</a><h1 data-detail="name"><?= $detailValue($alarm['name']) ?></h1>
 <div class="alarm-detail-actions">
-<?php if($management): ?><button type="button" class="button" data-detail-action="ack" aria-label="Acknowledge alarm" title="Ack Alarm" <?= !empty($alarm['acknowledged'])||$alarm['state']==='Closed'?'disabled':'' ?>>+</button><button type="button" class="button" data-detail-action="escalate" aria-label="Escalate alarm" title="Escalate Alarm" <?= empty($alarm['acknowledged'])||!empty($alarm['escalated'])||$alarm['state']==='Closed'?'disabled':'' ?>>+</button><?php endif; ?>
+
 <button type="button" class="icon-button alarm-detail-export" id="alarm-detail-export" aria-label="Export alarm details"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m-4 4 4-4 4 4M5 10H3v11h18V10h-2"/></svg></button>
 </div></header>
 <p id="alarm-detail-feedback" role="status" aria-live="polite"></p>
@@ -30,10 +31,10 @@ $severityColors=['Critical'=>'#f94144','Major'=>'#f3722b','Minor'=>'#f7961e','Wa
 <section id="alarm-history" role="tabpanel" aria-labelledby="alarm-history-tab" class="alarm-detail-panel">
 <div class="alarm-history-scroll"><table class="alarm-history-table"><thead><tr><th>Alarm<br>Occurred</th><th>Severity &amp;<br>Ack</th><th>Description &amp; Fix</th><th>Ack &amp; Remarks</th><th>Count</th></tr></thead><tbody id="alarm-detail-history">
 <?php foreach($alarmDetail['history'] as $event): $snapshot=$event['snapshot'];$severity=$snapshot['severity']??(isset($severityColors[$event['note']])?$event['note']:''); ?>
-<tr title="<?= $detailValue($event['event']) ?>"><td><?= icct_nms_alarm_format_time($event['created_epoch']) ?></td><td><?php if(isset($severityColors[$severity])): ?><span class="alarm-severity" style="background:<?= $severityColors[$severity] ?>;color:<?= $severity==='Information'?'#fff':'#161616' ?>"><?= $severityNames[$severity]??$severity ?></span><?php else: ?>-<?php endif; ?></td><td><span><?= $detailValue($snapshot['description']??'') ?></span><small><?= $detailValue($snapshot['fix']??'') ?></small><?php if(!$snapshot): ?><small class="alarm-legacy-note">Historical content was not recorded.</small><?php endif; ?></td><td><?= isset($snapshot['acknowledged'])?(!empty($snapshot['acknowledged'])?'Ack':'Not_Ack'):'-' ?><small><?= $detailValue($event['event']==='Acknowledged'?$event['note']:'') ?></small></td><td><?= $detailValue($snapshot['occurrences']??'') ?></td></tr>
+<tr title="<?= $tableValue($event['event']) ?>"><td><?= !empty($event['created_epoch'])?icct_nms_alarm_format_time($event['created_epoch']):'' ?></td><td><?php if(isset($severityColors[$severity])): ?><span class="alarm-severity" style="background:<?= $severityColors[$severity] ?>;color:<?= $severity==='Information'?'#fff':'#161616' ?>"><?= $severityNames[$severity]??$severity ?></span><?php endif; ?></td><td><span><?= $tableValue($snapshot['description']??'') ?></span><small><?= $tableValue($snapshot['fix']??'') ?></small><?php if(!$snapshot): ?><small class="alarm-legacy-note">Historical content was not recorded.</small><?php endif; ?></td><td><?= isset($snapshot['acknowledged'])?(!empty($snapshot['acknowledged'])?'Ack':'Not_Ack'):'' ?><small><?= $tableValue($event['event']==='Acknowledged'?$event['note']:'') ?></small></td><td><?= $tableValue($snapshot['occurrences']??'') ?></td></tr>
 <?php endforeach; ?>
 </tbody></table></div></section>
-<section id="alarm-escalation" role="tabpanel" aria-labelledby="alarm-escalation-tab" class="alarm-detail-panel" hidden><div class="alarm-history-scroll"><table class="alarm-history-table alarm-escalation-table"><thead><tr><th>Alarm Occurred</th><th>Escalated By</th><th>Remarks</th><th>Escalation Status</th></tr></thead><tbody id="alarm-detail-escalations"><?php foreach($alarmDetail['escalations'] as $event): ?><tr><td><?= icct_nms_alarm_format_time($event['created_epoch']) ?></td><td><?= $detailValue($event['actor_name']??('User '.$event['actor_id'])) ?></td><td><?= $detailValue($event['note']) ?></td><td>Esc</td></tr><?php endforeach; ?></tbody></table></div></section>
+<section id="alarm-escalation" role="tabpanel" aria-labelledby="alarm-escalation-tab" class="alarm-detail-panel" hidden><div class="alarm-history-scroll"><table class="alarm-history-table alarm-escalation-table"><thead><tr><th>Alarm Occurred</th><th>Escalated By</th><th>Remarks</th><th>Escalation Status</th></tr></thead><tbody id="alarm-detail-escalations"><?php foreach($alarmDetail['escalations'] as $event): ?><tr><td><?= !empty($event['created_epoch'])?icct_nms_alarm_format_time($event['created_epoch']):'' ?></td><td><?= $tableValue($event['actor_name']??('User '.$event['actor_id'])) ?></td><td><?= $tableValue($event['note']) ?></td><td>Esc</td></tr><?php endforeach; ?></tbody></table></div></section>
 <script type="application/json" id="alarm-detail-data"><?= json_encode($alarmDetail,JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_INVALID_UTF8_SUBSTITUTE) ?></script>
-<dialog id="alarm-detail-action-dialog"><form id="alarm-detail-action-form"><h2 id="alarm-detail-action-title"></h2><p id="alarm-detail-action-help"></p><?php icct_nms_token(); ?><label class="field">Remarks<textarea name="note" maxlength="1000" rows="3"></textarea></label><div class="message-actions"><button type="button" class="button" id="alarm-detail-action-cancel">Cancel</button><button class="button primary" type="submit">Save</button></div></form></dialog>
+
 </section>
