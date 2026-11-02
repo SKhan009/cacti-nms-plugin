@@ -3230,3 +3230,10 @@ h1, h2, h3, h4, h5, h6 { line-height: 1.25; }
 @media(max-width:480px){.alarm-detail-summary{gap:18px 12px}.alarm-acknowledgement dl{grid-template-columns:1fr}.alarm-detail-heading{gap:8px}.alarm-detail-actions .button,.alarm-detail-export{width:28px;min-width:28px;height:28px;min-height:28px}.alarm-detail-export{padding:3px}}
 
 .alarm-history-table small:empty,.alarm-history-table span:empty{display:none}
+
+.alarm-status-checked::before{content:'✓';display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;margin-right:4px;border-radius:50%;background:#161616;color:white;font-size:9px;font-weight:700;line-height:1;vertical-align:middle}
+.alarm-history-pagination{display:flex;align-items:center;background:#f4f4f4;border:1px solid #d5d5d5;border-top:0;min-height:44px;font-size:13px;color:#555;gap:0}.alarm-history-pagination>label{padding:12px 14px;border-right:1px solid #ddd;white-space:nowrap}.alarm-history-pagination select{border:0;background:transparent;font:inherit;color:inherit;padding:0 6px;cursor:pointer}.alarm-history-pagination>span{padding:10px 14px;flex:1}.alarm-history-pagination>div{display:flex;gap:6px;align-items:center;padding:10px 14px;border-left:1px solid #ddd;white-space:nowrap}.alarm-history-pagination>button{align-self:stretch;width:38px;flex:none;background:transparent;color:#252525;border:0;border-left:1px solid #ddd;font-size:23px;cursor:pointer}.alarm-history-pagination>button:disabled{color:#bbb;cursor:default}
+.alarm-detail-panel .alarm-history-scroll{max-height:clamp(220px,calc(100dvh - 480px),600px);overflow:auto}.alarm-history-table thead th{position:sticky;top:0;z-index:1;background:#fff}
+@media(max-width:650px){.alarm-history-pagination{flex-wrap:wrap}.alarm-history-pagination>label{padding:10px}.alarm-history-pagination>span{padding:10px}.alarm-history-pagination>div{margin-left:auto;padding:10px}}
+
+.alarm-table small.alarm-status-checked{color:#252525}

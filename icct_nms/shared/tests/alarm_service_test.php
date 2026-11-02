@@ -13,3 +13,15 @@ $host=['id'=>2,'hostname'=>'127.0.0.1'];$rule=['source'=>'snmp','name'=>'Battery
 $key=icct_nms_alarm_key($host,$rule,$observation);ok($key===icct_nms_alarm_key($host,$rule,array_replace($observation,['rule'=>9])),'Reordering device rules must not lose workflow identity');
 ok($key!==icct_nms_alarm_key(array_replace($host,['id'=>3]),$rule,$observation),'Alarm identity must be device-specific');
 echo "PASS: durable alarm activation, recovery, missing observations, recurrence and stable device ownership.\n";
+$events=[
+ ['event'=>'Current observation','note'=>'','actor_id'=>0,'snapshot'=>['acknowledged'=>0]],
+ ['event'=>'Raised','note'=>'Major','actor_id'=>0,'snapshot'=>[]],
+ ['event'=>'Details updated','note'=>'Major','actor_id'=>0,'snapshot'=>['acknowledged'=>1]],
+ ['event'=>'Acknowledged','note'=>'Investigating supply failure','actor_id'=>1,'snapshot'=>['acknowledged'=>1]],
+ ['event'=>'Raised','note'=>'Major','actor_id'=>0,'snapshot'=>[]]
+];
+$history=icct_nms_alarm_history_remarks($events);
+ok($history[2]['snapshot']['ack_note']==='Investigating supply failure','Known acknowledgement remarks must accompany later snapshots');
+ok(!isset($history[0]['snapshot']['ack_note']),'An unacknowledged recurrence must not inherit old remarks');
+ok($events[2]['snapshot']===['acknowledged'=>1],'Read-time enrichment must not rewrite stored snapshots');
+echo "PASS: acknowledgement remarks stay within their activation and preserve historical content.\n";

@@ -2,6 +2,10 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Inventory designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
+## Version 1.2.16
+
+The final alarm detail layout adds checked-circle Ack/Esc indicators, native acknowledger username/email, and Alarm History pagination with page size, range, page selection and navigation. Stored acknowledgement remarks remain associated with their event-time snapshot and are carried forward only within the same activation. The history table scrolls under a fixed header while its pagination remains visible. The removed plus buttons and blank missing table fields remain as requested.
+
 ## Version 1.2.15
 
 The Alarms eye action opens a dedicated full-page view with the Figma summary labels, Acknowledgement & Remarks, and Alarm History/Escalation tabs. Back navigation and detail CSV export use the same saved alarm and device permissions as the list. Acknowledgement and escalation actions are available from the list; the detail header contains only Export. Missing history fields are left blank. Tab selection survives a reload, dates use `DD-MM-YYYY HH:mm:ss` in Asia/Kolkata, and the page refreshes saved data every 30 seconds.

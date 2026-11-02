@@ -16,6 +16,10 @@ function icct_nms_alarm_key($host,$rule,$observation) {
 }
 function icct_nms_alarm_history_write($key,$event,$actor=0,$note='') {
     $row=db_fetch_row_prepared('SELECT name,description,fix,severity,state,occurrences,acknowledged,escalated,ticket_state FROM plugin_icct_nms_alarms WHERE alarm_key=?',[$key]);
+    if(!empty($row['acknowledged'])){
+        $ack=$event==='Acknowledged'?['note'=>$note,'actor_id'=>$actor]:db_fetch_row_prepared("SELECT note,actor_id FROM plugin_icct_nms_alarm_history WHERE alarm_key=? AND event='Acknowledged' ORDER BY id DESC LIMIT 1",[$key]);
+        $row['ack_note']=$ack['note']??'';$row['ack_actor_id']=(int)($ack['actor_id']??0);
+    }
     icct_backend_category_execute('INSERT INTO plugin_icct_nms_alarm_history(alarm_key,event,actor_id,note,snapshot_json,created_at) VALUES(?,?,?,?,?,NOW())',[$key,$event,$actor,$note,json_encode($row,JSON_THROW_ON_ERROR)]);
 }
 function icct_nms_alarm_record($host,$rule,$observation) {
@@ -107,16 +111,30 @@ function icct_nms_alarm_detail($key) {
     $devices=array_column(icct_nms_inventory(),null,'id');$device=$devices[$row['host_id']]??null;
     if(!$device)throw new RuntimeException('Alarm unavailable.');
     $row+=['device_name'=>$device['description'],'short_name'=>$device['short_name']??'','address'=>$device['hostname'],'network_type'=>$device['device_type']??'','device_status'=>$device['status_label']??'Unknown'];
-    $history=db_fetch_assoc_prepared("SELECT h.*,UNIX_TIMESTAMP(h.created_at) AS created_epoch,COALESCE(NULLIF(u.full_name,''),u.username) AS actor_name FROM plugin_icct_nms_alarm_history h LEFT JOIN user_auth u ON u.id=h.actor_id WHERE h.alarm_key=? ORDER BY h.id DESC",[$key]);
+    $history=db_fetch_assoc_prepared("SELECT h.*,UNIX_TIMESTAMP(h.created_at) AS created_epoch,COALESCE(NULLIF(u.full_name,''),u.username) AS actor_name,u.username AS actor_username,u.email_address AS actor_email FROM plugin_icct_nms_alarm_history h LEFT JOIN user_auth u ON u.id=h.actor_id WHERE h.alarm_key=? ORDER BY h.id DESC",[$key]);
     $ack=null;$escalations=[];
     foreach($history as &$event){
         $snapshot=json_decode((string)($event['snapshot_json']??''),true);$event['snapshot']=is_array($snapshot)?$snapshot:[];unset($event['snapshot_json']);
         if($event['event']==='Acknowledged'&&$ack===null)$ack=$event;
         if($event['event']==='Escalated')$escalations[]=$event;
     }unset($event);
+    $history=icct_nms_alarm_history_remarks($history);
     return ['alarm'=>$row,'history'=>$history,'acknowledgement'=>!empty($row['acknowledged'])?$ack:null,'escalations'=>$escalations];
 }
 function icct_nms_alarm_format_time($epoch) {
     if(!(int)$epoch)return '-';
     return (new DateTimeImmutable('@'.(int)$epoch))->setTimezone(new DateTimeZone('Asia/Kolkata'))->format('d-m-Y H:i:s');
+}
+
+/** Carry forward only known acknowledgement remarks within the same activation. */
+function icct_nms_alarm_history_remarks($history) {
+    $ack=null;
+    foreach(array_reverse(array_keys($history)) as $index){
+        $event=&$history[$index];$snapshot=$event['snapshot'];
+        if($event['event']==='Raised'||(isset($snapshot['acknowledged'])&&!(int)$snapshot['acknowledged']))$ack=null;
+        if($event['event']==='Acknowledged')$ack=['note'=>$event['note'],'actor_id'=>(int)$event['actor_id']];
+        if(!empty($snapshot['acknowledged'])&&!array_key_exists('ack_note',$snapshot)&&$ack){$event['snapshot']['ack_note']=$ack['note'];$event['snapshot']['ack_actor_id']=$ack['actor_id'];}
+        unset($event);
+    }
+    return $history;
 }
