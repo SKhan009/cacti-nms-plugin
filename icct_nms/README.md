@@ -2,6 +2,10 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Inventory designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
+## Version 1.3.0
+
+NetFlow/IPFIX now integrates enabled Presets, per-device exporter mappings, and a read-only Inventory reporting tab linked from topology. The nfdump receiver decodes v5, v7, v9 and IPFIX with IPv4/IPv6 transport. Owned tables retain decoded flows, trends and anomaly history; capture imports are transactional and idempotent. Reports include time/IP/port/protocol/version/application/LAN-WAN filters, bandwidth charts, top source/destination hosts, protocols, exporter application IDs or labelled service-port estimates, conversations, pagination and CSV export. Per-device rules flag scans, SYN floods, worm-like SMB/RPC fan-out and bandwidth overuse; fresh normal observations resolve findings. Collectors are isolated by native Cacti poller ID and run offline after package installation. See [deployment and operating notes](protocols/netflow/README.md) for exporter setup, retention, classification and sampling.
+
 ## Version 1.2.19
 
 Alarm History expands to fit all rows on the selected page without an internal vertical scrollbar. Pagination follows the final row; narrow screens retain horizontal table scrolling.

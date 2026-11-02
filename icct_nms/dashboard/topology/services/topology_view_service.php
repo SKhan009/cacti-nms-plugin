@@ -31,6 +31,8 @@ function icct_nms_topology_data($mapData) {
             'Serial Number'=>$device['serial']??'',
             'Rack Placement'=>empty($host['rack_name'])?'':(isset($host['start_unit'])?'U'.$host['start_unit'].'–U'.((int)$host['start_unit']+(int)$host['unit_height']-1).' ('.$host['rack_name'].')':$host['rack_name'].' (Peripheral)'),
         ];
+        $device['netflow']=icct_nms_netflow_topology($device['id']);
+        if($device['netflow']){ $nf=$device['netflow'];$device['summary']['NetFlow / IPFIX']=$nf['enabled']?'Enabled':'Disabled';$device['summary']['Flow Exporter']=$nf['exporter'];$device['summary']['Flow Collector']=$nf['collector'];$device['summary']['Last Flow Received']=$nf['last_data'];$device['summary']['Flow Records']=$nf['flows'];$device['summary']['Traffic Anomalies']=$nf['anomalies'];}
         $device['diagnostics']=is_realm_allowed(3)?icct_backend_diag_selected_labels($device['id']):[];
         $device['discovery']=icct_nms_device_discovery_summary($device['id'],$discoveryHosts[$device['id']]??null);
         $device['short_name']=trim((string)($host['short_name']??'')) ?: icct_backend_short_name_generate($device['name'],$host['device_type']??'',(int)$device['id']);

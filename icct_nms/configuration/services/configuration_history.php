@@ -16,7 +16,8 @@ function icct_nms_configuration_snapshot($id) {
     icct_nms_configuration_pick($serial,['connection_id','device_address','protocol','poll_interval'],'serial',$out);
     icct_nms_configuration_pick(json_decode($serial['settings_json'] ?? '{}',true) ?: [],['baud_rate','data_bits','parity','stop_bits','flow_control','response_timeout','serial_retries','serial_interface'],'serial_settings',$out);
     icct_nms_configuration_pick(icct_backend_syslog_assignment($id) ?: [],['source_address','transport','max_severity','severity_codes','facility_codes','match_strings'],'syslog',$out);
-    foreach(['snmp','ssh','serial','cdp','lldp','syslog'] as $protocol)$out['protocol_enabled.'.$protocol]=icct_backend_protocol_enabled($id,$protocol)?'1':'0';
+    icct_nms_configuration_pick(icct_nms_netflow_assignment($id),array_merge(icct_nms_netflow_fields(),['exporter_address']),'netflow',$out);
+    foreach(['snmp','ssh','serial','cdp','lldp','syslog','netflow'] as $protocol)$out['protocol_enabled.'.$protocol]=icct_backend_protocol_enabled($id,$protocol)?'1':'0';
     $out['graphs.template_ids']=json_encode(array_column(icct_nms_graph_associations($id),'id'));
     $out['ports.monitoring']=json_encode(icct_nms_port_monitoring($id),JSON_THROW_ON_ERROR);
     $out['fault.rules']=json_encode(icct_nms_fault_rules($id),JSON_THROW_ON_ERROR);

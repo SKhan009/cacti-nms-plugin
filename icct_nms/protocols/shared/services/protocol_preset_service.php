@@ -5,6 +5,7 @@ function icct_nms_protocol_preset_fields($protocol) {
         case 'snmp': return ['snmp_version','snmp_port','snmp_timeout','max_oids','availability_method','ping_method','ping_timeout','ping_retries','snmp_username','snmp_auth_protocol','snmp_priv_protocol','snmp_context','snmp_security_level'];
         case 'cdp': case 'lldp': return ['interval_seconds','stale_seconds','refresh_seconds'];
         case 'ssh': return ['port','connect_timeout','auth_method','username','command_timeout','retries','keepalive','monitoring'];
+        case 'netflow': return icct_nms_netflow_fields();
         case 'syslog': return ['severity_codes','facility_codes','match_strings'];
         case 'serial': return ['serial_interface','baud_rate','data_bits','parity','stop_bits','flow_control','response_timeout','serial_retries','serial_interval','serial_protocol'];
         default: throw new InvalidArgumentException('Choose a supported protocol.');
@@ -42,6 +43,8 @@ function icct_nms_protocol_preset_validate($protocol,$input) {
         $validated=icct_backend_ssh_preset_values($out+['name'=>'Protocol defaults','description'=>'','enabled'=>1]);
         foreach ($out as $field=>$value) if ($field!=='monitoring') $out[$field]=$validated[$field];
         $out['monitoring']=!empty($input['monitoring'])?'1':'0';
+    } elseif ($protocol==='netflow') {
+        $out=icct_nms_netflow_validate($out);
     } elseif ($protocol==='syslog') {
         foreach(icct_backend_syslog_filters($out) as $field=>$values)$out[$field]=json_encode($values,JSON_THROW_ON_ERROR);
     } else {
@@ -66,7 +69,7 @@ function icct_nms_save_protocol_preset($input) {
 /** Only names of overridden non-secret preset fields are stored here. */
 function icct_nms_protocol_device_overrides($id) {
     $out=[];
-    foreach (['snmp','cdp','lldp','ssh','serial','syslog'] as $protocol) {
+    foreach (['snmp','cdp','lldp','ssh','serial','syslog','netflow'] as $protocol) {
         $json=$id ? db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['device_preset_overrides_'.$id.'_'.$protocol]) : false;
         if ($json===false || $json===null || $json==='') { $out[$protocol]=null; continue; }
         $names=json_decode($json,true,32,JSON_THROW_ON_ERROR);
@@ -76,12 +79,12 @@ function icct_nms_protocol_device_overrides($id) {
     return $out;
 }
 function icct_nms_protocol_record_overrides($id,$action,$input) {
-    if ($action==='remove_protocol' && in_array($input['protocol'] ?? '',['snmp','cdp','lldp','ssh','serial','syslog'],true)) {
+    if ($action==='remove_protocol' && in_array($input['protocol'] ?? '',['snmp','cdp','lldp','ssh','serial','syslog','netflow'],true)) {
         icct_backend_category_execute('DELETE FROM plugin_icct_nms_meta WHERE meta_key=?',['device_preset_overrides_'.$id.'_'.$input['protocol']]);
         return;
     }
     $protocol=$action==='discovery' ? ($input['discovery_protocol'] ?? '') : $action;
-    if (!is_string($protocol) || !in_array($protocol,['snmp','cdp','lldp','ssh','serial','syslog'],true)) return;
+    if (!is_string($protocol) || !in_array($protocol,['snmp','cdp','lldp','ssh','serial','syslog','netflow'],true)) return;
     $defaults=icct_nms_protocol_presets()[$protocol] ?? [];
     if (!$defaults) return;
     $overrides=icct_nms_protocol_device_overrides($id)[$protocol] ?? [];

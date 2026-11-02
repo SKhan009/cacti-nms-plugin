@@ -17,6 +17,7 @@ try{icct_nms_topology_save([6=>[.2,.2]],$rev);throw new LogicException('Device p
 icct_nms_topology_save([2=>[.6,.4]],$rev);if(!isset($stored[1],$stored[2]))throw new LogicException('Save removed other device positions');
 $allowed=false;try{icct_nms_topology_save([],hash('sha256',json_encode($stored)));throw new LogicException('Realm bypass');}catch(RuntimeException $e){}
 echo "Topology persistence, bounds, stale writes and device/realm permissions passed.\n";
+function icct_nms_netflow_topology($id){return $id===1?['enabled'=>true,'exporter'=>'192.0.2.1','collector'=>'192.0.2.10:2055','last_data'=>'2026-11-02 12:00:00','flows'=>12,'anomalies'=>1]:null;}
 function icct_nms_uptime($ticks){return $ticks?'Reported uptime':'Not reported';}
 function read_config_option($name){return '300';}
 function is_realm_allowed($id){return true;}
@@ -27,6 +28,7 @@ function icct_nms_type_asset($type,$view){return 'shared/assets/'.$view.'-'.$typ
 function icct_nms_fault_observations($host){return $host['id']===1?[['state'=>'Critical'],['state'=>'Minor']]:[];}
 function db_fetch_assoc_prepared($sql,$args){if(isset($GLOBALS['snapshots']))return $GLOBALS['snapshots'][$args[0]]??[];return $args[0]===1?[['protocol'=>'lldp','status'=>'success','config_hash'=>'test','succeeded_at'=>date('Y-m-d H:i:s'),'data_json'=>json_encode(['neighbors'=>[['present'=>true,'peer_label'=>'Switch'],['present'=>false,'peer_label'=>'Sensor'],['present'=>true,'management_addresses'=>['127.0.0.1']]]])]]:[];}
 $diagram=icct_nms_topology_data(['unlocated'=>[['id'=>1,'name'=>'Host','address'=>'127.0.0.1'],['id'=>2,'name'=>'Switch','address'=>'127.0.0.1'],['id'=>3,'name'=>'Sensor','address'=>'127.0.0.1']],'sites'=>[]]);
+if($diagram['devices'][0]['summary']['Flow Records']!==12||$diagram['devices'][0]['netflow']['exporter']!=='192.0.2.1')throw new LogicException('NetFlow summary lost device mapping');
 if(count($diagram['links'])!==1||$diagram['links'][0]['target']!==2)throw new LogicException('Ambiguous or absent neighbour linked');
 if($diagram['devices'][0]['image_asset']!=='shared/assets/image-switch.svg'||$diagram['devices'][0]['network_asset']!=='shared/assets/network-switch.svg')throw new LogicException('Image View must resolve the assigned type independently of standard topology');
 if($diagram['devices'][0]['fault_count']!==2)throw new LogicException('Fault counts are incomplete');

@@ -645,3 +645,39 @@ CREATE TABLE IF NOT EXISTS `plugin_icct_nms_alarm_history` (
  `created_at` datetime NOT NULL,
  PRIMARY KEY (`id`), KEY `alarm_history` (`alarm_key`,`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+
+-- Persistent decoded NetFlow records and exactly-once capture-file ingestion.
+CREATE TABLE IF NOT EXISTS plugin_icct_nms_netflow_flows (
+ id bigint unsigned NOT NULL AUTO_INCREMENT,
+ host_id mediumint unsigned NOT NULL,
+ capture_key char(64) NOT NULL,
+ record_number int unsigned NOT NULL,
+ version tinyint unsigned NOT NULL,
+ src_addr varchar(45) NOT NULL,
+ dst_addr varchar(45) NOT NULL,
+ src_port smallint unsigned NOT NULL,
+ dst_port smallint unsigned NOT NULL,
+ protocol tinyint unsigned NOT NULL,
+ tcp_flags varchar(16) NOT NULL,
+ input_if int unsigned NOT NULL,
+ output_if int unsigned NOT NULL,
+ bytes bigint unsigned NOT NULL,
+ packets bigint unsigned NOT NULL,
+ first_seen datetime NOT NULL,
+ last_seen datetime NOT NULL,
+ application varchar(120) NOT NULL,
+ application_basis varchar(24) NOT NULL,
+ sampled tinyint unsigned NOT NULL DEFAULT 0,
+ traffic_scope varchar(8) NOT NULL,
+ received_at datetime NOT NULL,
+ PRIMARY KEY(id), UNIQUE KEY capture_record(capture_key,record_number),
+ KEY host_time(host_id,last_seen), KEY host_source(host_id,src_addr), KEY host_destination(host_id,dst_addr)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS plugin_icct_nms_netflow_files (
+ capture_key char(64) NOT NULL,
+ host_id mediumint unsigned NOT NULL,
+ source_file varchar(512) NOT NULL,
+ records_count int unsigned NOT NULL,
+ imported_at datetime NOT NULL,
+ PRIMARY KEY(capture_key), KEY imported_at(imported_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

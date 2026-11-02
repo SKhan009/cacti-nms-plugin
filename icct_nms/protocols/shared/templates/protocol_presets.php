@@ -4,7 +4,7 @@ $protocolPresets=icct_nms_protocol_presets();
 $failedProtocol='';
 if ($_SERVER['REQUEST_METHOD']==='POST' && $error) {
     $key=$_POST['preset_protocol'] ?? '';
-    if (is_string($key) && in_array($key,['cdp','lldp','snmp','ssh','serial','syslog'],true)) {
+    if (is_string($key) && in_array($key,['cdp','lldp','snmp','ssh','serial','syslog','netflow'],true)) {
         $protocolPresets[$key]=array_intersect_key(array_filter($_POST,'is_scalar'),array_flip(icct_nms_protocol_preset_fields($key)));
         $failedProtocol=$key;
     }

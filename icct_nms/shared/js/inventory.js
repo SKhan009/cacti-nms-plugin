@@ -1470,6 +1470,8 @@ if (protocolDefaultData) {
 (() => {
   const tabs = [...document.querySelectorAll('[data-device-view-tab]')];
   if (!tabs.length) return;
+  // Fragment links must retain this device URL even with the plugin's global base href.
+  tabs.forEach(tab=>{const url=new URL(location.href);url.hash='view-'+tab.dataset.deviceViewTab;tab.href=url.href;});
   const render = () => {
     const requested = location.hash.replace('#view-', '');
     const active = tabs.some(tab => tab.dataset.deviceViewTab === requested) ? requested : 'details';

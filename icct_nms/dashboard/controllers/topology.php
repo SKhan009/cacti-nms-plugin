@@ -45,7 +45,7 @@ try {
         $hosts=array_column(icct_nms_inventory(),null,'id');
         $selected['capacity']=icct_nms_topology_capacity($hosts[$summaryId]);
         header('Content-Type: application/json');header('Cache-Control: no-store');
-        echo json_encode(array_intersect_key($selected,array_flip(['name','address','status','network_asset','summary','capacity','fault_counts'])),JSON_THROW_ON_ERROR);exit;
+        echo json_encode(array_intersect_key($selected,array_flip(['name','address','status','network_asset','summary','capacity','fault_counts','netflow'])),JSON_THROW_ON_ERROR);exit;
     }
     $mapData=icct_nms_map_data();
     $dashboardPreferences=icct_nms_dashboard_preferences();

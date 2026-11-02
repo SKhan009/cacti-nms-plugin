@@ -1,0 +1,12 @@
+<?php
+$nfFields=['version'=>['Version','select',[5=>'NetFlow v5',7=>'NetFlow v7',9=>'NetFlow v9',10=>'IPFIX']],'collector'=>['Collector Address','text','Receiver hostname or IP address'],'port'=>['Collector Port','number','1–65535'],'active_timeout'=>['Active Timeout (Sec)','number','1–86400'],'inactive_timeout'=>['Inactive Timeout (Sec)','number','1–86400'],'sampling_rate'=>['Sampling Rate','number','Packets per sample'],'lan_cidrs'=>['LAN Prefixes','text','Comma-separated CIDRs'],'wan_interfaces'=>['WAN Interface ifIndex Values','text','Optional: 2,3'],'bandwidth_limit_mbps'=>['Bandwidth Alert Limit (Mbps)','number','5-minute average'],'scan_threshold'=>['Scan Alert Destinations / Ports','number','Distinct targets per 5 minutes'],'syn_pps_threshold'=>['SYN Alert Packets / Sec','number','5-minute average']];
+?>
+<p>Send flow records from your router or switch to this collector. Configure the selected version, timeouts and sampling on the exporter itself. Capture files are processed every 60 seconds. Data is retained for 30 days.</p>
+<div class="protocol-grid cols-4">
+<?php foreach($nfFields as $name=>[$label,$type,$help]): ?><label class="field"><span class="field-label"><?= $label ?></span>
+<?php if($type==='select'): ?><select name="<?= $name ?>"><?php foreach($help as $v=>$caption): ?><option value="<?= $v ?>" <?= (int)$netflow[$name]===$v?'selected':'' ?>><?= $caption ?></option><?php endforeach; ?></select>
+<?php else: ?><input name="<?= $name ?>" type="<?= $type ?>" value="<?= icct_nms_h($netflow[$name]) ?>" placeholder="<?= icct_nms_h($help) ?>" <?= in_array($name,['wan_interfaces','lan_cidrs'],true)?'':'required' ?> <?= $type==='number'?'min="1" max="'.($name==='port'?65535:100000000).'"':'' ?>><?php endif; ?></label><?php endforeach; ?>
+<?php if(!$presetMode): ?><label class="field"><span class="field-label">Exporter Source IP</span><input name="exporter_address" required value="<?= icct_nms_h($netflow['exporter_address']??$host['hostname']??'') ?>" placeholder="Source IP observed by the collector"></label><?php endif; ?>
+</div>
+<p>WAN interfaces take priority. Otherwise, traffic inside LAN prefixes is LAN, traffic crossing a LAN prefix is WAN, and other traffic is unclassified. Port-based application estimates are labelled. Traffic totals account for advertised sampling. The saved sampling rate is used only when the exporter provides no sampling information.</p>
+<div class="protocol-actions"><button class="button primary" type="submit">Save</button></div>

@@ -240,6 +240,8 @@ function icct_nms_remove_protocol($id, $host, $input)
             ]);
         case "discovery":
             return icct_nms_save_discovery($id, ["methods" => []]);
+        case "netflow":
+            return icct_nms_netflow_remove($id);
         case "syslog":
             return icct_nms_syslog_remove($id);
         case "serial":
@@ -266,7 +268,7 @@ function icct_nms_toggle_protocol($id, $host, $input)
     icct_backend_require_device_access($id);
     $protocol = $input["protocol"] ?? "";
     if (
-        !in_array($protocol, ["cdp", "lldp", "snmp", "ssh", "serial", "syslog"], true) ||
+        !in_array($protocol, ["cdp", "lldp", "snmp", "ssh", "serial", "syslog", "netflow"], true) ||
         !in_array($input["enabled"] ?? "", ["0", "1"], true)
     ) {
         throw new InvalidArgumentException("Invalid protocol state.");
@@ -324,6 +326,7 @@ function icct_nms_toggle_protocol($id, $host, $input)
             [$monitoring, $id],
         );
     }
+    if ($protocol === "netflow") icct_backend_category_execute("UPDATE plugin_icct_nms_netflow_devices SET enabled=?,updated_at=NOW() WHERE host_id=?",[$enabled?1:0,(int)$id]);
     if ($protocol === "syslog") icct_nms_syslog_toggle($id, $enabled);
     icct_backend_protocol_state_write($id, $protocol, $enabled);
 }

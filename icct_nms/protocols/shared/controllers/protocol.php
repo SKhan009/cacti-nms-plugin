@@ -134,6 +134,10 @@ try {
                     }
                     icct_nms_save_serial($id, $_POST);
                     break;
+                case "netflow":
+                    if (!icct_backend_protocol_enabled($id,"netflow")) throw new RuntimeException("Enable NetFlow before editing its settings.");
+                    icct_nms_netflow_save($id,$host,$_POST);
+                    break;
                 case "syslog":
                     if (!icct_backend_protocol_enabled($id, "syslog")) throw new RuntimeException("Enable Syslog before editing its settings.");
                     icct_nms_save_syslog($id, $host, $_POST);
@@ -151,6 +155,7 @@ try {
                 "ssh" => "SSH",
                 "serial" => "Serial communication",
                 "syslog" => "Syslog",
+                "netflow" => "NetFlow",
                 "diagnostics" => "Device diagnostics",
                 "discovery" => "Discovery",
             ];

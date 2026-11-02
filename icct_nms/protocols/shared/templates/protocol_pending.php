@@ -1,14 +1,6 @@
 <?php
 // Parameter previews only. No form/action exists until a real backend adapter is implemented.
 $pendingFields = [
-    'netflow' => [
-        ['Version','version','select',['5'=>'NetFlow v5','9'=>'NetFlow v9','10'=>'IPFIX']],
-        ['Collector Address','collector','text','Collector hostname or IP address'],
-        ['Collector Port','port','number','1–65535'],
-        ['Active Timeout (Sec)','active_timeout','number','Exporter active-flow timeout'],
-        ['Inactive Timeout (Sec)','inactive_timeout','number','Exporter inactive-flow timeout'],
-        ['Sampling Rate','sampling_rate','number','Packets per sample'],
-    ],
     'ntp' => [
         ['NTP Server','server','text','Server hostname or IP address'],
         ['Port','port','number','1–65535'],

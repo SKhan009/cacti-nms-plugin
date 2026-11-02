@@ -11,7 +11,7 @@
   const previous = document.querySelector('#wizard-previous');
   const next = document.querySelector('#wizard-next');
   let id = Number(wizard.dataset.deviceId), leaving = false, busy = false;
-  const forms = [...panels.querySelectorAll('form')].filter(f => ['snmp','ssh','serial','syslog','discovery','diagnostics','ports','faults'].includes(f.elements.action?.value));
+  const forms = [...panels.querySelectorAll('form')].filter(f => ['snmp','ssh','serial','syslog','netflow','discovery','diagnostics','ports','faults'].includes(f.elements.action?.value));
   
   const snapshot = f => JSON.stringify([...new FormData(f)].filter(([n]) => n !== '__csrf_magic').map(([n,v]) => [n,v instanceof File ? (v.name ? `${v.name}:${v.size}:${v.lastModified}` : '') : v]));
   const baseline = new Map([basic,...forms].map(f => [f,snapshot(f)]));
@@ -185,7 +185,7 @@
     if(!wizard.contains(event.target))return;
     event.preventDefault();event.stopImmediatePropagation();
     const form=event.target,action=form.elements.action?.value;
-    if(form===basic || ['snmp','ssh','serial','syslog','discovery','diagnostics','ports','faults'].includes(action)) {
+    if(form===basic || ['snmp','ssh','serial','syslog','netflow','discovery','diagnostics','ports','faults'].includes(action)) {
       explicitSave();return;
     }
     const data=new FormData(form);

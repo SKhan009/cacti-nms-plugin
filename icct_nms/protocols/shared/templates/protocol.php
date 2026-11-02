@@ -14,7 +14,7 @@ $protocolPresetHelp = static function (string $key, string $label) use ($presetM
         'ssh' => 'Preset port, authentication method, username and connection settings. When adding a device, confirm its username and enter its password or private key; changes apply only to that device.',
         'serial' => 'Preset interface, line settings, polling and serial protocol. When adding a device, select its serial port and bus address; changes apply only to that device.',
         'syslog' => 'Choose the severity levels, facilities, and match strings to accept. New devices inherit these defaults; saved device selections remain independent.',
-        'netflow' => 'Planned presets: version, collector, timeouts and sampling. Device setup will configure its flow exporter to send to the collector. Configuration is unavailable until integration is ready.',
+        'netflow' => 'Set defaults for flow collection, exporter timing and reporting. On the device, configure its exporter to send to this collector; saving here does not modify router configuration.',
         'ntp' => 'Planned presets: server, version, timeout, polling and offset limit. Device setup will confirm its NTP server. Configuration is unavailable until integration is ready.',
         'tacacs' => 'Planned presets: server, port, timeout, retries and authentication method. Device setup will require its shared secret and credentials. Configuration is unavailable until integration is ready.',
     ];
@@ -57,7 +57,7 @@ $protocolPresetHelp = static function (string $key, string $label) use ($presetM
 <?php endif; ?>
 <?php
 $protocolStates = [];
-foreach (["cdp", "lldp", "snmp", "ssh", "serial", "syslog"] as $key) {
+foreach (["cdp", "lldp", "snmp", "ssh", "serial", "syslog", "netflow"] as $key) {
     $protocolStates[$key] = icct_backend_protocol_enabled($id, $key);
 }
 ?>
@@ -247,9 +247,17 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial", "syslog"] as $key) {
                 <?php require __DIR__ . '/../../syslog/templates/syslog.php'; ?>
             </form></div>
         </details>
+        <?php
+        $netflow=$presetMode?($protocolPresets['netflow']??[]):icct_nms_netflow_assignment($id);
+        $netflowSaved=!empty($netflow);$netflow=array_replace(icct_nms_netflow_defaults(),icct_nms_protocol_presets()['netflow']??[],$netflow);
+        ?>
+        <details class="protocol-item" id="protocol-netflow" data-saved="<?= $netflowSaved?'1':'0' ?>" <?= $netflowSaved||in_array('netflow',$protocolDraft,true)?'':'hidden' ?>>
+        <summary><span class="accordion-chevron" aria-hidden="true"></span><span>NetFlow / IPFIX <?php $protocolPresetHelp('netflow','NetFlow'); ?></span><button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7"/></svg></button></summary>
+        <div class="protocol-content"><form method="post"><?php icct_nms_token(); ?><input type="hidden" name="action" value="<?= $presetMode?'save_protocol_defaults':'netflow' ?>"><?php if($presetMode): ?><input type="hidden" name="preset_protocol" value="netflow"><?php endif; ?>
+        <?php require __DIR__.'/../../netflow/templates/settings.php'; ?>
+        </form></div></details>
         <?php foreach (
             [
-                "netflow" => "Netflow",
                 "ntp" => "NTP",
                 "tacacs" => "TACACS+",
             ]

@@ -19,12 +19,15 @@ function db_fetch_cell_prepared($sql,$args){return str_contains($sql,'GET_LOCK')
 function icct_nms_discovery_assignment($id){return [];}
 function icct_backend_serial_assignment($id){return [];}
 function icct_backend_syslog_assignment($id){return [];}
+function icct_nms_netflow_assignment($id){return ['version'=>9,'collector'=>'192.0.2.10','exporter_address'=>'192.0.2.1'];}
+function icct_nms_netflow_fields(){return ['version','collector'];}
 function icct_backend_protocol_enabled($id,$protocol){return true;}
 function icct_nms_graph_associations($id){return [['id'=>4]];}
 function icct_nms_meta($key){global $records;return $records[$key] ?? '';}
 function icct_backend_category_execute($sql,$args){global $records;$records[$args[0]]=$args[1];}
 $_SESSION['sess_user_id']=1;
 icct_nms_configuration_record(1,'Created');$first=json_decode($records['configuration_latest_1'],true);
+verify($first['snapshot']['netflow.collector']==='192.0.2.10'&&$first['snapshot']['netflow.version']==='9','NetFlow settings are included in configuration history');
 verify(!isset($first['snapshot']['device.snmp_community']),'Real snapshot excludes SNMP community');
 $count=count($records);icct_nms_configuration_record(1,'Unchanged');verify(count($records)===$count,'Identical auto saves are deduplicated');
 $fixtureHost['hostname']='192.0.2.2';icct_nms_configuration_record(1,'Edited');$second=json_decode($records['configuration_latest_1'],true);

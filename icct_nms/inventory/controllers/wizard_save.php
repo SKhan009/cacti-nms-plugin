@@ -34,6 +34,7 @@ try {
             case 'snmp': icct_nms_save_snmp($id, $host, $_POST); break;
             case 'ssh': icct_nms_save_ssh($id, $_POST); break;
             case 'serial': icct_nms_save_serial($id, $_POST); break;
+            case 'netflow': icct_nms_netflow_save($id,$host,$_POST); break;
             case 'syslog': icct_nms_save_syslog($id, $host, $_POST); break;
             case 'discovery': icct_nms_save_discovery($id, $_POST); break;
             case 'diagnostics': icct_nms_save_diagnostics($id, $_POST); break;
