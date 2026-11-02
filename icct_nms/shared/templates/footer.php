@@ -62,6 +62,7 @@
 <script src="protocols/snmp/mibs/js/mib-repository.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../protocols/snmp/mibs/js/mib-repository.js'),0,12) ?>" defer></script>
 <script src="protocols/snmp/mibs/js/mib-wizard.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../protocols/snmp/mibs/js/mib-wizard.js'),0,12) ?>" defer></script>
 <?php endif; ?>
-<?php if(!empty($alarmsPage)): ?><script src="alarms/js/alarms.js?v=<?= substr(hash_file('sha256',ICCT_NMS_ROOT.'/alarms/js/alarms.js'),0,12) ?>" defer></script><?php endif; ?>
+<?php if(!empty($alarmDetail)): ?><script src="alarms/js/alarm-detail.js?v=<?= substr(hash_file('sha256',ICCT_NMS_ROOT.'/alarms/js/alarm-detail.js'),0,12) ?>" defer></script><?php endif; ?>
+<?php if(!empty($alarmsPage)&&!isset($alarmDetail)): ?><script src="alarms/js/alarms.js?v=<?= substr(hash_file('sha256',ICCT_NMS_ROOT.'/alarms/js/alarms.js'),0,12) ?>" defer></script><?php endif; ?>
 </body>
 </html>

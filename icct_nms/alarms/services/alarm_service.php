@@ -15,7 +15,8 @@ function icct_nms_alarm_key($host,$rule,$observation) {
     return hash('sha256',json_encode([(int)$host['id'],(string)($host['hostname']??''),(string)($rule['preset_key']??''),$rule['source']??'rrd',$rule['name']??$observation['graph'],$rule['template_id']??0,$rule['metric_id']??0,$rule['oid']??'',(string)$observation['graph_id'],$rule['condition']??'', $rule['minimum']??null,$rule['maximum']??null],JSON_THROW_ON_ERROR));
 }
 function icct_nms_alarm_history_write($key,$event,$actor=0,$note='') {
-    icct_backend_category_execute('INSERT INTO plugin_icct_nms_alarm_history(alarm_key,event,actor_id,note,created_at) VALUES(?,?,?,?,NOW())',[$key,$event,$actor,$note]);
+    $row=db_fetch_row_prepared('SELECT name,description,fix,severity,state,occurrences,acknowledged,escalated,ticket_state FROM plugin_icct_nms_alarms WHERE alarm_key=?',[$key]);
+    icct_backend_category_execute('INSERT INTO plugin_icct_nms_alarm_history(alarm_key,event,actor_id,note,snapshot_json,created_at) VALUES(?,?,?,?,?,NOW())',[$key,$event,$actor,$note,json_encode($row,JSON_THROW_ON_ERROR)]);
 }
 function icct_nms_alarm_record($host,$rule,$observation) {
     $key=icct_nms_alarm_key($host,$rule,$observation);$lock='icct_alarm_'.substr($key,0,40);
@@ -33,6 +34,7 @@ function icct_nms_alarm_record($host,$rule,$observation) {
             }else{
                 icct_backend_category_execute('UPDATE plugin_icct_nms_alarms SET graph_id=?,name=?,description=?,fix=?,severity=?,state=?,last_seen=NOW(),sample_time=?,occurrences=?,acknowledged=?,escalated=?,ticket_state=?,revision=revision+1 WHERE alarm_key=?',[(int)$observation['graph_id'],$name,$description,$fix,$change['severity'],$change['state'],(int)($observation['sample_time']??0),$change['occurrences'],$change['raised']?0:(int)$previous['acknowledged'],$change['raised']?0:(int)$previous['escalated'],$change['raised']?'':$previous['ticket_state'],$key]);
             }
+            if(!$change['event']&&$previous&&($previous['description']!==$description||$previous['fix']!==$fix))$change['event']='Details updated';
             if($change['event'])icct_nms_alarm_history_write($key,$change['event'],0,$change['severity']);
         }
         icct_backend_category_execute('COMMIT',[]);
@@ -95,4 +97,26 @@ function icct_nms_alarm_action($input) {
         icct_nms_alarm_history_write($key,$event,icct_backend_current_user_id(),$note);
         icct_backend_category_execute('COMMIT',[]);
     }catch(Throwable $e){icct_backend_category_execute('ROLLBACK',[]);throw $e;}
+}
+
+/** Authorized full-page detail model, including immutable event-time content. */
+function icct_nms_alarm_detail($key) {
+    if(!is_string($key)||!preg_match('/^[a-f0-9]{64}$/D',$key))throw new InvalidArgumentException('Alarm unavailable.');
+    $row=db_fetch_row_prepared('SELECT *,UNIX_TIMESTAMP(first_seen) AS occurred_epoch,UNIX_TIMESTAMP(last_seen) AS observed_epoch FROM plugin_icct_nms_alarms WHERE alarm_key=?',[$key]);
+    if(!$row)throw new RuntimeException('Alarm unavailable.');icct_nms_alarm_require_access($row);
+    $devices=array_column(icct_nms_inventory(),null,'id');$device=$devices[$row['host_id']]??null;
+    if(!$device)throw new RuntimeException('Alarm unavailable.');
+    $row+=['device_name'=>$device['description'],'short_name'=>$device['short_name']??'','address'=>$device['hostname'],'network_type'=>$device['device_type']??'','device_status'=>$device['status_label']??'Unknown'];
+    $history=db_fetch_assoc_prepared("SELECT h.*,UNIX_TIMESTAMP(h.created_at) AS created_epoch,COALESCE(NULLIF(u.full_name,''),u.username) AS actor_name FROM plugin_icct_nms_alarm_history h LEFT JOIN user_auth u ON u.id=h.actor_id WHERE h.alarm_key=? ORDER BY h.id DESC",[$key]);
+    $ack=null;$escalations=[];
+    foreach($history as &$event){
+        $snapshot=json_decode((string)($event['snapshot_json']??''),true);$event['snapshot']=is_array($snapshot)?$snapshot:[];unset($event['snapshot_json']);
+        if($event['event']==='Acknowledged'&&$ack===null)$ack=$event;
+        if($event['event']==='Escalated')$escalations[]=$event;
+    }unset($event);
+    return ['alarm'=>$row,'history'=>$history,'acknowledgement'=>!empty($row['acknowledged'])?$ack:null,'escalations'=>$escalations];
+}
+function icct_nms_alarm_format_time($epoch) {
+    if(!(int)$epoch)return '-';
+    return (new DateTimeImmutable('@'.(int)$epoch))->setTimezone(new DateTimeZone('Asia/Kolkata'))->format('d-m-Y H:i:s');
 }

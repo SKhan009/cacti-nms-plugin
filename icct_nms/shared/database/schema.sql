@@ -641,6 +641,7 @@ CREATE TABLE IF NOT EXISTS `plugin_icct_nms_alarm_history` (
  `event` varchar(32) NOT NULL,
  `actor_id` int unsigned NOT NULL DEFAULT 0,
  `note` text NOT NULL,
+ `snapshot_json` mediumtext DEFAULT NULL,
  `created_at` datetime NOT NULL,
  PRIMARY KEY (`id`), KEY `alarm_history` (`alarm_key`,`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;

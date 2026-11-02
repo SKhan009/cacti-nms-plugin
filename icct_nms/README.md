@@ -2,6 +2,12 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Inventory designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
+## Version 1.2.15
+
+The Alarms eye action opens a dedicated full-page view with the Figma summary labels, Acknowledgement & Remarks, and Alarm History/Escalation tabs. Back navigation, acknowledgement/escalation controls and detail CSV export use the same saved alarm and device permissions as the list. Tab selection survives a reload, dates use `DD-MM-YYYY HH:mm:ss` in Asia/Kolkata, and the page refreshes saved data every 30 seconds.
+
+History now captures immutable event-time severity, Description, Fix, acknowledgement and occurrence count. Editing a rule's text records a new details event without rewriting older snapshots. Upgrading starts a current-observation baseline for existing alarms; older events without captured content remain marked as unavailable. Run the native plugin upgrade to add the snapshot column before using this view.
+
 ## Version 1.2.14
 
 The new **Alarms** menu lists device-linked Cacti data-source thresholds, SNMP/MIB fault rules, port alarms and current native device reachability failures. The configured Cacti poller maintains a durable alarm journal; the page refreshes every 30 seconds and supports device/severity/acknowledgement/escalation filters, search, occurrence sorting, pagination and CSV export. First-seen times and recurrence counts are retained; missing measurements never imply recovery. Initial synchronization records currently observed alarms without inventing historical occurrence times. Existing raw Syslog messages remain in each device's Syslog history.

@@ -13,6 +13,6 @@
 <footer class="alarm-pagination"><label>Items per page: <select id="alarm-page-size"><option>10</option><option>25</option><option>50</option><option>100</option></select></label><span id="alarm-page-count"></span><div><button type="button" id="alarm-prev" aria-label="Previous page">‹</button><span id="alarm-page-number"></span><button type="button" id="alarm-next" aria-label="Next page">›</button></div></footer>
 <form id="alarm-token" hidden><?php icct_nms_token(); ?></form>
 <script type="application/json" id="alarm-data"><?= json_encode($alarmRows,JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_INVALID_UTF8_SUBSTITUTE) ?></script>
-<dialog id="alarm-detail"><div class="message-heading"><h2>Alarm Details</h2><form method="dialog"><button type="submit" aria-label="Close alarm details">×</button></form></div><div id="alarm-detail-body"></div></dialog>
+
 <dialog id="alarm-action-dialog"><form id="alarm-action-form"><h2 id="alarm-action-title"></h2><p id="alarm-action-help"></p><label class="field">Note<textarea name="note" maxlength="1000" rows="3"></textarea></label><div class="message-actions"><button type="button" class="button" id="alarm-action-cancel">Cancel</button><button class="button primary" type="submit">Save</button></div></form></dialog>
 </section>

@@ -19,6 +19,14 @@ function icct_nms_schema_install()
     if(!db_fetch_cell("SHOW COLUMNS FROM plugin_icct_nms_alarms LIKE 'graph_id'")) {
         if(!db_execute("ALTER TABLE plugin_icct_nms_alarms ADD graph_id INT UNSIGNED NOT NULL DEFAULT 0 AFTER source"))throw new RuntimeException('Alarm graph ownership migration failed.');
     }
+    if(!db_fetch_cell("SHOW COLUMNS FROM plugin_icct_nms_alarm_history LIKE 'snapshot_json'")) {
+        if(!db_execute("ALTER TABLE plugin_icct_nms_alarm_history ADD snapshot_json MEDIUMTEXT DEFAULT NULL AFTER note"))throw new RuntimeException('Alarm history snapshot migration failed.');
+    }
+    // Start immutable history snapshots from current saved facts; never invent past content.
+    foreach(db_fetch_assoc("SELECT a.* FROM plugin_icct_nms_alarms a WHERE NOT EXISTS(SELECT 1 FROM plugin_icct_nms_alarm_history h WHERE h.alarm_key=a.alarm_key AND h.snapshot_json IS NOT NULL)") as $alarm){
+        $snapshot=array_intersect_key($alarm,array_flip(['name','description','fix','severity','state','occurrences','acknowledged','escalated','ticket_state']));
+        if(!db_execute_prepared('INSERT INTO plugin_icct_nms_alarm_history(alarm_key,event,actor_id,note,snapshot_json,created_at) VALUES(?,?,0,?,?,NOW())',[$alarm['alarm_key'],'Current observation','History snapshots started from the current saved observation.',json_encode($snapshot,JSON_THROW_ON_ERROR)]))throw new RuntimeException('Alarm history baseline could not be saved.');
+    }
     // Preserve operator fixes; fill only previously empty device rule descriptions.
     require_once __DIR__.'/../../fcaps/services/fcaps_service.php';
     foreach(db_fetch_assoc("SELECT meta_key,meta_value FROM plugin_icct_nms_meta WHERE meta_key REGEXP '^fault_rules_[0-9]+$'") as $row){
