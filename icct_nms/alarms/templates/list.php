@@ -14,5 +14,5 @@
 <form id="alarm-token" hidden><?php icct_nms_token(); ?></form>
 <script type="application/json" id="alarm-data"><?= json_encode($alarmRows,JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_INVALID_UTF8_SUBSTITUTE) ?></script>
 
-<dialog id="alarm-action-dialog"><form id="alarm-action-form"><h2 id="alarm-action-title"></h2><p id="alarm-action-help"></p><label class="field">Note<textarea name="note" maxlength="1000" rows="3"></textarea></label><div class="message-actions"><button type="button" class="button" id="alarm-action-cancel">Cancel</button><button class="button primary" type="submit">Save</button></div></form></dialog>
+<dialog id="alarm-action-dialog"><form id="alarm-action-form"><h2 id="alarm-action-title"></h2><p id="alarm-action-help"></p><div id="alarm-ticket-fields" hidden><label class="field">Ticket Severity<select name="ticket_severity"><option>High</option><option>Medium</option><option>Low</option></select></label><label class="field">Ticket Name<input name="ticket_name" maxlength="320"></label></div><label class="field">Remarks<textarea name="note" maxlength="1000" rows="3"></textarea></label><div class="message-actions"><button type="button" class="button" id="alarm-action-cancel">Cancel</button><button class="button primary" type="submit">Save</button></div></form></dialog>
 </section>

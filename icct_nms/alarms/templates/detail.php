@@ -27,7 +27,7 @@ $severityColors=['Critical'=>'#f94144','Major'=>'#f3722b','Minor'=>'#f7961e','Wa
 <section class="alarm-acknowledgement"><h2>Acknowledgement &amp; Remarks</h2><dl><div><dt>Remarks</dt><dd data-detail="remarks"><?= $detailValue($ack['note']??'') ?></dd></div><div><dt>Acknowledge By</dt><dd data-detail="acknowledge_by"><?= $detailValue($actorLabel) ?></dd></div></dl></section>
 <div class="alarm-detail-tabs" role="tablist" aria-label="Alarm records">
 <button type="button" role="tab" id="alarm-history-tab" aria-controls="alarm-history" aria-selected="true">Alarm History</button>
-<button type="button" role="tab" id="alarm-escalation-tab" aria-controls="alarm-escalation" aria-selected="false" tabindex="-1" <?= !$alarmDetail['escalations']?'disabled':'' ?>>Escalation</button>
+<button type="button" role="tab" id="alarm-escalation-tab" aria-controls="alarm-escalation" aria-selected="false" tabindex="-1" <?= !$alarmDetail['ticket']['timeline']?'disabled':'' ?>>Escalation</button>
 </div>
 <section id="alarm-history" role="tabpanel" aria-labelledby="alarm-history-tab" class="alarm-detail-panel">
 <div class="alarm-history-scroll"><table class="alarm-history-table"><thead><tr><th>Alarm<br>Occurred</th><th>Severity &amp;<br>Ack</th><th>Description &amp; Fix</th><th>Ack &amp; Remarks</th><th>Count</th></tr></thead><tbody id="alarm-detail-history">
@@ -41,7 +41,12 @@ $severityColors=['Critical'=>'#f94144','Major'=>'#f3722b','Minor'=>'#f7961e','Wa
 <div><select id="alarm-history-page" aria-label="Alarm history page"><option>1</option></select><span id="alarm-history-pages">of <?= max(1,(int)ceil(count($alarmDetail['history'])/100)) ?> pages</span></div>
 <button type="button" id="alarm-history-prev" aria-label="Previous alarm history page" disabled>‹</button><button type="button" id="alarm-history-next" aria-label="Next alarm history page" <?= count($alarmDetail['history'])<=100?'disabled':'' ?>>›</button>
 </footer></section>
-<section id="alarm-escalation" role="tabpanel" aria-labelledby="alarm-escalation-tab" class="alarm-detail-panel" hidden><div class="alarm-history-scroll"><table class="alarm-history-table alarm-escalation-table"><thead><tr><th>Alarm Occurred</th><th>Escalated By</th><th>Remarks</th><th>Escalation Status</th></tr></thead><tbody id="alarm-detail-escalations"><?php foreach($alarmDetail['escalations'] as $event): ?><tr><td><?= !empty($event['created_epoch'])?icct_nms_alarm_format_time($event['created_epoch']):'' ?></td><td><?= $tableValue($event['actor_name']??('User '.$event['actor_id'])) ?></td><td><?= $tableValue($event['note']) ?></td><td>Esc</td></tr><?php endforeach; ?></tbody></table></div></section>
+<section id="alarm-escalation" role="tabpanel" aria-labelledby="alarm-escalation-tab" class="alarm-detail-panel" hidden>
+<div class="alarm-ticket-layout"><dl class="alarm-ticket-details">
+<?php $ticket=$alarmDetail['ticket']['details']; foreach(['severity'=>'Ticket Severity','name'=>'Ticket Name','remarks'=>'Remarks'] as $field=>$label): ?><div><dt><?= $label ?></dt><dd data-ticket="<?= $field ?>"><?= $tableValue($ticket[$field]??'') ?></dd></div><?php endforeach; ?>
+</dl><ol id="alarm-ticket-timeline" class="alarm-ticket-timeline" aria-label="Ticket status history">
+<?php foreach($alarmDetail['ticket']['timeline'] as $event): ?><li class="alarm-ticket-event <?= $event['kind'] ?>"><h3><?= $event['label'] ?></h3><time><?= icct_nms_alarm_format_time($event['created_epoch']) ?></time><p><?= $tableValue($event['note']) ?></p></li><?php endforeach; ?>
+</ol></div></section>
 <script type="application/json" id="alarm-detail-data"><?= json_encode($alarmDetail,JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_INVALID_UTF8_SUBSTITUTE) ?></script>
 
 </section>

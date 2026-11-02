@@ -3237,3 +3237,7 @@ h1, h2, h3, h4, h5, h6 { line-height: 1.25; }
 @media(max-width:650px){.alarm-history-pagination{flex-wrap:wrap}.alarm-history-pagination>label{padding:10px}.alarm-history-pagination>span{padding:10px}.alarm-history-pagination>div{margin-left:auto;padding:10px}}
 
 .alarm-table small.alarm-status-checked{color:#252525}
+
+/* Escalation ticket details and Figma status timeline. */
+.alarm-ticket-layout{display:grid;grid-template-columns:1fr 1fr;min-height:310px;gap:24px}.alarm-ticket-details{margin:0;padding:0 20px 0 0;border-right:1px solid #d5d5d5}.alarm-ticket-details>div{margin-bottom:22px}.alarm-ticket-timeline{list-style:none;margin:0;padding:0;max-height:400px;overflow:auto}.alarm-ticket-event{border-left:2px solid #155cff;padding:0 8px;margin:0 0 12px}.alarm-ticket-event.opened{border-left-color:#2c60f5}.alarm-ticket-event.progress{border-left-color:#429488}.alarm-ticket-event.resolved{border-left-color:#f5c344}.alarm-ticket-event.reopen{border-left-color:#ec6337}.alarm-ticket-event h3{font-size:14px;line-height:1.4;font-weight:600;margin:0;color:#252525}.alarm-ticket-event time,.alarm-ticket-event p{font-size:13px;line-height:1.4;color:#888;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}.alarm-ticket-event p:empty{display:none}#alarm-ticket-fields[hidden]{display:none}
+@media(max-width:650px){.alarm-ticket-layout{grid-template-columns:1fr;gap:18px;min-height:0}.alarm-ticket-details{border-right:0;border-bottom:1px solid #d5d5d5;padding:0 0 8px}.alarm-ticket-timeline{max-height:none}}

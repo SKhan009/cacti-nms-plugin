@@ -14,12 +14,13 @@ function icct_nms_alarm_transition($previous,$observation) {
 function icct_nms_alarm_key($host,$rule,$observation) {
     return hash('sha256',json_encode([(int)$host['id'],(string)($host['hostname']??''),(string)($rule['preset_key']??''),$rule['source']??'rrd',$rule['name']??$observation['graph'],$rule['template_id']??0,$rule['metric_id']??0,$rule['oid']??'',(string)$observation['graph_id'],$rule['condition']??'', $rule['minimum']??null,$rule['maximum']??null],JSON_THROW_ON_ERROR));
 }
-function icct_nms_alarm_history_write($key,$event,$actor=0,$note='') {
+function icct_nms_alarm_history_write($key,$event,$actor=0,$note='',$ticket=null) {
     $row=db_fetch_row_prepared('SELECT name,description,fix,severity,state,occurrences,acknowledged,escalated,ticket_state FROM plugin_icct_nms_alarms WHERE alarm_key=?',[$key]);
     if(!empty($row['acknowledged'])){
         $ack=$event==='Acknowledged'?['note'=>$note,'actor_id'=>$actor]:db_fetch_row_prepared("SELECT note,actor_id FROM plugin_icct_nms_alarm_history WHERE alarm_key=? AND event='Acknowledged' ORDER BY id DESC LIMIT 1",[$key]);
         $row['ack_note']=$ack['note']??'';$row['ack_actor_id']=(int)($ack['actor_id']??0);
     }
+    if($ticket!==null)$row['ticket']=$ticket;
     icct_backend_category_execute('INSERT INTO plugin_icct_nms_alarm_history(alarm_key,event,actor_id,note,snapshot_json,created_at) VALUES(?,?,?,?,?,NOW())',[$key,$event,$actor,$note,json_encode($row,JSON_THROW_ON_ERROR)]);
 }
 function icct_nms_alarm_record($host,$rule,$observation) {
@@ -85,20 +86,40 @@ function icct_nms_alarm_require_access($row) {
 function icct_nms_alarm_action($input) {
     icct_backend_require_management(3);
     $key=$input['alarm_key']??'';$action=$input['alarm_action']??'';
-    if(!is_string($key)||!preg_match('/^[a-f0-9]{64}$/D',$key)||!in_array($action,['ack','escalate','close','ticket_close','ticket_reopen'],true))throw new InvalidArgumentException('Choose a valid alarm action.');
+    if(!is_string($key)||!preg_match('/^[a-f0-9]{64}$/D',$key)||!in_array($action,['ack','escalate','close','ticket_close','ticket_reopen','ticket_progress','ticket_resolve'],true))throw new InvalidArgumentException('Choose a valid alarm action.');
     $rawNote=$input['note']??'';if(!is_string($rawNote))throw new InvalidArgumentException('Enter a text note.');$note=trim($rawNote);if(strlen($note)>1000)throw new InvalidArgumentException('Use no more than 1000 characters.');
     icct_backend_category_execute('START TRANSACTION',[]);
     try{
         $row=db_fetch_row_prepared('SELECT * FROM plugin_icct_nms_alarms WHERE alarm_key=? FOR UPDATE',[$key]);
         if(!$row)throw new RuntimeException('Alarm unavailable.');icct_nms_alarm_require_access($row);
         if((int)($input['revision']??0)!==(int)$row['revision'])throw new RuntimeException('Alarm changed. Refresh before retrying.');
+        $ticket=null;
         if($action==='ack'){if($row['acknowledged']||$row['state']==='Closed')throw new RuntimeException('This alarm cannot be acknowledged.');$sql='acknowledged=1';$event='Acknowledged';}
-        elseif($action==='escalate'){if(!$row['acknowledged']||$row['escalated']||$row['state']==='Closed')throw new RuntimeException('Acknowledge this alarm before escalation.');$sql='escalated=1';$event='Escalated';}
+        elseif($action==='escalate'){if(!$row['acknowledged']||$row['escalated']||$row['state']==='Closed')throw new RuntimeException('Acknowledge this alarm before escalation.');$severity=$input['ticket_severity']??icct_nms_alarm_ticket_severity($row['severity']);
+            $device=db_fetch_cell_prepared('SELECT description FROM host WHERE id=?',[(int)$row['host_id']]);
+            $name=$input['ticket_name']??($row['name'].' - '.$device);
+            if(!is_string($severity)||!in_array($severity,['High','Medium','Low'],true))throw new InvalidArgumentException('Choose a valid ticket severity.');
+            if(!is_string($name)||trim($name)===''||mb_strlen($name)>320)throw new InvalidArgumentException('Enter a ticket name of up to 320 characters.');
+            $ticket=['severity'=>$severity,'name'=>trim($name),'remarks'=>$note];
+            $sql="escalated=1,ticket_state='Open'";$event='Escalated';}
         elseif($action==='close'){$sql="state='Closed'";$event='Closed';if($row['state']==='Closed')throw new RuntimeException('Alarm already closed.');}
-        elseif($action==='ticket_close'){$sql="ticket_state='Closed'";$event='Ticket closed';}
-        else{$sql="ticket_state='Open'";$event='Ticket reopened';}
+        else{
+            if(!$row['escalated'])throw new RuntimeException('Escalate this alarm before changing its ticket.');
+            $current=$row['ticket_state']?:'Open';
+            if($action==='ticket_reopen'){
+                if(!in_array($current,['Closed','Resolved'],true))throw new RuntimeException('Only a resolved ticket can be reopened.');
+                $sql="ticket_state='Open'";$event='Ticket reopened';
+            }elseif($action==='ticket_progress'){
+                if($current!=='Open')throw new RuntimeException('Only an open ticket can move to in progress.');
+                $sql="ticket_state='In Progress'";$event='Ticket progress';
+            }else{
+                if(!in_array($current,['Open','In Progress'],true))throw new RuntimeException('This ticket is already resolved.');
+                $sql="ticket_state='Resolved'";$event='Ticket resolved';
+            }
+            $detail=icct_nms_alarm_detail($key);$ticket=$detail['ticket']['details'];
+        }
         icct_backend_category_execute('UPDATE plugin_icct_nms_alarms SET '.$sql.',revision=revision+1 WHERE alarm_key=?',[$key]);
-        icct_nms_alarm_history_write($key,$event,icct_backend_current_user_id(),$note);
+        icct_nms_alarm_history_write($key,$event,icct_backend_current_user_id(),$note,$ticket);
         icct_backend_category_execute('COMMIT',[]);
     }catch(Throwable $e){icct_backend_category_execute('ROLLBACK',[]);throw $e;}
 }
@@ -119,7 +140,7 @@ function icct_nms_alarm_detail($key) {
         if($event['event']==='Escalated')$escalations[]=$event;
     }unset($event);
     $history=icct_nms_alarm_history_remarks($history);
-    return ['alarm'=>$row,'history'=>$history,'acknowledgement'=>!empty($row['acknowledged'])?$ack:null,'escalations'=>$escalations];
+    return ['alarm'=>$row,'history'=>$history,'acknowledgement'=>!empty($row['acknowledged'])?$ack:null,'escalations'=>$escalations,'ticket'=>icct_nms_alarm_ticket($row,$history)];
 }
 function icct_nms_alarm_format_time($epoch) {
     if(!(int)$epoch)return '-';
@@ -137,4 +158,25 @@ function icct_nms_alarm_history_remarks($history) {
         unset($event);
     }
     return $history;
+}
+
+/** Ticket metadata and audit trail are kept in the existing immutable journal. */
+function icct_nms_alarm_ticket_severity($severity) {
+    return ['Critical'=>'High','Major'=>'High','Minor'=>'Medium','Warning'=>'Low','Information'=>'Low'][$severity]??'Low';
+}
+function icct_nms_alarm_ticket($alarm,$history) {
+    $labels=['Escalated'=>['OPENED','opened'],'Ticket progress'=>['IN PROGRESS','progress'],'Ticket resolved'=>['RESOLVED','resolved'],'Ticket closed'=>['RESOLVED','resolved'],'Ticket reopened'=>['REOPEN','reopen']];
+    $timeline=[];$details=null;
+    foreach($history as $event){
+        if($event['event']==='Raised')break;
+        if(!isset($labels[$event['event']]))continue;
+        if($details===null&&isset($event['snapshot']['ticket']))$details=$event['snapshot']['ticket'];
+        [$label,$kind]=$labels[$event['event']];
+        $timeline[]=['label'=>$label,'kind'=>$kind,'created_epoch'=>$event['created_epoch'],'note'=>$event['note']];
+        if($event['event']==='Escalated'){
+            if($details===null)$details=['severity'=>icct_nms_alarm_ticket_severity($event['snapshot']['severity']??$alarm['severity']),'name'=>$alarm['name'].' - '.$alarm['device_name'],'remarks'=>$event['note']];
+            break;
+        }
+    }
+    return ['details'=>$details,'timeline'=>$timeline];
 }

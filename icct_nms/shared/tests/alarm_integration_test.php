@@ -16,17 +16,28 @@ $rule['description']='Updated description';$rule['corrective_action']='Updated f
 $raisedAgain=json_decode(db_fetch_cell_prepared("SELECT snapshot_json FROM plugin_icct_nms_alarm_history WHERE alarm_key=? AND event='Raised' ORDER BY id LIMIT 1",[$key]),true);assertAlarm($raisedAgain===$raised,'New text overwrote historical content');
 $act=static function($action)use($get,$key){icct_nms_alarm_action(['alarm_key'=>$key,'alarm_action'=>$action,'revision'=>$get()['revision'],'note'=>'QA note']);};
 try{$act('escalate');throw new LogicException('Escalation allowed before acknowledgement');}catch(RuntimeException $e){}
-$act('ack');$detail=icct_nms_alarm_detail($key);assertAlarm($detail['acknowledgement']['note']==='QA note'&&$detail['alarm']['device_name']===$host['description'],'Full detail lost linked device or acknowledgement remarks');$act('escalate');$detail=icct_nms_alarm_detail($key);assertAlarm(count($detail['escalations'])===1&&$detail['escalations'][0]['note']==='QA note','Escalation tab lost its saved record');
+try{$act('ticket_progress');throw new LogicException('Ticket action accepted before escalation');}catch(RuntimeException $e){}
+$act('ack');$detail=icct_nms_alarm_detail($key);assertAlarm($detail['acknowledgement']['note']==='QA note'&&$detail['alarm']['device_name']===$host['description'],'Full detail lost linked device or acknowledgement remarks');try{icct_nms_alarm_action(['alarm_key'=>$key,'alarm_action'=>'escalate','revision'=>$get()['revision'],'ticket_severity'=>'Invalid']);throw new LogicException('Invalid ticket severity accepted');}catch(InvalidArgumentException $e){}
+icct_nms_alarm_action(['alarm_key'=>$key,'alarm_action'=>'escalate','revision'=>$get()['revision'],'note'=>'QA note','ticket_severity'=>'Medium','ticket_name'=>'Custom supply incident']);$detail=icct_nms_alarm_detail($key);assertAlarm(count($detail['escalations'])===1&&$detail['escalations'][0]['note']==='QA note','Escalation tab lost its saved record');
 $ackSnapshot=json_decode(db_fetch_cell_prepared("SELECT snapshot_json FROM plugin_icct_nms_alarm_history WHERE alarm_key=? AND event='Acknowledged' ORDER BY id DESC LIMIT 1",[$key]),true);assertAlarm((int)$ackSnapshot['acknowledged']===1&&$ackSnapshot['description']==='Updated description'&&$ackSnapshot['ack_note']==='QA note','Acknowledgement snapshot lost state or content');
 try{icct_nms_alarm_detail('invalid');throw new LogicException('Invalid detail key accepted');}catch(InvalidArgumentException $e){}
 db_execute_prepared('UPDATE plugin_icct_nms_alarms SET graph_id=2147483647 WHERE alarm_key=?',[$key]);
 try{icct_nms_alarm_detail($key);throw new LogicException('Detail exposed a forbidden graph');}catch(RuntimeException $e){}
 db_execute_prepared('UPDATE plugin_icct_nms_alarms SET graph_id=0 WHERE alarm_key=?',[$key]);
+assertAlarm($get()['ticket_state']==='Open','Escalation must open a ticket');
+$act('ticket_progress');assertAlarm($get()['ticket_state']==='In Progress','Ticket progress did not save');
+$act('ticket_resolve');assertAlarm($get()['ticket_state']==='Resolved','Ticket resolution did not save');
+$act('ticket_reopen');
+$ticket=icct_nms_alarm_detail($key)['ticket'];
+assertAlarm(array_column($ticket['timeline'],'label')===['REOPEN','RESOLVED','IN PROGRESS','OPENED'],'Ticket timeline order or statuses incorrect');
+assertAlarm($ticket['details']['severity']==='Medium'&&$ticket['details']['name']==='Custom supply incident'&&$ticket['details']['remarks']==='QA note','Ticket details did not survive its lifecycle');
+try{$act('ticket_reopen');throw new LogicException('Duplicate reopen accepted');}catch(RuntimeException $e){}
 $act('ticket_close');$act('ticket_reopen');$r=$get();assertAlarm($r['acknowledged']&&$r['escalated']&&$r['ticket_state']==='Open','Workflow save failed');
 try{icct_nms_alarm_action(['alarm_key'=>$key,'alarm_action'=>'close','revision'=>0]);throw new LogicException('Stale revision accepted');}catch(RuntimeException $e){}
 $act('close');icct_nms_alarm_record($host,$rule,$o);assertAlarm($get()['state']==='Closed','Poller reopened a manually closed alarm');
 icct_nms_alarm_record($host,$rule,array_replace($o,['state'=>'Normal']));assertAlarm($get()['state']==='Resolved','Recovery failed');
 icct_nms_alarm_record($host,$rule,$o);$r=$get();assertAlarm((int)$r['occurrences']===2&&!$r['acknowledged']&&!$r['escalated'],'Recurrence must reset workflow and increment only once');
+assertAlarm(icct_nms_alarm_detail($key)['ticket']['timeline']===[],'Recurrence exposed the previous ticket');
 icct_nms_alarm_record($host,$rule,array_replace($o,['state'=>'Unknown']));assertAlarm($get()['state']==='Active','Missing data cleared an active alarm');
 try{icct_nms_alarm_require_access(['host_id'=>16777215,'graph_id'=>0]);throw new LogicException('Foreign device allowed');}catch(RuntimeException $e){}
 try{icct_nms_alarm_require_access(['host_id'=>$host['id'],'graph_id'=>2147483647]);throw new LogicException('Foreign graph allowed');}catch(RuntimeException $e){}
