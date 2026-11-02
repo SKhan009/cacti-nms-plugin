@@ -612,3 +612,35 @@ CREATE TABLE IF NOT EXISTS `plugin_icct_nms_netflow_events` (
   KEY `host_event` (`host_id`,`event_key`,`state`),
   KEY `state_time` (`state`,`updated_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+
+-- Durable device-linked alarm lifecycle and operator history.
+CREATE TABLE IF NOT EXISTS `plugin_icct_nms_alarms` (
+ `alarm_key` char(64) NOT NULL,
+ `host_id` mediumint(8) unsigned NOT NULL,
+ `source` varchar(16) NOT NULL,
+ `graph_id` int unsigned NOT NULL DEFAULT 0,
+ `name` varchar(160) NOT NULL,
+ `description` text NOT NULL,
+ `fix` text NOT NULL,
+ `severity` varchar(16) NOT NULL,
+ `state` varchar(16) NOT NULL,
+ `first_seen` datetime NOT NULL,
+ `last_seen` datetime NOT NULL,
+ `sample_time` bigint unsigned NOT NULL DEFAULT 0,
+ `occurrences` int unsigned NOT NULL DEFAULT 1,
+ `acknowledged` tinyint unsigned NOT NULL DEFAULT 0,
+ `escalated` tinyint unsigned NOT NULL DEFAULT 0,
+ `ticket_state` varchar(16) NOT NULL DEFAULT '',
+ `revision` int unsigned NOT NULL DEFAULT 1,
+ PRIMARY KEY (`alarm_key`),
+ KEY `device_state` (`host_id`,`state`,`last_seen`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;
+CREATE TABLE IF NOT EXISTS `plugin_icct_nms_alarm_history` (
+ `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+ `alarm_key` char(64) NOT NULL,
+ `event` varchar(32) NOT NULL,
+ `actor_id` int unsigned NOT NULL DEFAULT 0,
+ `note` text NOT NULL,
+ `created_at` datetime NOT NULL,
+ PRIMARY KEY (`id`), KEY `alarm_history` (`alarm_key`,`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;

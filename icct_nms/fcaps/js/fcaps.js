@@ -64,7 +64,7 @@
     if(!seen.size){const message=document.createElement('p');message.className='fault-oid-empty';message.textContent='No known OIDs for this device.';oidNavigation.append(message);}
   }
   document.querySelector('#device-form [name=device_type]')?.addEventListener('change',()=>renderMeasurements());
-  function sync(){hidden.value=JSON.stringify([...list.children].map(row=>({preset_key:row.dataset.presetKey||'',description:row.dataset.presetDescription||'',source:row.querySelector('[data-source]').value,parameter:row.querySelector('[data-parameter]').value,oid:row.querySelector('[data-oid]').value,units:row.querySelector('[data-units]').value,scale:row.querySelector('[data-scale]').value,condition:row.querySelector('[data-condition]').value,template_id:row.querySelector('[data-template]').value,metric_id:row.querySelector('[data-metric]').value,minimum:row.querySelector('[data-minimum]').value,maximum:row.querySelector('[data-maximum]').value,name:row.querySelector('[data-name]').value,corrective_action:row.querySelector('[data-corrective-action]').value,email_recipients:row.querySelector('[data-email-recipients]').value,email:row.querySelector('[data-email]').checked,audio:row.querySelector('[data-audio]').checked,severity:row.querySelector('[data-severity]').value,enabled:row.querySelector('[data-enabled]').checked})));}
+  function sync(){hidden.value=JSON.stringify([...list.children].map(row=>({preset_key:row.dataset.presetKey||'',description:row.querySelector('[data-description]').value,source:row.querySelector('[data-source]').value,parameter:row.querySelector('[data-parameter]').value,oid:row.querySelector('[data-oid]').value,units:row.querySelector('[data-units]').value,scale:row.querySelector('[data-scale]').value,condition:row.querySelector('[data-condition]').value,template_id:row.querySelector('[data-template]').value,metric_id:row.querySelector('[data-metric]').value,minimum:row.querySelector('[data-minimum]').value,maximum:row.querySelector('[data-maximum]').value,name:row.querySelector('[data-name]').value,corrective_action:row.querySelector('[data-corrective-action]').value,email_recipients:row.querySelector('[data-email-recipients]').value,email:row.querySelector('[data-email]').checked,audio:row.querySelector('[data-audio]').checked,severity:row.querySelector('[data-severity]').value,enabled:row.querySelector('[data-enabled]').checked})));}
   function option(select,value,label){const o=document.createElement('option');o.value=String(value);o.textContent=label;select.append(o);}
   const fieldHelp={
     name:'A short name for this alarm, e.g. UPS battery low.',
@@ -82,7 +82,8 @@
     maximum:'Raise a fault above this value, in the same units as the reading. For = or ≠, enter the numeric device status code.',
     severity:'Alarm level for this rule. Add separate rules for other severity levels.',
     enabled:'Enable this rule for automatic evaluation after saving.',
-    'corrective-action':'Optional action for the operator, e.g. Check UPS power supply.'
+    description:'Describe the condition reported by this alarm.',
+    'corrective-action':'Steps to investigate and fix this alarm, e.g. Check UPS power supply.'
   };
   function field(row,label,kind,key){
     const wrapper=document.createElement('label');wrapper.className='field';
@@ -151,7 +152,8 @@
     metrics(false);sourceFields();reading.value=values.length?values.map(item=>item.value===null?'Unknown':String(item.value)+(units.value?' '+units.value:'')).join(' / '):'Awaiting collection';
     template.addEventListener('change',()=>{metrics(true);reading.value='Awaiting collection';sync();});metric.addEventListener('change',()=>{const item=parameters.find(p=>String(p.metric_id)===metric.value&&String(p.template_id)===template.value);if(item){parameter.value=item.parameter;units.value=item.units||'';oid.value=item.oid;scale.value=item.scale||1;}reading.value='Awaiting collection';sync();});source.addEventListener('change',()=>{sourceFields();if(source.value==='snmp'){const item=parameters.find(p=>String(p.metric_id)===metric.value&&String(p.template_id)===template.value);if(item){picker.value=String(parameters.findIndex(parameter=>parameter.oid===item.oid));fillParameter(item);}else if(oid.value)readParameter();}sync();});condition.addEventListener('change',()=>conditionFields(true));
     const enabled=field(row,'Enabled','checkbox','enabled');enabled.checked=rule.enabled??true;
-    const guidance=field(row,'Corrective Guidance (optional)','textarea','corrective-action');guidance.rows=2;guidance.maxLength=1000;guidance.placeholder='Suggested action when a fault occurs';guidance.value=rule.corrective_action||'';wrapper(guidance).classList.add('fault-guidance');
+    const description=field(row,'Description','textarea','description');description.rows=3;description.maxLength=1000;description.value=rule.description||'';wrapper(description).classList.add('fault-description');
+    const guidance=field(row,'Fix','textarea','corrective-action');guidance.rows=2;guidance.maxLength=1000;guidance.placeholder='Suggested action when a fault occurs';guidance.value=rule.corrective_action||'';wrapper(guidance).classList.add('fault-guidance');
     // Preserve existing notification preferences without presenting inactive delivery controls.
     const preferences=document.createElement('div');preferences.hidden=true;row.append(preferences);
     const email=field(preferences,'Email','checkbox','email'),audio=field(preferences,'Audio','checkbox','audio'),recipients=field(preferences,'Email Recipients','text','email-recipients');email.checked=!!rule.email;audio.checked=!!rule.audio;recipients.value=rule.email_recipients||'';

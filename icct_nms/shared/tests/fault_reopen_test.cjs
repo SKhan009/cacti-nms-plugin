@@ -19,5 +19,6 @@ setTimeout(()=>{
  assert.equal(row.querySelector('[data-scale]').closest('.field').hidden,true);
  assert.equal(row.querySelector('[data-units]').closest('.field').hidden,true);
  assert.equal(row.querySelector('[data-minimum]').value,20);
+ row.querySelector('[data-description]').value='Battery condition description';row.querySelector('[data-corrective-action]').value='Inspect battery supply';row.listeners.input();const stored=JSON.parse(nodes['#fault-rules-value'].value)[1];assert.equal(stored.description,'Battery condition description');assert.equal(stored.corrective_action,'Inspect battery supply');
  console.log('Reopening restores the SNMP parameter, fetches a numeric reading automatically, preserves thresholds and keeps scale hidden.');
 },0);

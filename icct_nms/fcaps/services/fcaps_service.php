@@ -175,12 +175,13 @@ function icct_backend_collect_faults() {
         icct_backend_category_execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',['fault_status_'.$id,json_encode($snapshot,JSON_THROW_ON_ERROR)]);
     }
 }
-function icct_nms_fault_observations($host) {
+function icct_nms_fault_observations($host,$collector=false) {
+    if($collector&&(int)$host['poller_id']!==icct_backend_inventory_collector_id())throw new RuntimeException('Device belongs to another collector.');
     $id=(int)$host['id'];$rules=icct_nms_fault_rules($id);
     $data=json_decode((string)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['fault_status_'.$id]),true);
     $age=time()-(int)($data['time'] ?? 0);
     if($host['disabled']!=='' || $age<0 || $age>2*max(60,(int)read_config_option('poller_interval')) || ($data['rules_hash'] ?? '')!==hash('sha256',json_encode($rules,JSON_THROW_ON_ERROR)))return icct_nms_port_faults($host);
-    $allowed=array_map('intval',array_column(icct_nms_device_graphs($id),'local_graph_id'));
+    $allowed=$collector?array_map('intval',array_column(db_fetch_assoc_prepared('SELECT id FROM graph_local WHERE host_id=?',[$id]),'id')):array_map('intval',array_column(icct_nms_device_graphs($id),'local_graph_id'));
     return array_merge(array_values(array_filter($data['results'] ?? [],static fn($row)=>!(int)$row['graph_id'] || in_array((int)$row['graph_id'],$allowed,true))),icct_nms_port_faults($host));
 }
 
@@ -201,4 +202,14 @@ function icct_nms_fault_numeric($value) {
 }
 function icct_nms_fault_snmp_read($host,$oid) {
     return icct_nms_fault_numeric(cacti_snmp_get($host['hostname'],$host['snmp_community'],$oid,$host['snmp_version'],$host['snmp_username'],$host['snmp_password'],$host['snmp_auth_protocol'],$host['snmp_priv_passphrase'],$host['snmp_priv_protocol'],$host['snmp_context'],$host['snmp_port'],min(10000,max(1,(int)$host['snmp_timeout'])),min(1,max(0,(int)read_config_option('snmp_retries'))),'ICCT Fault',$host['snmp_engine_id'],SNMP_STRING_OUTPUT_ASCII));
+}
+
+/** Describe a saved threshold without inventing a diagnosis or remediation. */
+function icct_nms_fault_description($rule) {
+    $parameter=trim((string)($rule['parameter']??''))?:trim((string)($rule['name']??''))?:'the selected data source';
+    $condition=$rule['condition']??'outside';$units=trim((string)($rule['units']??''));$suffix=$units!==''?' '.$units:'';
+    $conditionText=['above'=>'above','below'=>'below','at_or_above'=>'at or above','at_or_below'=>'at or below','equals'=>'equal to','not_equals'=>'not equal to'];
+    if($condition==='outside')$limit='outside '.($rule['minimum']??'—').' to '.($rule['maximum']??'—').$suffix;
+    else $limit=($conditionText[$condition]??$condition).' '.($rule[in_array($condition,['below','at_or_below'],true)?'minimum':'maximum']??'—').$suffix;
+    return substr('Alarm when '.$parameter.' is '.$limit.'.',0,1000);
 }

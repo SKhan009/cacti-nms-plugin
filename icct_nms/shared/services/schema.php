@@ -16,6 +16,16 @@ function icct_nms_schema_install()
             if(!db_execute("ALTER TABLE plugin_icct_nms_syslog_devices ADD `".$column."` TEXT DEFAULT NULL"))throw new RuntimeException('Syslog filter upgrade failed.');
         }
     }
+    if(!db_fetch_cell("SHOW COLUMNS FROM plugin_icct_nms_alarms LIKE 'graph_id'")) {
+        if(!db_execute("ALTER TABLE plugin_icct_nms_alarms ADD graph_id INT UNSIGNED NOT NULL DEFAULT 0 AFTER source"))throw new RuntimeException('Alarm graph ownership migration failed.');
+    }
+    // Preserve operator fixes; fill only previously empty device rule descriptions.
+    require_once __DIR__.'/../../fcaps/services/fcaps_service.php';
+    foreach(db_fetch_assoc("SELECT meta_key,meta_value FROM plugin_icct_nms_meta WHERE meta_key REGEXP '^fault_rules_[0-9]+$'") as $row){
+        $rules=json_decode($row['meta_value'],true);if(!is_array($rules))continue;$changed=false;
+        foreach($rules as &$rule)if(is_array($rule)&&trim((string)($rule['description']??''))===''){$rule['description']=icct_nms_fault_description($rule);$changed=true;}unset($rule);
+        if($changed&&!db_execute_prepared('UPDATE plugin_icct_nms_meta SET meta_value=?,updated_at=NOW() WHERE meta_key=?',[json_encode($rules,JSON_THROW_ON_ERROR),$row['meta_key']]))throw new RuntimeException('Fault descriptions could not be upgraded.');
+    }
     icct_nms_schema_diagnostic_mtr_migration();
     icct_nms_schema_mtr_background_migration();
     icct_nms_schema_sites_migration();

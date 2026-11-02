@@ -38,6 +38,7 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
                 <button class="icon-button" type="button" aria-label="Navigation menu" aria-expanded="false">☰</button>
                 <nav class="header-menu-panel" aria-label="Main navigation">
                     <a href="dashboard/controllers/topology.php">Dashboard</a>
+                    <a href="alarms/controllers/alarms.php">Alarms</a>
                     <a href="inventory/controllers/inventory.php">Inventory</a>
                     <a href="dashboard/topology/controllers/topology_configuration.php">Topology Configuration</a>
                     <a href="protocols/snmp/mibs/controllers/mib_repository.php">MIB Repository</a>

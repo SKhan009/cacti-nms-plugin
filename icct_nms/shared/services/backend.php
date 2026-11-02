@@ -57,3 +57,5 @@ require_once __DIR__ . "/../../ports/services/backend/ports.php";
 require_once __DIR__ . '/../../fcaps/services/fcaps_service.php';
 
 require_once __DIR__ . '/../../protocols/syslog/services/backend/syslog.php';
+
+require_once __DIR__ . '/../../alarms/services/alarm_service.php';

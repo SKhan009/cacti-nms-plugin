@@ -2,6 +2,14 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Inventory designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
+## Version 1.2.14
+
+The new **Alarms** menu lists device-linked Cacti data-source thresholds, SNMP/MIB fault rules, port alarms and current native device reachability failures. The configured Cacti poller maintains a durable alarm journal; the page refreshes every 30 seconds and supports device/severity/acknowledgement/escalation filters, search, occurrence sorting, pagination and CSV export. First-seen times and recurrence counts are retained; missing measurements never imply recovery. Initial synchronization records currently observed alarms without inventing historical occurrence times. Existing raw Syslog messages remain in each device's Syslog history.
+
+Operators can acknowledge, record a local escalation, close alarms, and manage local ticket status. Alarm History records collector transitions and operator notes. These workflow actions do not send email, create an external service-desk ticket or forward an escalation to CNMS. Device management permissions, device ACLs and graph visibility apply to reads and writes. Concurrent edits require a fresh revision. A manually closed alarm stays closed until an observed recovery and recurrence.
+
+MIB and device fault forms now use editable **Description** and **Fix** fields. Existing fixes and descriptions are preserved; previously empty device descriptions receive factual text derived from the saved threshold. The read-only device view and Alarms list show the same saved content. Upgrade and enable the plugin through native Plugin Management to install the two additive alarm tables before using the page. For a one-time resynchronization after ordinary collection, run `php plugins/icct_nms/alarms/cli/collect_alarms.php` on the assigned collector.
+
 ## Version 1.2.13
 
 Map View and Birds Eye View now show this LNMS and Cacti's configured remote pollers. The local LNMS is the radar center; availability comes from native poller heartbeats. Assign each poller to a native site under Presets → Site → LNMS / Remote Poller Locations. Only sites with valid coordinates are plotted geographically. Missing locations remain explicit; IP addresses and installation URLs never create guessed coordinates. The radar uses labeled logical positions when geographic information is incomplete. No Bluetooth, subnet scan, internet geolocation or device-site demo markers are used. The plugin root URL opens the dashboard.
