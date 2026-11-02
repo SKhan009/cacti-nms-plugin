@@ -11,7 +11,7 @@ $recordPager = static function($key, $page, $total) use ($id) {
     echo '<div class="type-pagination"><span>'.($total ? (($page-1)*25+1).'–'.min($page*25,$total) : '0').' of '.$total.' records</span><span class="type-page-count">Page '.$page.' of '.$pages.'</span>';
     foreach ([$page-1=>'Previous', $page+1=>'Next'] as $target=>$label) {
         $disabled = $target<1 || $target>$pages;
-        echo '<a href="'.icct_nms_h($url(max(1,min($pages,$target)))).'"'.($disabled?' aria-disabled="true" tabindex="-1"':'').'>'.$label.'</a>';
+        echo '<a href="'.icct_nms_h($url(max(1,min($pages,$target)))).'" class="pagination-control" aria-label="'.$label.' records page"'.($disabled?' aria-disabled="true" tabindex="-1"':'').'>'.($label==='Previous'?'<svg class="pagination-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5 7 12 15 19Z"/></svg>':'<svg class="pagination-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5 17 12 9 19Z"/></svg>').'</a>';
     }
     echo '</div>';
 };

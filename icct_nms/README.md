@@ -2,6 +2,10 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Inventory designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
+## Version 1.2.18
+
+Pagination uses a shared solid triangle SVG for previous/next across Inventory, device graphs and records, device types, Syslog, topology connections/discovery, racks, MIB lists/objects and alarm lists/history. Accessible labels, disabled states and existing navigation are preserved.
+
 ## Version 1.2.17
 
 Escalation now shows Ticket Severity, Ticket Name and Remarks alongside a newest-first status timeline: OPENED (blue), IN PROGRESS (teal), RESOLVED (yellow) and REOPEN (orange). Escalation creates an open local ticket; authorized list actions progress, resolve and reopen it with immutable remarks and timestamps. Ticket metadata is saved in the existing history snapshots and stays scoped to its alarm activation. Device permissions, CSRF and revision checks apply. This is local ticket tracking; no external ticket delivery is configured.

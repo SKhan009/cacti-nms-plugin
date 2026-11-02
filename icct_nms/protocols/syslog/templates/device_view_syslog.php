@@ -48,8 +48,8 @@ $syslogLabelList=static function($codes,$labels){return $codes?implode(', ',arra
 <td><?= (int)$event['repeat_count'] ?></td><td><?= icct_nms_h($event['last_seen']) ?></td>
 </tr><?php endforeach; ?><?php if(!$syslogEvents): ?><tr><td colspan="8">No Syslog or availability events<?= $syslogSearch !== '' ? ' match your search' : ' for this device' ?>.</td></tr><?php endif; ?></tbody></table></div>
 <nav class="type-pagination" aria-label="Syslog pages">
-<?php if($syslogPage>1): ?><a class="button" href="<?= icct_nms_h($syslogPageUrl($syslogPage-1)) ?>">Previous</a><?php endif; ?>
+<?php if($syslogPage>1): ?><a class="button pagination-control" aria-label="Previous Syslog page" href="<?= icct_nms_h($syslogPageUrl($syslogPage-1)) ?>"><svg class="pagination-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5 7 12 15 19Z"/></svg></a><?php endif; ?>
 <span>Page <?= $syslogPage ?> of <?= $syslogPages ?></span>
-<?php if($syslogPage<$syslogPages): ?><a class="button" href="<?= icct_nms_h($syslogPageUrl($syslogPage+1)) ?>">Next</a><?php endif; ?>
+<?php if($syslogPage<$syslogPages): ?><a class="button pagination-control" aria-label="Next Syslog page" href="<?= icct_nms_h($syslogPageUrl($syslogPage+1)) ?>"><svg class="pagination-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5 17 12 9 19Z"/></svg></a><?php endif; ?>
 </nav>
 </section>

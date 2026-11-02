@@ -39,7 +39,7 @@ $severityColors=['Critical'=>'#f94144','Major'=>'#f3722b','Minor'=>'#f7961e','Wa
 <label>Items per page: <select id="alarm-history-size" aria-label="Alarm history items per page"><option>10</option><option>25</option><option>50</option><option selected>100</option></select></label>
 <span id="alarm-history-range"><?= count($alarmDetail['history'])?'1–'.min(100,count($alarmDetail['history'])).' of '.count($alarmDetail['history']).' items':'0 items' ?></span>
 <div><select id="alarm-history-page" aria-label="Alarm history page"><option>1</option></select><span id="alarm-history-pages">of <?= max(1,(int)ceil(count($alarmDetail['history'])/100)) ?> pages</span></div>
-<button type="button" id="alarm-history-prev" aria-label="Previous alarm history page" disabled>‹</button><button type="button" id="alarm-history-next" aria-label="Next alarm history page" <?= count($alarmDetail['history'])<=100?'disabled':'' ?>>›</button>
+<button type="button" id="alarm-history-prev" aria-label="Previous alarm history page" disabled class="pagination-control"><svg class="pagination-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5 7 12 15 19Z"/></svg></button><button type="button" id="alarm-history-next" aria-label="Next alarm history page" <?= count($alarmDetail['history'])<=100?'disabled':'' ?> class="pagination-control"><svg class="pagination-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5 17 12 9 19Z"/></svg></button>
 </footer></section>
 <section id="alarm-escalation" role="tabpanel" aria-labelledby="alarm-escalation-tab" class="alarm-detail-panel" hidden>
 <div class="alarm-ticket-layout"><dl class="alarm-ticket-details">

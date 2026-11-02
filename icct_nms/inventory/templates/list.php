@@ -282,8 +282,8 @@
             <select id="page-number"></select>
         </label>
         <span id="page-count"></span>
-        <button type="button" id="page-previous" aria-label="Previous page">‹</button>
-        <button type="button" id="page-next" aria-label="Next page">›</button>
+        <button type="button" id="page-previous" aria-label="Previous page" class="pagination-control"><svg class="pagination-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5 7 12 15 19Z"/></svg></button>
+        <button type="button" id="page-next" aria-label="Next page" class="pagination-control"><svg class="pagination-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5 17 12 9 19Z"/></svg></button>
     </div>
 </footer>
 <?php if ($management): ?>
