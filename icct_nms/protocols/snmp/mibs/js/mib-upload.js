@@ -7,6 +7,10 @@
  const closeButtons=[...dialog.querySelectorAll('[data-mib-upload-close]')];
  let busy=false,saving=false,returnFocus=null,completed=null,activeToken=null,activeRequest=null;
  const endpoint=new URL(chooser.getAttribute('action'),document.baseURI);
+ function uploadToken(){
+  if(typeof crypto==='undefined'||typeof crypto.getRandomValues!=='function')throw Error('This browser cannot create a MIB upload token. Use a supported browser with JavaScript enabled.');
+  const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);return Array.from(bytes,byte=>byte.toString(16).padStart(2,'0')).join('');
+ }
  function working(value){busy=value;closeButtons.forEach(button=>button.disabled=value&&saving);dialog.setAttribute('aria-busy',String(value));}
  function controls(action,token){const body=new FormData(chooser);body.delete('mibs[]');body.set('action',action);body.set('upload_token',token);return body;}
  function showError(message){error.textContent=message;error.hidden=false;}
@@ -55,7 +59,7 @@
   const fileError=files.length!==1?'Select one MIB file.':!(/\.(mib|my|txt)$/i.test(files[0].name))?'Select a .mib, .my or .txt MIB file.':files[0].size>1048576?'The MIB file must be no larger than 1 MiB.':'';
   if(fileError){showError(fileError);return;}
   if(activeToken)discardDraft(activeToken);
-  const token=crypto.randomUUID().replace(/-/g,'');activeToken=token;completed=null;
+  let token;try{token=uploadToken();}catch(failure){showError(failure.message);return;}activeToken=token;completed=null;
   repositoryWarning(null);readNext.hidden=true;working(true);chooser.querySelector('[type=submit]').disabled=true;title.textContent='Reading MIB';error.hidden=true;chooser.hidden=true;progress.hidden=false;bar.max=100;bar.value=0;
   progressText.textContent='Reading the file. It will only be saved when you choose Save or Proceed.';filename.textContent='Uploading “'+files[0].name+'”';count.textContent='Uploading file…';
   const body=new FormData(chooser);body.set('upload_response','json');body.set('upload_progress','1');body.set('upload_token',token);

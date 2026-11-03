@@ -31,13 +31,14 @@ function fixture(settings={}){
   abort(){this.aborted=true;}
  }
  class FormData extends Map{constructor(){super([['__csrf_magic','fixture-csrf'],['action','upload'],['mibs[]','file-bytes']]);}set(key,value){super.set(key,value);return this;}}
- const context={document:{createElement:()=>new Element(),baseURI:'http://localhost/cacti/plugins/icct_nms/',querySelector:selector=>elements[selector]||null,querySelectorAll:selector=>selector==='[data-mib-upload-open]'?[opener]:[]},location:{origin:'http://localhost',assign:href=>navigations.push(href)},URL,FormData,XMLHttpRequest:Request,crypto:{randomUUID:()=> (++sequence).toString(16).padStart(32,'0')},fetch:async(url,options)=>{fetches.push({url,options});const result=settings.responses?.shift()||{ok:true,redirect:'protocols/snmp/mibs/controllers/mib_repository.php?uploaded=1'};return {ok:result.ok,headers:{get:()=> 'application/json'},json:async()=>result};}};
+ const context={document:{createElement:()=>new Element(),baseURI:'http://localhost/cacti/plugins/icct_nms/',querySelector:selector=>elements[selector]||null,querySelectorAll:selector=>selector==='[data-mib-upload-open]'?[opener]:[]},location:{origin:'http://localhost',assign:href=>navigations.push(href)},URL,FormData,XMLHttpRequest:Request,crypto:settings.noCrypto?{}:{getRandomValues:bytes=>{bytes.fill(0);bytes[15]=++sequence;return bytes;}},Uint8Array,fetch:async(url,options)=>{fetches.push({url,options});const result=settings.responses?.shift()||{ok:true,redirect:'protocols/snmp/mibs/controllers/mib_repository.php?uploaded=1'};return {ok:result.ok,headers:{get:()=> 'application/json'},json:async()=>result};}};
  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../../protocols/snmp/mibs/js/mib-upload.js'),'utf8'),context);
  const start=()=>form.events.submit({preventDefault(){}});
  const finish=(summary={name:'TEST-MIB',object_count:4,supported_count:2,existing_count:1,can_configure:true})=>{summary={repository_check:{blocked:false,warnings:[],exact:[],fingerprint:'a'.repeat(64)},...summary};const xhr=requests.at(-1);xhr.status=200;xhr.response={ok:true,upload_token:xhr.body.get('upload_token'),object_count:summary.object_count,summary};xhr.events.load();};
  return {elements,form,dialog,opener,close,submit,file,automatic,repository,cells,requests,fetches,navigations,start,finish};
 }
 (async()=>{
+ const unavailable=fixture({noCrypto:true});unavailable.start();assert.equal(unavailable.requests.length,0);assert.match(unavailable.elements['#mibUploadError'].textContent,/browser cannot create/);
  const f=fixture();f.start();const xhr=f.requests[0];assert.equal(xhr.body.get('upload_progress'),'1');assert.equal(xhr.body.get('upload_token').length,32);assert.equal(f.close.disabled,false,'Cross remains available while reading');
  xhr.upload.events.progress({lengthComputable:true,loaded:50,total:100});assert.equal(f.elements['#mibUploadBar'].value,50);
  xhr.upload.events.load();assert(f.elements['#mibUploadBar'].indeterminate);

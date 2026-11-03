@@ -78,10 +78,27 @@ try {
   sessionStorage.removeItem('icct-next-toast');
   if (queued) icctToast(JSON.parse(queued));
 } catch (_) { /* Notifications do not require browser storage. */ }
+let pendingMibInvalidFocus=false;
 document.addEventListener('invalid', event => {
   event.preventDefault();
   const field = event.target, panel = field.closest('.protocol-item');
   if (panel) {panel.hidden = false;panel.open = true;}
+  // Native validation also checks other OIDs and the hidden Data Source/Fault tab.
+  // Reveal the first invalid control instead of leaving its feedback in a hidden panel.
+  const prepared=field.closest('[data-prepared-panel]');
+  if(prepared&&!pendingMibInvalidFocus){
+    pendingMibInvalidFocus=true;
+    requestAnimationFrame(()=>{
+      const opener=[...document.querySelectorAll('[data-prepared-open]')].find(button=>button.dataset.preparedOpen===prepared.dataset.preparedPanel);
+      if(opener)opener.click();
+      const pane=field.closest('[data-editor-pane]');
+      if(pane){const tab=[...prepared.querySelectorAll('[data-editor-tab]')].find(button=>button.dataset.editorTab===pane.dataset.editorPane);if(tab)tab.click();}
+      const card=field.closest('.mib-fault-card');
+      if(card&&!card.classList.contains('editing'))card.querySelector('[data-rule-edit]')?.click();
+      field.focus();field.scrollIntoView({block:'center'});pendingMibInvalidFocus=false;
+    });
+  }
+
   const label = field.getAttribute('aria-label') || field.closest('.field')?.querySelector('.field-label')?.textContent.trim() || 'Field';
   field.setAttribute('aria-invalid', 'true');
   icctInlineMessage({title:'Check your entry', text:`${label}: ${field.validationMessage}`, danger:true, context:field.closest('.field') || field.form});
