@@ -25,6 +25,7 @@ try{
     }
     $devices=icct_nms_inventory();$byId=array_column($devices,null,'id');$profiles=icct_nms_connections();$links=array_filter(icct_nms_manual_links(),fn($link)=>isset($byId[$link['source']],$byId[$link['target']]));
     $scanResults=$automation?icct_nms_scan_rows($byId):[];
+    $connectionScanResults=[];foreach($scanResults as $row){$key=$row['poller_id'].'|'.$row['address'];if(!isset($connectionScanResults[$key]))$connectionScanResults[$key]=$row;}
     $observations=array_merge(icct_nms_topology_discovery_rows($devices),icct_nms_scan_neighbour_rows($scanResults));$networks=[];$coreDevices=[];
     if($automation){$networks=db_fetch_assoc('SELECT id,name,subnet_range,enabled,total_ips,up_hosts,snmp_hosts,last_started,last_status FROM automation_networks ORDER BY name');
         $nativeRunning=array_column(db_fetch_assoc('SELECT DISTINCT network_id FROM automation_processes'),'network_id');

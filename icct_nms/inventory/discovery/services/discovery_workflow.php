@@ -98,8 +98,9 @@ function icct_nms_scan_result($id) {
 }
 /** Range probes are observations; they do not establish a physical cable/link. */
 function icct_nms_scan_rows($allowedHosts) {
-    icct_backend_require_management(23);$rows=[];
+    icct_backend_require_management(23);$rows=[];$seen=[];
     foreach(db_fetch_assoc("SELECT r.*,j.network_id,j.name AS scan_name,j.poller_id,p.name AS collector FROM plugin_icct_nms_scan_results r JOIN plugin_icct_nms_scan_jobs j ON j.id=r.job_id LEFT JOIN poller p ON p.id=j.poller_id WHERE r.state<>'pending' ORDER BY r.observed_at DESC,r.id DESC") as $r){
+        $key=$r['poller_id'].'|'.$r['network_id'].'|'.$r['address'];if(isset($seen[$key]))continue;$seen[$key]=true;
         $e=json_decode($r['evidence_json']?:'{}',true)?:[];
         $matched=icct_nms_scan_existing($r['address'],$e);$host=count($matched)===1?$matched[0]:0;
         if($host&&!isset($allowedHosts[$host]))continue;
