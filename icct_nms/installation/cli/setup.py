@@ -56,12 +56,21 @@ def validate_root(value):
     return root
 
 
-def verify_bundle(directory, target):
+def component_packages(target, component=None):
+    if component is None:
+        return MANIFEST['packages'][target['family']]
+    packages = MANIFEST['optional_components'][component]['packages'][target['family']]
+    if not packages:
+        raise ValueError('No supported repository package for this component on this OS; use the approved native build guide.')
+    return packages
+
+
+def verify_bundle(directory, target, component=None):
     directory = Path(directory).resolve()
     data = json.loads((directory / "bundle.json").read_text())
     if data.get("format") != 1 or data.get("target") != target:
         raise ValueError("Offline bundle OS version or CPU architecture differs from this server.")
-    if data.get("packages") != MANIFEST["packages"][target["family"]]:
+    if data.get("packages") != component_packages(target, component) or data.get("component") != component:
         raise ValueError("Bundle package list does not match this plugin release; rebuild it.")
     files = []
     for name, expected in data.get("files", {}).items():
@@ -80,12 +89,12 @@ def verify_bundle(directory, target):
     return sorted(files)
 
 
-def download_bundle(directory, target):
+def download_bundle(directory, target, component=None):
     dest = Path(directory).resolve()
     if dest.exists() and any(dest.iterdir()):
         raise ValueError("Use an empty bundle directory; never mix OS versions or architectures.")
     dest.mkdir(parents=True, exist_ok=True)
-    packages = MANIFEST["packages"][target["family"]]
+    packages = component_packages(target, component)
     if target["family"] == "rhel":
         # dnf-plugins-core provides download; --alldeps includes already installed dependencies.
         run(["dnf", "download", "--resolve", "--alldeps", "--destdir", dest, *packages])
@@ -120,16 +129,16 @@ def download_bundle(directory, target):
     if not files:
         raise ValueError("Package manager produced no packages.")
     (dest / "bundle.json").write_text(
-        json.dumps(dict(format=1, target=target, packages=packages, files=files), indent=2) + "\n"
+        json.dumps(dict(format=1, target=target, component=component, packages=packages, files=files), indent=2) + "\n"
     )
     print("Bundle built for exactly: " + json.dumps(target))
 
 
-def install_packages(target, bundle, online=False):
+def install_packages(target, bundle, online=False, component=None):
     if bundle and online:
         raise ValueError("--online cannot be combined with --bundle.")
     if bundle:
-        files = verify_bundle(bundle, target)
+        files = verify_bundle(bundle, target, component) if component else verify_bundle(bundle, target)
         if target["family"] == "rhel":
             run(["dnf", "-y", "--disablerepo=*", "install", *files])
         else:
@@ -149,11 +158,11 @@ def install_packages(target, bundle, online=False):
                      'install', *files], env=dict(os.environ, DEBIAN_FRONTEND='noninteractive'))
     elif online:
         if target["family"] == "rhel":
-            run(["dnf", "-y", "install", *MANIFEST["packages"]["rhel"]])
+            run(["dnf", "-y", "install", *component_packages(target, component)])
         else:
             run(["apt-get", "update"])
             run(
-                ["apt-get", "-y", "--no-remove", "install", *MANIFEST["packages"]["debian"]],
+                ["apt-get", "-y", "--no-remove", "install", *component_packages(target, component)],
                 env=dict(os.environ, DEBIAN_FRONTEND="noninteractive"),
             )
     else:
@@ -270,6 +279,7 @@ def main():
         help="Existing PHP/collector account; defaults apache on RHEL, www-data on Debian",
     )
     parser.add_argument("--web-group")
+    parser.add_argument("--component", choices=list(MANIFEST["optional_components"]), help="Install or bundle one optional dependency only; no plugin or service configuration")
     parser.add_argument('--application-only', action='store_true', help='Install application pages/schema only; leave OS packages and services managed externally')
     parser.add_argument(
         "--online",
@@ -292,7 +302,7 @@ def main():
             raise ValueError('Run bundle as root on the matching build system.')
         if not args.bundle:
             raise ValueError('bundle requires --bundle OUTPUT_DIRECTORY')
-        download_bundle(args.bundle, target)
+        download_bundle(args.bundle, target, args.component) if args.component else download_bundle(args.bundle, target)
         return
     root = validate_root(args.cacti_root)
     user = args.web_user or ("apache" if target["family"] == "rhel" else "www-data")
@@ -306,7 +316,8 @@ def main():
         cacti=str(root),
         user=user,
         group=group,
-        packages=MANIFEST["packages"][target["family"]],
+        packages=component_packages(target, args.component),
+        component=args.component,
         offline=not args.online,
         pending=MANIFEST["pending_features"],
         additional=[
@@ -318,11 +329,17 @@ def main():
     )
     if args.action == "plan":
         if args.bundle:
-            verify_bundle(args.bundle, target)
+            verify_bundle(args.bundle, target, args.component)
         print(json.dumps(plan, indent=2))
         return
     if os.geteuid() != 0:
         raise ValueError("Run install/bundle as root; plan is read-only and needs no privileges.")
+    if args.component:
+        if args.application_only or args.no_packages:
+            raise ValueError('--component requires --online or --bundle.')
+        install_packages(target, args.bundle, args.online, args.component)
+        print('Dependency installed. Application integration and service configuration are separate.')
+        return
     php = preflight(root)
     if not args.application_only and not args.no_packages:
         install_packages(target, args.bundle, args.online)

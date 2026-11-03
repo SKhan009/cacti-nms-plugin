@@ -13,6 +13,7 @@ function icct_nms_installation_manifest()
 function icct_nms_installation_binary($names, $executable = true)
 {
     foreach ((array) $names as $name) {
+        if (strpos($name, '/') === 0 && is_file($name) && (!$executable || is_executable($name))) return $name;
         foreach (
             ['/usr/bin', '/usr/sbin', '/usr/local/bin', '/usr/local/sbin', '/bin', '/sbin'] as $dir
         ) {
@@ -112,7 +113,9 @@ function icct_nms_installation_checks()
                 $path ? 'Ready' : ($present ? 'Needs setup' : 'Missing'),
                 $path ?: ($present ? $present.' · installed; check execution permissions for the collector.' : 'Install ' . implode(' / ', (array) $names) . ' on this collector.'),
             );
-            if ($present) $checks[count($checks)-1]['installed'] = true;
+            if ($present) {
+                $checks[count($checks) - 1]['installed'] = true;
+            }
         }
         foreach ($spec['services'] as $unit) {
             $state = icct_nms_installation_service($unit);
@@ -132,7 +135,7 @@ function icct_nms_installation_checks()
                         : 'Needs setup'),
                 $state . $observed . ' · applies to this server/collector only.',
             );
-            $checks[count($checks)-1]['installed'] = $installed;
+            $checks[count($checks) - 1]['installed'] = $installed;
         }
         foreach ($spec['files'] as $file) {
             $add(
@@ -145,6 +148,20 @@ function icct_nms_installation_checks()
         if (!empty($spec['note'])) {
             $add($feature, 'Configuration', 'Needs setup', $spec['note']);
         }
+    }
+    foreach ($manifest['optional_components'] ?? [] as $id => $spec) {
+        $observation = PHP_SAPI === 'cli' ? icct_nms_installation_component($id, $spec) : ($saved['components'][$id] ?? []);
+        $installed = $observation['installed'] ?? null;
+        $add($spec['label'], 'Package', $installed === true ? 'Installed' : ($installed === false ? 'Missing' : 'Not checked'), ($observation['detail'] ?? 'Awaiting local collector check.').' · '.$spec['note']);
+        $checks[count($checks)-1]['installed'] = $installed;
+        $checks[count($checks)-1]['component'] = $id;
+    }
+    foreach (['installation/services/checks.php','installation/cli/setup.py','setup.php','shared/services/backend.php'] as $source) {
+        $path = dirname(__DIR__, 2).'/'.$source;
+        $unsafe = is_file($path) && (fileperms($path) & 0002);
+        // Root CLI may write source; the HTTP account must not.
+        $webWritable = (PHP_SAPI !== 'cli' || (function_exists('posix_geteuid') && posix_geteuid() !== 0)) && is_writable($path);
+        $add('Permissions', $source, !$unsafe && !$webWritable && is_readable($path) ? 'Ready' : 'Needs setup', $unsafe ? 'Source is world-writable; restrict ownership and mode.' : ($webWritable ? 'Web account can modify source; restrict source ownership.' : 'Source readable; no world-write permission.'));
     }
     foreach ($manifest['pending_features'] as $feature => $note) {
         $add($feature, 'Backend', 'Unavailable', $note);
@@ -178,7 +195,9 @@ function icct_nms_installation_snapshot($raw, $hostname, $now, $maxAge)
 function icct_nms_installation_unit_exists($unit)
 {
     foreach (['/etc/systemd/system','/usr/lib/systemd/system','/lib/systemd/system'] as $directory) {
-        if (is_file($directory.'/'.$unit)) return true;
+        if (is_file($directory.'/'.$unit)) {
+            return true;
+        }
     }
     return false;
 }
@@ -186,14 +205,31 @@ function icct_nms_installation_unit_exists($unit)
 /** Only missing installable components expose an Install action. */
 function icct_nms_installation_action($check)
 {
-    if ($check['status'] === 'Ready' || $check['status'] === 'Unavailable' || ($check['installed'] ?? null) === true) return '';
-    if (($check['installed'] ?? null) === false) return $check['feature'] === 'SSH' ? 'ssh' : 'packages';
-    if ($check['status'] !== 'Missing') return '';
-    if ($check['feature'] === 'SSH') return 'ssh';
-    if ($check['item'] === 'Pathchar') return 'pathchar';
-    if (strpos($check['detail'], 'Bundled plugin asset') !== false) return 'plugin';
-    if ($check['item'] === 'Plugin database') return 'plugin';
-    if (in_array($check['item'], ['Cacti version','PHP CLI','PHP Web'], true)) return '';
+    if (isset($check['component'])) return ($check['installed'] ?? null) === false ? 'component-'.$check['component'] : '';
+    if ($check['status'] === 'Ready' || $check['status'] === 'Unavailable' || ($check['installed'] ?? null) === true) {
+        return '';
+    }
+    if (($check['installed'] ?? null) === false) {
+        return $check['feature'] === 'SSH' ? 'ssh' : 'packages';
+    }
+    if ($check['status'] !== 'Missing') {
+        return '';
+    }
+    if ($check['feature'] === 'SSH') {
+        return 'ssh';
+    }
+    if ($check['item'] === 'Pathchar') {
+        return 'pathchar';
+    }
+    if (strpos($check['detail'], 'Bundled plugin asset') !== false) {
+        return 'plugin';
+    }
+    if ($check['item'] === 'Plugin database') {
+        return 'plugin';
+    }
+    if (in_array($check['item'], ['Cacti version','PHP CLI','PHP Web'], true)) {
+        return '';
+    }
     return 'packages';
 }
 
@@ -216,8 +252,38 @@ function icct_nms_installation_save_services()
             $binaries[$feature][$label] = icct_nms_installation_binary($spec['binaries'][$label], false);
         }
     }
-    $snapshot = json_encode(['time' => time(),'hostname' => gethostname(),'services' => $services,'installed_services' => $installedServices,'binaries' => $binaries], JSON_THROW_ON_ERROR);
+    $components = [];
+    foreach (icct_nms_installation_manifest()['optional_components'] ?? [] as $id => $spec) $components[$id] = icct_nms_installation_component($id, $spec);
+    $snapshot = json_encode(['components' => $components, 'time' => time(),'hostname' => gethostname(),'services' => $services,'installed_services' => $installedServices,'binaries' => $binaries], JSON_THROW_ON_ERROR);
     if (!db_execute_prepared('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()', ['installation_services_'.(int)$config['poller_id'],$snapshot])) {
         throw new RuntimeException('Could not save collector service observations.');
     }
+}
+
+/** Local package inventory only; never called from HTTP. */
+function icct_nms_installation_component($id, $spec)
+{
+    if (PHP_SAPI !== 'cli') throw new RuntimeException('Package inventory requires CLI.');
+    $family = is_file('/etc/redhat-release') ? 'rhel' : 'debian';
+    $names = $spec['binaries'] ?? [];
+    if (isset($names[$family])) $names = $names[$family];
+    $paths = [];
+    foreach ($names as $name) {
+        $path = icct_nms_installation_binary([$name], false);
+        if ($path) $paths[] = $path;
+    }
+    // Guacamole's approved custom build must not be replaced by a stock package.
+    if ($id === 'guacamole' && $paths) return ['installed'=>true,'detail'=>implode(', ', $paths)];
+    $packages = $spec['packages'][$family];
+    if (!$packages) return ['installed'=>null,'detail'=>'Approved native build required for this OS.'];
+    if (!is_callable('shell_exec') || !icct_nms_installation_binary('timeout')) return ['installed'=>null,'detail'=>'Package inventory unavailable.'];
+    $manager = icct_nms_installation_binary($family === 'rhel' ? 'rpm' : 'dpkg-query');
+    if (!$manager) return ['installed'=>null,'detail'=>'Package manager unavailable.'];
+    $found = [];
+    foreach ($packages as $package) {
+        $arguments = $family === 'rhel' ? ' -q --qf '.escapeshellarg('%{NAME} %{VERSION}-%{RELEASE}').' -- ' : ' -W -f='.escapeshellarg('${db:Status-Status} ${Version}').' -- ';
+        $value = trim((string)shell_exec(escapeshellarg(icct_nms_installation_binary('timeout')).' 3s '.escapeshellarg($manager).$arguments.escapeshellarg($package).' 2>/dev/null'));
+        if ($family === 'rhel' ? strpos($value, $package.' ') === 0 : strpos($value, 'installed ') === 0) $found[] = $package.': '.$value;
+    }
+    return ['installed'=>count($found) === count($packages),'detail'=>$found ? implode('; ', $found) : 'Not installed.'];
 }

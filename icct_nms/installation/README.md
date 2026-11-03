@@ -69,3 +69,16 @@ Debian 12's Netperf package requires the official `non-free` repository componen
 For application-only deployment into an existing externally managed Cacti installation, use `python3 install.py --cacti-root /path/to/cacti --application-only`. This installs pages/schema through native Cacti APIs without touching OS packages or worker services. The full installer archive is verified first.
 
 Chrony is not a required plugin package: automatically installing a time daemon could replace the host’s existing time-sync service. Existing OS synchronization is retained; the unimplemented NTP monitoring backend remains clearly unavailable.
+
+
+### Optional protocol dependencies
+
+Installation Checks now inventories Redis, Python WebSocket support, chrony, TACACS+ tools, Apache Guacamole and FTP/TFTP/Telnet clients separately from application integration. Installed dependencies have no Install button. Package-only setup does not configure plugin features, PAM, time sources or firewall rules. Repository package scripts may apply their distribution defaults.
+
+Use `setup.py install --component redis --online` (also `websocket`, `ntp`, `tacacs`, `guacamole`, `transfer`). Build an offline dependency bundle with `setup.py bundle --component redis --bundle /outside/webroot/redis-bundle`; install with `setup.py install --component redis --bundle /outside/webroot/redis-bundle`. Each bundle is pinned to its component, OS release and architecture; existing base bundles remain compatible.
+
+Guacamole custom builds under `/opt/nms-guacamole/1.6.0` are recognized without replacing the running daemon. A stock guacd package does not satisfy the SSH strict-auth policy. Debian has no automatic Guacamole repository profile; use the approved native build guide. Debian TACACS+ profile installs a client library, while RHEL installs server tools; neither changes login authentication.
+
+BLR §5.2.2.3 requires Telnet, SSH, FTP, TFTP, NTP, TACACS+, NetFlow/IPFIX and SNMP/discovery protocols. §5.3.3.3 requires NTP node statistics (sync, source, offset, jitter, delay), which remain distinct from chrony being installed. Redis and WebSocket are supporting implementation dependencies requested for this project, not named BLR requirements.
+
+Permission checks cover required writable upload directories and critical source files. Keep application source owned by an administrator and not writable by the HTTP/collector account; keep only the documented storage directories writable. Existing service accounts, SELinux enforcement and pchar raw-socket capability are preserved.

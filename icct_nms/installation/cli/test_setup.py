@@ -89,6 +89,17 @@ class BundleSafety(unittest.TestCase):
             setup.main()
             download.assert_called_once_with('/tmp/test-bundle', target)
 
+    def test_optional_component_isolated_and_bundle_profile_checked(self):
+        with patch.object(setup, 'run') as run:
+            setup.install_packages(dict(family='rhel'), None, online=True, component='websocket')
+            self.assertEqual(run.call_args[0][0], ['dnf','-y','install','python3-websockets'])
+        with self.assertRaisesRegex(ValueError, 'approved native build'):
+            setup.component_packages(dict(family='debian'), 'guacamole')
+        with tempfile.TemporaryDirectory() as directory:
+            target, data = self.fixture(directory)
+            with self.assertRaisesRegex(ValueError, 'package list'):
+                setup.verify_bundle(directory, target, 'redis')
+
     def test_online_requires_explicit_selection(self):
         with patch.object(setup, 'run') as run:
             setup.install_packages(dict(family='rhel'), None, online=True)

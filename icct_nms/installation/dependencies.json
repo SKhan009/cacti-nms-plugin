@@ -137,7 +137,8 @@
     "SSH": {
       "binaries": {
         "SSH terminal backend": [
-          "guacd"
+          "guacd",
+          "/opt/nms-guacamole/1.6.0/sbin/guacd"
         ]
       },
       "services": [
@@ -147,7 +148,10 @@
         "protocols/ssh/vendor/autoload.php",
         "protocols/ssh/assets/guacamole-1.6.0.js"
       ],
-      "note": "Requires the bundled strict-auth patch, an HTTPS origin and a private service account. A stock guacd package alone is insufficient; see protocols/ssh/README.md."
+      "note": "Requires the bundled strict-auth patch, an HTTPS origin and a private service account. A stock guacd package alone is insufficient; see protocols/ssh/README.md.",
+      "root_binaries": [
+        "SSH terminal backend"
+      ]
     },
     "Diagnostics": {
       "binaries": {
@@ -197,7 +201,104 @@
     }
   },
   "pending_features": {
-    "NTP monitoring": "Protocol monitoring backend is not implemented. Installing chrony supplies OS clock synchronization only; existing time sources are preserved.",
-    "TACACS+": "Protocol backend is not implemented. No package installation can enable this feature yet."
+    "NTP monitoring": "Node sync status, source, offset, jitter and delay collection is not implemented.",
+    "TACACS+": "Plugin authentication integration is not implemented."
+  },
+  "optional_components": {
+    "redis": {
+      "label": "Redis",
+      "packages": {
+        "rhel": [
+          "redis"
+        ],
+        "debian": [
+          "redis-server"
+        ]
+      },
+      "binaries": [
+        "redis-server"
+      ],
+      "note": "Cache / messaging dependency. Plugin integration pending."
+    },
+    "websocket": {
+      "label": "WebSocket runtime",
+      "packages": {
+        "rhel": [
+          "python3-websockets"
+        ],
+        "debian": [
+          "python3-websockets"
+        ]
+      },
+      "note": "Python WebSocket library. An application endpoint and HTTPS configuration are separate."
+    },
+    "ntp": {
+      "label": "NTP tools",
+      "packages": {
+        "rhel": [
+          "chrony"
+        ],
+        "debian": [
+          "chrony"
+        ]
+      },
+      "binaries": [
+        "chronyc"
+      ],
+      "note": "Clock tools installed separately from NTP node monitoring. Existing time sources are preserved."
+    },
+    "tacacs": {
+      "label": "TACACS+ tools",
+      "packages": {
+        "rhel": [
+          "tacacs"
+        ],
+        "debian": [
+          "libauthen-tacacsplus-perl"
+        ]
+      },
+      "binaries": {
+        "rhel": [
+          "tac_plus"
+        ],
+        "debian": []
+      },
+      "note": "RHEL server tools / Debian client library. Plugin authentication integration pending; no PAM changes."
+    },
+    "guacamole": {
+      "label": "Apache Guacamole",
+      "packages": {
+        "rhel": [
+          "guacd"
+        ],
+        "debian": []
+      },
+      "binaries": [
+        "guacd",
+        "/opt/nms-guacamole/1.6.0/sbin/guacd"
+      ],
+      "note": "Native daemon dependency. Strict-auth patch, SSH broker and HTTPS are required separately. Debian requires an approved native build."
+    },
+    "transfer": {
+      "label": "FTP / TFTP / Telnet tools",
+      "packages": {
+        "rhel": [
+          "lftp",
+          "tftp",
+          "telnet"
+        ],
+        "debian": [
+          "lftp",
+          "tftp-hpa",
+          "telnet"
+        ]
+      },
+      "binaries": [
+        "lftp",
+        "tftp",
+        "telnet"
+      ],
+      "note": "Protocol clients only. Device workflows and server configuration are separate."
+    }
   }
 }
