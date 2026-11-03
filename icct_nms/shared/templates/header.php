@@ -25,7 +25,7 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
             --icct-severity-<?= strtolower($severity) ?>: <?= $color ?>;
         <?php endforeach; ?>}</style>
         <script>const icctSeverityColors = Object.freeze(<?= json_encode(icct_nms_severity_colors(), JSON_THROW_ON_ERROR) ?>);</script>
-        <script src="shared/js/navigation.js"></script>
+        <script src="shared/js/navigation.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../js/navigation.js'), 0, 12) ?>"></script>
         <script src="shared/js/browser-utils.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../js/browser-utils.js'), 0, 12) ?>"></script>
         <title><?= icct_nms_h($title) ?> · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
@@ -49,7 +49,12 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
                     <a href="dashboard/topology/controllers/topology_configuration.php">Topology Configuration</a>
                     <a href="protocols/snmp/mibs/controllers/mib_repository.php">MIB Repository</a>
                     <a href="presets/controllers/presets.php#segment">Presets</a>
-                    <?php if(is_realm_allowed(26)): ?><details class="installation-settings-menu"><summary>Settings</summary><a href="installation/controllers/installation.php">Installation Checks</a></details><?php endif; ?>
+                    <?php if(is_realm_allowed(26)): ?><div class="installation-settings-menu">
+                            <button type="button" class="settings-menu-trigger" aria-expanded="false" aria-controls="settings-submenu">Settings</button>
+                            <div class="settings-submenu" id="settings-submenu" hidden>
+                                <a href="installation/controllers/installation.php">Installation Checks</a>
+                            </div>
+                        </div><?php endif; ?>
                 </nav>
             </div>
             <div class="brand">

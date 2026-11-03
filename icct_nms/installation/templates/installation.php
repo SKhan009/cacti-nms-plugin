@@ -1,10 +1,10 @@
-<section class="topology-configuration">
+<section class="topology-configuration installation-checks">
 <div class="titlebar"><div><p>Settings / Installation Checks</p><h1>Installation Checks</h1></div><a class="button" href="installation/controllers/installation.php">Refresh checks</a></div>
-<table class="action-table site-table"><thead><tr><th>Feature</th><th>Component</th><th>Status</th><th>Details</th><th>Actions</th></tr></thead><tbody>
+<div class="installation-table-wrap"><table class="action-table site-table installation-table"><colgroup><col class="installation-feature"><col class="installation-component"><col class="installation-status"><col class="installation-detail"><col class="installation-actions"></colgroup><thead><tr><th>Feature</th><th>Component</th><th>Status</th><th>Details</th><th>Actions</th></tr></thead><tbody>
 <?php foreach ($checks as $check): $installAction=icct_nms_installation_action($check); ?>
 <tr><td><?= icct_nms_h($check['feature']) ?></td><td><?= icct_nms_h($check['item']) ?></td><td><span class="device-status <?= in_array($check['status'],['Ready','Installed'],true)?'online':'other' ?>"><?= icct_nms_h($check['status']) ?></span></td><td><?= icct_nms_h($check['detail']) ?></td><td><?php if($installAction): ?><button type="button" class="button primary" data-install-action="<?= icct_nms_h($installAction) ?>" data-install-component="<?= icct_nms_h($check['item']) ?>" aria-label="Install <?= icct_nms_h($check['item']) ?>">Install</button><?php endif; ?></td></tr>
 <?php endforeach; ?>
-</tbody></table>
+</tbody></table></div>
 <dialog id="installation-dialog" aria-labelledby="installation-dialog-title">
 <div class="message-heading"><h2 id="installation-dialog-title">Install component</h2><button type="button" data-install-close aria-label="Close installation">×</button></div>
 <div data-install-help="packages" hidden><p>Run one option as administrator on this collector, then refresh checks.</p><p>Online</p><pre><?= icct_nms_h($command.' --online') ?></pre><p>Offline package bundle</p><pre><?= icct_nms_h($command.' --bundle /path/to/bundle') ?></pre><p>Packages already provisioned</p><pre><?= icct_nms_h($command.' --no-packages') ?></pre></div>

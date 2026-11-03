@@ -3256,5 +3256,64 @@ h1, h2, h3, h4, h5, h6 { line-height: 1.25; }
 
 #netflow-chart{height:240px;min-height:200px}
 
-.installation-settings-menu>summary{padding:12px 16px;cursor:pointer}.installation-settings-menu>a{padding-left:32px}
+.installation-settings-menu {
+    position: relative;
+}
+.settings-menu-trigger {
+    display: block;
+    width: 100%;
+    border: 0;
+    padding: 12px 16px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.settings-menu-trigger:hover,
+.settings-menu-trigger[aria-expanded='true'] {
+    background: #e5e5e5;
+}
+.settings-submenu {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    width: 220px;
+    max-width: calc(100vw - 220px);
+    background: #fff;
+    border: 1px solid var(--line);
+    box-shadow: 0 4px 14px #0003;
+}
+.settings-submenu[hidden] {
+    display: none;
+}
+.installation-checks > .titlebar {
+    height: auto;
+    min-height: 80px;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.installation-checks > .titlebar p {
+    margin: 0 0 8px;
+    font-size: 12px;
+    color: var(--muted);
+}
+.installation-table-wrap {
+    overflow-x: auto;
+}
+.installation-table {
+    min-width: 760px;
+}
+.installation-feature { width: 13%; }
+.installation-component { width: 23%; }
+.installation-status { width: 12%; }
+.installation-detail { width: 42%; }
+.installation-actions { width: 10%; }
+.icct-inventory table.installation-table > tbody > tr > td {
+    vertical-align: middle;
+}
+.installation-table .device-status {
+    white-space: nowrap;
+}
+
 #installation-dialog{max-width:min(800px,calc(100vw - 48px))}#installation-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere}
