@@ -1,0 +1,1688 @@
+(() => {
+    'use strict';
+    const review = document.querySelector('#mibReview');
+    const objects = [...document.querySelectorAll('[data-mib-object]')],
+        objectSearch = document.querySelector('[data-mib-search]'),
+        pager = document.querySelector('[data-mib-pagination]');
+    let objectPage = 1,
+        matches = objects;
+    function renderObjects() {
+        if (!pager) return;
+        const size = pager.querySelector('[data-mib-size]').value,
+            limit = size === 'all' ? Math.max(1, matches.length) : Number(size),
+            pages = Math.max(1, Math.ceil(matches.length / limit));
+        objectPage = Math.max(1, Math.min(objectPage, pages));
+        objects.forEach((object) => (object.hidden = true));
+        matches
+            .slice((objectPage - 1) * limit, objectPage * limit)
+            .forEach((object) => (object.hidden = false));
+        pager.querySelector('[data-mib-range]').textContent =
+            (matches.length
+                ? `${(objectPage - 1) * limit + 1}–${Math.min(objectPage * limit, matches.length)}`
+                : '0') + ` of ${matches.length} objects`;
+        pager
+            .querySelector('[data-mib-page]')
+            .replaceChildren(
+                ...Array.from(
+                    { length: pages },
+                    (_, i) => new Option(String(i + 1), String(i + 1), false, i + 1 === objectPage),
+                ),
+            );
+        pager.querySelector('[data-mib-pages]').textContent = `of ${pages} pages`;
+        pager.querySelector('[data-mib-prev]').disabled = objectPage === 1;
+        pager.querySelector('[data-mib-next]').disabled = objectPage === pages;
+    }
+    function filterObjects() {
+        objectPage = 1;
+        matches = objects.filter((object) =>
+            object.textContent
+                .toLowerCase()
+                .includes(objectSearch?.value.trim().toLowerCase() || ''),
+        );
+        renderObjects();
+    }
+    if (pager) {
+        pager.querySelector('[data-mib-size]').addEventListener('change', () => {
+            objectPage = 1;
+            renderObjects();
+        });
+        pager.querySelector('[data-mib-page]').addEventListener('change', (e) => {
+            objectPage = Number(e.target.value);
+            renderObjects();
+        });
+        pager.querySelector('[data-mib-prev]').addEventListener('click', () => {
+            objectPage--;
+            renderObjects();
+        });
+        pager.querySelector('[data-mib-next]').addEventListener('click', () => {
+            objectPage++;
+            renderObjects();
+        });
+    }
+    objectSearch?.addEventListener('input', filterObjects);
+    filterObjects();
+    if (review) {
+        review.querySelectorAll('[data-mib-color]').forEach((control) => {
+            const picker = control.querySelector('[data-mib-color-picker]'),
+                hex = control.querySelector('[data-mib-color-hex]');
+            picker.addEventListener('input', () => {
+                hex.value = picker.value.slice(1).toUpperCase();
+                hex.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+            hex.addEventListener('input', () => {
+                if (/^[a-fA-F0-9]{6}$/.test(hex.value)) picker.value = '#' + hex.value;
+            });
+        });
+        const eligible = objects.filter(
+                (object) => !object.querySelector('summary input').disabled,
+            ),
+            all = review.querySelector('[data-mib-select-all]');
+        function selection() {
+            const count = eligible.filter(
+                (object) => object.querySelector('summary input').checked,
+            ).length;
+            all.checked = count > 0 && count === eligible.length;
+            all.indeterminate = count > 0 && count < eligible.length;
+            all.disabled = eligible.length === 0;
+            review.querySelector('[data-mib-selected-count]').textContent =
+                `${count} of ${eligible.length} numeric objects selected`;
+        }
+        function toggle(object) {
+            const checked = object.querySelector('summary input').checked;
+            object
+                .querySelectorAll('.mib-object-body input,.mib-object-body select')
+                .forEach((input) => (input.disabled = !checked));
+        }
+        objects.forEach((object) => {
+            const checkbox = object.querySelector('summary input');
+            checkbox.addEventListener('click', (e) => e.stopPropagation());
+            checkbox.addEventListener('change', () => {
+                toggle(object);
+                selection();
+            });
+            toggle(object);
+            const index = object.querySelector('[data-mib-index]'),
+                oid = object.querySelector('[data-base-oid]');
+            index?.addEventListener('input', () => {
+                oid.value = index.value.trim()
+                    ? oid.dataset.baseOid + '.' + index.value.trim()
+                    : oid.dataset.baseOid;
+                oid.setCustomValidity('');
+                oid.removeAttribute('aria-invalid');
+                oid.closest('.field')?.querySelector('.inline-feedback')?.remove();
+            });
+            oid?.addEventListener('input', () => {
+                oid.setCustomValidity('');
+                if (index)
+                    index.value = oid.value.startsWith(oid.dataset.baseOid + '.')
+                        ? oid.value.slice(oid.dataset.baseOid.length + 1)
+                        : '';
+            });
+        });
+        function setSelection(rows, checked) {
+            rows.forEach((object) => {
+                object.querySelector('summary input').checked = checked;
+                toggle(object);
+            });
+            selection();
+        }
+        all.addEventListener('change', () => setSelection(eligible, all.checked));
+        review.querySelector('[data-mib-select-filtered]').addEventListener('click', () =>
+            setSelection(
+                eligible.filter((object) => matches.includes(object)),
+                true,
+            ),
+        );
+        review
+            .querySelector('[data-mib-clear]')
+            .addEventListener('click', () => setSelection(eligible, false));
+        selection();
+        const graph = review.querySelector('[name="create_graph"]'),
+            data = review.querySelector('[name="create_data"]');
+        graph.addEventListener('change', () => {
+            if (graph.checked) data.checked = true;
+        });
+        data.addEventListener('change', () => {
+            if (!data.checked) graph.checked = false;
+        });
+        // Hidden pages remain in the form. Pack all selected edits before disabling individual fields.
+        function reveal(object, input) {
+            objectSearch.value = '';
+            matches = objects;
+            const limit = pager.querySelector('[data-mib-size]').value;
+            objectPage =
+                limit === 'all' ? 1 : Math.floor(objects.indexOf(object) / Number(limit)) + 1;
+            renderObjects();
+            object.open = true;
+            input.reportValidity();
+            input.focus();
+        }
+        review.addEventListener('submit', (event) => {
+            if (event.submitter?.value === 'discard') {
+                objects.forEach((object) =>
+                    object
+                        .querySelectorAll('input,select')
+                        .forEach((input) => (input.disabled = true)),
+                );
+                return;
+            }
+            for (const object of eligible) {
+                if (!object.querySelector('summary input').checked) continue;
+                const oid = object.querySelector('[data-base-oid]'),
+                    index = object.querySelector('[data-mib-index]');
+                oid.value = oid.value.trim().replace(/^\./, '');
+                if (
+                    index &&
+                    oid.value !== oid.dataset.baseOid &&
+                    oid.value !== '' &&
+                    (!oid.value.startsWith(oid.dataset.baseOid + '.') ||
+                        !/^\d+(?:\.\d+)*$/.test(oid.value.slice(oid.dataset.baseOid.length + 1)))
+                ) {
+                    event.preventDefault();
+                    oid.setCustomValidity(
+                        'Enter a numeric instance index or keep the base OID for a reusable template.',
+                    );
+                    reveal(object, oid);
+                    return;
+                }
+            }
+            for (const input of review.querySelectorAll('input,select')) {
+                if (input.disabled || input.checkValidity()) continue;
+                event.preventDefault();
+                const object = input.closest('[data-mib-object]');
+                if (object) reveal(object, input);
+                else {
+                    input.reportValidity();
+                    input.focus();
+                }
+                return;
+            }
+            const payload = { selected: {}, records: {} };
+            for (const [name, value] of new FormData(review)) {
+                let match = name.match(/^selected\[(\d+)\]$/);
+                if (match) {
+                    payload.selected[match[1]] = value;
+                    continue;
+                }
+                match = name.match(/^records\[(\d+)\]\[(\w+)\]$/);
+                if (match) {
+                    payload.records[match[1]] ??= {};
+                    payload.records[match[1]][match[2]] = value;
+                }
+            }
+            let packed = review.querySelector('[name="review_payload"]');
+            if (!packed) {
+                packed = document.createElement('input');
+                packed.type = 'hidden';
+                packed.name = 'review_payload';
+                review.append(packed);
+            }
+            packed.value = JSON.stringify(payload);
+            objects.forEach((object) =>
+                object.querySelectorAll('input,select').forEach((input) => (input.disabled = true)),
+            );
+        });
+    }
+})();
+
+(() => {
+    'use strict';
+    const form = document.querySelector('#mibGenerationForm');
+    if (!form) return;
+    const button = document.querySelector('#mibGenerate'),
+        progress = document.querySelector('#mibGenerationProgress'),
+        status = document.querySelector('#mibGenerationStatus'),
+        bar = document.querySelector('#mibGenerationBar'),
+        error = document.querySelector('#mibGenerationError'),
+        spinner = document.querySelector('.mib-generation-spinner');
+    let busy = false;
+    if (!button) return; // A committed stage has results and navigation, no generation action.
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (busy || button.disabled) return;
+        busy = true;
+        button.disabled = true;
+        error.hidden = true;
+        document.querySelector('[data-prepared-review]')?.setAttribute('hidden', '');
+        progress.classList.remove('complete');
+        progress.hidden = false;
+        progress.setAttribute('aria-busy', 'true');
+        spinner.hidden = false;
+        bar.removeAttribute('value');
+        status.textContent = 'Please wait till the generation completes.';
+        document.querySelector('#mibGenerationCaption').textContent =
+            'Preparing definitions in this session…';
+        const body = new FormData(form);
+        body.set('generation_response', 'json');
+        if (form.dataset.commitAfterSave === '1') {
+            body.set('commit_after_save', '1');
+            delete form.dataset.commitAfterSave;
+        }
+        if (form.dataset.nextAfterSave === '1') {
+            body.set('next_after_save', '1');
+            delete form.dataset.nextAfterSave;
+        }
+        if (body.has('prepared_review')) {
+            const records = {};
+            const choices = [...form.querySelectorAll('[data-prepared-select]:not(:disabled)')];
+            if (choices.length)
+                body.set(
+                    'prepared_selection',
+                    JSON.stringify(
+                        Object.fromEntries(
+                            choices
+                                .filter((box) => box.checked)
+                                .map((box) => [box.dataset.preparedSelect, 1]),
+                        ),
+                    ),
+                );
+            for (const [name, value] of [...body.entries()]) {
+                const match = /^records\[(\d+)\]\[([a-z_]+)\]$/.exec(name);
+                if (match) {
+                    if (
+                        choices.length &&
+                        !choices.some(
+                            (box) => box.dataset.preparedSelect === match[1] && box.checked,
+                        )
+                    ) {
+                        body.delete(name);
+                        continue;
+                    }
+                    (records[match[1]] ??= {})[match[2]] = value;
+                    body.delete(name);
+                }
+            }
+            body.set('prepared_records', JSON.stringify(records));
+        }
+
+        try {
+            const response = await fetch(new URL(form.getAttribute('action'), document.baseURI), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json' },
+                body,
+            });
+            if (
+                !response.ok ||
+                !response.headers.get('content-type')?.includes('application/x-ndjson') ||
+                !response.body
+            ) {
+                if (response.headers.get('content-type')?.includes('application/json')) {
+                    const failure = await response.json();
+                    throw Error(failure.error || 'Could not save this step.');
+                }
+                throw Error(
+                    'Could not read generation progress. Reopen the MIB Repository to check your session.',
+                );
+            }
+            const reader = response.body.getReader(),
+                decoder = new TextDecoder(),
+                list = document.querySelector('#mibGenerationResults'),
+                count = document.querySelector('#mibGenerationCount');
+            list.replaceChildren();
+            let pending = '',
+                destination = null;
+            function update(event) {
+                if (event.event === 'error') throw Error(event.message);
+                if (event.event === 'status') status.textContent = event.message;
+                if (event.event === 'start') {
+                    bar.value = 0;
+                    count.textContent = '0 / ' + event.total + ' prepared';
+                }
+                if (event.event === 'item') {
+                    bar.value = (event.completed / event.total) * 100;
+                    count.textContent = event.completed + ' / ' + event.total + ' prepared';
+                    const item = document.createElement('li'),
+                        check = document.createElement('span');
+                    check.className = 'mib-generation-check';
+                    check.textContent = '✓';
+                    item.append(
+                        check,
+                        document.createTextNode(
+                            event.result.kind +
+                                ' Prepared “' +
+                                event.result.name +
+                                (event.result.oid ? ' (' + event.result.oid + ')' : '') +
+                                '”',
+                        ),
+                    );
+                    list.append(item);
+                    status.textContent =
+                        'Preparing ' + event.result.kind + ': ' + event.result.name;
+                }
+                if (event.event === 'complete') destination = event.redirect;
+            }
+            while (true) {
+                const chunk = await reader.read();
+                pending += decoder.decode(chunk.value || new Uint8Array(), { stream: !chunk.done });
+                let end;
+                while ((end = pending.indexOf('\n')) >= 0) {
+                    const line = pending.slice(0, end);
+                    pending = pending.slice(end + 1);
+                    if (line.trim()) update(JSON.parse(line));
+                }
+                if (chunk.done) break;
+            }
+            if (pending.trim()) update(JSON.parse(pending));
+            if (!destination)
+                throw Error(
+                    'Preparation was interrupted. Retry Generate; no Cacti templates were saved.',
+                );
+            const next = new URL(destination, document.baseURI);
+            if (
+                next.origin !== location.origin ||
+                !next.pathname.endsWith('/protocols/snmp/mibs/controllers/mib_repository.php')
+            )
+                throw Error('Invalid generation destination.');
+            location.assign(next.href);
+        } catch (failure) {
+            document.querySelector('[data-prepared-review]')?.removeAttribute('hidden');
+            busy = false;
+            button.disabled = false;
+            spinner.hidden = true;
+            progress.hidden = true;
+            progress.setAttribute('aria-busy', 'false');
+            error.textContent = failure.message;
+            error.hidden = false;
+        }
+    });
+})();
+
+// Review the current stage's prepared definitions without creating Cacti objects.
+(() => {
+    'use strict';
+    const review = document.querySelector('[data-prepared-review]');
+    if (!review || review.hasAttribute('data-device-review')) return;
+    if (!review.hasAttribute('data-graph-review')) {
+        const buttons = [...review.querySelectorAll('[data-prepared-open]')],
+            panels = [...review.querySelectorAll('[data-prepared-panel]')],
+            placeholder = review.querySelector('[data-prepared-placeholder]');
+        function close() {
+            buttons.forEach((button) => {
+                button.classList.remove('selected');
+                button.setAttribute('aria-pressed', 'false');
+            });
+            panels.forEach((panel) => (panel.hidden = true));
+            placeholder.hidden = false;
+        }
+        buttons.forEach((button) =>
+            button.addEventListener('click', () => {
+                close();
+                button.classList.add('selected');
+                button.setAttribute('aria-pressed', 'true');
+                panels.find(
+                    (panel) => panel.dataset.preparedPanel === button.dataset.preparedOpen,
+                ).hidden = false;
+                placeholder.hidden = true;
+            }),
+        );
+        review.querySelectorAll('[data-prepared-choice]').forEach((choice) =>
+            choice.addEventListener('change', () => {
+                if (choice.checked)
+                    buttons
+                        .find(
+                            (button) =>
+                                button.dataset.preparedOpen === choice.dataset.preparedChoice,
+                        )
+                        .click();
+            }),
+        );
+        const initial = review.querySelector('[data-prepared-choice]:checked');
+        const first = initial
+            ? buttons.find(
+                  (button) => button.dataset.preparedOpen === initial.dataset.preparedChoice,
+              )
+            : buttons[0];
+        if (first) first.click();
+        review.querySelector('[data-prepared-search]').addEventListener('input', (event) => {
+            const query = event.target.value.trim().toLowerCase();
+            buttons.forEach((button) => {
+                const panel = panels.find(
+                    (panel) => panel.dataset.preparedPanel === button.dataset.preparedOpen,
+                );
+                button.hidden = !panel.dataset.preparedSearchText.includes(query);
+                button.closest('[data-prepared-row]').hidden = button.hidden;
+            });
+            const active = buttons.find(
+                (button) => button.classList.contains('selected') && !button.hidden,
+            );
+            const visible = active || buttons.find((button) => !button.hidden);
+            review.querySelector('[data-prepared-empty]').hidden = !!visible;
+            if (visible) visible.click();
+            else close();
+        });
+    }
+    const fields = [
+            ...review.querySelectorAll(
+                'input[name]:not([data-prepared-radio]), select[name], textarea[name], [data-prepared-select]:not(:disabled)',
+            ),
+        ],
+        fieldValue = (field) => (field.type === 'checkbox' ? field.checked : field.value),
+        original = new Map(fields.map((field) => [field, fieldValue(field)])),
+        generate = document.querySelector('#mibGenerate');
+    const ack = document.querySelector('[data-session-save-ack]'),
+        confirmation = document.querySelector('[data-session-save]');
+    const add = document.querySelector('#mibAddForm [value=add_generated]');
+    const isDirty = () => fields.some((field) => fieldValue(field) !== original.get(field));
+    function updateNext() {
+        const dirty = isDirty();
+        if (add && review.hasAttribute('data-graph-review')) {
+            add.disabled = generate?.dataset.completed !== '1';
+            add.textContent = dirty ? 'Save' : add.dataset.defaultLabel || 'Add';
+        }
+        document.querySelectorAll('a.mib-generation-next').forEach((link) => {
+            const blocked = dirty && !ack?.checked;
+            if (blocked) {
+                link.setAttribute('aria-disabled', 'true');
+                link.title = 'Confirm the checkbox to save changes with Next.';
+            } else {
+                link.removeAttribute('aria-disabled');
+                link.removeAttribute('title');
+            }
+        });
+    }
+    review.addEventListener('input', (event) => {
+        if (
+            event.target.matches('[data-prepared-radio]') ||
+            (!event.target.name && !event.target.matches('[data-prepared-select]'))
+        )
+            return;
+        const dirty = isDirty();
+        if (generate?.dataset.completed === '1') generate.hidden = true;
+        if (confirmation) confirmation.hidden = !dirty;
+        if (ack) ack.checked = false;
+        updateNext();
+    });
+    if (
+        add &&
+        (review.hasAttribute('data-graph-review') ||
+            document.querySelector('#mibGenerationForm')?.dataset.savedEdit === '1')
+    )
+        document.querySelector('#mibAddForm').addEventListener('submit', (event) => {
+            if (
+                event.submitter !== add ||
+                (!isDirty() &&
+                    document.querySelector('#mibGenerationForm')?.dataset.savedEdit !== '1')
+            )
+                return;
+            event.preventDefault();
+            const form = document.querySelector('#mibGenerationForm');
+            if (!form.reportValidity()) return;
+            form.dataset.commitAfterSave = '1';
+            form.requestSubmit();
+        });
+    if (ack) ack.addEventListener('change', updateNext);
+    document.querySelectorAll('a.mib-generation-next').forEach((link) =>
+        link.addEventListener('click', (event) => {
+            if (!isDirty()) return;
+            event.preventDefault();
+            if (!ack?.checked) {
+                const error = document.querySelector('#mibGenerationError');
+                error.hidden = false;
+                error.textContent = 'Confirm the checkbox to save changes with Next.';
+                return;
+            }
+            const form = document.querySelector('#mibGenerationForm');
+            form.dataset.nextAfterSave = '1';
+            form.requestSubmit();
+        }),
+    );
+})();
+
+// Cacti and fault settings share one session review, with explicit generation.
+(() => {
+    'use strict';
+    document.querySelectorAll('[data-prepared-panel]').forEach((panel) => {
+        panel.querySelectorAll('[data-editor-tab]').forEach((tab) =>
+            tab.addEventListener('click', () => {
+                panel
+                    .querySelectorAll('[data-editor-tab]')
+                    .forEach((item) => item.setAttribute('aria-selected', String(item === tab)));
+                panel
+                    .querySelectorAll('[data-editor-pane]')
+                    .forEach(
+                        (pane) => (pane.hidden = pane.dataset.editorPane !== tab.dataset.editorTab),
+                    );
+            }),
+        );
+        const active = panel.querySelector('[data-source-active]');
+        if (active)
+            active.addEventListener('change', () => {
+                const value = active.parentElement.querySelector('input[type=hidden]');
+                value.value = active.checked ? '1' : '0';
+                active.parentElement.querySelector('span').textContent = active.checked
+                    ? 'Enabled'
+                    : 'Disabled';
+                value.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+        const faults = panel.querySelector('[data-prepared-faults]');
+        if (!faults) return;
+        const list = faults.querySelector('[data-prepared-fault-list]'),
+            payload = faults.querySelector('[data-prepared-fault-payload]'),
+            template = faults.querySelector('template');
+        function indicator() {
+            const marker = document.querySelector(
+                '[data-prepared-open="' +
+                    panel.dataset.preparedPanel +
+                    '"] [data-prepared-fault-indicator]',
+            );
+            if (!marker) return;
+            const count = list.children.length;
+            marker.hidden = count === 0;
+            marker.setAttribute('aria-label', count + ' fault presets available');
+            marker.dataset.tooltip = count + ' fault presets available';
+        }
+        function sync() {
+            indicator();
+            faults.querySelector('[data-fault-reviewed]').value = '1';
+            payload.value = JSON.stringify(
+                [...list.children].map((card) =>
+                    Object.fromEntries(
+                        [...card.querySelectorAll('[data-rule]')].map((field) => [
+                            field.dataset.rule,
+                            field.type === 'checkbox' ? field.checked : field.value,
+                        ]),
+                    ),
+                ),
+            );
+            payload.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        function read(card) {
+            return Object.fromEntries(
+                [...card.querySelectorAll('[data-rule]')].map((field) => [
+                    field.dataset.rule,
+                    field.type === 'checkbox' ? field.checked : field.value,
+                ]),
+            );
+        }
+        function display(card) {
+            const rule = read(card);
+            card.querySelectorAll('[data-rule-counter]').forEach((counter) => {
+                const field = card.querySelector(
+                    '[data-rule="' + counter.dataset.ruleCounter + '"]',
+                );
+                counter.textContent = field.value.length + '/' + field.maxLength;
+            });
+            const names = {
+                above: '>',
+                below: '<',
+                at_or_above: '≥',
+                at_or_below: '≤',
+                equals: '=',
+                not_equals: '≠',
+            };
+            card.querySelector('[data-rule-title]').textContent = rule.name || 'New Fault';
+            const status = card.querySelector('[data-rule-status]');
+            status.textContent = rule.enabled ? 'Enabled' : 'Disabled';
+            status.classList.toggle('enabled', !!rule.enabled);
+            card.querySelector('[data-rule-enabled-label]').textContent = status.textContent;
+            card.querySelectorAll('[data-rule-preview]').forEach((cell) => {
+                const key = cell.dataset.rulePreview;
+                cell.textContent =
+                    key === 'condition'
+                        ? names[rule.condition]
+                        : key === 'threshold'
+                          ? rule.threshold === ''
+                              ? 'Not configured'
+                              : rule.threshold
+                          : rule[key] || '—';
+                if (key === 'severity') {
+                    cell.dataset.severity = rule.severity;
+                    cell.textContent =
+                        { Information: 'Info', Warning: 'Warn' }[rule.severity] || rule.severity;
+                }
+            });
+        }
+        function edit(card, on) {
+            card.classList.toggle('editing', on);
+            card.querySelector('[data-rule=name]').hidden = !on;
+            card.querySelector('[data-rule-title]').hidden = on;
+            card.querySelector('[data-rule-status]').hidden = on;
+            card.querySelector('[data-prepared-fault-remove]').hidden = on;
+            card.querySelector('[data-rule-fields]').hidden = !on;
+            card.querySelector('[data-rule-summary]').hidden = on;
+            card.querySelector('[data-rule-save]').hidden = !on;
+            card.querySelector('[data-rule-edit]').hidden = on;
+            card.querySelector('[data-rule-error]').hidden = true;
+        }
+        function add(rule = {}, editing = false) {
+            const card = template.content.firstElementChild.cloneNode(true);
+            card.querySelectorAll('[data-rule]').forEach((field) => {
+                if (field.type === 'checkbox') field.checked = !!rule[field.dataset.rule];
+                else if (rule[field.dataset.rule] !== undefined)
+                    field.value = rule[field.dataset.rule];
+                field.addEventListener('input', () => {
+                    display(card);
+                    sync();
+                });
+            });
+            card.querySelector('[data-prepared-fault-remove]').addEventListener(
+                'click',
+                async (event) => {
+                    const button = event.currentTarget;
+                    if (button.disabled) return;
+                    button.disabled = true;
+                    try {
+                        const accepted = await icctShowMessage({
+                            title: 'Delete fault rule',
+                            text:
+                                'Delete “' +
+                                (read(card).name || 'New Fault') +
+                                '” from this configuration? Changes are saved when you choose Next.',
+                            confirm: true,
+                            danger: true,
+                            accept: 'Delete',
+                        });
+                        if (!accepted) return;
+                        card.remove();
+                        sync();
+                        faults.querySelector('[data-prepared-fault-empty]').hidden =
+                            list.children.length > 0;
+                    } finally {
+                        button.disabled = false;
+                    }
+                },
+            );
+            const rename = () => {
+                edit(card, true);
+                const name = card.querySelector('[data-rule=name]');
+                name.focus();
+                name.select();
+            };
+            card.querySelector('[data-rule-title]').addEventListener('click', rename);
+            card.querySelector('[data-rule-edit]').addEventListener('click', rename);
+            card.querySelector('[data-rule=name]').addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    card.querySelector('[data-rule-save]').click();
+                }
+            });
+            card.querySelector('[data-rule-save]').addEventListener('click', () => {
+                const value = read(card),
+                    error = card.querySelector('[data-rule-error]');
+                if (
+                    !value.name.trim() ||
+                    (value.enabled &&
+                        (value.threshold === '' || !Number.isFinite(Number(value.threshold))))
+                ) {
+                    error.textContent = !value.name.trim()
+                        ? 'Enter an alarm name.'
+                        : 'Enter a numeric threshold before enabling this alarm.';
+                    error.hidden = false;
+                    return;
+                }
+                card.querySelector('[data-rule=name]').value = value.name.trim();
+                display(card);
+                sync();
+                edit(card, false);
+            });
+            list.append(card);
+            display(card);
+            edit(card, editing);
+            faults.querySelector('[data-prepared-fault-empty]').hidden = true;
+            indicator();
+        }
+
+        JSON.parse(payload.value).forEach((rule) => add(rule));
+        faults.querySelector('[data-prepared-fault-add]').addEventListener('click', () => {
+            if (list.children.length >= 8) return;
+            add({}, true);
+            sync();
+        });
+    });
+})();
+
+// Reuse the project's floating tooltip layer for MIB field help.
+(() => {
+    'use strict';
+    if (!document.querySelector('[data-prepared-review]')) return;
+    const help = {
+        data_name:
+            'Name of the Cacti data source template prepared for this OID. The name must be unique.',
+        collection_method:
+            'Collection methods are loaded from the installed Cacti core. Indexed SNMP discovers table instances; SNMP GET reads a specific instance.',
+        profile_id:
+            'An installed Cacti data source profile controls the collection interval and heartbeat.',
+        active: 'Enable or disable collection for data sources created from this template.',
+        oid: 'Read-only polling OID from the selected MIB definition. Specific table instances are configured using Instance Index.',
+        ds_type:
+            'GAUGE stores current values. COUNTER and DERIVE calculate rates; ABSOLUTE calculates a rate for counters reset after each read.',
+        units: 'Measurement units for the collected value, such as seconds or bytes. Keep blank when the MIB does not specify units.',
+        min: 'Minimum valid value stored in the RRD. U means unknown. This is a storage bound, not an alarm threshold.',
+        max: 'Maximum valid value stored in the RRD. U means unknown. This is a storage bound, not an alarm threshold.',
+        instance_index:
+            'For SNMP GET on a table, enter the numeric instance suffix. Indexed SNMP discovers ' +
+            'instances automatically and requires this field to remain blank.',
+        name: 'Name identifying this alarm preset for the selected OID.',
+        condition: 'Comparison applied to the collected value and the numeric alarm threshold.',
+        threshold:
+            'Numeric value used by this alarm. Zero is valid. A threshold is required before enabling the alarm.',
+        severity: 'Severity assigned when the alarm condition matches.',
+        enabled: 'Enable this configured preset when its graph template is applied to a device.',
+        description: 'Explanation of the alarm condition shown to the operator.',
+        corrective_action: 'Suggested action for the operator when this alarm occurs.',
+    };
+    function decorate(root) {
+        root.querySelectorAll('.field').forEach((field) => {
+            const label = field.querySelector('.field-label'),
+                control = field.querySelector('input:not([type=hidden]),select,textarea');
+            if (!label || !control || label.querySelector('.field-info')) return;
+            const key =
+                control.dataset.rule ||
+                (control.hasAttribute('data-source-active')
+                    ? 'active'
+                    : /\[([a-z_]+)\]$/.exec(control.name)?.[1]);
+            if (!help[key]) return;
+            const title = label.firstChild?.textContent.trim() || label.textContent.trim();
+            if (!control.hasAttribute('aria-label')) control.setAttribute('aria-label', title);
+            const icon = document.createElement('span');
+            icon.className = 'field-info';
+            icon.tabIndex = 0;
+            icon.setAttribute('role', 'img');
+            icon.setAttribute('aria-label', 'Information about ' + title);
+            icon.dataset.tooltip = help[key];
+            icon.innerHTML =
+                '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg>';
+            icon.addEventListener('click', (event) => event.preventDefault());
+            label.append(icon);
+        });
+    }
+    document.querySelectorAll('[data-prepared-panel]').forEach(decorate);
+    const observer = new MutationObserver((changes) => {
+        changes.forEach((change) =>
+            change.addedNodes.forEach((node) => {
+                if (node.nodeType === 1 && node.matches('.mib-fault-card')) decorate(node);
+            }),
+        );
+    });
+    document
+        .querySelectorAll('[data-prepared-fault-list]')
+        .forEach((list) => observer.observe(list, { childList: true }));
+})();
+
+// Renew only the active session's review lease; this never writes native templates.
+(() => {
+    'use strict';
+    const form = document.querySelector('#mibGenerationForm');
+    if (!form || !form.querySelector('[name=ready_token]')) return;
+    let lastActivity = Date.now(),
+        pending = false;
+    ['input', 'change', 'pointerdown', 'keydown'].forEach((type) =>
+        document.addEventListener(type, () => (lastActivity = Date.now()), { passive: true }),
+    );
+    setInterval(async () => {
+        if (pending || document.hidden || Date.now() - lastActivity > 300000) return;
+        pending = true;
+        try {
+            const body = new FormData();
+            ['ready_token', 'bundle_id', '__csrf_magic'].forEach((name) =>
+                body.set(name, form.querySelector('[name="' + name + '"]').value),
+            );
+            body.set('action', 'touch_review');
+            const response = await fetch(new URL(form.getAttribute('action'), document.baseURI), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json' },
+                body,
+            });
+            if (response.ok && response.headers.get('content-type')?.includes('application/json')) {
+                const result = await response.json();
+                if (result.ok && result.csrf)
+                    document
+                        .querySelectorAll('[name=__csrf_magic]')
+                        .forEach((field) => (field.value = result.csrf));
+            }
+        } catch (_) {
+            /* Next reports request failures without discarding entered settings. */
+        } finally {
+            pending = false;
+        }
+    }, 120000);
+})();
+
+// Each selected source belongs to one configurable graph template in this session.
+(() => {
+    'use strict';
+    const root = document.querySelector('[data-graph-review]:not([data-device-review])');
+    if (!root) return;
+    const model = JSON.parse(root.querySelector('[data-graph-model]').textContent),
+        sources = model.sources;
+    const list = root.querySelector('[data-graph-list]'),
+        editor = root.querySelector('[data-graph-editor]'),
+        search = root.querySelector('[data-graph-search]');
+    let groups = [],
+        active = 0,
+        editing = false;
+    const el = (tag, text, cls) => {
+        const n = document.createElement(tag);
+        if (text !== undefined) n.textContent = text;
+        if (cls) n.className = cls;
+        return n;
+    };
+    const field = (source, key) =>
+        root.querySelector('[data-source="' + source.index + '"][data-graph-field="' + key + '"]');
+    const value = (source, key) => field(source, key).value;
+    function set(source, key, v) {
+        field(source, key).value = String(v);
+        field(source, key).dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    function load() {
+        groups = [];
+        sources.forEach((source) => {
+            let group = groups.find((g) => g.name === value(source, 'graph_name'));
+            if (!group) {
+                group = { name: value(source, 'graph_name'), sources: [] };
+                groups.push(group);
+            }
+            group.sources.push(source);
+        });
+    }
+    load();
+    function updateList() {
+        list.replaceChildren();
+        root.querySelector('[data-graph-count]').textContent = groups.length;
+        groups.forEach((g, i) => {
+            const button = el(
+                'button',
+                undefined,
+                'mib-graph-list-item' + (i === active ? ' selected' : ''),
+            );
+            button.type = 'button';
+            button.title = g.name;
+            button.hidden = !g.name.toLowerCase().includes(search.value.trim().toLowerCase());
+            button.setAttribute('aria-pressed', String(i === active));
+            button.append(
+                el('span', g.name),
+                el('small', '[' + g.sources.length + ' Data Sources]'),
+            );
+            button.addEventListener('click', () => {
+                active = i;
+                render();
+            });
+            list.append(button);
+        });
+        root.querySelector('[data-graph-empty]').hidden = [...list.children].some((n) => !n.hidden);
+    }
+    function control(source, key, choices) {
+        const input = el(choices ? 'select' : 'input');
+        input.setAttribute('aria-label', source.record.label + ' ' + key.replaceAll('_', ' '));
+        if (choices)
+            Object.entries(choices).forEach(([id, label]) => {
+                const option = el('option', label);
+                option.value = id;
+                input.append(option);
+            });
+        else {
+            input.maxLength = key === 'color' ? 6 : 150;
+            if (key === 'color') input.pattern = '[a-fA-F0-9]{6}';
+        }
+        input.value = value(source, key);
+        input.addEventListener('input', () => set(source, key, input.value));
+        return input;
+    }
+    function extraItems(source) {
+        return JSON.parse(value(source, 'graph_items') || '[]');
+    }
+    function editItem(group, source = null, index = null) {
+        editor.querySelector('[data-graph-item-editor]')?.remove();
+        const panel = el('fieldset', undefined, 'mib-graph-item-editor');
+        panel.dataset.graphItemEditor = '';
+        panel.append(el('legend', index === null ? 'Add Graph Item' : 'Edit Graph Item'));
+        const sourceLabel = el('label', undefined, 'field');
+        sourceLabel.append(el('span', 'Data Source', 'field-label'));
+        const sourceSelect = el('select');
+        sourceSelect.setAttribute('aria-label', 'Graph Item Data Source');
+        group.sources.forEach((s) => {
+            const option = el('option', s.record.data_name);
+            option.value = s.index;
+            sourceSelect.append(option);
+        });
+        sourceSelect.value = (source || group.sources[0]).index;
+        sourceSelect.disabled = index !== null;
+        sourceLabel.append(sourceSelect);
+        panel.append(sourceLabel);
+        const grid = el('div', undefined, 'mib-core-graph-options'),
+            controls = {};
+        panel.append(grid);
+        const fill = (s) => {
+            const item =
+                index === null
+                    ? Object.fromEntries(
+                          Object.entries(model.itemFields).map(([key, f]) => [key, f.default]),
+                      )
+                    : extraItems(s)[index];
+            if (index === null) {
+                item.graph_type_id = value(s, 'graph_type');
+                item.consolidation_function_id = value(s, 'cf');
+                item.text_format = value(s, 'legend');
+                const color = Object.entries(model.itemFields.color_id?.choices || {}).find(
+                    ([, hex]) => hex === value(s, 'color'),
+                );
+                if (color) item.color_id = color[0];
+            }
+            Object.entries(controls).forEach(([key, input]) => {
+                if (input.type === 'checkbox') input.checked = item[key] === 'on';
+                else input.value = item[key] ?? '';
+            });
+        };
+        Object.entries(model.itemFields).forEach(([key, f]) => {
+            const label = el('label', undefined, 'field');
+            label.append(el('span', f.label, 'field-label'));
+            const input = el(f.choices ? 'select' : 'input');
+            input.setAttribute('aria-label', 'Graph Item ' + f.label);
+            if (f.help) input.title = f.help;
+            if (f.method === 'checkbox') {
+                input.type = 'checkbox';
+            } else if (f.choices) {
+                Object.entries(f.choices).forEach(([id, text]) => {
+                    const option = el('option', text);
+                    option.value = id;
+                    input.append(option);
+                });
+            } else input.maxLength = f.max_length;
+            controls[key] = input;
+            label.append(input);
+            grid.append(label);
+        });
+        fill(source || group.sources[0]);
+        sourceSelect.addEventListener('change', () =>
+            fill(group.sources.find((s) => String(s.index) === sourceSelect.value)),
+        );
+        const actions = el('div', undefined, 'mib-graph-toolbar'),
+            save = el('button', index === null ? 'Add Item' : 'Save Item', 'button primary'),
+            cancel = el('button', 'Cancel', 'button');
+        save.type = cancel.type = 'button';
+        cancel.addEventListener('click', () => panel.remove());
+        save.addEventListener('click', () => {
+            if (![...panel.querySelectorAll('input,select')].every((c) => c.reportValidity()))
+                return;
+            const selected = group.sources.find((s) => String(s.index) === sourceSelect.value),
+                items = extraItems(selected),
+                item = Object.fromEntries(
+                    Object.entries(controls).map(([key, input]) => [
+                        key,
+                        input.type === 'checkbox' ? (input.checked ? 'on' : '') : input.value,
+                    ]),
+                );
+            if (index === null) items.push(item);
+            else items[index] = item;
+            set(selected, 'graph_items', JSON.stringify(items));
+            render();
+        });
+        actions.append(cancel, save);
+        panel.append(actions);
+        editor.querySelector('.mib-graph-table-scroll').before(panel);
+        sourceSelect.focus();
+    }
+    function deleteButton(callback) {
+        const button = el('button', undefined, 'button mib-query-delete mib-graph-delete');
+        button.type = 'button';
+        button.setAttribute('aria-label', 'Delete graph item');
+        button.dataset.tooltip = 'Delete graph item';
+        button.innerHTML =
+            '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg>';
+        button.addEventListener('click', async () => {
+            if (
+                await icctShowMessage({
+                    title: 'Delete graph item',
+                    text: 'Delete this graph item from the prepared template?',
+                    confirm: true,
+                    danger: true,
+                    accept: 'Delete',
+                })
+            ) {
+                callback();
+                render();
+            }
+        });
+        return button;
+    }
+    function render() {
+        updateList();
+        editor.replaceChildren();
+        const group = groups[active];
+        if (!group) return;
+        const options = {
+            ...Object.fromEntries(
+                Object.entries(model.graphFields).map(([key, definition]) => [
+                    key,
+                    definition.default ?? '',
+                ]),
+            ),
+            multiple: model.flags.multiple ?? '',
+            test_source: model.flags.test_source ?? '',
+            ...JSON.parse(value(group.sources[0], 'graph_options')),
+        };
+        root.querySelectorAll('[data-graph-edit-only]').forEach((n) => (n.hidden = !editing));
+        const heading = el('header', undefined, 'mib-graph-heading');
+        heading.append(el('h2', group.name));
+        const edit = el('button', undefined, 'mib-graph-edit button');
+        edit.type = 'button';
+        edit.setAttribute('aria-label', editing ? 'Save graph template' : 'Edit graph template');
+        edit.dataset.tooltip = editing ? 'Save graph template changes' : 'Edit graph template';
+        edit.classList.toggle('saving', editing);
+        if (editing) edit.textContent = 'Save';
+        else
+            edit.innerHTML =
+                '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-1 5 5-1L20 8l-4-4L4 16zm10-10 4 4"/></svg>';
+        edit.addEventListener('click', () => {
+            if (editing) {
+                const controls = [...editor.querySelectorAll('input,select')];
+                const invalid = controls.find((control) => !control.checkValidity());
+                if (invalid) {
+                    invalid.reportValidity();
+                    return;
+                }
+                if (!group.name.trim()) {
+                    editor.querySelector('[aria-label="Graph Template Name"]').focus();
+                    return;
+                }
+                const form = document.querySelector('#mibGenerationForm');
+                if (form?.dataset.savedEdit === '1') {
+                    form.dataset.commitAfterSave = '1';
+                    form.requestSubmit();
+                    return;
+                }
+            }
+            editing = !editing;
+            render();
+        });
+        heading.append(edit);
+        editor.append(heading);
+        const title = el(
+            'h3',
+            editing ? 'Graph Template - ' + group.name : 'Graph Template Details',
+        );
+        if (!editing) editor.append(title);
+        const details = el('div', undefined, 'mib-graph-template-details'),
+            label = el('label', undefined, 'field');
+        label.append(el('span', 'Graph Template Name', 'field-label'));
+        const name = el('input');
+        name.value = group.name;
+        name.maxLength = 190;
+        name.required = true;
+        name.setAttribute('aria-label', 'Graph Template Name');
+        name.addEventListener('input', () => {
+            group.name = name.value;
+            group.sources.forEach((s) => set(s, 'graph_name', name.value));
+            editor.querySelector('h2').textContent = name.value;
+            updateList();
+        });
+        if (editing) label.append(name);
+        else label.append(el('p', group.name));
+        details.append(label);
+        for (const key of ['multiple', 'test_source']) {
+            const definition = model.graphFields[key];
+            if (!definition) continue;
+            const item = el('label', undefined, 'field');
+            item.append(el('span', definition.label, 'field-label'));
+            if (editing) {
+                const wrapper = el('span', undefined, 'mib-source-toggle'),
+                    input = el('input'),
+                    text = el('span', options[key] === 'on' ? 'Enabled' : 'Disabled');
+                input.type = 'checkbox';
+                input.setAttribute('role', 'switch');
+                input.setAttribute('aria-label', definition.label);
+                input.checked = options[key] === 'on';
+                input.addEventListener('change', () => {
+                    options[key] = input.checked ? 'on' : '';
+                    text.textContent = input.checked ? 'Enabled' : 'Disabled';
+                    group.sources.forEach((source) =>
+                        set(source, 'graph_options', JSON.stringify(options)),
+                    );
+                });
+                wrapper.append(input, text);
+                item.append(wrapper);
+            } else item.append(el('p', options[key] === 'on' ? 'Enabled' : 'Disabled'));
+            details.append(item);
+        }
+        if (!editing) editor.append(details);
+        const itemHeading = el(
+            'h3',
+            'Graph Template Items' + (editing ? ' [' + group.name + ']' : ''),
+        );
+        editor.append(itemHeading);
+        if (editing) {
+            const addItem = el('button', '+ Add Item', 'button');
+            addItem.type = 'button';
+            addItem.setAttribute('aria-label', 'Add Graph Item');
+            addItem.addEventListener('click', () => editItem(group));
+            const actions = el('div', undefined, 'mib-graph-toolbar mib-graph-item-add-actions');
+            actions.append(addItem);
+            editor.append(actions);
+        }
+        const scroll = el('div', undefined, 'mib-graph-table-scroll'),
+            table = el('table', undefined, 'mib-graph-items'),
+            thead = el('thead'),
+            head = el('tr');
+        [
+            'Graph Items',
+            'Data Source',
+            'Graph Item Type',
+            'CF Type',
+            'Min',
+            'Max',
+            'GPrint',
+            'CDEF',
+            'VDEF',
+            'Alpha %',
+            'Item Color',
+        ].forEach((t) => head.append(el('th', t)));
+        thead.append(head);
+        table.append(thead);
+        const tbody = el('tbody');
+        let count = 0;
+        group.sources.forEach((source) => {
+            const record = source.record;
+            const deleted = JSON.parse(value(source, 'graph_deleted_items') || '[]');
+            const items = model.items.filter(
+                (item) =>
+                    !deleted.includes(Number(item.sequence)) &&
+                    (Number(item.graph_type_id) !== 9 || value(source, 'statistics') === '1'),
+            );
+            items.forEach((item) => {
+                const tr = el('tr');
+                tr.append(el('td', 'Item #' + ++count));
+                const sourceCell = el('td', record.data_name);
+                tr.append(sourceCell);
+                const plot = [4, 5, 6, 7].includes(Number(item.graph_type_id));
+                let cell = el('td');
+                cell.append(
+                    plot && editing
+                        ? control(source, 'graph_type', model.plotTypes)
+                        : document.createTextNode(
+                              model.itemTypes[
+                                  plot ? value(source, 'graph_type') : item.graph_type_id
+                              ] || String(item.graph_type_id),
+                          ),
+                );
+                tr.append(cell);
+                cell = el('td');
+                cell.append(
+                    plot && editing
+                        ? control(source, 'cf', model.cfTypes)
+                        : document.createTextNode(
+                              model.cfTypes[
+                                  plot ? value(source, 'cf') : item.consolidation_function_id
+                              ] || '—',
+                          ),
+                );
+                tr.append(cell);
+                [
+                    record.min ?? 'U',
+                    record.max ?? 'U',
+                    item.graph_type_id == 9 ? item.gprint_text || item.text_format : '—',
+                    item.cdef_name || '—',
+                    item.vdef_name || '—',
+                    plot ? Math.round((parseInt(item.alpha || 'FF', 16) / 255) * 100) + '%' : '—',
+                ].forEach((t) => tr.append(el('td', String(t))));
+                cell = el('td');
+                if (plot) {
+                    if (editing) {
+                        sourceCell.append(control(source, 'legend'));
+                        cell.append(control(source, 'color'));
+                    } else {
+                        const swatch = el('span', undefined, 'mib-graph-color-swatch');
+                        const hex = value(source, 'color');
+                        if (/^[a-fA-F0-9]{6}$/.test(hex)) swatch.style.backgroundColor = '#' + hex;
+                        cell.append(swatch, document.createTextNode(hex));
+                    }
+                } else cell.textContent = '—';
+                tr.append(cell);
+                if (editing) {
+                    const action = el('td');
+                    action.append(
+                        deleteButton(() => {
+                            deleted.push(Number(item.sequence));
+                            set(source, 'graph_deleted_items', JSON.stringify(deleted));
+                        }),
+                    );
+                    tr.append(action);
+                }
+                tbody.append(tr);
+            });
+            const stats = el('label', undefined, 'mib-graph-statistics'),
+                check = el('input');
+            check.type = 'checkbox';
+            check.checked = value(source, 'statistics') === '1';
+            check.addEventListener('change', () => {
+                set(source, 'statistics', check.checked ? '1' : '0');
+                render();
+            });
+            stats.append(check, el('span', 'Include native GPrint statistics for ' + record.label));
+        });
+        group.sources.forEach((source) =>
+            extraItems(source).forEach((item, index) => {
+                const tr = el('tr');
+                tr.append(
+                    el('td', 'Item #' + ++count),
+                    el('td', source.record.data_name),
+                    el('td', model.itemFields.graph_type_id.choices[item.graph_type_id] || '—'),
+                    el(
+                        'td',
+                        model.itemFields.consolidation_function_id.choices[
+                            item.consolidation_function_id
+                        ] || '—',
+                    ),
+                    el('td', source.record.min ?? 'U'),
+                    el('td', source.record.max ?? 'U'),
+                    el('td', model.itemFields.gprint_id?.choices[item.gprint_id] || '—'),
+                    el('td', model.itemFields.cdef_id?.choices[item.cdef_id] || '—'),
+                    el('td', model.itemFields.vdef_id?.choices[item.vdef_id] || '—'),
+                    el('td', model.itemFields.alpha?.choices[item.alpha] || item.alpha),
+                    el('td', model.itemFields.color_id?.choices[item.color_id] || '—'),
+                );
+                if (editing) {
+                    const cell = el('td'),
+                        edit = el('button', 'Edit', 'button');
+                    edit.type = 'button';
+                    edit.setAttribute('aria-label', 'Edit graph item ' + count);
+                    edit.addEventListener('click', () => editItem(group, source, index));
+                    const remove = deleteButton(() => {
+                        const items = extraItems(source);
+                        items.splice(index, 1);
+                        set(source, 'graph_items', JSON.stringify(items));
+                    });
+                    cell.append(edit, remove);
+                    tr.append(cell);
+                }
+                tbody.append(tr);
+            }),
+        );
+        if (editing) head.append(el('th', 'Actions'));
+        table.append(tbody);
+        scroll.append(table);
+        editor.append(scroll);
+        const inputsHeading = el('h3', 'Graph Item Inputs');
+        const mappings = el('div', undefined, 'mib-core-graph-options');
+        group.sources.forEach((source, i) => {
+            const item = el('div');
+            item.append(el('small', 'Data Source #' + (i + 1)), el('p', source.record.label));
+            mappings.append(item);
+        });
+        mappings.classList.add('mib-graph-input-list');
+        editor.insertBefore(inputsHeading, itemHeading);
+        editor.insertBefore(mappings, itemHeading);
+        if (editing) editor.append(title, details);
+        let section = null,
+            grid = null;
+        Object.entries(model.graphFields).forEach(([key, definition]) => {
+            if (['multiple', 'test_source'].includes(key)) return;
+            if (section !== definition.section) {
+                section = definition.section;
+                editor.append(el('h3', 'Graph Template - ' + section));
+                grid = el('div', undefined, 'mib-core-graph-options');
+                editor.append(grid);
+            }
+            const item = el('label', undefined, 'field');
+            item.append(el('span', definition.label, 'field-label'));
+            const current = String(options[key] ?? definition.default ?? '');
+            if (editing) {
+                const choices = definition.choices;
+                const input = el(
+                    definition.method === 'checkbox' ? 'input' : choices ? 'select' : 'input',
+                );
+                input.setAttribute('aria-label', definition.label);
+                if (definition.help) {
+                    const info = el('span', undefined, 'field-info');
+                    info.tabIndex = 0;
+                    info.setAttribute('role', 'img');
+                    info.setAttribute('aria-label', 'Information about ' + definition.label);
+                    info.dataset.tooltip = definition.help;
+                    info.innerHTML =
+                        '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg>';
+                    item.firstElementChild.append(info);
+                }
+                if (definition.method === 'checkbox') {
+                    input.type = 'checkbox';
+                    input.setAttribute('role', 'switch');
+                    input.checked = current === 'on';
+                } else if (choices) {
+                    Object.entries(choices).forEach(([id, text]) => {
+                        const option = el('option', text);
+                        option.value = id;
+                        input.append(option);
+                    });
+                    input.value = current;
+                } else {
+                    input.value = current;
+                    input.maxLength = definition.max_length;
+                }
+                input.addEventListener('input', () => {
+                    options[key] =
+                        input.type === 'checkbox' ? (input.checked ? 'on' : '') : input.value;
+                    group.sources.forEach((source) =>
+                        set(source, 'graph_options', JSON.stringify(options)),
+                    );
+                });
+                if (input.type === 'checkbox') {
+                    const wrapper = el('span', undefined, 'mib-source-toggle'),
+                        state = el('span', input.checked ? 'Enabled' : 'Disabled');
+                    wrapper.append(input, state);
+                    input.addEventListener(
+                        'change',
+                        () => (state.textContent = input.checked ? 'Enabled' : 'Disabled'),
+                    );
+                    item.append(wrapper);
+                } else item.append(input);
+            } else {
+                const text =
+                    definition.method === 'checkbox'
+                        ? current === 'on'
+                            ? 'ON'
+                            : 'OFF'
+                        : definition.choices
+                          ? (definition.choices[current] ?? current)
+                          : current;
+                item.append(el('p', text || '—'));
+            }
+            grid.append(item);
+        });
+    }
+    if (document.querySelector('#mibGenerationForm')?.dataset.savedEdit === '1')
+        root.querySelectorAll(
+            '[data-graphs-combine],[data-graphs-separate],[data-graph-add]',
+        ).forEach((control) => {
+            control.disabled = true;
+            control.title = 'Create a new template to change graph source groups.';
+        });
+    root.querySelector('[data-graphs-combine]').addEventListener('click', () => {
+        const name = groups[active]?.name || sources[0].record.data_name;
+        sources.forEach((s) => set(s, 'graph_name', name));
+        load();
+        active = 0;
+        render();
+    });
+    root.querySelector('[data-graphs-separate]').addEventListener('click', () => {
+        sources.forEach((s) => set(s, 'graph_name', s.record.data_name));
+        load();
+        active = 0;
+        render();
+    });
+    root.querySelector('[data-graph-add]').addEventListener('click', () => {
+        editor.querySelector('[data-graph-compose]')?.remove();
+        const compose = el('fieldset', undefined, 'mib-graph-compose');
+        compose.dataset.graphCompose = '';
+        compose.append(el('legend', 'Add Graph Template'));
+        const label = el('label', undefined, 'field');
+        label.append(el('span', 'Graph Template Name', 'field-label'));
+        const name = el('input');
+        name.maxLength = 190;
+        name.setAttribute('aria-label', 'New Graph Template Name');
+        label.append(name);
+        compose.append(label);
+        const choices = el('div', undefined, 'mib-graph-members');
+        sources.forEach((source) => {
+            const label = el('label'),
+                box = el('input');
+            box.type = 'checkbox';
+            box.dataset.sourceIndex = source.index;
+            label.append(box, el('span', source.record.data_name));
+            choices.append(label);
+        });
+        compose.append(choices);
+        const error = el('p', undefined, 'notice error');
+        error.hidden = true;
+        compose.append(error);
+        const create = el('button', 'Create Graph Template', 'button'),
+            cancel = el('button', 'Cancel', 'button');
+        create.type = cancel.type = 'button';
+        create.addEventListener('click', () => {
+            const selected = sources.filter(
+                    (source) =>
+                        choices.querySelector('[data-source-index="' + source.index + '"]').checked,
+                ),
+                title = name.value.trim();
+            if (
+                !title ||
+                !selected.length ||
+                groups.some((g) => g.name.toLowerCase() === title.toLowerCase())
+            ) {
+                error.textContent =
+                    'Enter a unique graph name and select at least one data source.';
+                error.hidden = false;
+                return;
+            }
+            selected.forEach((source) => set(source, 'graph_name', title));
+            load();
+            active = groups.findIndex((g) => g.name === title);
+            render();
+        });
+        cancel.addEventListener('click', () => compose.remove());
+        compose.append(create, cancel);
+        editor.prepend(compose);
+        name.focus();
+    });
+    search.addEventListener('input', updateList);
+    render();
+})();
+
+// Step 4 selects graph templates for one device template, independently of OID selection.
+(() => {
+    'use strict';
+    const root = document.querySelector('[data-device-review]');
+    if (!root) return;
+    const choices = [...root.querySelectorAll('[data-device-graph]')],
+        payload = root.querySelector('[name=device_graphs]'),
+        name = root.querySelector('[name=device_name]'),
+        all = root.querySelector('[data-device-all]'),
+        generate = document.querySelector('#mibGenerate'),
+        add = document.querySelector('#mibAddForm [value=add_generated]');
+    const classField = root.querySelector('[name=device_class]'),
+        queriesField = root.querySelector('[name=device_queries]'),
+        queryChoice = root.querySelector('[data-device-query-choice]'),
+        queryList = root.querySelector('[data-device-query-list]'),
+        saveButton = root.querySelector('[data-device-save]');
+    let queryIds = JSON.parse(queriesField.value);
+    const original = payload.value,
+        originalName = name.value,
+        originalClass = classField?.value ?? '',
+        originalQueries = queriesField.value,
+        key = 'icct-mib-device-' + root.dataset.deviceKey,
+        enabled = { checked: true };
+    const include = document.createElement('input');
+    include.type = 'hidden';
+    include.name = 'include_device';
+    include.value = '1';
+    document.querySelector('#mibAddForm').append(include);
+    function sync(save = true) {
+        const selected = choices.filter((c) => c.checked).map((c) => c.value);
+        renderQueries();
+        payload.value = JSON.stringify(selected);
+        root.querySelector('[data-device-count]').textContent = selected.length;
+        root.querySelector('[data-device-source-count]').textContent = new Set(
+            choices.filter((c) => c.checked).flatMap((c) => JSON.parse(c.dataset.deviceSources)),
+        ).size;
+        all.checked = selected.length === choices.length && choices.length > 0;
+        all.indeterminate = selected.length > 0 && selected.length < choices.length;
+        root.querySelectorAll('[data-device-summary]').forEach(
+            (row) => (row.hidden = !selected.includes(row.dataset.deviceSummary)),
+        );
+        const dirty =
+            payload.value !== original ||
+            name.value !== originalName ||
+            (classField?.value ?? '') !== originalClass ||
+            queriesField.value !== originalQueries;
+        if (generate.dataset.completed === '1') {
+            generate.hidden = !dirty;
+            generate.textContent = 'Update Device Template';
+        }
+        generate.disabled = !selected.length && !queryIds.length;
+        if (add) {
+            add.disabled =
+                generate.dataset.completed !== '1' ||
+                (!selected.length && !queryIds.length) ||
+                !name.value.trim();
+            add.textContent = dirty ? 'Save' : add.dataset.defaultLabel || 'Add';
+        }
+        if (saveButton) saveButton.disabled = add?.disabled ?? true;
+        if (classField)
+            root.querySelector('[data-device-class-label]').textContent =
+                classField.selectedOptions[0]?.textContent || '—';
+        include.value = enabled.checked ? '1' : '0';
+        name.disabled = !enabled.checked;
+        choices.forEach((c) => (c.disabled = !enabled.checked));
+        all.disabled = !enabled.checked;
+        root.querySelector('[data-device-template-count]').textContent = enabled.checked
+            ? '1'
+            : '0';
+        root.querySelector('[data-device-information]').textContent = enabled.checked
+            ? 'This optional device template groups the selected graph templates for devices that expose the required MIB objects.'
+            : 'Device template creation is skipped. Add saves the prepared data source and graph templates.';
+        if (!enabled.checked) generate.hidden = true;
+        else if (generate.dataset.completed !== '1') generate.hidden = false;
+        document.querySelector('[data-session-save]').hidden = true;
+        if (save) {
+            try {
+                sessionStorage.setItem(
+                    key,
+                    JSON.stringify({
+                        graphs: selected,
+                        name: name.value,
+                        class: classField?.value ?? '',
+                        queries: queryIds,
+                        enabled: enabled.checked,
+                    }),
+                );
+            } catch (_) {}
+            payload.dispatchEvent(new Event('input', { bubbles: true }));
+            document.querySelector('[data-session-save]').hidden = true;
+        }
+    }
+    choices.forEach((c) => c.addEventListener('change', () => sync()));
+    all.addEventListener('change', () => {
+        choices.forEach((c) => (c.checked = all.checked));
+        sync();
+    });
+    name.addEventListener('input', () => sync());
+    classField?.addEventListener('change', () => sync());
+    root.querySelector('[data-device-search]').addEventListener('input', (event) => {
+        const q = event.target.value.toLowerCase().trim();
+        choices.forEach(
+            (c) =>
+                (c.closest('label').hidden = !c.dataset.deviceSearchName.toLowerCase().includes(q)),
+        );
+        root.querySelector('[data-device-empty]').hidden = choices.some(
+            (c) => !c.closest('label').hidden,
+        );
+    });
+    try {
+        const saved = JSON.parse(sessionStorage.getItem(key) || 'null');
+        if (saved) {
+            const known = new Set(choices.map((c) => c.value));
+            choices.forEach((c) => (c.checked = saved.graphs.includes(c.value)));
+            if (!saved.graphs.some((key) => known.has(key)))
+                choices.forEach((c) => (c.checked = JSON.parse(original).includes(c.value)));
+            name.value = saved.name;
+            if (
+                classField &&
+                saved.class &&
+                [...classField.options].some((o) => o.value === saved.class)
+            )
+                classField.value = saved.class;
+            if (Array.isArray(saved.queries)) {
+                const knownQueries = new Set([...queryChoice.options].map((o) => o.value));
+                queryIds = saved.queries.filter((id) => knownQueries.has(String(id)));
+            }
+        }
+    } catch (_) {}
+    function queryRow(name, status, dependent, removeQuery) {
+        const row = document.createElement('div');
+        row.className = 'mib-device-query-row';
+        const label = document.createElement('span');
+        label.textContent = name;
+        const actions = document.createElement('span');
+        actions.className = 'mib-device-query-actions';
+        if (status) {
+            const badge = document.createElement('span');
+            badge.textContent = status;
+            actions.append(badge);
+        }
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'button mib-query-delete';
+        remove.setAttribute('aria-label', 'Delete data query ' + name);
+        remove.dataset.tooltip = 'Remove data query association';
+        remove.innerHTML =
+            '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg>';
+        remove.addEventListener('click', async () => {
+            const text =
+                'Remove “' +
+                name +
+                '” from this device template?' +
+                (dependent.length ? ' Its dependent graph selection will also be removed.' : '') +
+                ' The Cacti query definition will be kept.';
+            if (
+                !(await icctShowMessage({
+                    title: 'Delete query association',
+                    text,
+                    confirm: true,
+                    danger: true,
+                    accept: 'Delete',
+                }))
+            )
+                return;
+            dependent.forEach((choice) => (choice.checked = false));
+            removeQuery();
+            sync();
+        });
+        actions.append(remove);
+        row.append(label, actions);
+        queryList.append(row);
+    }
+    function renderQueries() {
+        const required = new Set(
+            choices
+                .filter((c) => c.checked)
+                .flatMap((c) => JSON.parse(c.dataset.deviceQueries || '[]')),
+        );
+        const effective = [...new Set([...queryIds, ...required])].sort((a, b) => a - b);
+        queriesField.value = JSON.stringify(effective);
+        queryList.replaceChildren();
+        effective.forEach((id) => {
+            const name =
+                [...queryChoice.options].find((o) => o.value === String(id))?.textContent ||
+                String(id);
+            const dependent = choices.filter(
+                (c) => c.checked && JSON.parse(c.dataset.deviceQueries || '[]').includes(id),
+            );
+            queryRow(name, required.has(id) ? 'Required by selected graph' : '', dependent, () => {
+                queryIds = queryIds.filter((value) => value !== id);
+            });
+        });
+        const pending = [
+            ...new Set(
+                choices
+                    .filter((c) => c.checked)
+                    .flatMap((c) => JSON.parse(c.dataset.devicePendingQueries || '[]')),
+            ),
+        ];
+        pending.forEach((name) => {
+            const dependent = choices.filter(
+                (c) =>
+                    c.checked && JSON.parse(c.dataset.devicePendingQueries || '[]').includes(name),
+            );
+            queryRow(name, 'MIB query · Created on save', dependent, () => {});
+        });
+        root.querySelector('[data-device-query-empty]').hidden =
+            effective.length > 0 || pending.length > 0;
+    }
+    root.querySelector('[data-device-query-add]').addEventListener('click', () => {
+        const id = Number(queryChoice.value);
+        if (!id || queryIds.includes(id)) return;
+        queryIds.push(id);
+        queryIds.sort((a, b) => a - b);
+        renderQueries();
+        sync();
+    });
+    document.querySelector('#mibAddForm').addEventListener('submit', (event) => {
+        if (event.submitter?.value !== 'add_generated') return;
+        event.preventDefault();
+        const form = document.querySelector('#mibGenerationForm');
+        if (!form.reportValidity()) return;
+        form.dataset.commitAfterSave = '1';
+        form.requestSubmit();
+    });
+    renderQueries();
+    sync(false);
+})();

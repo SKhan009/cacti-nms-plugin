@@ -1,0 +1,526 @@
+/** Real rack placement editor; all writes use the same service as Add/Edit Device. */
+(() => {
+    'use strict';
+    const source = document.querySelector('#rackViewData');
+    if (!source) return;
+    let data = JSON.parse(source.textContent),
+        editing = false,
+        busy = false,
+        scale = 1,
+        rackOffset = 0,
+        savedData = structuredClone(data),
+        changes = new Map(),
+        reservedChanges = new Map(),
+        leavePending = false,
+        bypassLeave = false;
+    const cabinets = document.querySelector('#rackCabinets'),
+        pool = document.querySelector('#rackDevicePool'),
+        message = document.querySelector('#rackViewMessage'),
+        actions = document.querySelector('#rackEditActions');
+    const saveButton = document.querySelector('#rackSaveDraft'),
+        dialog = document.querySelector('#rackDraftDialog');
+    const el = (tag, cls, text) => {
+        const n = document.createElement(tag);
+        if (cls) n.className = cls;
+        if (text !== undefined) n.textContent = text;
+        return n;
+    };
+    const severityColors = icctSeverityColors;
+    function renderLegend() {
+        const totals = Object.fromEntries(Object.keys(severityColors).map((level) => [level, 0]));
+        const rackIds = new Set(data.racks.map((rack) => Number(rack.id)));
+        data.devices
+            .filter((device) => rackIds.has(Number(device.rack_id)) && !device.peripheral)
+            .forEach((device) => {
+                Object.keys(totals).forEach(
+                    (level) => (totals[level] += Number(device.fault_counts?.[level] || 0)),
+                );
+            });
+        const legend = document.querySelector('#rackAlarms');
+        legend.replaceChildren(
+            el(
+                'span',
+                '',
+                'Total: ' + Object.values(totals).reduce((sum, count) => sum + count, 0),
+            ),
+        );
+        Object.entries(totals).forEach(([level, count]) => {
+            const pill = el('span', ''),
+                dot = el('i', '');
+            dot.style.background = severityColors[level];
+            dot.setAttribute('aria-hidden', 'true');
+            pill.append(dot, document.createTextNode(level + ': ' + count));
+            legend.append(pill);
+        });
+    }
+    const dashboardSource = document.querySelector('#dashboardData');
+    const scopeSite = dashboardSource
+        ? Number(JSON.parse(dashboardSource.textContent).site_id || 0)
+        : 0;
+    function scopedData(value) {
+        if (!scopeSite) return value;
+        return {
+            ...value,
+            sites: value.sites.filter((site) => Number(site.id) === scopeSite),
+            racks: value.racks,
+            devices: value.devices,
+        };
+    }
+    function siteDevices() {
+        return data.devices;
+    }
+    function card(device) {
+        const n = el('div', 'rack-device ' + window.icctStatusClass(device.status));
+        n.dataset.deviceId = device.id;
+        n.draggable = editing;
+        n.tabIndex = 0;
+        if (device.rack_asset) {
+            const image = el('img', 'rack-device-image');
+            image.src = device.rack_asset;
+            image.alt = '';
+            image.draggable = false;
+            image.addEventListener('error', () => (image.hidden = true));
+            n.append(image);
+        }
+        n.append(el('span', 'rack-device-name', device.name));
+        const badge = el('span', 'rack-alarm-count', String(device.fault_count || 0));
+        badge.style.background = severityColors[device.fault_severity] || '#fff';
+        badge.style.color = device.fault_severity === 'Critical' ? '#fff' : '#222';
+        badge.title = device.fault_count
+            ? device.fault_count + ' active alarms · ' + device.fault_severity
+            : 'No active alarms';
+        n.append(badge);
+        n.title = device.name + ' · ' + device.status;
+        n.setAttribute(
+            'aria-label',
+            n.title + ' · ' + (device.fault_count || 0) + ' active alarms',
+        );
+        n.addEventListener('dragstart', (event) => {
+            if (!editing || busy) {
+                event.preventDefault();
+                return;
+            }
+            event.dataTransfer.setData('text/plain', String(device.id));
+        });
+        return n;
+    }
+    function droppable(target, rackId, unit, peripheral = false) {
+        target.addEventListener('dragover', (event) => {
+            if (editing && !busy) {
+                event.preventDefault();
+                target.classList.add('drag-over');
+            }
+        });
+        target.addEventListener('dragleave', () => target.classList.remove('drag-over'));
+        target.addEventListener('drop', (event) => {
+            event.preventDefault();
+            target.classList.remove('drag-over');
+            const value = event.dataTransfer.getData('text/plain'),
+                id = Number(value);
+            if (editing && value.startsWith('reserve:')) stageReservation(value, rackId, unit);
+            else if (editing && siteDevices().some((d) => d.id === id))
+                stage(id, rackId, unit, peripheral);
+        });
+    }
+    function render() {
+        const racks = data.racks,
+            devices = siteDevices();
+        renderLegend();
+        rackOffset = Math.min(rackOffset, Math.max(0, Math.floor((racks.length - 1) / 3) * 3));
+        const previous = document.querySelector('#rackPrevious'),
+            next = document.querySelector('#rackNext');
+        previous.hidden = next.hidden = racks.length <= 3;
+        previous.disabled = rackOffset === 0;
+        next.disabled = rackOffset + 3 >= racks.length;
+        document.querySelector('#rackPageStatus').textContent =
+            racks.length > 3
+                ? 'Racks ' +
+                  (rackOffset + 1) +
+                  '–' +
+                  Math.min(rackOffset + 3, racks.length) +
+                  ' of ' +
+                  racks.length
+                : '';
+        cabinets.replaceChildren();
+        pool.hidden = !editing;
+        actions.hidden = !editing;
+        saveButton.disabled = busy || !(changes.size || reservedChanges.size);
+        document.querySelector('#rackViewEdit').hidden = !data.management;
+        document.querySelector('#rackViewEdit').setAttribute('aria-pressed', String(editing));
+        const list = document.querySelector('#rackDeviceList');
+        list.replaceChildren();
+        if (editing) list.append(reservationCard('reserve:new'));
+        devices.forEach((d) => list.append(card(d)));
+        droppableOncePool();
+        if (!racks.length)
+            cabinets.append(
+                el('p', '', 'No racks configured. Add a rack in Presets → Rack Config.'),
+            );
+        racks.slice(rackOffset, rackOffset + 3).forEach((rack) => {
+            const shell = el('section', 'rack-cabinet'),
+                heading = el('header', '');
+            heading.append(el('h3', '', rack.name), el('small', '', rack.unit_count + ' U'));
+            shell.append(heading);
+            const frame = el('div', 'rack-frame'),
+                slots = el('div', 'rack-slots');
+            slots.style.setProperty('--rack-units', rack.unit_count);
+            slots.style.gridTemplateRows = 'repeat(' + rack.unit_count + ',minmax(0,1fr))';
+            const occupied = new Set(rack.blocked.map(Number));
+            (rack.reservations || []).forEach((item) => {
+                for (let u = item.start; u < item.start + item.height; u++) occupied.add(u);
+            });
+            devices
+                .filter((d) => d.rack_id === Number(rack.id) && !d.peripheral)
+                .forEach((d) => {
+                    for (let u = d.start; u < d.start + d.height; u++) occupied.add(u);
+                });
+            for (let u = 1; u <= Number(rack.unit_count); u++) {
+                const slot = el('div', 'rack-slot' + (occupied.has(u) ? ' occupied' : ''));
+                slot.style.gridRow = String(u);
+                slot.append(el('span', 'rack-unit-label', u + 'U'));
+                slot.title = occupied.has(u) ? u + 'U — In use' : u + 'U — Available';
+                droppable(slot, Number(rack.id), u);
+                slots.append(slot);
+            }
+            devices
+                .filter((d) => d.rack_id === Number(rack.id) && !d.peripheral)
+                .forEach((d) => {
+                    const n = card(d);
+                    n.style.gridRow = d.start + ' / span ' + d.height;
+                    droppable(n, Number(rack.id), d.start);
+                    slots.append(n);
+                });
+            frame.append(slots);
+            shell.append(frame);
+            (rack.reservations || []).forEach((item) => {
+                const n = reservationCard('reserve:' + rack.id + ':' + item.id);
+                n.style.gridRow = item.start + ' / span ' + item.height;
+                slots.append(n);
+            });
+            cabinets.append(shell);
+        });
+    }
+    let poolBound = false;
+    function droppableOncePool() {
+        if (!poolBound) {
+            droppable(pool, 0, 0);
+            poolBound = true;
+        }
+    }
+    async function refresh() {
+        const response = await fetch('presets/controllers/rack_placement.php', {
+            credentials: 'same-origin',
+            cache: 'no-store',
+        });
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw Error(result.error || 'Unable to refresh racks.');
+        data = scopedData(result.data);
+        savedData = structuredClone(data);
+        render();
+    }
+    function reservationCard(value) {
+        const n = el('div', 'rack-device reserved');
+        n.append(el('span', 'rack-device-name', 'Reserved slot'));
+        n.draggable = editing;
+        n.tabIndex = 0;
+        n.title = 'Reserved rack space';
+        if (editing && value !== 'reserve:new') {
+            const remove = el('button', '', '×');
+            remove.type = 'button';
+            remove.setAttribute('aria-label', 'Clear reserved slot');
+            remove.addEventListener('click', () => stageReservation(value, 0, 0));
+            n.append(remove);
+        }
+        n.addEventListener('dragstart', (event) => {
+            if (!editing || busy) {
+                event.preventDefault();
+                return;
+            }
+            event.dataTransfer.setData('text/plain', value);
+        });
+        return n;
+    }
+    function trackReservations(rack) {
+        const original = savedData.racks.find((r) => Number(r.id) === Number(rack.id));
+        if (JSON.stringify(rack.reservations || []) === JSON.stringify(original.reservations || []))
+            reservedChanges.delete(Number(rack.id));
+        else
+            reservedChanges.set(Number(rack.id), {
+                rack_id: Number(rack.id),
+                revision: original.reservation_revision,
+                items: rack.reservations || [],
+            });
+    }
+    function stageReservation(value, rackId, start) {
+        if (busy) return;
+        const [, sourceId, itemId] = value.split(':'),
+            sourceRack = data.racks.find((r) => String(r.id) === sourceId),
+            existing = sourceRack?.reservations?.find((item) => item.id === itemId),
+            height = existing?.height || 1,
+            rack = data.racks.find((r) => Number(r.id) === rackId);
+        if (rackId) {
+            const end = start + height - 1;
+            if (
+                !rack ||
+                end > Number(rack.unit_count) ||
+                (rack.blocked || []).some((u) => u >= start && u <= end) ||
+                (rack.reservations || []).some(
+                    (item) =>
+                        item !== existing &&
+                        item.start <= end &&
+                        item.start + item.height - 1 >= start,
+                ) ||
+                data.devices.some(
+                    (d) =>
+                        d.rack_id === rackId &&
+                        !d.peripheral &&
+                        d.start <= end &&
+                        d.start + d.height - 1 >= start,
+                )
+            ) {
+                message.textContent = 'These rack units are unavailable.';
+                return;
+            }
+        }
+        // Generate before changing the draft so a browser error cannot remove a reservation.
+        let reservationId = existing?.id;
+        if (rackId && !reservationId) {
+            try {
+                reservationId = icctRandomToken();
+            } catch (error) {
+                message.textContent = error.message;
+                return;
+            }
+        }
+        if (sourceRack) {
+            sourceRack.reservations = sourceRack.reservations.filter((item) => item.id !== itemId);
+            trackReservations(sourceRack);
+        }
+        if (rackId) {
+            rack.reservations = rack.reservations || [];
+            rack.reservations.push({ id: reservationId, start, height });
+            trackReservations(rack);
+        }
+        message.textContent = '';
+        render();
+    }
+    function placement(d) {
+        return [d.rack_id, d.start, d.peripheral, d.site_id];
+    }
+    function stage(id, rackId, start, peripheral) {
+        const device = data.devices.find((d) => d.id === id),
+            rack = data.racks.find((r) => Number(r.id) === rackId);
+        if (!device || busy) return;
+        const height = device.height || 1;
+        if (rackId && !peripheral) {
+            if (start + height - 1 > Number(rack.unit_count)) {
+                message.textContent = 'The device extends beyond the rack capacity.';
+                return;
+            }
+            const end = start + height - 1;
+            const collision =
+                (rack.blocked || []).some((u) => Number(u) >= start && Number(u) <= end) ||
+                (rack.reservations || []).some(
+                    (item) => item.start <= end && item.start + item.height - 1 >= start,
+                ) ||
+                data.devices.some(
+                    (d) =>
+                        d.id !== id &&
+                        d.rack_id === rackId &&
+                        !d.peripheral &&
+                        d.start <= end &&
+                        d.start + d.height - 1 >= start,
+                );
+            if (collision) {
+                message.textContent = 'These rack units are already occupied.';
+                return;
+            }
+        }
+        Object.assign(device, {
+            rack_id: rackId,
+            start: rackId && !peripheral ? start : 0,
+            peripheral: !!(rackId && peripheral),
+            site_id: device.site_id,
+        });
+        const original = savedData.devices.find((d) => d.id === id);
+        if (JSON.stringify(placement(device)) === JSON.stringify(placement(original)))
+            changes.delete(id);
+        else
+            changes.set(id, {
+                host_id: id,
+                rack_id: rackId,
+                units:
+                    rackId && !peripheral
+                        ? Array.from({ length: height }, (_, i) => start + i)
+                        : [],
+                peripheral: device.peripheral,
+                revision: original.revision,
+            });
+        message.textContent = '';
+        render();
+    }
+    async function saveDraft() {
+        if (busy) return false;
+        if (!(changes.size || reservedChanges.size)) return true;
+        const body = new FormData(document.querySelector('#rackViewToken'));
+        body.set('moves', JSON.stringify([...changes.values()]));
+        body.set('reservations', JSON.stringify([...reservedChanges.values()]));
+        busy = true;
+        render();
+        message.textContent = 'Saving…';
+        try {
+            const response = await fetch('presets/controllers/rack_placement.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                body,
+            });
+            const result = await response.json();
+            if (!response.ok || !result.ok)
+                throw Error(result.error || 'Changes could not be saved.');
+            data = scopedData(result.data);
+            savedData = structuredClone(data);
+            changes.clear();
+            reservedChanges.clear();
+            message.textContent = '';
+            return true;
+        } catch (error) {
+            message.textContent = error.message;
+            return false;
+        } finally {
+            busy = false;
+            render();
+        }
+    }
+    function discard() {
+        data = structuredClone(savedData);
+        changes.clear();
+        reservedChanges.clear();
+        message.textContent = '';
+        render();
+    }
+    async function leave(action) {
+        if (busy || leavePending) return;
+        if (!(changes.size || reservedChanges.size)) {
+            action();
+            return;
+        }
+        leavePending = true;
+        dialog.returnValue = 'cancel';
+        dialog.showModal();
+        const choice = await new Promise((resolve) => {
+            dialog.addEventListener('close', () => resolve(dialog.returnValue || 'cancel'), {
+                once: true,
+            });
+        });
+        leavePending = false;
+        if (choice === 'discard') {
+            discard();
+            action();
+        } else if (choice === 'save' && (await saveDraft())) action();
+    }
+    dialog
+        .querySelectorAll('[data-rack-choice]')
+        .forEach((button) =>
+            button.addEventListener('click', () => dialog.close(button.dataset.rackChoice)),
+        );
+    document.querySelector('#rackViewEdit').addEventListener('click', () => {
+        if (editing)
+            leave(() => {
+                editing = false;
+                render();
+            });
+        else {
+            editing = true;
+            render();
+        }
+    });
+    saveButton.addEventListener('click', saveDraft);
+    document.addEventListener(
+        'click',
+        (event) => {
+            if (bypassLeave || !editing) return;
+            const target = event.target.closest('a[href],.icct-view-tabs [role="tab"]');
+            if (
+                !target ||
+                target.dataset.view === 'rack' ||
+                target.getAttribute('href')?.startsWith('#')
+            )
+                return;
+            if (busy || changes.size || reservedChanges.size) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                leave(() => {
+                    editing = false;
+                    render();
+                    bypassLeave = true;
+                    target.click();
+                    bypassLeave = false;
+                });
+            } else {
+                editing = false;
+                render();
+            }
+        },
+        true,
+    );
+    document.addEventListener('icct:before-view-change', (event) => {
+        if (bypassLeave || !editing || event.detail.tab.dataset.view === 'rack') return;
+        if (busy || changes.size || reservedChanges.size) {
+            event.preventDefault();
+            leave(() => {
+                editing = false;
+                render();
+                bypassLeave = true;
+                event.detail.tab.click();
+                bypassLeave = false;
+            });
+        } else {
+            editing = false;
+            render();
+        }
+    });
+    // Browser reload/close uses the native unsaved-changes warning.
+    window.addEventListener('beforeunload', (event) => {
+        if (changes.size || reservedChanges.size || busy) {
+            event.preventDefault();
+            event.returnValue = '';
+        }
+    });
+    function zoom() {
+        cabinets.style.setProperty('--rack-scale', scale);
+    }
+    document.querySelector('#rackPrevious').addEventListener('click', () => {
+        rackOffset = Math.max(0, rackOffset - 3);
+        render();
+    });
+    document.querySelector('#rackNext').addEventListener('click', () => {
+        rackOffset += 3;
+        render();
+    });
+    document.querySelector('#rackViewZoomIn').addEventListener('click', () => {
+        scale = Math.min(2, scale + 0.1);
+        zoom();
+    });
+    document.querySelector('#rackViewZoomOut').addEventListener('click', () => {
+        scale = Math.max(0.6, scale - 0.1);
+        zoom();
+    });
+    document.querySelector('#rackViewFit').addEventListener('click', () => {
+        scale = 1;
+        zoom();
+        document.querySelector('#icct-panel-rack').scrollTop = 0;
+    });
+    document.querySelector('#rackViewFullscreen').addEventListener('click', () => {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else
+            document
+                .querySelector('.icct-map-panel')
+                .requestFullscreen()
+                .catch(() => (message.textContent = 'Fullscreen is unavailable.'));
+    });
+    render();
+    setInterval(() => {
+        if (!editing && !busy && !document.querySelector('#icct-panel-rack').hidden)
+            refresh().catch((error) => (message.textContent = error.message));
+    }, 30000);
+})();

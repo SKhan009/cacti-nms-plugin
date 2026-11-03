@@ -1,0 +1,1345 @@
+(function () {
+    'use strict';
+    const dataElement = document.querySelector('#dashboardData');
+    if (!dataElement) return;
+    const data = JSON.parse(dataElement.textContent);
+    let preferences = data.preferences,
+        readings = data.readings,
+        mode = 'severity',
+        saveAgain = false;
+    const names = {
+            topology: 'Topology / Rack / Image / Map',
+            birds: 'Birds Eye View',
+            alarms: 'Alarm Overview',
+            ack: 'Ack Overview',
+            escalation: 'Escalation Overview',
+            frequent: 'Top 10 Frequent Alarms by Count',
+            recent: 'Recent Alarms (25)',
+            ports: 'Device Interface (Ports) Overview',
+            problematic: 'Problematic Devices by Active Alarms Count',
+        },
+        colors = icctSeverityColors,
+        palette = [
+            '#7086fd',
+            '#6ed195',
+            '#ffad4d',
+            '#05dbfa',
+            '#9989fc',
+            '#1d94ff',
+            '#ff928a',
+            '#3bc3e0',
+        ];
+    const segmentColors = {
+        power: '#7086fd',
+        security: '#6ed195',
+        los: '#ffad4d',
+        vsat: '#05dbfa',
+        voicevideo: '#9989fc',
+        computers: '#1d94ff',
+        fireprevention: '#ff928a',
+        network: '#3bc3e0',
+    };
+    function alarmSegmentColor(name) {
+        const key = String(name)
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '');
+        if (Object.prototype.hasOwnProperty.call(segmentColors, key)) return segmentColors[key];
+        let hash = 0;
+        for (const letter of key) hash = (Math.imul(hash, 31) + letter.charCodeAt(0)) >>> 0;
+        return palette[hash % palette.length];
+    }
+    const select = document.querySelector('#dashboardSelect'),
+        picker = document.querySelector('.dashboard-widget-picker'),
+        status = document.querySelector('#dashboardSaveStatus'),
+        side = document.querySelector('#dashboardWidgets'),
+        extras = document.querySelector('#dashboardExtraWidgets'),
+        grid = document.querySelector('.dashboard-grid');
+    function element(tag, text) {
+        const e = document.createElement(tag);
+        if (text !== undefined) e.textContent = text;
+        return e;
+    }
+    function svg(tag, attributes, text) {
+        const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+        Object.entries(attributes).forEach(([k, v]) => e.setAttribute(k, v));
+        if (text !== undefined) e.textContent = text;
+        return e;
+    }
+    function widgets() {
+        return preferences.dashboards[preferences.selected].widgets;
+    }
+    preferences.dashboards.forEach((dashboard) => {
+        dashboard.columns = 'auto';
+    });
+    let statusTimer;
+    function reportStatus(message = '', success = false) {
+        clearTimeout(statusTimer);
+        status.textContent = message;
+        status.hidden = !message;
+        status.classList.toggle('save-success', success);
+        if (success) statusTimer = setTimeout(() => reportStatus(), 4000);
+    }
+    let savePromise = null;
+    function save() {
+        const interval = document.querySelector('#dashboardRefreshInterval');
+        if (interval) {
+            if (!interval.reportValidity()) return Promise.resolve(false);
+            const seconds = Number(interval.value);
+            if (seconds !== preferences.refresh_seconds) {
+                preferences.refresh_seconds = seconds;
+                scheduleRefresh();
+            }
+        }
+        if (savePromise) {
+            saveAgain = true;
+            return savePromise;
+        }
+        savePromise = (async () => {
+            let ok = true;
+            reportStatus();
+            do {
+                saveAgain = false;
+                const body = new FormData(document.querySelector('#dashboardToken'));
+                body.set('dashboard_preferences', JSON.stringify(preferences));
+                try {
+                    const r = await fetch('dashboard/controllers/topology.php', {
+                        method: 'POST',
+                        body,
+                        credentials: 'same-origin',
+                    });
+                    if (!r.ok) throw Error();
+                    const stored = await r.json();
+                    if (!stored || !Array.isArray(stored.dashboards)) throw Error();
+                    reportStatus('Dashboard saved successfully.', true);
+                } catch (e) {
+                    ok = false;
+                    reportStatus('Layout could not be saved. Click to retry.');
+                }
+            } while (saveAgain);
+            return ok;
+        })().finally(() => {
+            savePromise = null;
+        });
+        return savePromise;
+    }
+    function siteUrl(id) {
+        const url = new URL(location.href);
+        url.searchParams.set('site_id', id);
+        return url;
+    }
+    status.addEventListener('click', save);
+    // Pack cards into short grid rows so tall cards do not stretch their neighbours.
+    let packFrame = 0;
+    function packCards() {
+        cancelAnimationFrame(packFrame);
+        packFrame = requestAnimationFrame(() => {
+            if (extras.hidden) return;
+            const columns = Math.max(1, Math.floor((extras.clientWidth + 12) / 372));
+            extras.style.gridTemplateColumns = 'repeat(' + columns + ', minmax(0, 1fr))';
+            extras.querySelectorAll('.dashboard-card').forEach((card) => {
+                card.style.gridColumn = 'span 1';
+                if (!card.hidden && !card.classList.contains('widget-expanded'))
+                    card.style.gridRowEnd =
+                        'span ' + Math.ceil(card.getBoundingClientRect().height + 12);
+            });
+        });
+    }
+    const packingObserver = new ResizeObserver(packCards);
+    packingObserver.observe(extras);
+    document.querySelectorAll('.dashboard-card').forEach((card) => packingObserver.observe(card));
+    window.addEventListener('resize', packCards);
+    function layout() {
+        select.replaceChildren();
+        preferences.dashboards.forEach((d, i) => {
+            const option = element('option', d.name || 'Dashboard #' + (i + 1));
+            option.value = i;
+            select.append(option);
+        });
+        select.value = preferences.selected;
+        document.querySelector('#dashboardAdd').disabled = preferences.dashboards.length >= 5;
+        document
+            .querySelectorAll('[data-widget]')
+            .forEach((card) => (card.hidden = !widgets().includes(card.dataset.widget)));
+        const cards = widgets().filter((key) => key !== 'topology');
+        cards.forEach((key, index) =>
+            (index < 2 ? side : extras).append(
+                document.querySelector('[data-widget="' + key + '"]'),
+            ),
+        );
+        side.hidden = cards.length === 0;
+        extras.hidden = cards.length <= 2;
+        grid.classList.toggle('dashboard-no-side', side.hidden);
+        let empty = document.querySelector('#dashboardEmpty');
+        if (!empty) {
+            empty = element('p', 'This dashboard is empty. Use Add Widget to add a card.');
+            empty.id = 'dashboardEmpty';
+            grid.append(empty);
+        }
+        empty.hidden = widgets().length !== 0;
+        document.querySelector('#dashboardDelete').disabled = preferences.dashboards.length === 1;
+        document.querySelector('#dashboardUndo').hidden =
+            !preferences.deleted || preferences.dashboards.length >= 5;
+        window.dispatchEvent(new Event('resize'));
+    }
+    select.addEventListener('change', async () => {
+        preferences.selected = Number(select.value);
+        const site = preferences.dashboards[preferences.selected].site_id ?? 0;
+        if (site !== data.site_id) {
+            if (await save()) location.assign(siteUrl(site));
+            return;
+        }
+        layout();
+        save();
+    });
+    const nameDialog = document.querySelector('#dashboardNameDialog'),
+        nameInput = document.querySelector('#dashboardName');
+    let nameMode = 'create';
+    function openDashboardName(mode) {
+        nameMode = mode;
+        nameInput.setCustomValidity('');
+        nameInput.value =
+            mode === 'rename'
+                ? preferences.dashboards[preferences.selected].name ||
+                  'Dashboard #' + (preferences.selected + 1)
+                : '';
+        document.querySelector('#dashboardNameTitle').textContent =
+            mode === 'rename' ? 'Rename dashboard' : 'Save dashboard view';
+        document.querySelector('#dashboardNameHelp').textContent =
+            mode === 'rename'
+                ? 'Update the name of the selected dashboard.'
+                : 'Save the current cards, their order and column layout as a new dashboard.';
+        document.querySelector('#dashboardNameSubmit').textContent =
+            mode === 'rename' ? 'Save Name' : 'Save Dashboard';
+        nameDialog.showModal();
+        nameInput.focus();
+        if (mode === 'rename') nameInput.select();
+    }
+    document.querySelector('#dashboardSave').addEventListener('click', async function () {
+        this.disabled = true;
+        try {
+            if (await save()) reportStatus('Dashboard saved successfully.', true);
+        } finally {
+            this.disabled = false;
+        }
+    });
+    document
+        .querySelector('#dashboardRename')
+        .addEventListener('click', () => openDashboardName('rename'));
+    const deleteDialog = document.querySelector('#dashboardDeleteDialog');
+    let deleteIndex = null;
+    document.querySelector('#dashboardDelete').addEventListener('click', () => {
+        if (preferences.dashboards.length <= 1) return;
+        deleteIndex = preferences.selected;
+        document.querySelector('#dashboardDeleteMessage').textContent =
+            'Delete “' + preferences.dashboards[deleteIndex].name + '”?';
+        deleteDialog.showModal();
+        document.querySelector('#dashboardDeleteCancel').focus();
+    });
+    document.querySelector('#dashboardDeleteCancel').addEventListener('click', () => {
+        deleteIndex = null;
+        deleteDialog.close();
+    });
+    deleteDialog.addEventListener('cancel', () => {
+        deleteIndex = null;
+    });
+    document.querySelector('#dashboardDeleteConfirm').addEventListener('click', () => {
+        if (
+            deleteIndex === null ||
+            deleteIndex !== preferences.selected ||
+            preferences.dashboards.length <= 1
+        ) {
+            deleteDialog.close();
+            return;
+        }
+        const index = deleteIndex;
+        deleteIndex = null;
+        deleteDialog.close();
+        preferences.deleted = { index, dashboard: preferences.dashboards[index] };
+        preferences.dashboards.splice(index, 1);
+        preferences.selected = Math.min(index, preferences.dashboards.length - 1);
+        const site = preferences.dashboards[preferences.selected].site_id ?? 0;
+        if (site !== data.site_id) {
+            save().then((ok) => {
+                if (ok) location.assign(siteUrl(site));
+            });
+            return;
+        }
+        layout();
+        save();
+    });
+    document.querySelector('#dashboardUndo').addEventListener('click', () => {
+        if (!preferences.deleted || preferences.dashboards.length >= 5) return;
+        const { index, dashboard } = preferences.deleted;
+        const position = Math.min(index, preferences.dashboards.length);
+        preferences.dashboards.splice(position, 0, dashboard);
+        preferences.selected = position;
+        delete preferences.deleted;
+        if ((dashboard.site_id ?? 0) !== data.site_id) {
+            save().then((ok) => {
+                if (ok) location.assign(siteUrl(dashboard.site_id ?? 0));
+            });
+            return;
+        }
+        layout();
+        save();
+    });
+    document.querySelector('#dashboardAdd').addEventListener('click', () => {
+        if (preferences.dashboards.length >= 5) return;
+        openDashboardName('create');
+    });
+    document
+        .querySelector('#dashboardNameCancel')
+        .addEventListener('click', () => nameDialog.close());
+    document.querySelector('#dashboardNameForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = nameInput.value.trim();
+        if (!name) {
+            nameInput.setCustomValidity('Enter a dashboard name.');
+            nameInput.reportValidity();
+            return;
+        }
+        const previous = JSON.parse(JSON.stringify(preferences));
+        if (nameMode === 'rename') {
+            preferences.dashboards[preferences.selected].name = name;
+        } else {
+            if (preferences.dashboards.length >= 5) return;
+            const current = preferences.dashboards[preferences.selected];
+            preferences.dashboards.push({
+                name,
+                columns: 'auto',
+                site_id: current.site_id ?? 0,
+                widgets: [...current.widgets],
+            });
+            preferences.selected = preferences.dashboards.length - 1;
+        }
+        const submit = document.querySelector('#dashboardNameSubmit');
+        submit.disabled = true;
+        layout();
+        try {
+            if (await save()) {
+                nameDialog.close();
+            } else {
+                preferences = previous;
+                layout();
+            }
+        } finally {
+            submit.disabled = false;
+        }
+    });
+    nameInput.addEventListener('input', () => nameInput.setCustomValidity(''));
+    const addWidget = document.querySelector('#dashboardAddWidget'),
+        choices = document.querySelector('#dashboardWidgetChoices');
+    function closePicker() {
+        choices.hidden = true;
+        addWidget.setAttribute('aria-expanded', 'false');
+    }
+    addWidget.addEventListener('click', () => {
+        if (!choices.hidden) {
+            closePicker();
+            return;
+        }
+        choices.replaceChildren();
+        Object.entries(names)
+            .filter(([key]) => key !== 'topology')
+            .forEach(([key, name]) => {
+                const button = element(
+                    'button',
+                    name + (widgets().includes(key) ? ' — Added' : ''),
+                );
+                button.type = 'button';
+                button.disabled = widgets().includes(key);
+                button.addEventListener('click', () => {
+                    widgets().push(key);
+                    layout();
+                    save();
+                    closePicker();
+                    addWidget.focus();
+                });
+                choices.append(button);
+            });
+        choices.hidden = false;
+        addWidget.setAttribute('aria-expanded', 'true');
+    });
+    document.addEventListener('click', (e) => {
+        if (!picker.contains(e.target)) closePicker();
+    });
+    picker.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closePicker();
+            addWidget.focus();
+        }
+    });
+    document.querySelectorAll('[data-remove-widget]').forEach((button) =>
+        button.addEventListener('click', () => {
+            preferences.dashboards[preferences.selected].widgets = widgets().filter(
+                (w) => w !== button.dataset.removeWidget,
+            );
+            if (button.dataset.removeWidget === 'recent') collapseRecent();
+            if (button.dataset.removeWidget === 'ports') collapsePorts();
+            if (button.dataset.removeWidget === 'problematic') collapseProblematic();
+            layout();
+            save();
+        }),
+    );
+    function move(key, target, after) {
+        const list = widgets(),
+            old = list.indexOf(key),
+            to = list.indexOf(target);
+        if (key === 'topology' || target === 'topology' || old < 0 || to < 0 || old === to) return;
+        list.splice(old, 1);
+        list.splice(after === undefined ? to : list.indexOf(target) + (after ? 1 : 0), 0, key);
+        layout();
+        save();
+    }
+    // Pointer dragging supports both card headers and the gaps between cards.
+    let cardDrag = null,
+        dragFrame = 0;
+    function dropPosition(x, y) {
+        const bounds = grid.getBoundingClientRect();
+        if (x < bounds.left || x > bounds.right || y < bounds.top || y > bounds.bottom) return null;
+        const cards = Array.from(grid.querySelectorAll('.dashboard-card:not([hidden])')).filter(
+            (card) => card.dataset.widget !== cardDrag.key,
+        );
+        let closest = null,
+            distance = Infinity;
+        for (const card of cards) {
+            const r = card.getBoundingClientRect(),
+                dx = Math.max(r.left - x, 0, x - r.right),
+                dy = Math.max(r.top - y, 0, y - r.bottom),
+                score = dx * dx + dy * dy;
+            if (score < distance) {
+                distance = score;
+                closest = card;
+            }
+        }
+        if (!closest) return null;
+        const r = closest.getBoundingClientRect(),
+            after =
+                closest.parentElement === side
+                    ? y > r.top + r.height / 2
+                    : y >= r.bottom || (y >= r.top && x > r.left + r.width / 2);
+        return { card: closest, after };
+    }
+    function paintDrop() {
+        document
+            .querySelectorAll('.drag-target,.drag-before,.drag-after')
+            .forEach((card) => card.classList.remove('drag-target', 'drag-before', 'drag-after'));
+        cardDrag.destination = dropPosition(cardDrag.x, cardDrag.y);
+        if (cardDrag.destination) {
+            const { card, after } = cardDrag.destination;
+            card.classList.add('drag-target', after ? 'drag-after' : 'drag-before');
+        }
+        if (cardDrag.preview) {
+            cardDrag.preview.style.left = cardDrag.x + 12 + 'px';
+            cardDrag.preview.style.top = cardDrag.y + 12 + 'px';
+        }
+    }
+    function dragScroll() {
+        if (!cardDrag?.active) return;
+        const delta = cardDrag.y > window.innerHeight - 55 ? 18 : cardDrag.y < 70 ? -18 : 0;
+        if (delta) {
+            window.scrollBy(0, delta);
+            paintDrop();
+        }
+        dragFrame = requestAnimationFrame(dragScroll);
+    }
+    function endCardDrag(commit) {
+        if (!cardDrag) return;
+        const state = cardDrag;
+        cardDrag = null;
+        cancelAnimationFrame(dragFrame);
+        state.preview?.remove();
+        state.card.classList.remove('card-dragging');
+        document.body.classList.remove('dashboard-dragging');
+        document
+            .querySelectorAll('.drag-target,.drag-before,.drag-after')
+            .forEach((card) => card.classList.remove('drag-target', 'drag-before', 'drag-after'));
+        if (commit && state.destination)
+            move(state.key, state.destination.card.dataset.widget, state.destination.after);
+    }
+    document.querySelectorAll('.dashboard-card header').forEach((header) => {
+        const card = header.closest('[data-widget]'),
+            grip = header.querySelector('.widget-grip'),
+            key = card.dataset.widget;
+        header.draggable = true;
+        grip.draggable = true;
+        header.addEventListener('dragstart', (e) => {
+            if (
+                card.classList.contains('widget-expanded') ||
+                e.target.closest('button:not(.widget-grip),a,input,select')
+            ) {
+                e.preventDefault();
+                return;
+            }
+            endCardDrag(false);
+            cardDrag = { key, card, native: true, active: true, x: e.clientX, y: e.clientY };
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', key);
+            card.classList.add('card-dragging');
+            document.body.classList.add('dashboard-dragging');
+        });
+        header.addEventListener('dragend', () => endCardDrag(false));
+        header.addEventListener('pointerdown', (e) => {
+            if (
+                e.pointerType === 'mouse' ||
+                e.button !== 0 ||
+                card.classList.contains('widget-expanded') ||
+                e.target.closest('button:not(.widget-grip),a,input,select')
+            )
+                return;
+            e.preventDefault();
+            grip.focus();
+            cardDrag = {
+                key,
+                card,
+                id: e.pointerId,
+                startX: e.clientX,
+                startY: e.clientY,
+                x: e.clientX,
+                y: e.clientY,
+                active: false,
+            };
+            header.setPointerCapture(e.pointerId);
+        });
+        grip.addEventListener('keydown', (e) => {
+            if (!['ArrowUp', 'ArrowDown'].includes(e.key)) return;
+            e.preventDefault();
+            const list = widgets().filter((w) => w !== 'topology'),
+                destination = list[list.indexOf(key) + (e.key === 'ArrowUp' ? -1 : 1)];
+            if (destination) {
+                move(key, destination);
+                grip.focus();
+            }
+        });
+    });
+    document.addEventListener(
+        'pointermove',
+        (e) => {
+            if (!cardDrag || cardDrag.native || e.pointerId !== cardDrag.id) return;
+            cardDrag.x = e.clientX;
+            cardDrag.y = e.clientY;
+            if (!cardDrag.active) {
+                if (Math.hypot(e.clientX - cardDrag.startX, e.clientY - cardDrag.startY) < 5)
+                    return;
+                cardDrag.active = true;
+                cardDrag.card.classList.add('card-dragging');
+                document.body.classList.add('dashboard-dragging');
+                cardDrag.preview = element('div', names[cardDrag.key]);
+                cardDrag.preview.className = 'widget-drag-preview';
+                document.body.append(cardDrag.preview);
+                dragFrame = requestAnimationFrame(dragScroll);
+            }
+            e.preventDefault();
+            paintDrop();
+        },
+        { passive: false },
+    );
+    grid.addEventListener('dragover', (e) => {
+        if (!cardDrag?.native) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        cardDrag.x = e.clientX;
+        cardDrag.y = e.clientY;
+        paintDrop();
+    });
+    grid.addEventListener('drop', (e) => {
+        if (!cardDrag?.native) return;
+        e.preventDefault();
+        cardDrag.x = e.clientX;
+        cardDrag.y = e.clientY;
+        paintDrop();
+        endCardDrag(true);
+    });
+    document.addEventListener('pointerup', (e) => {
+        if (cardDrag && e.pointerId === cardDrag.id) endCardDrag(true);
+    });
+    // Native HTML dragging cancels its pointer stream while the drag is still active.
+    document.addEventListener('pointercancel', () => {
+        if (!cardDrag?.native) endCardDrag(false);
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') endCardDrag(false);
+    });
+    window.addEventListener('blur', () => endCardDrag(false));
+    function radar() {
+        const radar = document.querySelector('#birdsRadar'),
+            lnms = readings.lnms || { nodes: [], center: null },
+            origin = lnms.center || {
+                name: 'Device not configured',
+                status: 'Unknown',
+                coordinates: null,
+            },
+            sites = lnms.nodes.filter((node) => Number(node.id) !== Number(origin.id));
+        radar.replaceChildren();
+        const note = document.querySelector('#birdsLnmsStatus');
+        if (note) {
+            note.textContent = '';
+            note.hidden = true;
+        }
+        const cx = 160,
+            cy = 160,
+            r = 115,
+            geographic = Array.isArray(origin.coordinates);
+        radar.append(
+            svg(
+                'title',
+                {},
+                geographic
+                    ? 'Device bearings from the local server'
+                    : 'Configured devices — logical positions, not physical distance',
+            ),
+        );
+        for (let i = 1; i <= 9; i++)
+            radar.append(
+                svg('circle', {
+                    cx,
+                    cy,
+                    r: (r * i) / 9,
+                    fill: 'none',
+                    stroke: i % 3 === 0 ? '#447cf4' : '#c8d6ff',
+                    'stroke-width': i % 3 === 0 ? 1.5 : 0.7,
+                }),
+            );
+        for (let degrees = 0; degrees < 360; degrees += 10) {
+            const angle = (degrees * Math.PI) / 180,
+                x = cx + Math.sin(angle) * (r + 15),
+                y = cy - Math.cos(angle) * (r + 15);
+            radar.append(
+                svg('line', {
+                    x1: cx,
+                    y1: cy,
+                    x2: cx + Math.sin(angle) * r,
+                    y2: cy - Math.cos(angle) * r,
+                    stroke: degrees % 30 === 0 ? '#447cf4' : '#c8d6ff',
+                    'stroke-width': degrees % 30 === 0 ? 1.4 : 0.6,
+                }),
+            );
+            if (degrees % 30 === 0)
+                radar.append(
+                    svg(
+                        'text',
+                        {
+                            x,
+                            y: y + 3,
+                            fill: '#95b0ff',
+                            'text-anchor': 'middle',
+                            transform: `rotate(${degrees},${x},${y})`,
+                        },
+                        degrees,
+                    ),
+                );
+        }
+        const points = sites.map((site, index) => {
+            if (!geographic || !Array.isArray(site.coordinates))
+                return {
+                    site,
+                    distance: null,
+                    angle: ((-60 + (index * 360) / Math.max(1, sites.length)) * Math.PI) / 180,
+                };
+            const [a, b] = origin.coordinates.map((v) => (v * Math.PI) / 180),
+                [c, d] = site.coordinates.map((v) => (v * Math.PI) / 180),
+                delta = d - b,
+                hav =
+                    Math.sin((c - a) / 2) ** 2 +
+                    Math.cos(a) * Math.cos(c) * Math.sin(delta / 2) ** 2;
+            return {
+                site,
+                distance:
+                    6371 *
+                    2 *
+                    Math.atan2(Math.sqrt(Math.min(1, hav)), Math.sqrt(Math.max(0, 1 - hav))),
+                angle: Math.atan2(
+                    Math.sin(delta) * Math.cos(c),
+                    Math.cos(a) * Math.sin(c) - Math.sin(a) * Math.cos(c) * Math.cos(delta),
+                ),
+            };
+        });
+        const max = Math.max(1, ...points.map((p) => p.distance || 0));
+        function dot(site, x, y, isCenter, distance) {
+            const group = svg('g', {
+                tabindex: 0,
+                role: 'button',
+                'aria-label': site.name + ' · ' + site.status,
+            });
+            group.append(
+                svg(
+                    'title',
+                    {},
+                    site.name +
+                        ' · ' +
+                        (site.address || '') +
+                        ' · ' +
+                        site.status +
+                        (distance === null
+                            ? ' · Logical position'
+                            : distance === undefined
+                              ? ''
+                              : ' · ' + distance.toFixed(1) + ' km from Cacti server'),
+                ),
+            );
+            group.append(
+                svg('circle', {
+                    cx: x,
+                    cy: y,
+                    r: 10,
+                    fill: 'transparent',
+                    stroke: 'none',
+                    'pointer-events': 'all',
+                }),
+            );
+            if (isCenter)
+                group.append(
+                    svg('circle', {
+                        cx: x,
+                        cy: y,
+                        r: 13,
+                        fill: 'white',
+                        stroke: '#447cf4',
+                        'stroke-width': 1.5,
+                    }),
+                );
+            group.append(
+                svg('circle', {
+                    cx: x,
+                    cy: y,
+                    r: 5,
+                    fill:
+                        site.status === 'Online'
+                            ? '#2dc658'
+                            : site.status === 'Offline'
+                              ? '#ff4148'
+                              : site.status === 'Disabled'
+                                ? '#999'
+                                : '#ffb14e',
+                    stroke: 'white',
+                    'stroke-width': 0.6,
+                }),
+            );
+            const right = !isCenter && x >= cx,
+                label = site.name.length > 20 ? site.name.slice(0, 19) + '…' : site.name;
+            group.append(
+                svg(
+                    'text',
+                    {
+                        x: x + (right ? 8 : -8),
+                        y: y + 3,
+                        'text-anchor': right ? 'start' : 'end',
+                        'font-weight': 700,
+                        fill: '#252525',
+                    },
+                    label,
+                ),
+            );
+            if (site.id) {
+                function open() {
+                    document.dispatchEvent(new CustomEvent('icct:show-lnms', { detail: site.id }));
+                }
+                group.addEventListener('click', open);
+                group.addEventListener('keydown', (e) => {
+                    if (['Enter', ' '].includes(e.key)) {
+                        e.preventDefault();
+                        open();
+                    }
+                });
+            }
+            radar.append(group);
+        }
+        const positions = new Map([[Number(origin.id), [cx, cy]]]);
+        points.forEach(({ site, distance, angle }) => {
+            const radius = distance !== null ? (distance / max) * r * 0.72 : r * 0.58;
+            positions.set(Number(site.id), [
+                cx + Math.sin(angle) * radius,
+                cy - Math.cos(angle) * radius,
+            ]);
+        });
+        (lnms.links || []).forEach((link) => {
+            const a = positions.get(Number(link.source)),
+                b = positions.get(Number(link.target));
+            if (!a || !b) return;
+            const line = svg('line', {
+                x1: a[0],
+                y1: a[1],
+                x2: b[0],
+                y2: b[1],
+                stroke: { Up: '#21864a', Down: '#c83232', Disabled: '#777' }[link.status] || '#777',
+                'stroke-width': 2,
+                'stroke-dasharray': link.status === 'Unknown' ? '4 4' : '',
+            });
+            line.append(svg('title', {}, link.label + ' · ' + link.status));
+            radar.append(line);
+        });
+        points.forEach(({ site, distance }) => {
+            const [x, y] = positions.get(Number(site.id));
+            dot(site, x, y, false, distance);
+        });
+        dot(origin, cx, cy, true);
+    }
+    function alarms() {
+        const chart = document.querySelector('#alarmDonut'),
+            legend = document.querySelector('#alarmLegend');
+        chart.replaceChildren();
+        legend.replaceChildren();
+        const values = Object.entries(readings[mode]),
+            total = values.reduce((s, [k, v]) => s + v, 0),
+            radius = 59,
+            circumference = 2 * Math.PI * radius;
+        chart.append(
+            svg('circle', {
+                cx: 90,
+                cy: 90,
+                r: radius,
+                fill: 'none',
+                stroke: '#eceef2',
+                'stroke-width': 29,
+            }),
+        );
+        let offset = 0;
+        values.forEach(([name, count], i) => {
+            const color = mode === 'severity' ? colors[name] : alarmSegmentColor(name);
+            if (count > 0) {
+                const length = (count / total) * circumference;
+                chart.append(
+                    svg('circle', {
+                        cx: 90,
+                        cy: 90,
+                        r: radius,
+                        fill: 'none',
+                        stroke: color,
+                        'stroke-width': 29,
+                        'stroke-dasharray': length + ' ' + (circumference - length),
+                        'stroke-dashoffset': -offset,
+                        transform: 'rotate(-90 90 90)',
+                    }),
+                );
+                offset += length;
+            }
+            const item = element('li'),
+                dot = element('i');
+            dot.style.background = color;
+            item.append(dot, element('span', name), element('b', String(count)));
+            item.title = name + ': ' + count;
+            legend.append(item);
+        });
+        chart.append(
+            svg(
+                'text',
+                { x: 90, y: 98, 'text-anchor': 'middle', 'font-size': 26, fill: '#222' },
+                total,
+            ),
+        );
+        chart.setAttribute(
+            'aria-label',
+            total + ' active alarms grouped by ' + (mode === 'severity' ? 'severity' : 'segment'),
+        );
+        const note = document.querySelector('#alarmNote');
+        note.textContent = total ? '' : 'No active alarms.';
+        note.hidden = total > 0;
+    }
+    function frequentAlarms() {
+        const body = document.querySelector('#frequentAlarms');
+        body.replaceChildren();
+        for (const alarm of readings.frequent || []) {
+            const row = element('tr'),
+                name = element('td', alarm.name),
+                severity = element('td'),
+                badge = element(
+                    'span',
+                    { Warning: 'Warn', Information: 'Info' }[alarm.severity] || alarm.severity,
+                ),
+                count = element('td', String(alarm.count));
+            badge.className = 'frequent-severity';
+            badge.style.background = colors[alarm.severity] || '#ddd';
+            severity.append(badge);
+            row.append(name, severity, count);
+            body.append(row);
+        }
+        if (!body.children.length) {
+            const row = element('tr'),
+                cell = element('td', 'No active alarms.');
+            cell.colSpan = 3;
+            row.append(cell);
+            body.append(row);
+        }
+    }
+    function problematicDevices() {
+        const selected = Array.from(
+                document.querySelectorAll('[data-problematic-severity]:checked'),
+            ).map((input) => input.dataset.problematicSeverity),
+            source = readings.problematic || { devices: [], total_devices: 0 };
+        const devices = source.devices
+            .map((device) => ({
+                ...device,
+                count: selected.reduce((sum, key) => sum + Number(device.counts[key] || 0), 0),
+            }))
+            .filter((device) => device.count > 0)
+            .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+        document.querySelector('#problematicCount').textContent = devices.length;
+        document.querySelector('#problematicDeviceTotal').textContent = '/' + source.total_devices;
+        const body = document.querySelector('#problematicDevices');
+        body.replaceChildren();
+        for (const device of devices) {
+            const row = element('tr'),
+                name = element('td'),
+                link = element('a', device.name);
+            link.href = 'inventory/controllers/device.php?id=' + device.id + '&view=1#view-fcaps';
+            name.append(link);
+            row.append(name, element('td', String(device.count)));
+            body.append(row);
+        }
+        if (!devices.length) {
+            const row = element('tr'),
+                cell = element(
+                    'td',
+                    selected.length
+                        ? 'No devices with active alarms at the selected severities.'
+                        : 'Select a severity to show affected devices.',
+                );
+            cell.colSpan = 2;
+            row.append(cell);
+            body.append(row);
+        }
+    }
+    document
+        .querySelectorAll('[data-problematic-severity]')
+        .forEach((input) => input.addEventListener('change', problematicDevices));
+    const problematicCard = document.querySelector('[data-widget=problematic]'),
+        problematicExpand = document.querySelector('#problematicExpand');
+    function collapseProblematic() {
+        problematicCard.classList.remove('widget-expanded');
+        problematicExpand.setAttribute('aria-pressed', 'false');
+        problematicExpand.setAttribute('aria-label', 'Expand Problematic Devices');
+    }
+    problematicExpand.addEventListener('click', () => {
+        const expanded = problematicCard.classList.toggle('widget-expanded');
+        problematicExpand.setAttribute('aria-pressed', String(expanded));
+        problematicExpand.setAttribute(
+            'aria-label',
+            expanded ? 'Collapse Problematic Devices' : 'Expand Problematic Devices',
+        );
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') collapseProblematic();
+    });
+    function recentAlarms() {
+        const root = document.querySelector('#recentAlarms');
+        root.replaceChildren();
+        for (const alarm of readings.recent || []) {
+            const detail = element('details'),
+                summary = element('summary'),
+                dot = element('i'),
+                heading = element('span'),
+                name = element('strong', alarm.name),
+                when = alarm.time
+                    ? new Date(alarm.time * 1000).toLocaleString('en-IN', {
+                          timeZone: 'Asia/Kolkata',
+                      })
+                    : 'Time unavailable',
+                meta = element('small', when + ' · ' + alarm.device);
+            dot.style.background = colors[alarm.severity] || '#999';
+            dot.title = alarm.severity;
+            heading.append(name, meta);
+            summary.append(dot, heading);
+            detail.append(summary);
+            const body = element('div');
+            body.className = 'recent-detail';
+            body.append(
+                element(
+                    'p',
+                    alarm.graph +
+                        ' · Reading: ' +
+                        (alarm.value === null ? 'Unavailable' : alarm.value) +
+                        ' · ' +
+                        alarm.severity,
+                ),
+            );
+            if (alarm.corrective_action)
+                body.append(element('p', 'Fix: ' + alarm.corrective_action));
+            const links = element('nav'),
+                device = element('a', 'Device Details →');
+            device.href =
+                'inventory/controllers/device.php?id=' + alarm.device_id + '&view=1#view-fcaps';
+            links.append(device);
+            if (alarm.graph_id) {
+                const graph = element('a', 'Graph →');
+                graph.href =
+                    'inventory/controllers/device.php?id=' +
+                    alarm.device_id +
+                    '&view=1#view-graphs';
+                links.append(graph);
+            }
+            body.append(links);
+            detail.append(body);
+            root.append(detail);
+        }
+        if (!root.children.length) root.append(element('p', 'No active alarms.'));
+    }
+    const recentCard = document.querySelector('[data-widget=recent]'),
+        expandRecent = document.querySelector('#recentExpand');
+    function collapseRecent() {
+        recentCard.classList.remove('widget-expanded');
+        expandRecent.setAttribute('aria-pressed', 'false');
+        expandRecent.setAttribute('aria-label', 'Expand Recent Alarms');
+    }
+    expandRecent.addEventListener('click', () => {
+        const expanded = recentCard.classList.toggle('widget-expanded');
+        expandRecent.setAttribute('aria-pressed', String(expanded));
+        expandRecent.setAttribute(
+            'aria-label',
+            expanded ? 'Collapse Recent Alarms' : 'Expand Recent Alarms',
+        );
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') collapseRecent();
+    });
+    const portTip = document.querySelector('#dashboardPortTooltip');
+    let tipTimer = null;
+    function hidePortTip() {
+        portTip.hidden = true;
+        clearTimeout(tipTimer);
+        document
+            .querySelectorAll('.port-dot[aria-describedby]')
+            .forEach((e) => e.removeAttribute('aria-describedby'));
+    }
+    function portAvailability(port, fresh) {
+        if (!fresh) return '—';
+        if (Number(port.admin) === 2 || Number(port.oper) === 1) return 'Utilized/Occupied';
+        if (Number(port.admin) === 1 && Number(port.oper) === 2) return 'Unoccupied';
+        return '—';
+    }
+    function portsOverview() {
+        hidePortTip();
+        const root = document.querySelector('#portsOverview');
+        root.replaceChildren();
+        const states = {
+            1: 'Up',
+            2: 'Down',
+            3: 'Testing',
+            4: 'Not reported by device',
+            5: 'Dormant',
+            6: 'Not present',
+            7: 'Lower layer down',
+        };
+        for (const device of readings.ports || []) {
+            const row = element('div'),
+                name = element('a', device.name),
+                dots = element('div');
+            row.className = 'ports-device-row';
+            name.href = 'inventory/controllers/device.php?id=' + device.id + '&view=1#view-ports';
+            dots.className = 'port-dots';
+            for (const port of device.ports.items) {
+                const fresh = device.ports.fresh,
+                    dot = element('button');
+                dot.type = 'button';
+                dot.className = 'port-dot';
+                dot.style.background = !fresh
+                    ? '#aaa'
+                    : colors[port.alarm_state] ||
+                      (Number(port.admin) === 2
+                          ? '#ff4148'
+                          : Number(port.oper) === 1
+                            ? '#43ae69'
+                            : Number(port.oper) === 2
+                              ? '#155cff'
+                              : [3, 5, 6, 7].includes(Number(port.oper))
+                                ? '#ff9b17'
+                                : '#aaa');
+                dot.setAttribute(
+                    'aria-label',
+                    device.name +
+                        ' · ' +
+                        port.name +
+                        ' · ' +
+                        port.status +
+                        ' · ' +
+                        (port.alarm_state || 'Unmonitored'),
+                );
+                function show() {
+                    clearTimeout(tipTimer);
+                    portTip.replaceChildren();
+                    const speed = (port.high_speed_mbps || 0) * 1000000 || port.speed_bps || 0;
+                    const capacity =
+                        speed >= 1e9
+                            ? (speed / 1e9).toLocaleString() + ' Gbps'
+                            : speed >= 1e6
+                              ? (speed / 1e6).toLocaleString() + ' Mbps'
+                              : speed > 0
+                                ? speed + ' bps'
+                                : '';
+                    const suffix =
+                        Number(port.type) === 24
+                            ? ' (Loopback)'
+                            : fresh && capacity
+                              ? ' (' + capacity + ')'
+                              : '';
+                    const admin = fresh
+                        ? { 1: 'Up', 2: 'Down', 3: 'Testing' }[port.admin] || '—'
+                        : '—';
+                    const operational =
+                        fresh && Number(port.admin) !== 2
+                            ? port.oper_note ||
+                              (Number(port.oper) === 4 ? '—' : states[port.oper]) ||
+                              '—'
+                            : '—';
+                    const availability = portAvailability(port, fresh),
+                        list = element('dl');
+                    for (const [label, value] of [
+                        ['Interface Name', device.name + ' · ' + port.name + suffix],
+                        ['Admin Status', admin],
+                        ['Operational Status', operational],
+                        ['Availability', availability],
+                    ]) {
+                        const dt = element('dt', label),
+                            dd = element('dd', value);
+                        if (label.includes('Status'))
+                            dd.style.color = value.startsWith('Up')
+                                ? '#2dc658'
+                                : value === 'Down'
+                                  ? '#ff4148'
+                                  : '#252525';
+                        if (label === 'Availability' && availability === 'Unoccupied')
+                            dd.style.color = '#155cff';
+                        list.append(dt, dd);
+                    }
+                    portTip.append(list);
+                    portTip.hidden = false;
+                    dot.setAttribute('aria-describedby', 'dashboardPortTooltip');
+                    const box = dot.getBoundingClientRect(),
+                        tip = portTip.getBoundingClientRect();
+                    portTip.style.left =
+                        Math.max(8, Math.min(box.left, innerWidth - tip.width - 8)) + 'px';
+                    portTip.style.top =
+                        (box.bottom + 8 + tip.height < innerHeight
+                            ? box.bottom + 8
+                            : Math.max(8, box.top - tip.height - 8)) + 'px';
+                }
+                dot.addEventListener('pointerenter', show);
+                dot.addEventListener('focus', show);
+                dot.addEventListener('click', show);
+                dot.addEventListener('pointerleave', () => {
+                    tipTimer = setTimeout(hidePortTip, 180);
+                });
+                dot.addEventListener('blur', hidePortTip);
+                dots.append(dot);
+            }
+            row.append(name, dots);
+            root.append(row);
+        }
+        if (!root.children.length)
+            root.append(
+                element('p', 'No interfaces reported for the current device configurations.'),
+            );
+    }
+    portTip.addEventListener('pointerenter', () => clearTimeout(tipTimer));
+    portTip.addEventListener('pointerleave', hidePortTip);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') hidePortTip();
+    });
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.port-dot') && !portTip.contains(e.target)) hidePortTip();
+    });
+    grid.addEventListener('scroll', hidePortTip);
+    const portsCard = document.querySelector('[data-widget=ports]'),
+        portsExpand = document.querySelector('#portsExpand');
+    portsExpand.addEventListener('click', () => {
+        hidePortTip();
+        const expanded = portsCard.classList.toggle('widget-expanded');
+        portsExpand.setAttribute('aria-pressed', String(expanded));
+        portsExpand.setAttribute(
+            'aria-label',
+            expanded ? 'Collapse Ports Overview' : 'Expand Ports Overview',
+        );
+    });
+    function collapsePorts() {
+        hidePortTip();
+        portsCard.classList.remove('widget-expanded');
+        portsExpand.setAttribute('aria-pressed', 'false');
+        portsExpand.setAttribute('aria-label', 'Expand Ports Overview');
+    }
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') collapsePorts();
+    });
+    function workflowCharts() {
+        for (const key of ['ack', 'escalation']) {
+            const chart = document.querySelector('#' + key + 'Donut'),
+                legend = document.querySelector('#' + key + 'Legend'),
+                values = Object.entries(readings[key]),
+                total = values.reduce((sum, [, count]) => sum + count, 0);
+            chart.replaceChildren();
+            legend.replaceChildren();
+            const radius = 59,
+                circumference = 2 * Math.PI * radius;
+            chart.append(
+                svg('circle', {
+                    cx: 90,
+                    cy: 90,
+                    r: radius,
+                    fill: 'none',
+                    stroke: total > 0 ? '#eceef2' : '#b5cdff',
+                    'stroke-width': 29,
+                }),
+            );
+            let offset = 0;
+            values.forEach(([name, count], i) => {
+                const color = i === 0 ? '#155cff' : '#b5cdff';
+                if (count > 0 && total > 0) {
+                    const length = (count / total) * circumference;
+                    chart.append(
+                        svg('circle', {
+                            cx: 90,
+                            cy: 90,
+                            r: radius,
+                            fill: 'none',
+                            stroke: color,
+                            'stroke-width': 29,
+                            'stroke-dasharray': length + ' ' + (circumference - length),
+                            'stroke-dashoffset': -offset,
+                            transform: 'rotate(-90 90 90)',
+                        }),
+                    );
+                    offset += length;
+                }
+                const item = element('li'),
+                    dot = element('i');
+                dot.style.background = color;
+                item.append(
+                    dot,
+                    element('span', name === 'Not_Ack' ? 'Not Ack' : name),
+                    element('b', count === null ? 'Unknown' : String(count)),
+                );
+                legend.append(item);
+            });
+            chart.append(
+                svg(
+                    'text',
+                    { x: 90, y: 98, 'text-anchor': 'middle', 'font-size': 26, fill: '#222' },
+                    total,
+                ),
+            );
+            chart.setAttribute(
+                'aria-label',
+                total +
+                    ' active alarms; ' +
+                    values
+                        .map(
+                            ([name, count]) =>
+                                (name === 'Not_Ack' ? 'Not Ack' : name) +
+                                ': ' +
+                                (count === null ? 'Unknown' : count),
+                        )
+                        .join(', '),
+            );
+            const note = document.querySelector('#' + key + 'Note');
+            note.textContent =
+                total > 0
+                    ? key === 'ack'
+                        ? ''
+                        : 'Escalation status has not been recorded.'
+                    : 'No active alarms.';
+            note.hidden = !note.textContent;
+        }
+    }
+    document.querySelectorAll('[data-alarm-mode]').forEach((button) =>
+        button.addEventListener('click', () => {
+            mode = button.dataset.alarmMode;
+            document
+                .querySelectorAll('[data-alarm-mode]')
+                .forEach((b) => b.setAttribute('aria-pressed', String(b === button)));
+            alarms();
+        }),
+    );
+    let inventoryCursor = Math.max(
+        0,
+        ...(readings.inventory_changes || []).map((row) => Number(row.id)),
+    );
+    function inventoryChanges() {
+        const rows = (readings.inventory_changes || []).filter(
+            (row) => Number(row.id) > inventoryCursor,
+        );
+        inventoryCursor = Math.max(inventoryCursor, ...rows.map((row) => Number(row.id)));
+        if (rows.length && typeof window.icctShowMessage === 'function')
+            window.icctShowMessage({
+                title: 'Inventory updated',
+                text:
+                    rows
+                        .slice(0, 3)
+                        .map((row) => row.description + ' · ' + row.event)
+                        .join('; ') +
+                    (rows.length > 3 ? ' · ' + (rows.length - 3) + ' more changes' : ''),
+            });
+    }
+    let refreshPending = false;
+    async function refreshReadings(manual = false) {
+        if (refreshPending || (!manual && document.hidden)) return;
+        refreshPending = true;
+        const button = document.querySelector('#birdsRefresh');
+        button.disabled = true;
+        try {
+            const url = siteUrl(data.site_id);
+            url.searchParams.set('dashboard_readings', '1');
+            const response = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
+            if (!response.ok) throw Error();
+            const next = await response.json();
+            readings = next;
+            if (next.device_counts)
+                document.dispatchEvent(
+                    new CustomEvent('icct:device-counts', { detail: next.device_counts }),
+                );
+            if (next.lnms)
+                document.dispatchEvent(
+                    new CustomEvent('icct:lnms-readings', { detail: next.lnms }),
+                );
+            document.dispatchEvent(
+                new CustomEvent('icct:alarm-readings', { detail: next.device_alarms || [] }),
+            );
+            radar();
+            alarms();
+            workflowCharts();
+            frequentAlarms();
+            recentAlarms();
+            portsOverview();
+            problematicDevices();
+            inventoryChanges();
+            packCards();
+            if (manual) reportStatus();
+        } catch (e) {
+            reportStatus('Widget refresh failed. Showing last received readings.');
+        } finally {
+            refreshPending = false;
+            button.disabled = false;
+        }
+    }
+    document.querySelector('#birdsRefresh').addEventListener('click', () => refreshReadings(true));
+    let refreshTimer;
+    function scheduleRefresh() {
+        clearInterval(refreshTimer);
+        refreshTimer = setInterval(
+            () => refreshReadings(),
+            Math.max(5, Number(preferences.refresh_seconds) || 30) * 1000,
+        );
+        document.dispatchEvent(
+            new CustomEvent('icct:refresh-interval', {
+                detail: Number(preferences.refresh_seconds) || 30,
+            }),
+        );
+    }
+    const refreshInput = document.querySelector('#dashboardRefreshInterval');
+    refreshInput?.addEventListener('change', async () => {
+        if (!refreshInput.reportValidity()) return;
+        preferences.refresh_seconds = Number(refreshInput.value);
+        scheduleRefresh();
+        await save();
+    });
+    scheduleRefresh();
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) refreshReadings();
+    });
+    layout();
+    radar();
+    alarms();
+    workflowCharts();
+    frequentAlarms();
+    recentAlarms();
+    portsOverview();
+    problematicDevices();
+    inventoryChanges();
+})();

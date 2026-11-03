@@ -168,7 +168,7 @@ document.querySelector('#node-search')?.addEventListener('input',event=>{
 function updateNodeRackCount(){if(!nodeEditor)return;const profiles=JSON.parse(document.querySelector('#node-rack-profiles').textContent);nodeEditor.elements.rack_count_display.value=profiles[nodeEditor.elements.rack_profile_id.value]?.rack_count ?? '';}
 nodeEditor?.elements.rack_profile_id.addEventListener('change',updateNodeRackCount);if(nodeEditor)updateNodeRackCount();
 const rackEditor=document.querySelector('#rack-editor');
-function openRackEditor(profile={}){rackEditor.reset();for(const name of ['rack_profile_id','rack_name','rack_count','unit_count'])rackEditor.elements[name].value=profile[name] ?? '';document.querySelector('#rack-editor-title').textContent=profile.rack_profile_id?'Edit Rack Configuration':'Add Rack Configuration';rackEditor.hidden=false;rackEditor.elements.rack_name.focus();}
+function openRackEditor(profile={}){rackEditor.reset();for(const name of ['rack_profile_id','rack_name','unit_count'])rackEditor.elements[name].value=profile[name] ?? '';document.querySelector('#rack-editor-title').textContent=profile.rack_profile_id?'Edit Rack Configuration':'Add Rack Configuration';rackEditor.hidden=false;rackEditor.elements.rack_name.focus();}
 document.querySelector('#add-rack-config')?.addEventListener('click',()=>openRackEditor());
 document.querySelector('#cancel-rack-config')?.addEventListener('click',()=>{rackEditor.hidden=true;});
 document.querySelectorAll('[data-edit-rack-profile]').forEach(button=>button.addEventListener('click',()=>openRackEditor(JSON.parse(button.dataset.editRackProfile))));

@@ -1,0 +1,214 @@
+<!-- Device flow summaries show collector observations for the selected device and time window. -->
+<section
+    id="view-netflow"
+    data-device-view-panel="netflow"
+    hidden>
+    <div class="netflow-heading">
+        <h2>NetFlow / IPFIX</h2>
+        <div>
+            <span
+                id="netflow-health"
+                role="status">Loading readings…</span>
+            <button
+                class="icon-button"
+                type="button"
+                id="netflow-refresh"
+                aria-label="Refresh flow readings">↻</button>
+            <a
+                class="button"
+                id="netflow-export"
+                href="protocols/netflow/controllers/netflow.php?id=<?= (int) $id ?>&amp;export=1">Export CSV</a>
+        </div>
+    </div>
+    <p id="netflow-configuration"></p>
+    <p
+        id="netflow-feedback"
+        role="alert"></p>
+    <form
+        id="netflow-filters"
+        class="netflow-filters"
+        data-device-id="<?= (int) $id ?>">
+        <label class="field">
+            <span>Time</span>
+            <select name="hours">
+                <option value="1">Last hour</option>
+                <option
+                    value="24"
+                    selected>Last 24 hours</option>
+                <option value="168">Last 7 days</option>
+                <option value="720">Last 30 days</option>
+            </select>
+        </label>
+        <label class="field">
+            <span>Start (IST)</span>
+            <input
+                type="datetime-local"
+                name="start">
+        </label>
+        <label class="field">
+            <span>End (IST)</span>
+            <input
+                type="datetime-local"
+                name="end">
+        </label>
+        <label class="field">
+            <span>Version</span>
+            <select name="version">
+                <option value="">All</option>
+                <option value="5">v5</option>
+                <option value="7">v7</option>
+                <option value="9">v9</option>
+                <option value="10">IPFIX</option>
+            </select>
+        </label>
+        <label class="field">
+            <span>Traffic</span>
+            <select name="traffic_scope">
+                <option value="">All</option>
+                <option>LAN</option>
+                <option>WAN</option>
+                <option value="Unknown">Unclassified</option>
+            </select>
+        </label>
+        <label class="field">
+            <span>Source IP</span>
+            <input
+                name="src_addr"
+                placeholder="Exact IP address">
+        </label>
+        <label class="field">
+            <span>Destination IP</span>
+            <input
+                name="dst_addr"
+                placeholder="Exact IP address">
+        </label>
+        <label class="field">
+            <span>Protocol</span>
+            <select name="protocol">
+                <option value="">All</option>
+                <option value="6">TCP</option>
+                <option value="17">UDP</option>
+                <option value="1">ICMP</option>
+                <option value="58">ICMPv6</option>
+            </select>
+        </label>
+        <label class="field">
+            <span>Destination Port</span>
+            <input
+                name="dst_port"
+                type="number"
+                min="0"
+                max="65535">
+        </label>
+        <label class="field">
+            <span>Application</span>
+            <input
+                name="application"
+                placeholder="Name or application ID">
+        </label>
+        <button
+            class="button primary"
+            type="submit">Apply</button>
+        <button
+            class="button"
+            type="reset">Clear All</button>
+    </form>
+    <div
+        class="netflow-summary"
+        id="netflow-totals"></div>
+    <div class="netflow-chart-panel">
+        <h3>LAN / WAN Bandwidth Trends</h3>
+        <p id="netflow-chart-interval">Average throughput from exported flow records.</p>
+        <svg
+            id="netflow-chart"
+            viewBox="0 0 900 220"
+            role="img"
+            aria-label="LAN and WAN bandwidth history"></svg>
+        <p class="netflow-legend">
+            <span>● LAN</span>
+            <span>● WAN</span>
+            <span>● Unclassified</span>
+        </p>
+    </div>
+    <div
+        class="netflow-rankings"
+        id="netflow-rankings"></div>
+    <h3>Traffic Records</h3>
+    <p>Applications are shown only when reported by the exporter. Missing readings are shown as
+        unavailable. Readings update every 30 seconds; new exports can take up to one capture
+        interval to appear.</p>
+    <div class="site-table-wrap">
+        <table class="site-table netflow-table">
+            <thead>
+                <tr>
+                    <th>First / Last Seen (IST)</th>
+                    <th>Version</th>
+                    <th>Source</th>
+                    <th>Destination</th>
+                    <th>Protocol</th>
+                    <th>Bytes / Packets</th>
+                    <th>Application</th>
+                    <th>LAN / WAN</th>
+                </tr>
+            </thead>
+            <tbody id="netflow-records"></tbody>
+        </table>
+    </div>
+    <footer class="inventory-pagination">
+        <label>Items per page: <select id="netflow-size">
+                <option>10</option>
+                <option selected>25</option>
+                <option>50</option>
+                <option>100</option>
+            </select>
+        </label>
+        <span id="netflow-range"></span>
+        <div class="page-controls">
+            <select
+                id="netflow-page"
+                aria-label="NetFlow page"></select>
+            <span id="netflow-pages"></span>
+            <button
+                class="pagination-control"
+                type="button"
+                id="netflow-prev"
+                aria-label="Previous NetFlow page">
+                <svg
+                    class="pagination-arrow"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true">
+                    <path d="M15 5 7 12 15 19Z" />
+                </svg>
+            </button>
+            <button
+                class="pagination-control"
+                type="button"
+                id="netflow-next"
+                aria-label="Next NetFlow page">
+                <svg
+                    class="pagination-arrow"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true">
+                    <path d="M9 5 17 12 9 19Z" />
+                </svg>
+            </button>
+        </div>
+    </footer>
+    <h3>Traffic Anomalies</h3>
+    <p>Rule-based indicators of possible scanning, SYN floods, worm-like SMB/RPC traffic, and
+        over-utilization. These indicators require investigation and do not establish that an
+        endpoint is infected.</p>
+    <div class="site-table-wrap">
+        <table class="site-table">
+            <thead>
+                <tr>
+                    <th>Detected / Updated (IST)</th>
+                    <th>Severity</th>
+                    <th>Status</th>
+                    <th>Finding</th>
+                </tr>
+            </thead>
+            <tbody id="netflow-events"></tbody>
+        </table>
+    </div>
+</section>
