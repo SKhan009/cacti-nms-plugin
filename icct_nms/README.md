@@ -2,6 +2,10 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Inventory designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
+## Version 1.3.4
+
+NetFlow field tooltips explain purpose, accepted input/range, units, examples and how to apply the setting. Collector and exporter help distinguishes receiver and device addresses. Text input lengths match backend limits; device NetFlow setup also includes exporter source IP help.
+
 ## Version 1.3.3
 
 NetFlow setup explanations now appear in the project-style information tooltips beside each field. The two explanatory paragraphs and saved/unsaved preset status lines are removed. Independent version/mode presets and draft restoration remain available. Numeric input ranges match backend validation.
