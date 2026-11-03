@@ -1,18 +1,18 @@
 <?php
 $nfFields=['version'=>['Version','select',[5=>'NetFlow v5',7=>'NetFlow v7',9=>'NetFlow v9',10=>'IPFIX']],'collector'=>['Collector Address','text','Receiver hostname or IP address'],'port'=>['Collector Port','number','1–65535'],'active_timeout'=>['Active Timeout (Sec)','number','1–86400'],'inactive_timeout'=>['Inactive Timeout (Sec)','number','1–86400'],'sampling_rate'=>['Sampling Rate','number','Packets per sample'],'lan_cidrs'=>['LAN Prefixes','text','Comma-separated CIDRs'],'wan_interfaces'=>['WAN Interface ifIndex Values','text','Optional: 2,3'],'bandwidth_limit_mbps'=>['Bandwidth Alert Limit (Mbps)','number','5-minute average'],'scan_threshold'=>['Scan Alert Destinations / Ports','number','Distinct targets per 5 minutes'],'syn_pps_threshold'=>['SYN Alert Packets / Sec','number','5-minute average']];
 $nfHelp=[
-    'version'=>'Use: select the flow-record format sent by the router or switch. Allowed: NetFlow v5, v7, v9 or IPFIX. Example: choose v9 when the router exports v9. Configure the same format on the router; saving here does not change its configuration.',
-    'collector'=>'Use: destination server receiving flow records, usually the NMS server or assigned remote poller, rather than the monitored router. Input: IPv4, IPv6 or hostname; maximum 253 characters, without a URL scheme or port. Example: 10.0.2.15. Configure the router to send to this reachable address.',
-    'port'=>'Use: UDP destination port on the collector. Input: whole number from 1 to 65535. Example: 2055 for NetFlow or 4739 for IPFIX. Set the same destination port on the router and permit it through the collector firewall.',
-    'active_timeout'=>'Use: how often the router exports an update for a flow that is still active. Input: whole number from 1 to 86400 seconds. Example: 60 sends an update about every minute. Configure this value on the router; smaller values give more frequent updates.',
-    'inactive_timeout'=>'Use: how long the router waits after the last packet before finishing and exporting a flow. Input: whole number from 1 to 86400 seconds. Example: 15 exports after 15 seconds without traffic. Configure the same timeout on the router.',
-    'sampling_rate'=>'Use: number of packets represented by one sampled packet. Input: whole number from 1 to 1000000. Example: 1 means every packet; 100 means about one in 100. Match the router sampling setting. This value scales totals only when the exporter does not advertise its sampling rate.',
-    'lan_cidrs'=>'Use: identify internal networks for LAN/WAN reporting. Input: comma-separated IPv4 or IPv6 CIDRs, up to 1000 characters; prefix lengths 0–32 for IPv4 or 0–128 for IPv6. Example: 192.168.1.0/24. Both endpoints inside means LAN; one inside means WAN. WAN interface rules take priority. Blank defines no internal networks.',
-    'wan_interfaces'=>'Use: identify WAN links before applying LAN prefix rules. Input: optional comma-separated numeric SNMP ifIndex IDs, up to 512 characters. Example: 2,3 classifies flows entering or leaving interface 2 or 3 as WAN. Obtain IDs from device interface discovery; they may differ from physical port numbers. Blank uses LAN prefixes only.',
-    'bandwidth_limit_mbps'=>'Use: raise a high-bandwidth alert for this device. Input: whole number from 1 to 1000000 Mbps. Example: 100 alerts when collected traffic reaches a five-minute average of 100 Mbps. This is an alert threshold, not a speed limit.',
-    'scan_threshold'=>'Use: flag possible scanning by a source IP. Input: whole number from 2 to 1000000. Example: 100 flags a source reaching at least 100 different destination IPs OR destination ports within five minutes. It counts distinct targets, not total packets.',
-    'syn_pps_threshold'=>'Use: flag a possible TCP SYN flood from a source IP. Input: whole number from 1 to 100000000 packets per second. Example: 1000 alerts at an average of at least 1000 SYN-without-ACK packets per second over five minutes. It raises an alert; it does not block traffic.',
-    'exporter_address'=>'Use: link incoming NetFlow packets to this Cacti device. Input: one IPv4 or IPv6 source address, without a hostname, CIDR prefix or port. Example: 192.168.1.10. Enter the source IP actually seen by the collector; it may differ from the device management IP. Each exporter source IP must identify one device.',
+    'version'=>'Flow format sent by the device: v5, v7, v9 or IPFIX. Match the router setting.',
+    'collector'=>'Receiver IP or hostname, not the router address. Example: 10.0.2.15. Maximum 253 characters; no URL or port.',
+    'port'=>'Receiver UDP port: 1–65535. Common: NetFlow 2055, IPFIX 4739. Match the router destination port.',
+    'active_timeout'=>'Ongoing flow update interval: 1–86400 seconds. Example: 60 = every minute. Set on the router.',
+    'inactive_timeout'=>'Idle time before exporting a flow: 1–86400 seconds. Example: 15. Set on the router.',
+    'sampling_rate'=>'Packets per sample: 1–1000000. 1 = every packet; 100 = one in 100. Used when exporter sampling is absent.',
+    'lan_cidrs'=>'Internal network CIDRs, comma-separated. Example: 192.168.1.0/24. IPv4 prefix: 0–32; IPv6: 0–128. Maximum 1000 characters.',
+    'wan_interfaces'=>'Optional WAN ifIndex IDs, such as 2,3. Overrides LAN classification. Maximum 512 characters.',
+    'bandwidth_limit_mbps'=>'High-usage alert threshold: 1–1000000 Mbps, averaged over five minutes. Does not limit speed.',
+    'scan_threshold'=>'Scan alert threshold: 2–1000000 distinct destination IPs or ports per source within five minutes.',
+    'syn_pps_threshold'=>'SYN-flood alert threshold: 1–100000000 SYN-without-ACK packets/sec, averaged over five minutes.',
+    'exporter_address'=>'Device source IP seen by the collector. One IPv4/IPv6 address; no hostname or port. Must uniquely identify this device.',
 ];
 $nfRanges=['port'=>[1,65535],'active_timeout'=>[1,86400],'inactive_timeout'=>[1,86400],'sampling_rate'=>[1,1000000],'bandwidth_limit_mbps'=>[1,1000000],'scan_threshold'=>[2,1000000],'syn_pps_threshold'=>[1,100000000]];
 ?>
