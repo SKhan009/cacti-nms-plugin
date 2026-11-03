@@ -45,6 +45,7 @@
     <script src="inventory/js/wizard.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../../inventory/js/wizard.js'),0,12) ?>" defer></script>
 <?php endif; ?>
 <?php if (!empty($presetsPage)): ?>
+    <script src="protocols/shared/js/protocol-presets.js?v=<?= substr(hash_file('sha256',__DIR__.'/../../protocols/shared/js/protocol-presets.js'),0,12) ?>" defer></script>
     <script src="presets/js/presets.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../presets/js/presets.js'),0,12) ?>" defer></script>
 <?php endif; ?>
 <?php if (!empty($mapPage)): ?>

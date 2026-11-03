@@ -32,9 +32,19 @@ function icct_nms_seed_protocol_presets() {
             $existing=$oldProfiles[$version]??((int)($before['netflow']['version']??0)===$version?($before['netflow']??[]):[]);
             $profiles[$version]=array_replace($base,array_intersect_key($existing,array_flip(icct_nms_netflow_fields())),['version'=>$version]);
         }
+        $oldVersions=icct_nms_protocol_profiles(); $versions=[];
+        foreach(icct_nms_protocol_variants() as $protocol=>$variant) {
+            foreach($variant['labels'] as $value=>$label) {
+                $base=array_replace($starters[$protocol],[$variant['field']=>(string)$value]);
+                if($protocol==='serial'&&$value==='modbus_ascii')$base['data_bits']=7;
+                $active=$before[$protocol]??[];
+                $existing=$oldVersions[$protocol][$value]??((string)($active[$variant['field']]??'')===(string)$value?$active:[]);
+                $versions[$protocol][$value]=array_replace($base,array_intersect_key($existing,array_flip(icct_nms_protocol_preset_fields($protocol))),[$variant['field']=>(string)$value]);
+            }
+        }
         $execute('START TRANSACTION');
         try {
-            foreach (['protocol_defaults'=>[$before,$presets],'protocol_netflow_versions'=>[$oldProfiles,$profiles]] as $key=>[$old,$new]) {
+            foreach (['protocol_defaults'=>[$before,$presets],'protocol_netflow_versions'=>[$oldProfiles,$profiles],'protocol_versions'=>[$oldVersions,$versions]] as $key=>[$old,$new]) {
                 if($old===$new)continue;
                 $execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',[$key,json_encode($new,JSON_THROW_ON_ERROR)]);
             }

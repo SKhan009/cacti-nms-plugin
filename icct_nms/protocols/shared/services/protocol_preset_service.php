@@ -26,9 +26,21 @@ function icct_nms_netflow_profiles() {
     if (!is_array($profiles)) throw new RuntimeException('Invalid NetFlow version presets.');
     return array_intersect_key($profiles,array_flip([5,7,9,10]));
 }
+function icct_nms_protocol_variants() {
+    return ['snmp'=>['field'=>'snmp_version','labels'=>[1=>'SNMP v1',2=>'SNMP v2',3=>'SNMP v3']],
+        'ssh'=>['field'=>'auth_method','labels'=>['password'=>'SSH password','key'=>'SSH private key']],
+        'serial'=>['field'=>'serial_protocol','labels'=>['modbus_rtu'=>'Modbus RTU','modbus_ascii'=>'Modbus ASCII']]];
+}
+function icct_nms_protocol_profiles() {
+    $json=db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['protocol_versions']);
+    if (!$json) return [];
+    $profiles=json_decode($json,true,32,JSON_THROW_ON_ERROR);
+    if (!is_array($profiles)) throw new RuntimeException('Invalid protocol version presets.');
+    return $profiles;
+}
 function icct_nms_protocol_preset_validate($protocol,$input) {
     global $fields_host_edit;
-    if ($protocol==='snmp') $input+=array_replace(icct_nms_defaults(),icct_nms_protocol_presets()['snmp'] ?? []);
+    if ($protocol==='snmp') $input+=array_replace(icct_nms_defaults(),icct_nms_protocol_presets()['snmp'] ?? [],icct_nms_protocol_profiles()['snmp'][(int)($input['snmp_version']??0)]??[]);
     $out=[];
     foreach (icct_nms_protocol_preset_fields($protocol) as $field) {
         if (!isset($input[$field]) && $field!=='monitoring') throw new InvalidArgumentException('Missing field: '.$field);
@@ -65,20 +77,26 @@ function icct_nms_save_protocol_preset($input) {
     $protocol=$input['preset_protocol'] ?? '';
     if (!is_string($protocol)) throw new InvalidArgumentException('Choose a supported protocol.');
     $values=icct_nms_protocol_preset_validate($protocol,$input);
+    $variant=icct_nms_protocol_variants()[$protocol]??null;
+    $transaction=$protocol==='netflow'||$variant!==null;
     $lock='icct_protocol_defaults';
     if ((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,5)',[$lock])!==1) throw new RuntimeException('Protocol defaults are busy. Please retry.');
     try {
         $presets=icct_nms_protocol_presets(); $presets[$protocol]=$values;
-        if ($protocol==='netflow') icct_backend_category_execute('START TRANSACTION',[]);
+        if ($transaction) icct_backend_category_execute('START TRANSACTION',[]);
         try {
             if ($protocol==='netflow') {
                 $profiles=icct_nms_netflow_profiles(); $profiles[(int)$values['version']]=$values;
                 icct_backend_category_execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',['protocol_netflow_versions',json_encode($profiles,JSON_THROW_ON_ERROR)]);
             }
+            if ($variant) {
+                $profiles=icct_nms_protocol_profiles(); $profiles[$protocol][(string)$values[$variant['field']]]=$values;
+                icct_backend_category_execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',['protocol_versions',json_encode($profiles,JSON_THROW_ON_ERROR)]);
+            }
             icct_backend_category_execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',['protocol_defaults',json_encode($presets,JSON_THROW_ON_ERROR)]);
-            if ($protocol==='netflow') icct_backend_category_execute('COMMIT',[]);
+            if ($transaction) icct_backend_category_execute('COMMIT',[]);
         } catch (Throwable $e) {
-            if ($protocol==='netflow') icct_backend_category_execute('ROLLBACK',[]);
+            if ($transaction) icct_backend_category_execute('ROLLBACK',[]);
             throw $e;
         }
     } finally { db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)',[$lock]); }
@@ -106,6 +124,8 @@ function icct_nms_protocol_record_overrides($id,$action,$input) {
     if (!is_string($protocol) || !in_array($protocol,['snmp','cdp','lldp','ssh','serial','syslog','netflow'],true)) return;
     $defaults=icct_nms_protocol_presets()[$protocol] ?? [];
     if ($protocol==='netflow') $defaults=icct_nms_netflow_profiles()[(int)($input['version']??0)] ?? $defaults;
+    $variant=icct_nms_protocol_variants()[$protocol]??null;
+    if ($variant) $defaults=icct_nms_protocol_profiles()[$protocol][(string)($input[$variant['field']]??'')]??$defaults;
     if (!$defaults) return;
     $overrides=icct_nms_protocol_device_overrides($id)[$protocol] ?? [];
     foreach ($defaults as $field=>$value) {
