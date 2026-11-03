@@ -330,3 +330,30 @@ The additive Syslog migration is `icct_nms_schema_syslog_availability_migration(
 
 
 Database compatibility with the supplied v1.3.2 ZIP: the four `plugin_icct_nms_syslog_*` tables and the native `sites`/`host` Map storage are compatible. `shared/database/schema.sql` also includes the ZIP's four `plugin_icct_nms_ntp_*` and five `plugin_icct_nms_netflow_*` tables, using their original names and definitions. These tables prepare storage only; NTP and NetFlow application modules and workers still require a separate integration. VM chrony/NTP clock synchronization is independent of these per-device monitoring tables.
+
+
+### Discovery and GNSS workers (1.4.0)
+
+Discovery uses the existing **Topology Configuration → Networks**, **Discovered Devices** and **Device Connections** screens. Choose combined ICMP, SNMP, TCP ports, CDP and LLDP in Add/Edit Network. Discover Now starts Cacti's native automation and an additional bounded evidence job on the assigned collector. Cacti's scheduled runs are mirrored by the discovery worker. The native Automatically Add to Cacti option retains its native rule/template behavior; otherwise Review / Add opens the existing Add Device wizard. Graph and data query selections stay in its existing steps. Range observations alone never create physical links.
+
+Saved SNMP credential sets remain in Cacti. Results contain observations, not passwords. Repeated review uses native host IDs and a database lock; ambiguous identities require Inventory review. Completed evidence survives cancellation and retry. Existing status/identity changes are recorded in the plugin event journal and reported through existing dashboard notifications.
+
+Register each remote collector through Cacti’s existing **Remote Data Collector installation** workflow, which creates its native poller record on the primary server. Manage the registered collector through **Cacti Backend → Data Collection → Data Collectors**. Install this plugin and both workers on each collector. The worker uses that collector's native `poller_id` and Cacti's primary database connection; when the primary is unavailable it stops and retries, rather than using stale local permissions. The main server does not scan on behalf of a remote collector.
+
+On RHEL, with the plugin at `/var/www/html/cacti/plugins/icct_nms`, PHP CLI, Python 3 and native Cacti SNMP tools already installed:
+
+```sh
+sudo install -m 0644 /var/www/html/cacti/plugins/icct_nms/inventory/discovery/deploy/icct-nms-discovery.service /etc/systemd/system/
+sudo install -m 0644 /var/www/html/cacti/plugins/icct_nms/inventory/discovery/deploy/icct-nms-location.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now icct-nms-discovery icct-nms-location
+sudo systemctl status icct-nms-discovery icct-nms-location
+```
+
+Adjust service paths/user/group for other installations. Collection and the shipped UI assets do not require Internet access. Native ICMP probing needs Cacti's normal ping permissions. TCP scans cover explicitly selected ports (1–65535), up to 4096 addresses and 262144 address/port combinations per job.
+
+Configure GNSS through **Presets → Site → Configure GNSS** beside the appropriate collector. Supported inputs are vendor SNMP coordinate/fix OIDs, NMEA TCP/UDP, USB/RS-232 serial, local NMEA files and gpsd TPV. Select the actual receiver transport; a generic model cannot supply vendor OIDs automatically. Coordinates update the existing Map/Birds Eye poller marker without overwriting the saved site. Invalid, future or stale fixes do not appear as a current position. Birds Eye uses logical positions when coordinates are absent, not inferred geographic distance.
+
+For file input, place a current checksum-valid NMEA file under `/var/lib/icct-nms/gnss/` and grant the service read access. For serial, allow the service user access to the receiver device; the supplied RHEL unit uses the `dialout` group. Allow only the configured receiver/collector traffic through the existing firewall. SNMP uses the selected Inventory device's credentials. A GNSS device must belong to that collector. Real hardware and remote receiver connectivity require site-specific verification.
+
+Map/Birds Eye contain native LNMS/pollers only. Cross-collector connections are derived from existing manual or fresh CDP/LLDP device links; link Up/Down comes from collected interface readings. Missing readings are not shown as a healthy link. Dashboard refresh is saved per user (5–3600 seconds).

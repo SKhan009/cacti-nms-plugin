@@ -681,3 +681,35 @@ CREATE TABLE IF NOT EXISTS plugin_icct_nms_netflow_files (
  imported_at datetime NOT NULL,
  PRIMARY KEY(capture_key), KEY imported_at(imported_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Interactive discovery uses native Cacti range, SNMP and device APIs; these tables own workflow evidence only.
+CREATE TABLE IF NOT EXISTS plugin_icct_nms_scan_jobs (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, poller_id INT UNSIGNED NOT NULL, site_id INT UNSIGNED NOT NULL DEFAULT 0,
+ network_id INT UNSIGNED NOT NULL DEFAULT 0, name VARCHAR(128) NOT NULL, config_json MEDIUMTEXT NOT NULL,
+ state VARCHAR(20) NOT NULL DEFAULT 'queued', requested_by INT UNSIGNED NOT NULL, total INT UNSIGNED NOT NULL DEFAULT 0,
+ completed INT UNSIGNED NOT NULL DEFAULT 0, cancel_requested TINYINT UNSIGNED NOT NULL DEFAULT 0,
+ heartbeat DATETIME DEFAULT NULL, started_at DATETIME DEFAULT NULL, finished_at DATETIME DEFAULT NULL,
+ last_error VARCHAR(500) NOT NULL DEFAULT '', created_at DATETIME NOT NULL,
+ PRIMARY KEY(id), KEY collector_queue(poller_id,state)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS plugin_icct_nms_scan_results (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, job_id BIGINT UNSIGNED NOT NULL, address VARCHAR(45) NOT NULL,
+ state VARCHAR(20) NOT NULL DEFAULT 'pending', evidence_json MEDIUMTEXT DEFAULT NULL,
+ credential_id INT UNSIGNED NOT NULL DEFAULT 0, suggested_template INT UNSIGNED NOT NULL DEFAULT 0,
+ host_id INT UNSIGNED NOT NULL DEFAULT 0, error VARCHAR(500) NOT NULL DEFAULT '', observed_at DATETIME DEFAULT NULL,
+ PRIMARY KEY(id), UNIQUE KEY job_address(job_id,address), KEY host_id(host_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS plugin_icct_nms_inventory_events (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, host_id INT UNSIGNED NOT NULL, event VARCHAR(40) NOT NULL,
+ details_json TEXT NOT NULL, created_at DATETIME NOT NULL,
+ PRIMARY KEY(id), KEY host_time(host_id,created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS plugin_icct_nms_gnss_sources (
+ poller_id INT UNSIGNED NOT NULL, enabled TINYINT UNSIGNED NOT NULL DEFAULT 0, config_json TEXT NOT NULL,
+ updated_by INT UNSIGNED NOT NULL, updated_at DATETIME NOT NULL, PRIMARY KEY(poller_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS plugin_icct_nms_gnss_readings (
+ poller_id INT UNSIGNED NOT NULL, latitude DECIMAL(10,7) DEFAULT NULL, longitude DECIMAL(11,7) DEFAULT NULL,
+ status VARCHAR(20) NOT NULL, last_attempt DATETIME NOT NULL, last_fix DATETIME DEFAULT NULL,
+ source_time DATETIME DEFAULT NULL, last_error VARCHAR(255) NOT NULL DEFAULT '', PRIMARY KEY(poller_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

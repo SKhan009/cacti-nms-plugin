@@ -15,3 +15,6 @@ context.readings.lnms.center.coordinates=null;context.readings.lnms.nodes=[cente
 groups=radar.children.filter(n=>n.tag==='g');assert.equal(groups.length,1);assert.equal(note.textContent,'');assert.equal(note.hidden,true);
 assert(!JSON.stringify(radar).includes('Ordinary device site'));
 console.log('PASS: LNMS-only radar, heartbeat colors, real bearings, node summary actions and no invented remote sites.');
+context.readings.lnms.nodes=[center,remote];context.readings.lnms.links=[{source:1,target:2,status:'Down',label:'Configured WAN'}];vm.runInContext('radar()',context);
+assert(radar.children.some(n=>n.tag==='line'&&n.attrs.stroke==='#c83232'&&n.children.some(c=>c.textContent==='Configured WAN · Down')));
+console.log('PASS: configured poller links use their actual interface status color.');

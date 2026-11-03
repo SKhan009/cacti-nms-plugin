@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__.'/../../inventory/discovery/services/discovery_workflow.php';
 /** Plugin editor for Cacti's native automation network records. */
 function icct_nms_network_options(){
     global $ping_methods;
@@ -28,7 +29,9 @@ function icct_nms_network_defaults($options){
 function icct_nms_network_get($id){
     $id=icct_backend_topology_integer($id,1,16777215,'Network ID');
     $row=db_fetch_row_prepared('SELECT * FROM automation_networks WHERE id=?',[$id]);
-    if(!$row)throw new InvalidArgumentException('Network no longer exists.');return $row;
+    if(!$row)throw new InvalidArgumentException('Network no longer exists.');
+    $settings=json_decode((string)db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['discovery_network_'.$id]),true)?:[];
+    return array_replace($row,$settings);
 }
 function icct_nms_network_save($input){
     icct_backend_require_management(23);
@@ -57,13 +60,22 @@ function icct_nms_network_save($input){
     if($save['notification_enabled']==='on'&&$save['notification_email']==='')throw new InvalidArgumentException('Notification email is required when notifications are enabled.');
     $save['subnet_range']=implode(',',array_map('trim',preg_split('/[,\r\n]+/',$save['subnet_range'],-1,PREG_SPLIT_NO_EMPTY)));$save['total_ips']=0;
     foreach(explode(',',$save['subnet_range']) as $range){$count=automation_calculate_total_ips($range);if($count===false)throw new InvalidArgumentException('Invalid subnet range: '.$range);$save['total_ips']+=$count;}
-    $result=sql_save($save,'automation_networks');if(!$result)throw new RuntimeException('Unable to save network.');return (int)$result;
+    $extended=null;
+    if(!empty($input['scan_methods_present'])){
+        $extended=icct_nms_scan_validate(['name'=>$save['name'],'ranges'=>$save['subnet_range'],'methods'=>$input['scan_methods']??[],'ports'=>$input['scan_ports']??'','poller_id'=>$save['poller_id'],'site_id'=>$save['site_id'],'snmp_id'=>$save['snmp_id'],'timeout_ms'=>$input['scan_timeout']??500,'run_limit'=>min(14400,$save['run_limit'])]);
+    }
+    $result=sql_save($save,'automation_networks');if(!$result)throw new RuntimeException('Unable to save network.');if($extended!==null)icct_backend_category_execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()', ['discovery_network_'.$result,json_encode(['scan_methods'=>$extended['methods'],'scan_ports'=>implode(',',$extended['ports']),'scan_timeout'=>$extended['timeout_ms'],'scan_requested_by'=>icct_backend_current_user_id()],JSON_THROW_ON_ERROR)]);
+    return (int)$result;
 }
 function icct_nms_network_run($id){
     icct_backend_require_management(23);global $config;
     require_once $config['base_path'].'/lib/poller.php';
     $network=icct_nms_network_get($id);if($network['enabled']!=='on')throw new InvalidArgumentException('Enable this network before running discovery.');
     if(db_fetch_cell_prepared('SELECT COUNT(*) FROM automation_processes WHERE network_id=?',[$network['id']]))throw new InvalidArgumentException('Discovery is already running or finishing for this network.');
+    if(!empty($network['scan_methods'])){
+        if(db_fetch_cell_prepared("SELECT id FROM plugin_icct_nms_scan_jobs WHERE network_id=? AND state IN ('queued','running') LIMIT 1",[$network['id']]))throw new InvalidArgumentException('Discovery is already running for this network.');
+        icct_nms_scan_queue(['name'=>$network['name'],'ranges'=>$network['subnet_range'],'methods'=>$network['scan_methods'],'ports'=>$network['scan_ports']??'','timeout_ms'=>$network['scan_timeout']??500,'run_limit'=>min(14400,(int)$network['run_limit']),'poller_id'=>$network['poller_id'],'site_id'=>$network['site_id'],'snmp_id'=>$network['snmp_id'],'network_id'=>$network['id']]);
+    }
     if((int)$config['poller_id']===(int)$network['poller_id'])exec_background(read_config_option('path_php_binary'),['-q',read_config_option('path_webroot').'/poller_automation.php','--network='.(int)$network['id'],'--force']);
     else call_remote_data_collector($network['poller_id'],$config['url_path'].'remote_agent.php?action=discover&network='.(int)$network['id'],'AUTOM8');
 }

@@ -3,6 +3,7 @@
 require dirname(__DIR__, 2) . '/../../include/auth.php';
 require_once $config['base_path'] . '/include/global_form.php';
 require_once dirname(__DIR__, 2) . '/configuration/services/configuration_history.php';
+require_once dirname(__DIR__, 2) . '/inventory/discovery/services/discovery_workflow.php';
 require_once dirname(__DIR__, 2) . '/shared/services/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/inventory/services/inventory.php';
 require_once dirname(__DIR__, 2) . '/shared/services/forms.php';
@@ -22,7 +23,7 @@ try {
     $action = (string)($_POST['action'] ?? '');
     if ($action === 'basic') {
         $old = $id ? icct_nms_device($id) : icct_nms_defaults();
-        $id = icct_nms_save_device($id, $old, $_POST);
+        $id = !$id&&!empty($_POST['discovery_result'])?icct_nms_scan_wizard_save($_POST):icct_nms_save_device($id, $old, $_POST);
     } else {
         icct_backend_require_management(3);
         $host = icct_nms_device($id);

@@ -2,7 +2,8 @@
 /** Personal widget layouts; only known widgets, at most five dashboards. */
 function icct_nms_dashboard_validate($value) {
     if(!is_array($value)||!isset($value['dashboards'],$value['selected'])||!is_array($value['dashboards'])||count($value['dashboards'])<1||count($value['dashboards'])>5)throw new InvalidArgumentException('Choose one to five dashboards.');
-    $clean=['selected'=>(int)$value['selected'],'dashboards'=>[],'site_scope'=>'native'];
+    $refresh=$value['refresh_seconds']??30;if(!is_int($refresh)||$refresh<5||$refresh>3600)throw new InvalidArgumentException('Refresh interval must be 5–3600 seconds.');
+    $clean=['refresh_seconds'=>$refresh,'selected'=>(int)$value['selected'],'dashboards'=>[],'site_scope'=>'native'];
     foreach(array_values($value['dashboards']) as $index=>$dashboard){
         if(!is_array($dashboard)||!isset($dashboard['widgets'])||!is_array($dashboard['widgets'])||count($dashboard['widgets'])>9)throw new InvalidArgumentException('Invalid dashboard widgets.');
         $widgets=array_values($dashboard['widgets']);
@@ -28,7 +29,7 @@ function icct_nms_dashboard_validate($value) {
 function icct_nms_dashboard_preferences() {
     $raw=db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',['dashboard_user_'.icct_backend_current_user_id()]);
     try{if($raw){$value=json_decode($raw,true,512,JSON_THROW_ON_ERROR);icct_nms_dashboard_validate($value);return icct_nms_dashboard_validate($value);}}catch(Throwable $e){}
-    return ['selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms','ack','escalation','frequent','recent','ports','problematic']]]];
+    return ['refresh_seconds'=>30,'selected'=>0,'dashboards'=>[['widgets'=>['topology','birds','alarms','ack','escalation','frequent','recent','ports','problematic']]]];
 }
 function icct_nms_dashboard_save($value) {
     $clean=icct_nms_dashboard_validate($value);
@@ -47,10 +48,12 @@ function icct_nms_dashboard_readings($mapData) {
     arsort($segments);
     $frequent=array_values($frequent);usort($frequent,static fn($a,$b)=>($b['count']<=>$a['count']) ?: strcmp($a['name'],$b['name']) ?: strcmp($a['severity'],$b['severity']));
     usort($recent,static fn($a,$b)=>(($b['time'] ?? 0)<=>($a['time'] ?? 0)) ?: strcmp($a['name'],$b['name']));
+    require_once __DIR__.'/../../../inventory/discovery/services/inventory_events.php';
+    $inventoryEvents=icct_nms_inventory_recent_events(array_column($devices,'id'));
     $total=array_sum($severities);
     $unknown=$total>0?null:0;
     usort($ports,static fn($a,$b)=>strnatcasecmp($a['name'],$b['name']));
-    return ['device_alarms'=>array_map(static fn($device)=>['id'=>(int)($device['id']??0),'counts'=>$device['fault_counts']??[],'alarm'=>$device['alarm']??null],$devices),'problematic'=>['total_devices'=>count($devices),'devices'=>$problematic],'ports'=>$ports,'recent'=>array_slice($recent,0,25),'frequent'=>array_slice($frequent,0,10),'ack'=>['Ack'=>$unknown,'Not_Ack'=>$unknown],'escalation'=>['Esc'=>$unknown,'Not_Esc'=>$unknown],'sites'=>$sites,'severity'=>$severities,'segments'=>$segments,'total'=>array_sum($severities),'updated'=>date(DATE_ATOM)];
+    return ['device_counts'=>$mapData['counts']??null,'inventory_changes'=>$inventoryEvents,'device_alarms'=>array_map(static fn($device)=>['id'=>(int)($device['id']??0),'counts'=>$device['fault_counts']??[],'alarm'=>$device['alarm']??null],$devices),'problematic'=>['total_devices'=>count($devices),'devices'=>$problematic],'ports'=>$ports,'recent'=>array_slice($recent,0,25),'frequent'=>array_slice($frequent,0,10),'ack'=>['Ack'=>$unknown,'Not_Ack'=>$unknown],'escalation'=>['Esc'=>$unknown,'Not_Esc'=>$unknown],'sites'=>$sites,'severity'=>$severities,'segments'=>$segments,'total'=>array_sum($severities),'updated'=>date(DATE_ATOM)];
 }
 
 /** Resolve the server by the native poller identity, never an arbitrary demo site. */

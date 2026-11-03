@@ -69,3 +69,8 @@ verify(icct_nms_dashboard_scope($scopeMap,10)['counts']['total']===0);
 try{icct_nms_dashboard_scope($scopeMap,9);throw new RuntimeException('Unknown site accepted');}catch(RuntimeException $e){verify($e->getMessage()==='Site unavailable.');}
 foreach([-1,'7',[]] as $site){$bad=$named;$bad['dashboards'][0]['site_id']=$site;try{icct_nms_dashboard_validate($bad);throw new RuntimeException('Invalid site accepted');}catch(InvalidArgumentException $e){}}
 echo "Native-site dashboard scope, all sites, empty sites, alarm readings and invalid IDs passed\n";
+
+verify(icct_nms_dashboard_validate($valid+['refresh_seconds'=>5])['refresh_seconds']===5);
+verify(icct_nms_dashboard_validate($valid+['refresh_seconds'=>3600])['refresh_seconds']===3600);
+foreach([0,4,3601,'30'] as $interval){try{icct_nms_dashboard_validate($valid+['refresh_seconds'=>$interval]);throw new LogicException('Invalid refresh interval accepted');}catch(InvalidArgumentException $error){}}
+echo "Per-user refresh interval limits and numeric validation passed\n";

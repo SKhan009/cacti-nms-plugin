@@ -15,7 +15,7 @@ require_once dirname(__DIR__, 2) . '/protocols/shared/services/protocol_service.
 require_once dirname(__DIR__, 2) . '/protocols/serial/services/serial_service.php';
 require_once dirname(__DIR__, 2) . '/protocols/shared/services/protocol_preset_service.php';
 $presetTabs = ['rack-config'=>'Rack Config','protocols'=>'Protocols','site'=>'Site','segment'=>'Segment','device-type'=>'Device Type','network-connections'=>'Network Connections'];
-$actionTabs = ['save_rack_profile'=>'rack-config','delete_rack_profile'=>'rack-config','save_protocol_defaults'=>'protocols','save_site'=>'site','save_lnms_sites'=>'site','save_segment'=>'segment','delete_segment'=>'segment','save_type'=>'device-type','delete_type'=>'device-type','save_connection'=>'network-connections','delete_connection'=>'network-connections'];
+$actionTabs = ['save_rack_profile'=>'rack-config','delete_rack_profile'=>'rack-config','save_protocol_defaults'=>'protocols','save_gnss'=>'site','save_site'=>'site','save_lnms_sites'=>'site','save_segment'=>'segment','delete_segment'=>'segment','save_type'=>'device-type','delete_type'=>'device-type','save_connection'=>'network-connections','delete_connection'=>'network-connections'];
 $requestedTab = $_GET['tab'] ?? 'segment';
 $activePreset = $actionTabs[is_string($_POST['action'] ?? null) ? $_POST['action'] : ''] ?? (is_string($requestedTab) && isset($presetTabs[$requestedTab]) ? $requestedTab : 'segment');
 $typeEditing = false; $typeValues = []; $connectionEditing = false; $connectionValues = [];
@@ -40,6 +40,7 @@ try {
             if ($activePreset === 'segment') $segmentId = icct_nms_segment_id($_POST['segment_id'] ?? 0);
             if ($activePreset === 'rack-config') $message=icct_nms_save_rack_preset($_POST);
             elseif ($activePreset === 'protocols') $message=icct_nms_save_protocol_preset($_POST);
+            elseif (($_POST['action']??'')==='save_gnss'){icct_nms_gnss_save($_POST);$message='GNSS source saved.';}
             elseif ($activePreset === 'site') $message=($_POST['action']??'')==='save_lnms_sites'?icct_nms_lnms_save_sites($_POST):icct_nms_save_site($_POST);
             elseif ($activePreset === 'device-type') $message = icct_nms_save_device_type($_POST, $_FILES['device_image'] ?? null);
             elseif ($activePreset === 'network-connections') $message = icct_nms_save_connection($_POST);

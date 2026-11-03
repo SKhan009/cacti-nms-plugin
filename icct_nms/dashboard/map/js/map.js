@@ -81,7 +81,7 @@
         stateError = 'Local state boundaries unavailable.'; showStatus();
     });
     let lnms=data.lnms||{nodes:[],counts:{}};
-    const deviceCounts=document.querySelector('#dashboardStatusCounts').innerHTML;
+    let deviceCounts=data.counts||{};
     let activeView=new URL(location.href).searchParams.get('view')||'topology';
     const nodeDialog=document.querySelector('#lnmsNodeDialog');
     function showLnms(node){
@@ -89,21 +89,22 @@
         document.querySelector('#lnmsNodeAddress').textContent=node.address;
         const badge=document.querySelector('#lnmsNodeStatus');badge.textContent=node.status;badge.className='device-status '+({Online:'online',Offline:'offline',Disabled:'disabled'}[node.status]||'other');
         const details=document.querySelector('#lnmsNodeDetails');details.replaceChildren();
-        const fields={'Last heartbeat':node.last_seen||'Not received'};
+        const fields={'Last heartbeat':node.last_seen||'Not received','Location source':node.location_source||'Unassigned','Position status':node.location_status||'Unassigned','Last GNSS fix':node.last_fix||'Not received'};
         Object.entries(fields).forEach(([name,value])=>{const row=document.createElement('div'),label=document.createElement('dt'),content=document.createElement('dd');label.textContent=name;content.textContent=value;row.append(label,content);details.append(row);});
         const link=document.querySelector('#lnmsCollectorLink');link.hidden=!node.collector_url;if(node.collector_url)link.href=node.collector_url;
         if(!nodeDialog.open)nodeDialog.showModal();
     }
     document.addEventListener('icct:show-lnms',event=>{const node=lnms.nodes.find(n=>Number(n.id)===Number(event.detail));if(node)showLnms(node);});
-    const markers={};
+    const markers={};let pollerLinks=[];
     function statusTotals(){
         const target=document.querySelector('#dashboardStatusCounts');
-        if(activeView!=='map'){target.innerHTML=deviceCounts;target.setAttribute('aria-label','Device status totals');return;}
+        const counts=activeView==='map'?lnms.counts:deviceCounts;
         target.replaceChildren();target.setAttribute('aria-label','Device status totals');
-        for(const [label,key] of [['Total','total'],['Online','online'],['Offline','offline'],['Disabled','disabled']]){const span=document.createElement('span');span.className=key;span.textContent=label+': '+(lnms.counts[key]||0);target.append(span);}
+        for(const [label,key] of [['Total','total'],['Online','online'],['Offline','offline'],['Disabled','disabled']]){const span=document.createElement('span');span.className=key;span.textContent=label+': '+(counts[key]||0);target.append(span);}
     }
     function drawLnms(){
         Object.values(markers).forEach(marker=>marker.remove());Object.keys(markers).forEach(key=>delete markers[key]);
+        pollerLinks.forEach(line=>line.remove());pollerLinks=[];
         const notice=document.querySelector('#lnmsLocationNotice');notice.replaceChildren();notice.hidden=true;
         lnms.nodes.forEach(node=>{
             if(!node.coordinates)return;
@@ -111,6 +112,8 @@
             markers[node.id]=L.circleMarker(node.coordinates,{radius:node.local?7:5,color:'#fff',weight:1,fillColor:({Online:'#21864a',Offline:'#c83232',Disabled:'#777'})[node.status]||'#aa740a',fillOpacity:1}).addTo(map).bindTooltip(label,{direction:'top',permanent:true,className:'icct-map-site-label',offset:[0,-5]}).on('click',()=>showLnms(node));
             labelSiteMarker(markers[node.id],node.name+' · '+node.address+' · '+node.status);
         });
+        const byId=Object.fromEntries(lnms.nodes.map(node=>[node.id,node]));
+        (lnms.links||[]).forEach(link=>{const a=byId[link.source],b=byId[link.target];if(!a?.coordinates||!b?.coordinates)return;const label=document.createElement('span');label.textContent=link.label+' · '+link.status;pollerLinks.push(L.polyline([a.coordinates,b.coordinates],{color:({Up:'#21864a',Down:'#c83232',Disabled:'#777'})[link.status]||'#777',weight:2,dashArray:link.status==='Unknown'?'5 5':null}).addTo(map).bindTooltip(label));});
         statusTotals();
     }
     function fitLnms(){
@@ -118,6 +121,7 @@
         if(points.length){map.setMinZoom(2);map.fitBounds(L.latLngBounds(points),{padding:[36,36],maxZoom:10,animate:false});countryView=true;}
         else fitIndia();
     }
+    document.addEventListener('icct:device-counts',event=>{deviceCounts=event.detail;statusTotals();});
     document.addEventListener('icct:lnms-readings',event=>{lnms=event.detail;drawLnms();});
     drawLnms();
     document.getElementById('icctMapZoomIn').addEventListener('click', function () { map.zoomIn(); });

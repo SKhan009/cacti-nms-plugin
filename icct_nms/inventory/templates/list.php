@@ -22,7 +22,7 @@
         </div>
         <a class="export-button" href="inventory/controllers/export.php" aria-label="Export inventory CSV">↥</a>
         <?php if ($management): ?>
-        <button class="button" type="button" id="device-discovery">Device Discovery</button>
+        <a class="button" href="dashboard/topology/controllers/topology_configuration.php?tab=networks">Device Discovery</a>
         <a class="button primary" href="inventory/controllers/device.php">Add Device</a>
         <?php endif; ?>
     </div>

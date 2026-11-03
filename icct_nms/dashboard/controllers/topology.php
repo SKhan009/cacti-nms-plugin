@@ -64,7 +64,7 @@ try {
     $dashboardPreferences['dashboards'][$dashboardPreferences['selected']]['site_id']=$dashboardSiteId;
     if(isset($_GET['topology_readings'])){header('Content-Type: application/json');header('Cache-Control: no-store');echo json_encode(icct_nms_topology_data($mapData),JSON_THROW_ON_ERROR);exit;}
     $dashboardReadings=icct_nms_dashboard_readings($mapData);
-    $dashboardReadings['lnms']=icct_nms_lnms_data();
+    $dashboardReadings['lnms']=icct_nms_lnms_data(icct_nms_topology_data($mapData)['links']);
     $dashboardReadings['center']=$dashboardReadings['lnms']['center'];
     $mapData['lnms']=$dashboardReadings['lnms'];
     if(isset($_GET['dashboard_readings'])){header('Content-Type: application/json');header('Cache-Control: no-store');echo json_encode($dashboardReadings,JSON_THROW_ON_ERROR);exit;}

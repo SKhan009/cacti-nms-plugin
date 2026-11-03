@@ -1,4 +1,5 @@
 (()=>{'use strict';
+if(document.querySelector('[data-live-discovery]'))setInterval(()=>{if(!document.hidden)location.reload();},5000);
 document.querySelectorAll('.connection-device-select').forEach(select=>{
  const picker=document.createElement('div');picker.className='connection-picker';
  const toggle=document.createElement('button');toggle.type='button';toggle.className='connection-picker-toggle';toggle.setAttribute('aria-expanded','false');const label=select.id==='source'?'Source Device':(select.id==='target'?'Target Device':'Discovery Device');toggle.setAttribute('aria-label',label);

@@ -119,7 +119,11 @@ async function refreshTopology(){
   saved=structuredClone(positions);alarmTotals();render();
  }catch(error){message.textContent=error.message;}
 }
-setInterval(refreshTopology,30000);
+let topologyRefreshTimer;
+function scheduleTopologyRefresh(seconds){clearInterval(topologyRefreshTimer);topologyRefreshTimer=setInterval(refreshTopology,Math.max(5,Number(seconds)||30)*1000);}
+const dashboardConfig=document.querySelector('#dashboardData');
+scheduleTopologyRefresh(dashboardConfig?JSON.parse(dashboardConfig.textContent).preferences.refresh_seconds:30);
+document.addEventListener('icct:refresh-interval',event=>scheduleTopologyRefresh(event.detail));
 function selectTopologyView(next){
  if(!['topology','image'].includes(next))return;
  view=next;panel=document.querySelector('#icct-panel-'+next);

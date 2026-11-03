@@ -7,6 +7,7 @@
     ? 'data-clone="true"'
     : "" ?>>
     <?php icct_nms_token(); ?>
+    <?php if(!empty($discoveryResult)): ?><input type="hidden" name="discovery_result" value="<?= (int)$discoveryResult ?>"><?php endif; ?>
     <div class="titlebar">
         <h1><?= icct_nms_h($title) ?></h1>
         <div class="title-actions">

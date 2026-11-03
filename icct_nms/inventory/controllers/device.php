@@ -7,6 +7,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='fault_param
 require dirname(__DIR__, 2) . "/../../include/auth.php";
 require_once $config["base_path"] . "/include/global_form.php";
 require_once dirname(__DIR__, 2) . '/configuration/services/configuration_history.php';
+require_once dirname(__DIR__, 2) . '/inventory/discovery/services/discovery_workflow.php';
 require_once dirname(__DIR__, 2) . "/shared/services/bootstrap.php";
 require_once dirname(__DIR__, 2) . "/inventory/services/inventory.php";
 require_once dirname(__DIR__, 2) . "/shared/services/forms.php";
@@ -112,6 +113,15 @@ try {
             $cloneId,
         );
     }
+    $discoveryResult=(!$id&&!$cloneId)?(int)($_GET['discovery_result']??$_POST['discovery_result']??0):0;
+    if($discoveryResult){
+        $prefill=icct_nms_scan_wizard_values($discoveryResult);
+        $matches=icct_nms_scan_existing($prefill['hostname']);
+        if(count($matches)>1)throw new InvalidArgumentException('Multiple saved devices match this address. Review them in Inventory before adding another device.');
+        if(count($matches)===1){icct_backend_require_device_access($matches[0]);icct_nms_redirect('inventory/controllers/device.php?id='.$matches[0]);}
+        $old=icct_nms_scan_wizard_host($discoveryResult);
+        $values=array_replace($values,$old,$prefill);$shortNameAuto=true;
+    }
     if ($shortNameAuto && $values["description"] !== "") {
         $values["short_name"] = icct_backend_short_name_generate(
             $values["description"], $values["device_type"], $id,
@@ -123,7 +133,7 @@ try {
             throw new RuntimeException("This device is read only.");
         }
         try {
-            $saved = icct_nms_save_device($id, $old, $_POST);
+            $saved = $discoveryResult?icct_nms_scan_wizard_save($_POST):icct_nms_save_device($id, $old, $_POST);
             $_SESSION["icct_nms_notice"] = $cloneId
                 ? "Device “" . trim($_POST["description"]) . "” cloned successfully and added to Inventory."
                 : "Device “" . trim($_POST["description"]) . "” saved successfully.";
@@ -166,8 +176,12 @@ try {
     if ($treeView) echo '</div></div>';
     if ($wizard) {
         require dirname(__DIR__, 2) . "/inventory/services/wizard_view.php";
+        if(!empty($discoveryResult)&&(int)$old['snmp_version']>0){
+            $scanResult=icct_nms_scan_result($discoveryResult);$scanJob=icct_nms_scan_job($scanResult['job_id']);
+            $protocolDraft=array_values(array_intersect(json_decode($scanJob['config_json'],true)['methods']??[],['cdp','lldp']));
+        }
         echo '<script type="application/json" id="protocol-default-values">'.json_encode(icct_nms_protocol_presets(),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR).'</script>';
-        echo '<script type="application/json" id="protocol-device-overrides">'.json_encode(icct_nms_protocol_device_overrides($id),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR).'</script>';
+        echo '<script type="application/json" id="protocol-device-overrides">'.json_encode(!empty($discoveryResult)?['snmp'=>array_keys(icct_nms_protocol_presets()['snmp']??[])]:icct_nms_protocol_device_overrides($id),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR).'</script>';
         echo '<div id="wizard-panels" hidden>';
         require dirname(__DIR__, 2) . "/protocols/shared/templates/protocol.php";
         require dirname(__DIR__, 2) . '/ports/templates/ports.php';

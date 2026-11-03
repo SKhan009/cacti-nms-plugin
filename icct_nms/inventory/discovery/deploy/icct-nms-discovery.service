@@ -1,0 +1,19 @@
+[Unit]
+Description=ICCT discovery jobs for the local Cacti collector
+After=network-online.target mariadb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=apache
+Group=apache
+ExecStart=/usr/bin/php /var/www/html/cacti/plugins/icct_nms/inventory/discovery/cli/discovery_worker.php
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

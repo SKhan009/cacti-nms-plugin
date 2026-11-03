@@ -19,6 +19,8 @@ let statusTimer;
 function reportStatus(message='',success=false){clearTimeout(statusTimer);status.textContent=message;status.hidden=!message;status.classList.toggle('save-success',success);if(success)statusTimer=setTimeout(()=>reportStatus(),4000);}
 let savePromise=null;
 function save(){
+ const interval=document.querySelector('#dashboardRefreshInterval');
+ if(interval){if(!interval.reportValidity())return Promise.resolve(false);const seconds=Number(interval.value);if(seconds!==preferences.refresh_seconds){preferences.refresh_seconds=seconds;scheduleRefresh();}}
  if(savePromise){saveAgain=true;return savePromise;}
  savePromise=(async()=>{let ok=true;reportStatus();do{saveAgain=false;const body=new FormData(document.querySelector('#dashboardToken'));body.set('dashboard_preferences',JSON.stringify(preferences));try{const r=await fetch('dashboard/controllers/topology.php',{method:'POST',body,credentials:'same-origin'});if(!r.ok)throw Error();const stored=await r.json();if(!stored||!Array.isArray(stored.dashboards))throw Error();reportStatus('Dashboard saved successfully.',true);}catch(e){ok=false;reportStatus('Layout could not be saved. Click to retry.');}}while(saveAgain);return ok;})().finally(()=>{savePromise=null;});return savePromise;
 }
@@ -180,7 +182,9 @@ function radar(){
   if(site.id){function open(){document.dispatchEvent(new CustomEvent('icct:show-lnms',{detail:site.id}));}group.addEventListener('click',open);group.addEventListener('keydown',e=>{if(['Enter',' '].includes(e.key)){e.preventDefault();open();}});}
   radar.append(group);
  }
- points.forEach(({site,distance,angle})=>{const radius=distance!==null?distance/max*r*.72:r*.58;dot(site,cx+Math.sin(angle)*radius,cy-Math.cos(angle)*radius,false,distance);});
+ const positions=new Map([[Number(origin.id),[cx,cy]]]);points.forEach(({site,distance,angle})=>{const radius=distance!==null?distance/max*r*.72:r*.58;positions.set(Number(site.id),[cx+Math.sin(angle)*radius,cy-Math.cos(angle)*radius]);});
+ (lnms.links||[]).forEach(link=>{const a=positions.get(Number(link.source)),b=positions.get(Number(link.target));if(!a||!b)return;const line=svg('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:({Up:'#21864a',Down:'#c83232',Disabled:'#777'})[link.status]||'#777','stroke-width':2,'stroke-dasharray':link.status==='Unknown'?'4 4':''});line.append(svg('title',{},link.label+' · '+link.status));radar.append(line);});
+ points.forEach(({site,distance})=>{const [x,y]=positions.get(Number(site.id));dot(site,x,y,false,distance);});
  dot(origin,cx,cy,true);
 }
 function alarms(){const chart=document.querySelector('#alarmDonut'),legend=document.querySelector('#alarmLegend');chart.replaceChildren();legend.replaceChildren();const values=Object.entries(readings[mode]),total=values.reduce((s,[k,v])=>s+v,0),radius=59,circumference=2*Math.PI*radius;chart.append(svg('circle',{cx:90,cy:90,r:radius,fill:'none',stroke:'#eceef2','stroke-width':29}));let offset=0;values.forEach(([name,count],i)=>{const color=mode==='severity'?colors[name]:alarmSegmentColor(name);if(count>0){const length=count/total*circumference;chart.append(svg('circle',{cx:90,cy:90,r:radius,fill:'none',stroke:color,'stroke-width':29,'stroke-dasharray':length+' '+(circumference-length),'stroke-dashoffset':-offset,transform:'rotate(-90 90 90)'}));offset+=length;}const item=element('li'),dot=element('i');dot.style.background=color;item.append(dot,element('span',name),element('b',String(count)));item.title=name+': '+count;legend.append(item);});chart.append(svg('text',{x:90,y:98,'text-anchor':'middle','font-size':26,fill:'#222'},total));chart.setAttribute('aria-label',total+' active alarms grouped by '+(mode==='severity'?'severity':'segment'));const note=document.querySelector('#alarmNote');note.textContent=total?'':'No active alarms.';note.hidden=total>0;}
@@ -263,16 +267,26 @@ function workflowCharts(){
  }
 }
 document.querySelectorAll('[data-alarm-mode]').forEach(button=>button.addEventListener('click',()=>{mode=button.dataset.alarmMode;document.querySelectorAll('[data-alarm-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));alarms();}));
+let inventoryCursor=Math.max(0,...(readings.inventory_changes||[]).map(row=>Number(row.id)));
+function inventoryChanges(){
+ const rows=(readings.inventory_changes||[]).filter(row=>Number(row.id)>inventoryCursor);
+ inventoryCursor=Math.max(inventoryCursor,...rows.map(row=>Number(row.id)));
+ if(rows.length&&typeof window.icctShowMessage==='function')window.icctShowMessage({title:'Inventory updated',text:rows.slice(0,3).map(row=>row.description+' · '+row.event).join('; ')+(rows.length>3?' · '+(rows.length-3)+' more changes':'')});
+}
 let refreshPending=false;
 async function refreshReadings(manual=false){
  if(refreshPending||(!manual&&document.hidden))return;
  refreshPending=true;const button=document.querySelector('#birdsRefresh');button.disabled=true;
- try{const url=siteUrl(data.site_id);url.searchParams.set('dashboard_readings','1');const response=await fetch(url,{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw Error();const next=await response.json();readings=next;if(next.lnms)document.dispatchEvent(new CustomEvent('icct:lnms-readings',{detail:next.lnms}));document.dispatchEvent(new CustomEvent('icct:alarm-readings',{detail:next.device_alarms||[]}));radar();alarms();workflowCharts();frequentAlarms();recentAlarms();portsOverview();problematicDevices();packCards();if(manual)reportStatus();}
+ try{const url=siteUrl(data.site_id);url.searchParams.set('dashboard_readings','1');const response=await fetch(url,{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw Error();const next=await response.json();readings=next;if(next.device_counts)document.dispatchEvent(new CustomEvent('icct:device-counts',{detail:next.device_counts}));if(next.lnms)document.dispatchEvent(new CustomEvent('icct:lnms-readings',{detail:next.lnms}));document.dispatchEvent(new CustomEvent('icct:alarm-readings',{detail:next.device_alarms||[]}));radar();alarms();workflowCharts();frequentAlarms();recentAlarms();portsOverview();problematicDevices();inventoryChanges();packCards();if(manual)reportStatus();}
  catch(e){reportStatus('Widget refresh failed. Showing last received readings.');}
  finally{refreshPending=false;button.disabled=false;}
 }
 document.querySelector('#birdsRefresh').addEventListener('click',()=>refreshReadings(true));
-setInterval(()=>refreshReadings(),30000);
+let refreshTimer;
+function scheduleRefresh(){clearInterval(refreshTimer);refreshTimer=setInterval(()=>refreshReadings(),Math.max(5,Number(preferences.refresh_seconds)||30)*1000);document.dispatchEvent(new CustomEvent('icct:refresh-interval',{detail:Number(preferences.refresh_seconds)||30}));}
+const refreshInput=document.querySelector('#dashboardRefreshInterval');
+refreshInput?.addEventListener('change',async()=>{if(!refreshInput.reportValidity())return;preferences.refresh_seconds=Number(refreshInput.value);scheduleRefresh();await save();});
+scheduleRefresh();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshReadings();});
-layout();radar();alarms();workflowCharts();frequentAlarms();recentAlarms();portsOverview();problematicDevices();
+layout();radar();alarms();workflowCharts();frequentAlarms();recentAlarms();portsOverview();problematicDevices();inventoryChanges();
 })();
