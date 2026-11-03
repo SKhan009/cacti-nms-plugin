@@ -18,16 +18,6 @@
         const read = () => Object.fromEntries(fields.map(key => [key, get(key)]));
         let current = variant ? get(variant.field) : 'default', loading = false;
         const saved = key => variant ? config.profiles[protocol]?.[key] : config.saved[protocol];
-        const status = document.createElement('p');
-        status.dataset.protocolPresetStatus = protocol;
-        status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
-        input.after(status);
-        const update = () => {
-            const baseline = saved(current), values = read();
-            const same = baseline && fields.every(key => String(baseline[key] ?? '') === String(values[key] ?? ''));
-            const label = variant ? variant.labels[current] : protocol.toUpperCase();
-            status.textContent = (same ? 'Saved preset · ' : 'Unsaved changes · ') + label;
-        };
         const set = (key, value) => controls(key).forEach(control => {
             if (control.type === 'radio') control.checked = control.value === String(value);
             else if (control.type === 'checkbox') control.checked = String(value) === '1';
@@ -53,10 +43,7 @@
                 const seven = form.querySelector('[name="data_bits"] option[value="7"]');
                 if (seven) seven.disabled = !ascii;
             }
-            update();
         });
-        form.addEventListener('input', () => { if (!loading) update(); });
         if (protocol === 'serial') controls(variant.field).find(control => control.checked)?.dispatchEvent(new Event('change', { bubbles: true }));
-        update();
     });
 })();

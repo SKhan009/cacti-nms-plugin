@@ -2,6 +2,10 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Inventory designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
+## Version 1.3.3
+
+NetFlow setup explanations now appear in the project-style information tooltips beside each field. The two explanatory paragraphs and saved/unsaved preset status lines are removed. Independent version/mode presets and draft restoration remain available. Numeric input ranges match backend validation.
+
 ## Version 1.3.2
 
 All supported protocol presets show saved/unsaved status. SNMP v1/v2/v3, SSH password/private-key modes and Serial Modbus RTU/ASCII each retain independent non-secret settings, alongside the existing per-version NetFlow presets. CDP, LLDP and Syslog retain separate single presets. Installation/upgrade seeds missing variants without replacing saved values. Switching modes keeps page-local drafts; Save persists the selected mode for new protocol assignments without changing saved devices. Passwords, private keys and SNMP community strings are excluded.

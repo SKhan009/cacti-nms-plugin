@@ -256,7 +256,6 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial", "syslog", "netflow"] as $key) 
         <div class="protocol-content"><form method="post"><?php icct_nms_token(); ?><input type="hidden" name="action" value="<?= $presetMode?'save_protocol_defaults':'netflow' ?>"><?php if($presetMode): ?><input type="hidden" name="preset_protocol" value="netflow"><?php endif; ?>
         <?php if($presetMode): ?>
         <script type="application/json" data-netflow-profiles><?= json_encode(icct_nms_netflow_profiles(),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
-        <p data-netflow-preset-status role="status" aria-live="polite"></p>
         <?php endif; ?>
         <?php require __DIR__.'/../../netflow/templates/settings.php'; ?>
         </form></div></details>
