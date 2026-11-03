@@ -254,6 +254,10 @@ foreach (["cdp", "lldp", "snmp", "ssh", "serial", "syslog", "netflow"] as $key) 
         <details class="protocol-item" id="protocol-netflow" data-saved="<?= $netflowSaved?'1':'0' ?>" <?= $netflowSaved||in_array('netflow',$protocolDraft,true)?'':'hidden' ?>>
         <summary><span class="accordion-chevron" aria-hidden="true"></span><span>NetFlow / IPFIX <?php $protocolPresetHelp('netflow','NetFlow'); ?></span><button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7"/></svg></button></summary>
         <div class="protocol-content"><form method="post"><?php icct_nms_token(); ?><input type="hidden" name="action" value="<?= $presetMode?'save_protocol_defaults':'netflow' ?>"><?php if($presetMode): ?><input type="hidden" name="preset_protocol" value="netflow"><?php endif; ?>
+        <?php if($presetMode): ?>
+        <script type="application/json" data-netflow-profiles><?= json_encode(icct_nms_netflow_profiles(),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
+        <p data-netflow-preset-status role="status" aria-live="polite"></p>
+        <?php endif; ?>
         <?php require __DIR__.'/../../netflow/templates/settings.php'; ?>
         </form></div></details>
         <?php foreach (

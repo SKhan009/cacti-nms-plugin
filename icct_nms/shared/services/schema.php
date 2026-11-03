@@ -40,6 +40,8 @@ function icct_nms_schema_install()
     icct_nms_schema_rack_catalogue_migration();
     icct_nms_schema_missing_preset_racks();
     icct_nms_schema_syslog_availability_migration();
+    require_once __DIR__.'/../../protocols/shared/services/protocol_seed.php';
+    icct_nms_seed_protocol_presets();
     if (
         !db_execute_prepared(
             'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',

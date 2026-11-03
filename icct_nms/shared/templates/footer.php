@@ -29,6 +29,7 @@
         0,
         12,
     ) ?>" defer></script>
+<script src="protocols/netflow/js/netflow-presets.js?v=<?= substr(hash_file('sha256',__DIR__.'/../../protocols/netflow/js/netflow-presets.js'),0,12) ?>" defer></script>
 <?php if (!empty($deviceViewPage)): ?>
 <script src="protocols/netflow/js/netflow-view.js?v=<?= substr(hash_file('sha256',__DIR__.'/../../protocols/netflow/js/netflow-view.js'),0,12) ?>" defer></script>
 <script src="ports/js/device-view-ports.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../ports/js/device-view-ports.js'),0,12) ?>" defer></script>
