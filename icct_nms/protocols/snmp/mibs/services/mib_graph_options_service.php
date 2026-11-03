@@ -90,7 +90,9 @@ function icct_mib_core_graph_fields()
 function icct_mib_core_graph_defaults($name, $units)
 {
     $row = db_fetch_row(
-        "SELECT gg.*,gt.multiple,gt.test_source FROM graph_templates_graph gg JOIN graph_templates gt ON gt.id=gg.graph_template_id WHERE gt.name='SNMP - Generic OID Template' AND gg.local_graph_id=0 LIMIT 1",
+        'SELECT gg.*,gt.multiple,gt.test_source FROM graph_templates_graph gg JOIN ' .
+            'graph_templates gt ON gt.id=gg.graph_template_id WHERE gt.name=\'SNMP - Generic OID ' .
+            'Template\' AND gg.local_graph_id=0 LIMIT 1',
     );
     if (!$row) {
         throw new RuntimeException('Cacti Generic OID graph template is not installed.');

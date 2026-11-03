@@ -230,7 +230,9 @@ try {
         require dirname(__DIR__, 2) . '/protocols/shared/templates/protocol.php';
         require dirname(__DIR__, 2) . '/ports/templates/ports.php';
         require dirname(__DIR__, 2) . '/fcaps/templates/fcaps.php';
-        echo '</div><footer class="form-footer wizard-footer"><button type="button" class="button" id="wizard-previous">Previous ←</button><button type="button" class="button" id="wizard-next">Next →</button></footer></div>';
+        echo '</div><footer class="form-footer wizard-footer"><button type="button" class="button" ' .
+            'id="wizard-previous">Previous ←</button><button type="button" class="button" ' .
+            'id="wizard-next">Next →</button></footer></div>';
     }
     require dirname(__DIR__, 2) . '/shared/templates/footer.php';
 } catch (Throwable $e) {

@@ -32,7 +32,9 @@ function icct_mib_device_graph_options($bundle, $records)
     }
     foreach (
         db_fetch_assoc(
-            'SELECT DISTINCT gi.graph_template_id,r.data_template_id FROM graph_templates_item gi JOIN data_template_rrd r ON r.id=gi.task_item_id AND r.local_data_id=0 WHERE gi.local_graph_id=0',
+            'SELECT DISTINCT gi.graph_template_id,r.data_template_id FROM graph_templates_item gi ' .
+                'JOIN data_template_rrd r ON r.id=gi.task_item_id AND r.local_data_id=0 WHERE ' .
+                'gi.local_graph_id=0',
         ) ?:
         [] as $source
     ) {

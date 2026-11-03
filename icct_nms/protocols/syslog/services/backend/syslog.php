@@ -153,7 +153,8 @@ function icct_backend_syslog_filters(array $input)
 function icct_backend_syslog_assignment($host_id)
 {
     return db_fetch_row_prepared(
-        'SELECT d.*,h.description,h.hostname FROM plugin_icct_nms_syslog_devices d INNER JOIN host h ON h.id=d.host_id WHERE d.host_id=? AND h.deleted=\'\'',
+        'SELECT d.*,h.description,h.hostname FROM plugin_icct_nms_syslog_devices d INNER JOIN ' .
+            'host h ON h.id=d.host_id WHERE d.host_id=? AND h.deleted=\'\'',
         [(int) $host_id],
     );
 }
@@ -167,15 +168,13 @@ function icct_backend_syslog_match_device($source_ip, $source_host)
     }
 
     $rows = db_fetch_assoc_prepared(
-        "SELECT d.*,h.description,h.hostname,h.poller_id
-         FROM plugin_icct_nms_syslog_devices d
-         INNER JOIN host h ON h.id=d.host_id
-         WHERE h.deleted='' AND h.disabled='' AND d.enabled=1 AND (
-             (d.source_address<>'' AND (d.source_address=? OR d.source_address=?)) OR
-             (d.source_address='' AND (h.hostname=? OR h.hostname=?))
-         )
-         ORDER BY CASE WHEN d.source_address=? THEN 0 WHEN d.source_address<>'' THEN 1 ELSE 2 END,h.id
-         LIMIT 10",
+        "SELECT d.*,h.description,h.hostname,h.poller_id\n         FROM " .
+            "plugin_icct_nms_syslog_devices d\n         INNER JOIN host h ON h.id=d.host_id\n         " .
+            "WHERE h.deleted='' AND h.disabled='' AND d.enabled=1 AND (\n             " .
+            "(d.source_address<>'' AND (d.source_address=? OR d.source_address=?)) OR\n             " .
+            "(d.source_address='' AND (h.hostname=? OR h.hostname=?))\n         )\n         ORDER BY " .
+            "CASE WHEN d.source_address=? THEN 0 WHEN d.source_address<>'' THEN 1 ELSE 2 END,h.id\n    " .
+            '     LIMIT 10',
         [$source_ip, $source_host, $source_ip, $source_host, $source_ip],
     );
     if ($rows === false) {
@@ -361,9 +360,10 @@ function icct_backend_syslog_ingest(array $record, &$reason = null)
     }
 
     icct_backend_syslog_execute(
-        'INSERT INTO plugin_icct_nms_syslog_events
-        (host_id,event_origin,event_time,received_at,last_seen,source_ip,source_host,transport,facility_code,facility,severity_code,severity,nms_severity,program,message,fingerprint)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        "INSERT INTO plugin_icct_nms_syslog_events\n        (host_id,event_origin,event_time," .
+            'received_at,last_seen,source_ip,source_host,transport,facility_code,facility,' .
+            "severity_code,severity,nms_severity,program,message,fingerprint)\n        VALUES(?,?,?,?," .
+            '?,?,?,?,?,?,?,?,?,?,?,?)',
         [
             (int) $assignment['host_id'],
             'syslog',
@@ -471,9 +471,10 @@ function icct_backend_syslog_store_availability_event(array $row, array $transit
         implode('|', [$hostId, 'availability', $transition['old'], $transition['new']]),
     );
     icct_backend_syslog_execute(
-        'INSERT INTO plugin_icct_nms_syslog_events
-        (host_id,event_origin,event_time,received_at,last_seen,source_ip,source_host,transport,facility_code,facility,severity_code,severity,nms_severity,program,message,fingerprint)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        "INSERT INTO plugin_icct_nms_syslog_events\n        (host_id,event_origin,event_time," .
+            'received_at,last_seen,source_ip,source_host,transport,facility_code,facility,' .
+            "severity_code,severity,nms_severity,program,message,fingerprint)\n        VALUES(?,?,?,?," .
+            '?,?,?,?,?,?,?,?,?,?,?,?)',
         [
             $hostId,
             'availability',
@@ -519,9 +520,10 @@ function icct_backend_syslog_collect_availability_events()
     try {
         icct_backend_syslog_execute('START TRANSACTION', []);
         $rows = db_fetch_assoc(
-            "SELECT h.id AS host_id,d.source_address,h.description,h.hostname,h.status,h.disabled,h.status_event_count,h.status_fail_date,h.status_rec_date
-             FROM host h INNER JOIN plugin_icct_nms_syslog_devices d ON d.host_id=h.id AND d.enabled=1
-             WHERE h.deleted='' ORDER BY h.id",
+            'SELECT h.id AS host_id,d.source_address,h.description,h.hostname,h.status,h.disabled,' .
+                "h.status_event_count,h.status_fail_date,h.status_rec_date\n             FROM host h INNER " .
+                "JOIN plugin_icct_nms_syslog_devices d ON d.host_id=h.id AND d.enabled=1\n             " .
+                "WHERE h.deleted='' ORDER BY h.id",
         );
         if ($rows === false) {
             throw new IcctSyslogStorageException('Availability device lookup failed.');
@@ -543,7 +545,9 @@ function icct_backend_syslog_collect_availability_events()
             }
             if (!$state) {
                 icct_backend_syslog_execute(
-                    'INSERT INTO plugin_icct_nms_syslog_availability_state(host_id,last_status,last_disabled,initialized_at,last_changed_at,updated_at) VALUES(?,?,?,NOW(),NULL,NOW())',
+                    'INSERT INTO ' .
+                        'plugin_icct_nms_syslog_availability_state(host_id,last_status,last_disabled,initialized_at,last_changed_at,updated_at) ' .
+                        'VALUES(?,?,?,NOW(),NULL,NOW())',
                     [$hostId, $newStatus, $newDisabled],
                 );
                 $summary['initialized']++;
@@ -609,11 +613,13 @@ function icct_backend_syslog_worker_state_save(
     $errors,
 ) {
     icct_backend_syslog_execute(
-        'INSERT INTO plugin_icct_nms_syslog_ingest_state
-        (source_key,source_path,source_inode,source_offset,last_record_at,records_ingested,records_dropped,errors,updated_at)
-        VALUES(?,?,?,?,?,?,?,?,NOW())
-        ON DUPLICATE KEY UPDATE source_path=VALUES(source_path),source_inode=VALUES(source_inode),source_offset=VALUES(source_offset),
-        last_record_at=VALUES(last_record_at),records_ingested=VALUES(records_ingested),records_dropped=VALUES(records_dropped),errors=VALUES(errors),updated_at=NOW()',
+        "INSERT INTO plugin_icct_nms_syslog_ingest_state\n        (source_key,source_path," .
+            'source_inode,source_offset,last_record_at,records_ingested,records_dropped,errors,' .
+            "updated_at)\n        VALUES(?,?,?,?,?,?,?,?,NOW())\n        ON DUPLICATE KEY UPDATE " .
+            'source_path=VALUES(source_path),source_inode=VALUES(source_inode),' .
+            "source_offset=VALUES(source_offset),\n        last_record_at=VALUES(last_record_at)," .
+            'records_ingested=VALUES(records_ingested),records_dropped=VALUES(records_dropped),' .
+            'errors=VALUES(errors),updated_at=NOW()',
         [
             $key,
             $path,
@@ -767,7 +773,8 @@ function icct_backend_syslog_import_spool_once($file, $max_records = 5000)
 function icct_backend_syslog_heartbeat($payload)
 {
     icct_backend_syslog_execute(
-        'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+        'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+            'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
         [
             'syslog_worker_status',
             json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE),
@@ -846,11 +853,9 @@ function icct_backend_syslog_event_ack($event_id, $ack, $comment = '')
 function icct_backend_syslog_event($event_id)
 {
     $row = db_fetch_row_prepared(
-        'SELECT e.*,h.description,h.hostname,u.username AS ack_username
-         FROM plugin_icct_nms_syslog_events e
-         INNER JOIN host h ON h.id=e.host_id
-         LEFT JOIN user_auth u ON u.id=e.acknowledged_by
-         WHERE e.id=?',
+        "SELECT e.*,h.description,h.hostname,u.username AS ack_username\n         FROM " .
+            "plugin_icct_nms_syslog_events e\n         INNER JOIN host h ON h.id=e.host_id\n         " .
+            "LEFT JOIN user_auth u ON u.id=e.acknowledged_by\n         WHERE e.id=?",
         [(int) $event_id],
     );
     if (!$row) {

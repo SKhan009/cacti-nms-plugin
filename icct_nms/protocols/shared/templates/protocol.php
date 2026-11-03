@@ -11,94 +11,175 @@ $protocolPresetHelp = static function (string $key, string $label) use ($presetM
     }
     $help = [
         'cdp' =>
-            'Preset collection, stale and refresh intervals. On the device, enable CDP and configure SNMP access; saved device settings stay independent.',
+                    (
+                        'Preset collection, stale and refresh intervals. On the device, enable CDP and configure '
+        . 'SNMP access; saved device settings stay independent.'
+                    ),
         'lldp' =>
-            'Preset collection, stale and refresh intervals. On the device, enable LLDP and configure SNMP access; saved device settings stay independent.',
+                    (
+                        'Preset collection, stale and refresh intervals. On the device, enable LLDP and '
+        . 'configure SNMP access; saved device settings stay independent.'
+                    ),
         'snmp' =>
-            'Preset version, port, timeouts, retries and security options. When adding a device, enter its community or SNMPv3 credentials; changes apply only to that device.',
+                    (
+                        'Preset version, port, timeouts, retries and security options. When adding a device, '
+        . 'enter its community or SNMPv3 credentials; changes apply only to that device.'
+                    ),
         'ssh' =>
-            'Preset port, authentication method, username and connection settings. When adding a device, confirm its username and enter its password or private key; changes apply only to that device.',
+                    (
+                        'Preset port, authentication method, username and connection settings. When adding a '
+        . 'device, confirm its username and enter its password or private key; changes apply only '
+        . 'to that device.'
+                    ),
         'serial' =>
-            'Preset interface, line settings, polling and serial protocol. When adding a device, select its serial port and bus address; changes apply only to that device.',
+                    (
+                        'Preset interface, line settings, polling and serial protocol. When adding a device, '
+        . 'select its serial port and bus address; changes apply only to that device.'
+                    ),
         'syslog' =>
-            'Choose the severity levels, facilities, and match strings to accept. New devices inherit these defaults; saved device selections remain independent.',
+                    (
+                        'Choose the severity levels, facilities, and match strings to accept. New devices '
+        . 'inherit these defaults; saved device selections remain independent.'
+                    ),
         'netflow' =>
-            'Set defaults for flow collection, exporter timing and reporting. On the device, configure its exporter to send to this collector; saving here does not modify router configuration.',
+                    (
+                        'Set defaults for flow collection, exporter timing and reporting. On the device, '
+        . 'configure its exporter to send to this collector; saving here does not modify router '
+        . 'configuration.'
+                    ),
         'ntp' =>
-            'Planned presets: server, version, timeout, polling and offset limit. Device setup will confirm its NTP server. Configuration is unavailable until integration is ready.',
+                    (
+                        'Planned presets: server, version, timeout, polling and offset limit. Device setup will '
+        . 'confirm its NTP server. Configuration is unavailable until integration is ready.'
+                    ),
         'tacacs' =>
-            'Planned presets: server, port, timeout, retries and authentication method. Device setup will require its shared secret and credentials. Configuration is unavailable until integration is ready.',
+                    (
+                        'Planned presets: server, port, timeout, retries and authentication method. Device setup '
+        . 'will require its shared secret and credentials. Configuration is unavailable until '
+        . 'integration is ready.'
+                    ),
     ];
     ?>
-    <span class="field-info" tabindex="0" role="img" aria-label="Configuration help for <?= icct_nms_h(
-        $label,
-    ) ?>" data-tooltip="<?= icct_nms_h(
-        $help[$key],
-    ) ?>"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span>
-    <?php
+    <span
+        class="field-info"
+        tabindex="0"
+        role="img"
+        aria-label="Configuration help for <?= icct_nms_h($label) ?>"
+        data-tooltip="<?= icct_nms_h($help[$key]) ?>">
+        <svg
+            viewBox="0 0 20 20"
+            aria-hidden="true">
+            <circle
+                cx="10"
+                cy="10"
+                r="8" />
+            <path d="M10 9v5M10 6v.5" />
+        </svg>
+    </span>
+<?php
 };
 ?>
 <?php if (empty($wizard) && !$presetMode): ?>
-<div class="titlebar">
-    <h1><?= icct_nms_h($host['description']) ?></h1>
-    <a class="button" href="inventory/controllers/inventory.php">Done</a>
-</div>
-<nav class="steps">
-    <ol>
-        <li>
-            <a href="inventory/controllers/device.php?id=<?= $id ?>">
-                Basic Information
-                <small>1/7</small>
-            </a>
-        </li>
-        <li class="current" data-protocol-step="1">
-            <a href="#protocol">
-                Protocol Config
-                <small>2/7</small>
-            </a>
-        </li>
-        <li data-protocol-step="2">
-            <a href="#diagnostics">
-                Device Diagnostics
-                <small>3/7</small>
-            </a>
-        </li>
-        <li data-protocol-step="3"><a href="protocols/shared/controllers/protocol.php?id=<?= $id ?>#graphs">Graphs<small>4/7</small></a></li>
-        <li data-protocol-step="4"><a href="#data-query">Data Query<small>5/7</small></a></li>
-        <li><a href="inventory/controllers/device.php?id=<?= $id ?>#ports">Port Config<small>6/7</small></a></li>
-        <li><a href="inventory/controllers/device.php?id=<?= $id ?>#fcaps">FCAPS<small>7/7</small></a></li>
-    </ol>
-</nav>
+    <div class="titlebar">
+        <h1><?= icct_nms_h($host['description']) ?></h1>
+        <a
+            class="button"
+            href="inventory/controllers/inventory.php">Done</a>
+    </div>
+    <nav class="steps">
+        <ol>
+            <li>
+                <a href="inventory/controllers/device.php?id=<?= $id ?>"> Basic Information <small>1/7
+                    </small>
+                </a>
+            </li>
+            <li
+                class="current"
+                data-protocol-step="1">
+                <a href="#protocol"> Protocol Config <small>2/7</small>
+                </a>
+            </li>
+            <li data-protocol-step="2">
+                <a href="#diagnostics"> Device Diagnostics <small>3/7</small>
+                </a>
+            </li>
+            <li data-protocol-step="3">
+                <a href="protocols/shared/controllers/protocol.php?id=<?= $id ?>#graphs">Graphs<small>
+                        4/7</small>
+                </a>
+            </li>
+            <li data-protocol-step="4">
+                <a href="#data-query">Data Query<small>5/7</small>
+                </a>
+            </li>
+            <li>
+                <a href="inventory/controllers/device.php?id=<?= $id ?>#ports">Port Config<small>6/7
+                    </small>
+                </a>
+            </li>
+            <li>
+                <a href="inventory/controllers/device.php?id=<?= $id ?>#fcaps">FCAPS<small>7/7</small>
+                </a>
+            </li>
+        </ol>
+    </nav>
 <?php endif; ?>
-<?php
-$protocolStates = [];
+<?php $protocolStates = [];
 foreach (['cdp', 'lldp', 'snmp', 'ssh', 'serial', 'syslog', 'netflow'] as $key) {
     $protocolStates[$key] = icct_backend_protocol_enabled($id, $key);
-}
-?>
-<?php if (!$presetMode): ?><script type="application/json" id="protocol-states"><?= json_encode(
-    $protocolStates,
-    JSON_HEX_TAG | JSON_HEX_AMP,
-) ?></script><?php endif; ?>
-<form method="post" id="toggle-protocol-form" hidden>
+} ?>
+<?php if (!$presetMode): ?>
+    <script
+        type="application/json"
+        id="protocol-states"><?= json_encode($protocolStates, JSON_HEX_TAG | JSON_HEX_AMP) ?></script>
+<?php endif; ?>
+<form
+    method="post"
+    id="toggle-protocol-form"
+    hidden>
     <?php icct_nms_token(); ?>
-    <input type="hidden" name="action" value="toggle_protocol" />
-    <input type="hidden" name="protocol" value="" />
-    <input type="hidden" name="enabled" value="" />
+    <input
+        type="hidden"
+        name="action"
+        value="toggle_protocol" />
+    <input
+        type="hidden"
+        name="protocol"
+        value="" />
+    <input
+        type="hidden"
+        name="enabled"
+        value="" />
 </form>
 <div class="device-form protocol-form">
     <div id="protocol-workspace">
-        <button class="add-protocol" id="add-protocol" type="button" aria-expanded="false">
-            + Add Protocol
-        </button>
-        <form method="post" id="remove-protocol-form" hidden>
+        <button
+            class="add-protocol"
+            id="add-protocol"
+            type="button"
+            aria-expanded="false"> + Add Protocol </button>
+        <form
+            method="post"
+            id="remove-protocol-form"
+            hidden>
             <?php icct_nms_token(); ?>
-            <input type="hidden" name="action" value="remove_protocol" />
-            <input type="hidden" name="protocol" value="" />
-            <input type="hidden" name="assignment_revision" value="<?= (int) ($serial['revision'] ??
-                0) ?>" />
+            <input
+                type="hidden"
+                name="action"
+                value="remove_protocol" />
+            <input
+                type="hidden"
+                name="protocol"
+                value="" />
+            <input
+                type="hidden"
+                name="assignment_revision"
+                value="<?= (int) ($serial['revision'] ?? 0) ?>" />
         </form>
-        <div id="protocol-picker" class="protocol-picker" hidden>
+        <div
+            id="protocol-picker"
+            class="protocol-picker"
+            hidden>
             <div id="protocol-options">
                 <?php foreach (
                     [
@@ -113,13 +194,18 @@ foreach (['cdp', 'lldp', 'snmp', 'ssh', 'serial', 'syslog', 'netflow'] as $key) 
                         'tacacs' => 'TACACS+',
                     ] as $key => $label
                 ): ?>
-                <label class="check-row">
-                    <input type="checkbox" data-protocol-target="<?= $key ?>" />
-                    <span><?= $label ?></span>
-                </label>
+                    <label class="check-row">
+                        <input
+                            type="checkbox"
+                            data-protocol-target="<?= $key ?>" />
+                        <span><?= $label ?></span>
+                    </label>
                 <?php endforeach; ?>
             </div>
-            <button class="button" type="button" id="confirm-protocols">Add</button>
+            <button
+                class="button"
+                type="button"
+                id="confirm-protocols">Add</button>
         </div>
         <?php
         $savedMethods = $discovery ? icct_backend_nd_host_methods($discovery, false) : [];
@@ -130,39 +216,49 @@ foreach (
     ] as $protocolKey => $protocolLabel
 ):
     $isSaved = in_array($protocolKey, $savedMethods, true); ?>
-        <details class="protocol-item" id="protocol-<?= $protocolKey ?>" data-saved="<?= $isSaved
-    ? '1'
-    : '0' ?>" <?= $isSaved || in_array($protocolKey, $protocolDraft, true)
-    ? ''
-    : 'hidden' ?> <?= $failedProtocol === $protocolKey ? 'open' : '' ?>>
-            <summary>
-                <span class="accordion-chevron" aria-hidden="true"></span>
-                <span><?= $protocolLabel ?> <?php $protocolPresetHelp(
-                    $protocolKey,
-                    $protocolLabel,
-                ); ?></span>
-                <button type="button" class="delete-protocol" aria-label="Remove <?= strtoupper(
-                    $protocolKey,
-                ) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg></button>
-            </summary>
-            <div class="protocol-content">
-                <form method="post">
-                    <?php icct_nms_token(); ?>
-                    <input type="hidden" name="action" value="<?= $presetMode
-                        ? 'save_protocol_defaults'
-                        : 'discovery' ?>" /><?php if (
+            <details
+                class="protocol-item"
+                id="protocol-<?= $protocolKey ?>"
+                data-saved="<?= $isSaved ? '1' : '0' ?>"
+                <?= $isSaved || in_array($protocolKey, $protocolDraft, true) ? '' : 'hidden' ?>
+                <?= $failedProtocol === $protocolKey ? 'open' : '' ?>>
+                <summary>
+                    <span
+                        class="accordion-chevron"
+                        aria-hidden="true"></span>
+                    <span><?= $protocolLabel ?> <?php $protocolPresetHelp($protocolKey, $protocolLabel); ?></span>
+                    <button
+                        type="button"
+                        class="delete-protocol"
+                        aria-label="Remove <?= strtoupper($protocolKey) ?>">
+                        <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true">
+                            <path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" />
+                        </svg>
+                    </button>
+                </summary>
+                <div class="protocol-content">
+                    <form method="post">
+                        <?php icct_nms_token(); ?>
+                        <input
+                            type="hidden"
+                            name="action"
+                            value="<?= $presetMode ? 'save_protocol_defaults' : 'discovery' ?>" />
+                        <?php if (
                             $presetMode
-                        ): ?><input type="hidden" name="preset_protocol" value="<?= $protocolKey ?>" /><?php endif; ?>
-                    <input type="hidden" name="discovery_protocol" value="<?= $protocolKey ?>" />
-                    <div class="protocol-grid cols-4">
-                        <?php
-                                                icct_nms_select(
-                                                    'Collection Mode',
-                                                    'mode',
-                                                    ['snmp' => 'SNMP'],
-                                                    'snmp',
-                                                    'disabled',
-                                                );
+                        ): ?>
+                            <input
+                                type="hidden"
+                                name="preset_protocol"
+                                value="<?= $protocolKey ?>" />
+                        <?php endif; ?>
+                        <input
+                            type="hidden"
+                            name="discovery_protocol"
+                            value="<?= $protocolKey ?>" />
+                        <div class="protocol-grid cols-4">
+                            <?php icct_nms_select('Collection Mode', 'mode', ['snmp' => 'SNMP'], 'snmp', 'disabled');
     foreach (
         [
             'interval_seconds' => 'Collection Interval (Sec)',
@@ -173,9 +269,7 @@ foreach (
         icct_nms_input(
             $label,
             $key,
-            ($presetMode
-                ? $protocolPresets[$protocolKey][$key] ?? null
-                : $discovery[$key] ?? null) ??
+            ($presetMode ? $protocolPresets[$protocolKey][$key] ?? null : $discovery[$key] ?? null) ??
                 [
                     'interval_seconds' => 300,
                     'stale_seconds' => 900,
@@ -196,123 +290,166 @@ foreach (
                 ][$key] .
                 '"',
         );
-    }
-    ?>
-                    </div>
-                    <div class="protocol-actions"><button class="button primary">Save</button></div>
-                </form>
-            </div>
-        </details>
+    } ?>
+                        </div>
+                        <div class="protocol-actions">
+                            <button class="button primary">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </details>
         <?php
 endforeach;
 ?>
-        <details class="protocol-item" id="protocol-snmp" data-saved="<?= (int) $host[
-    'snmp_version'
-] > 0
-    ? '1'
-    : '0' ?>" <?= (int) $host['snmp_version'] > 0 || in_array('snmp', $protocolDraft, true)
-    ? 'open'
-    : 'hidden' ?>>
+        <details
+            class="protocol-item"
+            id="protocol-snmp"
+            data-saved="<?= (int) $host['snmp_version'] > 0 ? '1' : '0' ?>"
+            <?= (int) $host['snmp_version'] > 0 || in_array('snmp', $protocolDraft, true) ? 'open' : 'hidden' ?>>
             <summary>
-                <span class="accordion-chevron" aria-hidden="true"></span>
-                <span>SNMP (Simple Network Management Protocol) <?php $protocolPresetHelp(
-                    'snmp',
-                    'SNMP',
-                ); ?></span>
-                <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
+                <span
+                    class="accordion-chevron"
+                    aria-hidden="true"></span>
+                <span>SNMP (Simple Network Management Protocol) <?php $protocolPresetHelp('snmp', 'SNMP'); ?></span>
+                <button
+                    type="button"
+                    class="delete-protocol"
+                    aria-label="Remove protocol">
+                    <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true">
+                        <path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" />
+                    </svg>
                 </button>
             </summary>
             <div class="protocol-content">
                 <form method="post">
-                    <?php
-                    icct_nms_token();
+                    <?php icct_nms_token();
 $values = $host;
-$readonly = false;
-?>
-                    <input type="hidden" name="action" value="<?= $presetMode
-    ? 'save_protocol_defaults'
-    : 'snmp' ?>" /><?php if (
-        $presetMode
-    ): ?><input type="hidden" name="preset_protocol" value="<?= 'snmp' ?>" /><?php endif; ?>
+$readonly = false; ?>
+                    <input
+                        type="hidden"
+                        name="action"
+                        value="<?= $presetMode ? 'save_protocol_defaults' : 'snmp' ?>" />
+                    <?php if (
+                        $presetMode
+                    ): ?>
+                        <input
+                            type="hidden"
+                            name="preset_protocol"
+                            value="<?= 'snmp' ?>" />
+                    <?php endif; ?>
                     <?php require __DIR__ . '/../../snmp/templates/snmp.php'; ?>
-                    <div class="protocol-actions"><button class="button primary">Save</button></div>
+                    <div class="protocol-actions">
+                        <button class="button primary">Save</button>
+                    </div>
                 </form>
-                <?php if (!$presetMode): ?><form method="post" id="snmp-discovery-policy">
-                    <?php icct_nms_token(); ?><input type="hidden" name="action" value="discovery"><input type="hidden" name="discovery_policy" value="1">
-                    <h3>Network Discovery</h3><div class="protocol-grid cols-3">
-                    <?php foreach (
-                        [
-                            'interval_seconds' => 'Collection Interval (Sec)',
-                            'stale_seconds' => 'Stale (Seconds)',
-                            'refresh_seconds' => 'Display Refresh (Seconds)',
-                        ] as $key => $label
-                    ) {
-                        icct_nms_input(
-                            $label,
-                            $key,
-                            $discovery[$key] ??
+                <?php if (!$presetMode): ?>
+                    <form
+                        method="post"
+                        id="snmp-discovery-policy">
+                        <?php icct_nms_token(); ?>
+                        <input
+                            type="hidden"
+                            name="action"
+                            value="discovery">
+                        <input
+                            type="hidden"
+                            name="discovery_policy"
+                            value="1">
+                        <h3>Network Discovery</h3>
+                        <div class="protocol-grid cols-3">
+                            <?php foreach (
                                 [
-                                    'interval_seconds' => 300,
-                                    'stale_seconds' => 900,
-                                    'refresh_seconds' => 30,
-                                ][$key],
-                            'number',
-                            'required min="' .
-                                [
-                                    'interval_seconds' => 300,
-                                    'stale_seconds' => 600,
-                                    'refresh_seconds' => 10,
-                                ][$key] .
-                                '" max="' .
-                                [
-                                    'interval_seconds' => 86400,
-                                    'stale_seconds' => 604800,
-                                    'refresh_seconds' => 300,
-                                ][$key] .
-                                '"',
-                        );
-                    } ?>
-                    </div><?php require __DIR__ . '/discovery_observations.php'; ?>
-                    <div class="protocol-actions"><button class="button primary">Save</button></div>
-                </form><?php endif; ?>
-
+                                    'interval_seconds' => 'Collection Interval (Sec)',
+                                    'stale_seconds' => 'Stale (Seconds)',
+                                    'refresh_seconds' => 'Display Refresh (Seconds)',
+                                ] as $key => $label
+                            ) {
+                                icct_nms_input(
+                                    $label,
+                                    $key,
+                                    $discovery[$key] ??
+                                        [
+                                            'interval_seconds' => 300,
+                                            'stale_seconds' => 900,
+                                            'refresh_seconds' => 30,
+                                        ][$key],
+                                    'number',
+                                    'required min="' .
+                                        [
+                                            'interval_seconds' => 300,
+                                            'stale_seconds' => 600,
+                                            'refresh_seconds' => 10,
+                                        ][$key] .
+                                        '" max="' .
+                                        [
+                                            'interval_seconds' => 86400,
+                                            'stale_seconds' => 604800,
+                                            'refresh_seconds' => 300,
+                                        ][$key] .
+                                        '"',
+                                );
+                            } ?>
+                        </div>
+                        <?php require __DIR__ . '/discovery_observations.php'; ?>
+                        <div class="protocol-actions">
+                            <button class="button primary">Save</button>
+                        </div>
+                    </form>
+                <?php endif; ?>
             </div>
         </details>
         <?php require __DIR__ . '/../../ssh/templates/settings.php'; ?>
-        <details class="protocol-item" id="protocol-serial" data-saved="<?= $serial
-            ? '1'
-            : '0' ?>" <?= $serial || in_array('serial', $protocolDraft, true)
-    ? ''
-    : 'hidden' ?> <?= $failedProtocol === 'serial' ? 'open' : '' ?>>
+        <details
+            class="protocol-item"
+            id="protocol-serial"
+            data-saved="<?= $serial ? '1' : '0' ?>"
+            <?= $serial || in_array('serial', $protocolDraft, true) ? '' : 'hidden' ?>
+            <?= $failedProtocol === 'serial' ? 'open' : '' ?>>
             <summary>
-                <span class="accordion-chevron" aria-hidden="true"></span>
-                <span>Serial Communication <?php $protocolPresetHelp(
-                    'serial',
-                    'Serial Communication',
-                ); ?></span>
-                <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
+                <span
+                    class="accordion-chevron"
+                    aria-hidden="true"></span>
+                <span>Serial Communication <?php $protocolPresetHelp('serial', 'Serial Communication'); ?></span>
+                <button
+                    type="button"
+                    class="delete-protocol"
+                    aria-label="Remove protocol">
+                    <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true">
+                        <path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" />
+                    </svg>
                 </button>
             </summary>
             <div class="protocol-content">
                 <form method="post">
                     <?php icct_nms_token(); ?>
-                    <input type="hidden" name="action" value="<?= $presetMode
-                        ? 'save_protocol_defaults'
-                        : 'serial' ?>" /><?php if (
-                            $presetMode
-                        ): ?><input type="hidden" name="preset_protocol" value="<?= 'serial' ?>" /><?php endif; ?>
-                    <input type="hidden" name="assignment_revision" value="<?= (int) ($serial[
-                                                'revision'
-                                            ] ?? 0) ?>" />
+                    <input
+                        type="hidden"
+                        name="action"
+                        value="<?= $presetMode ? 'save_protocol_defaults' : 'serial' ?>" />
+                    <?php if (
+                        $presetMode
+                    ): ?>
+                        <input
+                            type="hidden"
+                            name="preset_protocol"
+                            value="<?= 'serial' ?>" />
+                    <?php endif; ?>
+                    <input
+                        type="hidden"
+                        name="assignment_revision"
+                        value="<?= (int) ($serial['revision'] ?? 0) ?>" />
                     <?php require __DIR__ . '/../../serial/templates/serial.php'; ?>
-                    <div class="protocol-actions"><button class="button primary">Save</button></div>
+                    <div class="protocol-actions">
+                        <button class="button primary">Save</button>
+                    </div>
                 </form>
             </div>
         </details>
-        <?php
-                                $syslog = $presetMode
-                                    ? $protocolPresets['syslog'] ?? []
-                                    : icct_backend_syslog_assignment($id);
+        <?php $syslog = $presetMode ? $protocolPresets['syslog'] ?? [] : icct_backend_syslog_assignment($id);
 $syslogSaved = !empty($syslog);
 if (!$presetMode) {
     $syslogDefaults = icct_nms_protocol_presets()['syslog'] ?? [];
@@ -321,100 +458,163 @@ if (!$presetMode) {
             $syslog[$syslogField] = $syslogDefaults[$syslogField];
         }
     }
-}
-?>
-        <details class="protocol-item" id="protocol-syslog" data-saved="<?= $syslogSaved
-    ? '1'
-    : '0' ?>" <?= $syslogSaved || in_array('syslog', $protocolDraft, true)
-    ? ''
-    : 'hidden' ?>>
-            <summary><span class="accordion-chevron" aria-hidden="true"></span><span>Syslog <?php $protocolPresetHelp(
-                'syslog',
-                'Syslog',
-            ); ?></span><button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7"/></svg></button></summary>
-            <div class="protocol-content"><form method="post">
-                <?php icct_nms_token(); ?>
-                <input type="hidden" name="action" value="<?= $presetMode
-                    ? 'save_protocol_defaults'
-                    : 'syslog' ?>" />
-                <?php if (
-                    $presetMode
-                ): ?><input type="hidden" name="preset_protocol" value="syslog" /><?php endif; ?>
-                <?php require __DIR__ . '/../../syslog/templates/syslog.php'; ?>
-            </form></div>
+} ?>
+        <details
+            class="protocol-item"
+            id="protocol-syslog"
+            data-saved="<?= $syslogSaved ? '1' : '0' ?>"
+            <?= $syslogSaved || in_array('syslog', $protocolDraft, true) ? '' : 'hidden' ?>>
+            <summary>
+                <span
+                    class="accordion-chevron"
+                    aria-hidden="true"></span>
+                <span>Syslog <?php $protocolPresetHelp('syslog', 'Syslog'); ?></span>
+                <button
+                    type="button"
+                    class="delete-protocol"
+                    aria-label="Remove protocol">
+                    <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true">
+                        <path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" />
+                    </svg>
+                </button>
+            </summary>
+            <div class="protocol-content">
+                <form method="post">
+                    <?php icct_nms_token(); ?>
+                    <input
+                        type="hidden"
+                        name="action"
+                        value="<?= $presetMode ? 'save_protocol_defaults' : 'syslog' ?>" />
+                    <?php if (
+                        $presetMode
+                    ): ?>
+                        <input
+                            type="hidden"
+                            name="preset_protocol"
+                            value="syslog" />
+                    <?php endif; ?>
+                    <?php require __DIR__ . '/../../syslog/templates/syslog.php'; ?>
+                </form>
+            </div>
         </details>
-        <?php
-        $netflow = $presetMode
-            ? $protocolPresets['netflow'] ?? []
-            : icct_nms_netflow_assignment($id);
+        <?php $netflow = $presetMode ? $protocolPresets['netflow'] ?? [] : icct_nms_netflow_assignment($id);
 $netflowSaved = !empty($netflow);
 $netflow = array_replace(
     icct_nms_netflow_defaults(),
     icct_nms_protocol_presets()['netflow'] ?? [],
     $netflow,
-);
-?>
-        <details class="protocol-item" id="protocol-netflow" data-saved="<?= $netflowSaved
-    ? '1'
-    : '0' ?>" <?= $netflowSaved || in_array('netflow', $protocolDraft, true)
-    ? ''
-    : 'hidden' ?>>
-        <summary><span class="accordion-chevron" aria-hidden="true"></span><span>NetFlow / IPFIX <?php $protocolPresetHelp(
-            'netflow',
-            'NetFlow',
-        ); ?></span><button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7"/></svg></button></summary>
-        <div class="protocol-content"><form method="post"><?php icct_nms_token(); ?><input type="hidden" name="action" value="<?= $presetMode
-    ? 'save_protocol_defaults'
-    : 'netflow' ?>"><?php if (
-        $presetMode
-    ): ?><input type="hidden" name="preset_protocol" value="netflow"><?php endif; ?>
-        <?php if ($presetMode): ?>
-        <script type="application/json" data-netflow-profiles><?= json_encode(
-            icct_nms_netflow_profiles(),
-            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR,
-        ) ?></script>
-        <?php endif; ?>
-        <?php require __DIR__ . '/../../netflow/templates/settings.php'; ?>
-        </form></div></details>
-        <?php foreach (['ntp' => 'NTP', 'tacacs' => 'TACACS+'] as $key => $label): ?>
-        <details class="protocol-item" id="protocol-<?= $key ?>" data-saved="0" <?= in_array(
-            $key,
-            $protocolDraft,
-            true,
-        )
-                        ? ''
-                        : 'hidden' ?>>
+); ?>
+        <details
+            class="protocol-item"
+            id="protocol-netflow"
+            data-saved="<?= $netflowSaved ? '1' : '0' ?>"
+            <?= $netflowSaved || in_array('netflow', $protocolDraft, true) ? '' : 'hidden' ?>>
             <summary>
-                <span class="accordion-chevron" aria-hidden="true"></span>
-                <span><?= $label ?> <?php $protocolPresetHelp($key, $label); ?></span>
-                <button type="button" class="delete-protocol" aria-label="Remove protocol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
+                <span
+                    class="accordion-chevron"
+                    aria-hidden="true"></span>
+                <span>NetFlow / IPFIX <?php $protocolPresetHelp('netflow', 'NetFlow'); ?></span>
+                <button
+                    type="button"
+                    class="delete-protocol"
+                    aria-label="Remove protocol">
+                    <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true">
+                        <path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" />
+                    </svg>
                 </button>
             </summary>
             <div class="protocol-content">
-                <?php require __DIR__ . '/protocol_pending.php'; ?>
+                <form method="post">
+                    <?php icct_nms_token(); ?>
+                    <input
+                        type="hidden"
+                        name="action"
+                        value="<?= $presetMode ? 'save_protocol_defaults' : 'netflow' ?>">
+                    <?php if (
+                        $presetMode
+                    ): ?>
+                        <input
+                            type="hidden"
+                            name="preset_protocol"
+                            value="netflow">
+                    <?php endif; ?>
+                    <?php if ($presetMode): ?>
+                        <script
+                            type="application/json"
+                            data-netflow-profiles><?= json_encode(
+                                icct_nms_netflow_profiles(),
+                                JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR,
+                            ) ?></script>
+                    <?php endif; ?>
+                    <?php require __DIR__ . '/../../netflow/templates/settings.php'; ?>
+                </form>
             </div>
         </details>
+        <?php foreach (['ntp' => 'NTP', 'tacacs' => 'TACACS+'] as $key => $label): ?>
+            <details
+                class="protocol-item"
+                id="protocol-<?= $key ?>"
+                data-saved="0"
+                <?= in_array($key, $protocolDraft, true) ? '' : 'hidden' ?>>
+                <summary>
+                    <span
+                        class="accordion-chevron"
+                        aria-hidden="true"></span>
+                    <span><?= $label ?> <?php $protocolPresetHelp($key, $label); ?></span>
+                    <button
+                        type="button"
+                        class="delete-protocol"
+                        aria-label="Remove protocol">
+                        <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true">
+                            <path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" />
+                        </svg>
+                    </button>
+                </summary>
+                <div class="protocol-content">
+                    <?php require __DIR__ . '/protocol_pending.php'; ?>
+                </div>
+            </details>
         <?php endforeach; ?>
     </div>
     <?php if (!$presetMode): ?>
-    <section id="diagnostics" class="diagnostics-page">
-        <h2>Device Diagnostics</h2>
-        <form method="post">
-            <?php icct_nms_token(); ?>
-            <input type="hidden" name="action" value="diagnostics" />
-            <span class="field-label">Select Diagnostics Methods <span class="field-info" tabindex="0" role="img" aria-label="Information about diagnostic methods" data-tooltip="Choose the diagnostics available for this device. Configure packet count, hop limit and test duration alongside the selected methods."><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span></span>
-            <div class="diagnostics-list diagnostics-settings">
-                <?php
-                        $selected = icct_backend_diag_tools($diag['tools'] ?? '');
+        <section
+            id="diagnostics"
+            class="diagnostics-page">
+            <h2>Device Diagnostics</h2>
+            <form method="post">
+                <?php icct_nms_token(); ?>
+                <input
+                    type="hidden"
+                    name="action"
+                    value="diagnostics" />
+                <span class="field-label">Select Diagnostics Methods <span
+                        class="field-info"
+                        tabindex="0"
+                        role="img"
+                        aria-label="Information about diagnostic methods"
+                        data-tooltip="Choose the diagnostics available for this device. Configure packet count, hop limit and test duration alongside the selected methods.">
+                        <svg
+                            viewBox="0 0 20 20"
+                            aria-hidden="true">
+                            <circle
+                                cx="10"
+                                cy="10"
+                                r="8" />
+                            <path d="M10 9v5M10 6v.5" />
+                        </svg>
+                    </span>
+                </span>
+                <div class="diagnostics-list diagnostics-settings">
+                    <?php
+                    $selected = icct_backend_diag_tools($diag['tools'] ?? '');
         $groups = [
-            [
-                'Ping (Packets)',
-                ['ping' => 'Ping (Packets)'],
-                'ping_count',
-                'Ping (Packets)',
-                1,
-                10,
-            ],
+            ['Ping (Packets)', ['ping' => 'Ping (Packets)'], 'ping_count', 'Ping (Packets)', 1, 10],
             [
                 'Traceroute (Hops)',
                 [
@@ -456,14 +656,7 @@ $netflow = array_replace(
                 1,
                 30,
             ],
-            [
-                'Pathchar',
-                ['pathchar' => 'Pathchar'],
-                'pathchar_hops',
-                'Pathchar Hops (pchar)',
-                1,
-                30,
-            ],
+            ['Pathchar', ['pathchar' => 'Pathchar'], 'pathchar_hops', 'Pathchar Hops (pchar)', 1, 30],
             [
                 'Netperf (Sec)',
                 ['netperf' => 'Netperf (Sec)'],
@@ -474,118 +667,133 @@ $netflow = array_replace(
             ],
         ];
         foreach ($groups as [$group, $methods, $parameter, $caption, $min, $max]):
-
             $isGroup = count($methods) > 1;
             $key = array_key_first($methods);
             ?>
-                <div class="diagnostic-row <?= $group === 'MTR' ? 'diagnostic-row-mtr' : '' ?>">
-                    <label class="check-row diagnostic-primary">
-                        <?php if ($isGroup): ?>
-                        <input type="checkbox" <?= $group === 'MTR'
-                    ? 'data-mtr-group'
-                    : 'data-traceroute-group' ?> aria-label="<?= icct_nms_h($group) ?>" />
-                        <?php else: ?>
-                        <input type="checkbox" name="diagnostic_tools[]" value="<?= $key ?>" <?= in_array(
-                            $key,
-                            $selected,
-                            true,
-                        )
-    ? 'checked'
-    : '' ?> />
-                        <?php endif; ?>
-                        <?= icct_nms_h($group) ?>
-                    </label>
-                    <?php if ($parameter): ?>
-                    <div class="diagnostic-parameter" data-diagnostic-parameter="<?= $parameter ?>">
-                        <?php icct_nms_input(
-                            $caption,
-                            $parameter,
-                            $diag[$parameter] ??
-                                [
-                                    'ping_count' => 4,
-                                    'trace_hops' => 20,
-                                    'bandwidth_seconds' => 10,
-                                    'mtr_cycles' => (int) ($diag['ping_count'] ?? 4),
-                                    'pathchar_hops' => 20,
-                                ][$parameter],
-                            'number',
-                            'min="' . $min . '" max="' . $max . '"',
-                        ); ?>
-                    </div>
-                    <?php endif; ?>
-                    <?php if ($group === 'ARP'): ?>
-                    <div class="diagnostic-parameter" data-diagnostic-parameter="arp_interface">
-                        <?php icct_nms_input(
-                            'Collector Interface (optional)',
-                            'arp_interface',
-                            $diag['arp_interface'] ?? '',
-                            'text',
-                            'maxlength="15" placeholder="All interfaces"',
-                        ); ?>
-                    </div>
-                    <?php endif; ?>
-                    <?php if ($group === 'Pathchar'): ?>
-                    <div class="diagnostic-extra" data-diagnostic-parameter="pathchar_timeout">
-                        <?php icct_nms_input(
-                            'Time Limit (Sec)',
-                            'pathchar_timeout',
-                            $diag['pathchar_timeout'] ?? 60,
-                            'number',
-                            'min="10" max="120"',
-                        ); ?>
-                    </div>
-                    <?php endif; ?>
-                    <?php if ($isGroup): ?>
-                    <div class="diagnostic-methods">
-                        <?php foreach ($methods as $key => $label): ?>
-                        <label class="check-row diagnostic-child">
-                            <input type="checkbox" name="diagnostic_tools[]" value="<?= $key ?>" <?= in_array(
-                                $key,
-                                $selected,
-                                true,
-                            )
-    ? 'checked'
-    : '' ?> />
-                            <?= icct_nms_h($label) ?>
-                        </label>
-                        <?php endforeach; ?>
-                    </div>
-                    <?php endif; ?>
-                    <?php if ($group === 'MTR'): ?>
-                    <div class="diagnostic-monitor">
-                        <?php icct_nms_input(
-                            'MTR Interval (Sec)',
-                            'mtr_interval',
-                            $diag['mtr_interval'] ?? 300,
-                            'number',
-                            'min="60" max="3600"',
-                        ); ?>
-                        <label class="check-row diagnostic-background">Automatic background monitoring <input type="checkbox" name="mtr_background" value="1" <?= !empty(
-                            $diag['mtr_background']
-                        )
-                            ? 'checked'
-                            : '' ?> /></label>
-                    </div>
-                    <?php endif; ?>
-                </div>
-                <?php
+                        <div class="diagnostic-row <?= $group === 'MTR' ? 'diagnostic-row-mtr' : '' ?>">
+                            <label class="check-row diagnostic-primary">
+                                <?php if ($isGroup): ?>
+                                    <input
+                                        type="checkbox"
+                                        <?= $group === 'MTR' ? 'data-mtr-group' : 'data-traceroute-group' ?>
+                                        aria-label="<?= icct_nms_h($group) ?>" />
+                                <?php else: ?>
+                                    <input
+                                        type="checkbox"
+                                        name="diagnostic_tools[]"
+                                        value="<?= $key ?>"
+                                        <?= in_array($key, $selected, true) ? 'checked' : '' ?> />
+                                <?php endif; ?> <?= icct_nms_h($group) ?>
+
+                            </label>
+                            <?php if ($parameter): ?>
+                                <div
+                                    class="diagnostic-parameter"
+                                    data-diagnostic-parameter="<?= $parameter ?>">
+                                    <?php icct_nms_input(
+                                        $caption,
+                                        $parameter,
+                                        $diag[$parameter] ??
+                                            [
+                                                'ping_count' => 4,
+                                                'trace_hops' => 20,
+                                                'bandwidth_seconds' => 10,
+                                                'mtr_cycles' => (int) ($diag['ping_count'] ?? 4),
+                                                'pathchar_hops' => 20,
+                                            ][$parameter],
+                                        'number',
+                                        'min="' . $min . '" max="' . $max . '"',
+                                    ); ?>
+                                </div>
+                            <?php endif; ?>
+                            <?php if ($group === 'ARP'): ?>
+                                <div
+                                    class="diagnostic-parameter"
+                                    data-diagnostic-parameter="arp_interface">
+                                    <?php icct_nms_input(
+                                        'Collector Interface (optional)',
+                                        'arp_interface',
+                                        $diag['arp_interface'] ?? '',
+                                        'text',
+                                        'maxlength="15" placeholder="All interfaces"',
+                                    ); ?>
+                                </div>
+                            <?php endif; ?>
+                            <?php if ($group === 'Pathchar'): ?>
+                                <div
+                                    class="diagnostic-extra"
+                                    data-diagnostic-parameter="pathchar_timeout">
+                                    <?php icct_nms_input(
+                                        'Time Limit (Sec)',
+                                        'pathchar_timeout',
+                                        $diag['pathchar_timeout'] ?? 60,
+                                        'number',
+                                        'min="10" max="120"',
+                                    ); ?>
+                                </div>
+                            <?php endif; ?>
+                            <?php if ($isGroup): ?>
+                                <div class="diagnostic-methods">
+                                    <?php foreach ($methods as $key => $label): ?>
+                                        <label class="check-row diagnostic-child">
+                                            <input
+                                                type="checkbox"
+                                                name="diagnostic_tools[]"
+                                                value="<?= $key ?>"
+                                                <?= in_array($key, $selected, true) ? 'checked' : '' ?> /> <?= icct_nms_h($label) ?>
+
+                                        </label>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                            <?php if ($group === 'MTR'): ?>
+                                <div class="diagnostic-monitor">
+                                    <?php icct_nms_input(
+                                        'MTR Interval (Sec)',
+                                        'mtr_interval',
+                                        $diag['mtr_interval'] ?? 300,
+                                        'number',
+                                        'min="60" max="3600"',
+                                    ); ?>
+                                    <label class="check-row diagnostic-background">Automatic background
+                                        monitoring
+                                        <input
+                                            type="checkbox"
+                                            name="mtr_background"
+                                            value="1"
+                                            <?= !empty($diag['mtr_background']) ? 'checked' : '' ?> />
+                                    </label>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    <?php
         endforeach;
 ?>
-            </div>
-            <div class="protocol-actions"><button class="button primary">Save</button></div>
-        </form>
-    </section>
-    <?php require __DIR__ . '/../../../graphs/templates/graphs.php'; ?>
-    <?php require __DIR__ . '/../../../graphs/templates/data_queries.php'; ?>
+                </div>
+                <div class="protocol-actions">
+                    <button class="button primary">Save</button>
+                </div>
+            </form>
+        </section>
+        <?php require __DIR__ . '/../../../graphs/templates/graphs.php'; ?>
+        <?php require __DIR__ . '/../../../graphs/templates/data_queries.php'; ?>
     <?php endif; ?>
     <?php if (empty($wizard) && !$presetMode): ?>
-    <footer class="form-footer">
-        <a class="button" id="protocol-previous" href="inventory/controllers/device.php?id=<?= $id ?>">Previous ←</a>
-        <a class="button" id="protocol-next" href="#diagnostics">Next →</a>
-    </footer>
+        <footer class="form-footer">
+            <a
+                class="button"
+                id="protocol-previous"
+                href="inventory/controllers/device.php?id=<?= $id ?>">Previous ←</a>
+            <a
+                class="button"
+                id="protocol-next"
+                href="#diagnostics">Next →</a>
+        </footer>
     <?php endif; ?>
 </div>
-<script type="application/json" id="serial-data">
+<script
+    type="application/json"
+    id="serial-data">
     <?= json_encode(
         $connections,
         JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR,

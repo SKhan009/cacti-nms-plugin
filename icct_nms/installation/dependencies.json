@@ -41,7 +41,14 @@
       "libuuid",
       "libstdc++",
       "libcap",
-      "policycoreutils-python-utils"
+      "policycoreutils-python-utils",
+      "selinux-policy-devel",
+      "make",
+      "cairo",
+      "pango",
+      "libpng",
+      "fontconfig",
+      "dejavu-sans-mono-fonts"
     ],
     "debian": [
       "php-cli",
@@ -154,11 +161,16 @@
         ]
       },
       "services": [
-        "icct-nms-ssh.service"
+        "icct-nms-ssh.service",
+        "icct-nms-guacd.service"
       ],
       "files": [
         "protocols/ssh/vendor/autoload.php",
-        "protocols/ssh/assets/guacamole-1.6.0.js"
+        "protocols/ssh/assets/guacamole-1.6.0.js",
+        "protocols/ssh/controllers/ssh_terminal.php",
+        "protocols/ssh/controllers/ssh_console.php",
+        "protocols/ssh/js/terminal.js",
+        "protocols/ssh/css/terminal.css"
       ],
       "note": "Requires the bundled strict-auth patch, an HTTPS origin and a private service account. A stock guacd package alone is insufficient; see protocols/ssh/README.md.",
       "root_binaries": [

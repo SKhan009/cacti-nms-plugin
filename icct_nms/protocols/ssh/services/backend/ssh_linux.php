@@ -11,7 +11,8 @@ function icct_backend_ssh_key_envelope($key)
     $text = trim($key);
     if (
         preg_match(
-            '/\A-----BEGIN (OPENSSH PRIVATE KEY|RSA PRIVATE KEY|EC PRIVATE KEY|DSA PRIVATE KEY|PRIVATE KEY|ENCRYPTED PRIVATE KEY)-----\r?\n[\s\S]+\r?\n-----END \1-----\z/',
+            '/\\A-----BEGIN (OPENSSH PRIVATE KEY|RSA PRIVATE KEY|EC PRIVATE KEY|DSA PRIVATE ' .
+                'KEY|PRIVATE KEY|ENCRYPTED PRIVATE KEY)-----\\r?\\n[\\s\\S]+\\r?\\n-----END \\1-----\\z/',
             $text,
         )
     ) {

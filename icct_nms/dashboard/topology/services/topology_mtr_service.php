@@ -54,7 +54,9 @@ function icct_nms_link_mtr($id)
             continue;
         }
         $job = db_fetch_row_prepared(
-            "SELECT status,finished_at,result_json FROM plugin_icct_nms_diagnostic_jobs WHERE host_id=? AND (user_id=? OR is_background=1) AND poller_id=? AND tool=? AND config_hash=? AND status IN ('complete','failed') ORDER BY id DESC LIMIT 1",
+            'SELECT status,finished_at,result_json FROM plugin_icct_nms_diagnostic_jobs WHERE ' .
+                'host_id=? AND (user_id=? OR is_background=1) AND poller_id=? AND tool=? AND ' .
+                'config_hash=? AND status IN (\'complete\',\'failed\') ORDER BY id DESC LIMIT 1',
             [
                 $id,
                 icct_backend_current_user_id(),

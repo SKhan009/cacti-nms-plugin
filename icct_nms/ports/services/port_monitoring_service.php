@@ -87,7 +87,8 @@ function icct_nms_save_port_monitoring($id, $input)
         $known,
     );
     icct_backend_category_execute(
-        'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+        'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+            'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
         ['port_monitoring_' . $id, json_encode($settings, JSON_THROW_ON_ERROR)],
     );
 }
@@ -257,7 +258,11 @@ function icct_nms_record_port_alarms($host, $view, $settings)
             $transition['oper'] = $oper;
             if ($transition['changed']) {
                 icct_backend_category_execute(
-                    'INSERT INTO plugin_icct_nms_port_alarm_events(host_id,if_index,port_name,event,state_before,state_after,severity_before,severity_after,admin_status,oper_status,collected_at,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,NOW())',
+                    'INSERT INTO ' .
+                        ('plugin_icct_nms_port_alarm_events(host_id,if_index,port_name,event,state_before,' .
+                            'state_after,severity_before,severity_after,admin_status,oper_status,collected_at,' .
+                            'created_at) ') .
+                        'VALUES(?,?,?,?,?,?,?,?,?,?,?,NOW())',
                     [
                         $id,
                         (int) $index,
@@ -277,7 +282,8 @@ function icct_nms_record_port_alarms($host, $view, $settings)
             $next['ports'][$index] = $transition;
         }
         icct_backend_category_execute(
-            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
             ['port_alarm_state_' . $id, json_encode($next, JSON_THROW_ON_ERROR)],
         );
         icct_backend_category_execute('COMMIT', []);

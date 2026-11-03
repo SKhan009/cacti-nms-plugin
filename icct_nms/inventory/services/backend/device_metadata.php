@@ -86,9 +86,9 @@ function icct_backend_manual_serial_save($host_id, $value)
         );
     } else {
         $saved = db_execute_prepared(
-            'INSERT INTO plugin_icct_nms_device_metadata
-			(host_id, serial_number, updated_by, updated_at) VALUES (?, ?, ?, NOW())
-			ON DUPLICATE KEY UPDATE serial_number = VALUES(serial_number), updated_by = VALUES(updated_by), updated_at = NOW()',
+            "INSERT INTO plugin_icct_nms_device_metadata\n\t\t\t(host_id, serial_number, updated_by, " .
+                "updated_at) VALUES (?, ?, ?, NOW())\n\t\t\tON DUPLICATE KEY UPDATE serial_number = " .
+                'VALUES(serial_number), updated_by = VALUES(updated_by), updated_at = NOW()',
             [$host_id, $value, icct_backend_current_user_id()],
         );
     }
@@ -150,7 +150,8 @@ function icct_backend_short_name_validate($value)
         ($value !== '' && !preg_match('/^[A-Za-z0-9][A-Za-z0-9 _-]*$/D', $value))
     ) {
         throw new InvalidArgumentException(
-            'Short name must be at most 8 characters: letters, numbers, spaces, hyphens or underscores. Leave blank to generate it from the device name.',
+            'Short name must be at most 8 characters: letters, numbers, spaces, hyphens or ' .
+                'underscores. Leave blank to generate it from the device name.',
         );
     }
     return trim($value);

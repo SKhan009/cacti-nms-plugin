@@ -15,3 +15,8 @@ RewriteRule ^mib_repository\.php$ protocols/snmp/mibs/controllers/mib_repository
 RewriteRule ^presets\.php$ presets/controllers/presets.php [END]
 RewriteRule ^rack_placement\.php$ presets/controllers/rack_placement.php [END]
 RewriteRule ^ports\.php$ ports/controllers/ports.php [END]
+
+# Private SSH configuration is read by PHP and the broker, never served as a static asset.
+<Files "ssh.config.local.json">
+    Require all denied
+</Files>

@@ -91,7 +91,7 @@ function icct_nms_scan_tcp($address, $v, $id, $deadline)
         proc_close($p);
     }
 }
-function icct_nms_scan_snmp($address, $v)
+function icct_nms_scan_snmp($address, $v, $deadline = null)
 {
     // Use native credential discovery rather than duplicating SNMP authentication or storing secrets in result JSON.
     $items = db_fetch_assoc_prepared(
@@ -110,43 +110,87 @@ function icct_nms_scan_snmp($address, $v)
             'Limit the SNMP credential set to 32 entries and 60 seconds total probe timeout.',
         );
     }
-    $device = ['ip_address' => $address, 'snmp_id' => $v['snmp_id']];
-    ob_start();
-    try {
-        $ok = automation_valid_snmp_device($device);
-    } finally {
-        ob_end_clean();
-    }
-    if (!$ok) {
-        return ['ok' => false];
-    }
     foreach ($items as $item) {
-        $same = true;
-        foreach (
-            [
-                'snmp_version',
-                'snmp_port',
-                'snmp_community',
-                'snmp_username',
-                'snmp_password',
-                'snmp_auth_protocol',
-                'snmp_priv_passphrase',
-                'snmp_priv_protocol',
-                'snmp_context',
-                'snmp_engine_id',
-            ] as $key
-        ) {
-            if ((string) ($item[$key] ?? '') !== (string) ($device[$key] ?? '')) {
-                $same = false;
+        $result = icct_nms_scan_snmp_attempt($address, $item, $deadline);
+        if ($result['ok']) {
+            return ['ok' => true, 'device' => $result['device'], 'credential' => $item];
+        }
+    }
+    return ['ok' => false];
+}
+
+/** A fresh process prevents Net-SNMP from reusing another attempt's SNMPv3 USM keys. */
+function icct_nms_scan_snmp_attempt($address, $item, $deadline)
+{
+    if ($deadline !== null && microtime(true) >= $deadline) {
+        throw new RuntimeException('Native SNMP authentication exceeded its time budget.');
+    }
+    $pipes = [];
+    $process = proc_open(
+        [PHP_BINARY, __DIR__ . '/../cli/snmp_probe.php'],
+        [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['file', '/dev/null', 'a']],
+        $pipes,
+    );
+    if (!is_resource($process)) {
+        throw new RuntimeException('Cannot start isolated native SNMP authentication.');
+    }
+    // Credentials travel only through a private pipe, never command arguments, logs or result evidence.
+    $input = json_encode(['address' => $address, 'credential' => $item], JSON_THROW_ON_ERROR);
+    $limit = microtime(true) + 5 + ((int) $item['snmp_timeout'] * ((int) $item['snmp_retries'] + 1)) / 1000;
+    if ($deadline !== null) {
+        $limit = min($limit, $deadline);
+    }
+    $output = '';
+    $exit = -1;
+    try {
+        $written = 0;
+        while ($written < strlen($input)) {
+            $bytes = fwrite($pipes[0], substr($input, $written));
+            if ($bytes === false || $bytes === 0) {
+                throw new RuntimeException('Cannot deliver native SNMP credential.');
+            }
+            $written += $bytes;
+        }
+        fclose($pipes[0]);
+        stream_set_blocking($pipes[1], false);
+        do {
+            $output .= stream_get_contents($pipes[1]);
+            if (strlen($output) > 65536) {
+                throw new RuntimeException('Native SNMP response exceeds the discovery limit.');
+            }
+            $state = proc_get_status($process);
+            if (!$state['running']) {
+                $exit = $state['exitcode'];
+                $output .= stream_get_contents($pipes[1]);
                 break;
             }
+            if (microtime(true) >= $limit) {
+                throw new RuntimeException('Native SNMP authentication exceeded its time budget.');
+            }
+            usleep(10000);
+        } while (true);
+        if ($exit !== 0) {
+            throw new RuntimeException('Native SNMP authentication process failed.');
         }
-        if ($same) {
-            return ['ok' => true, 'device' => $device, 'credential' => $item];
+        $result = json_decode($output, true, 32, JSON_THROW_ON_ERROR);
+        if (!is_array($result) || !isset($result['ok']) || !is_bool($result['ok']) ||
+            ($result['ok'] && !is_array($result['device'] ?? null))) {
+            throw new RuntimeException('Native SNMP authentication returned an invalid response.');
         }
+        return $result;
+    } finally {
+        foreach ($pipes as $pipe) {
+            if (is_resource($pipe)) {
+                fclose($pipe);
+            }
+        }
+        if (proc_get_status($process)['running']) {
+            proc_terminate($process, 9);
+        }
+        proc_close($process);
     }
-    throw new RuntimeException('Successful SNMP credential could not be identified. Rescan.');
 }
+
 function icct_nms_scan_probe($row, $v, $deadline)
 {
     global $config;
@@ -177,7 +221,7 @@ function icct_nms_scan_probe($row, $v, $deadline)
     }
     if (array_intersect($v['methods'], ['snmp', 'cdp', 'lldp'])) {
         try {
-            $s = icct_nms_scan_snmp($address, $v);
+            $s = icct_nms_scan_snmp($address, $v, $deadline);
         } catch (Throwable $error) {
             $s = ['ok' => false];
             $e['method_errors']['snmp'] = 'SNMP probe failed. Check the saved credential set.';
@@ -214,6 +258,10 @@ function icct_nms_scan_probe($row, $v, $deadline)
                 try {
                     $data = icct_backend_nd_collect_direct($host, $method, $deadline);
                     $e['neighbors'][$method] = $data['neighbors'] ?? [];
+                    // Empty neighbor lists must retain the collector's explanation of missing tables.
+                    if (!empty($data['warning'])) {
+                        $e['method_errors'][$method] = strtoupper($method) . ': ' . $data['warning'];
+                    }
                 } catch (Throwable $error) {
                     $e['method_errors'][$method] = 'Neighbour tables unavailable or timed out.';
                 }
@@ -224,7 +272,9 @@ function icct_nms_scan_probe($row, $v, $deadline)
     $existing = icct_nms_scan_existing($address, $e);
     $e['matching_devices'] = $existing;
     icct_backend_category_execute(
-        "UPDATE plugin_icct_nms_scan_results SET state='observed',evidence_json=?,credential_id=?,suggested_template=?,host_id=?,error='',observed_at=NOW() WHERE id=?",
+        'UPDATE plugin_icct_nms_scan_results SET ' .
+            'state=\'observed\',evidence_json=?,credential_id=?,suggested_template=?,host_id=?,error=\'\',observed_at=NOW() ' .
+            'WHERE id=?',
         [
             json_encode($e, JSON_THROW_ON_ERROR),
             $credential,
@@ -258,7 +308,9 @@ function icct_nms_scan_work($poller)
             !is_realm_allowed(23)
         ) {
             icct_backend_category_execute(
-                "UPDATE plugin_icct_nms_scan_jobs SET state='failed',finished_at=NOW(),last_error='Requesting account no longer has discovery permission.' WHERE id=?",
+                'UPDATE plugin_icct_nms_scan_jobs SET ' .
+                    'state=\'failed\',finished_at=NOW(),last_error=\'Requesting account no longer has discovery ' .
+                    'permission.\' WHERE id=?',
                 [$id],
             );
             return $id;
@@ -287,7 +339,9 @@ function icct_nms_scan_work($poller)
                     );
                 }
                 icct_backend_category_execute(
-                    "UPDATE plugin_icct_nms_scan_jobs SET completed=(SELECT COUNT(*) FROM plugin_icct_nms_scan_results WHERE job_id=? AND state<>'pending'),heartbeat=NOW() WHERE id=?",
+                    'UPDATE plugin_icct_nms_scan_jobs SET completed=(SELECT COUNT(*) FROM ' .
+                        'plugin_icct_nms_scan_results WHERE job_id=? AND state<>\'pending\'),heartbeat=NOW() WHERE ' .
+                        'id=?',
                     [$id, $id],
                 );
             }
@@ -306,7 +360,9 @@ function icct_nms_scan_work($poller)
             );
         } catch (Throwable $e) {
             icct_backend_category_execute(
-                "UPDATE plugin_icct_nms_scan_jobs SET state=IF(cancel_requested=1,'cancelled','partial'),last_error=?,finished_at=NOW(),heartbeat=NOW() WHERE id=?",
+                'UPDATE plugin_icct_nms_scan_jobs SET ' .
+                    'state=IF(cancel_requested=1,\'cancelled\',\'partial\'),last_error=?,finished_at=NOW(),heartbeat=NOW() ' .
+                    'WHERE id=?',
                 [substr($e->getMessage(), 0, 500), $id],
             );
         }
@@ -383,7 +439,8 @@ function icct_nms_scan_native_runs($poller)
                 }
             }
             icct_backend_category_execute(
-                'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+                'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                    'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
                 [$key, $n['last_started']],
             );
         }

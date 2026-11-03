@@ -1,29 +1,34 @@
-<?php
-/**
+<?php /**
  * Saved inventory table, filters and pager; discovery opens the shared Networks screen.
- */
-?>
+ */ ?>
 <div class="inventory-heading">
     <div>
         <p class="breadcrumb">
-            <a href="dashboard/controllers/topology.php">Dashboard</a>
-            /
-            <a href="inventory/controllers/inventory.php">Inventory</a>
-            / Table View
+            <a href="dashboard/controllers/topology.php">Dashboard</a> / <a
+                href="inventory/controllers/inventory.php">Inventory</a> / Table View
         </p>
         <h1>Inventory</h1>
     </div>
     <div class="inventory-tools">
         <div class="view-toggle">
-            <button class="active" type="button" data-view="table" aria-pressed="true">
-                Table View
-            </button>
+            <button
+                class="active"
+                type="button"
+                data-view="table"
+                aria-pressed="true"> Table View </button>
             <a href="inventory/controllers/inventory.php?view=tree">Tree View</a>
         </div>
-        <a class="export-button" href="inventory/controllers/export.php" aria-label="Export inventory CSV">↥</a>
+        <a
+            class="export-button"
+            href="inventory/controllers/export.php"
+            aria-label="Export inventory CSV">↥</a>
         <?php if ($management): ?>
-        <a class="button" href="dashboard/topology/controllers/topology_configuration.php?tab=networks">Device Discovery</a>
-        <a class="button primary" href="inventory/controllers/device.php">Add Device</a>
+            <a
+                class="button"
+                href="dashboard/topology/controllers/topology_configuration.php?tab=networks">Device Discovery</a>
+            <a
+                class="button primary"
+                href="inventory/controllers/device.php">Add Device</a>
         <?php endif; ?>
     </div>
 </div>
@@ -46,58 +51,56 @@
             <option value="">All</option>
         </select>
     </label>
-    <button class="button" type="button" id="clear-filters" disabled>Clear All</button>
+    <button
+        class="button"
+        type="button"
+        id="clear-filters"
+        disabled>Clear All</button>
     <label class="field inventory-search">
         <span class="sr-only">Search inventory</span>
         <input
             id="inventory-search"
             type="search"
-            placeholder="Search With Device Name or IP Address"
-        />
+            placeholder="Search With Device Name or IP Address" />
     </label>
 </div>
-<div class="table-scroll" tabindex="0" role="region" aria-label="Inventory table">
-    <table class="action-table" id="inventory-table">
+<div
+    class="table-scroll"
+    tabindex="0"
+    role="region"
+    aria-label="Inventory table">
+    <table
+        class="action-table"
+        id="inventory-table">
         <thead>
             <tr>
-                <th scope="col" aria-sort="ascending">
-                    <button type="button" id="sort-name">
-                        Device Name &amp;
-                        <br />
-                        Short Name
-                        <span>↑</span>
+                <th
+                    scope="col"
+                    aria-sort="ascending">
+                    <button
+                        type="button"
+                        id="sort-name"> Device Name &amp;
+                        <br /> Short Name <span>↑</span>
                     </button>
                 </th>
-                <th scope="col">
-                    Segment &amp;
-                    <br />
-                    Device Type
+                <th scope="col"> Segment &amp;
+                    <br /> Device Type
                 </th>
-                <th scope="col">
-                    Device
-                    <br />
-                    Status
+                <th scope="col"> Device
+                    <br /> Status
                 </th>
-                <th scope="col">
-                    Serial Number &amp;
-                    <br />
-                    MAC Address
+                <th scope="col"> Serial Number &amp;
+                    <br /> MAC Address
                 </th>
                 <th scope="col">IP Address</th>
-                <th scope="col">
-                    Rack Placement &amp;
-                    <br />
-                    Rack Name
+                <th scope="col"> Rack Placement &amp;
+                    <br /> Rack Name
                 </th>
-                <th scope="col">
-                    Uptime &amp; Polling
-                    <br />
-                    Interval (Sec)
+                <th scope="col"> Uptime &amp; Polling
+                    <br /> Interval (Sec)
                 </th>
-                <th scope="col">
-                    Availability
-                    <br />
-                    (%)
+                <th scope="col"> Availability
+                    <br /> (%)
                 </th>
                 <th scope="col">Actions</th>
             </tr>
@@ -105,34 +108,27 @@
         <tbody>
             <?php foreach ($devices as $d):
                 $id = (int) $d['id']; ?>
-            <tr
-                data-name="<?= icct_nms_h($d['description']) ?>"
-                data-search="<?= icct_nms_h(
-                    $d['description'] . ' ' . $d['short_name'] . ' ' . $d['hostname'],
-                ) ?>"
-                data-segment="<?= icct_nms_h($d['segment']) ?>"
-                data-status="<?= icct_nms_h($d['status_label']) ?>"
-                data-rack="<?= icct_nms_h($d['rack_name']) ?>"
-                data-id="<?= $id ?>"
-            >
-                <td>
-                    <?= icct_nms_h($d['description']) ?>
-                    <small><?= icct_nms_h($d['short_name']) ?></small>
-                </td>
-                <td>
-                    <?= icct_nms_h($d['segment']) ?>
-                    <small><?= icct_nms_h($d['device_type']) ?></small>
-                </td>
-                <td><span class="device-status <?= icct_nms_status_class(
-                    $d['status_label'],
-                ) ?>"><?= icct_nms_h($d['status_label']) ?></span></td>
-                <td>
-                    <?= icct_nms_h($d['serial_number']) ?>
-                    <small><?= icct_nms_h($d['mac_address']) ?></small>
-                </td>
-                <td><?= icct_nms_h($d['hostname']) ?></td>
-                <td>
-                    <?= $d['start_unit']
+                <tr
+                    data-name="<?= icct_nms_h($d['description']) ?>"
+                    data-search="<?= icct_nms_h($d['description'] . ' ' . $d['short_name'] . ' ' . $d['hostname']) ?>"
+                    data-segment="<?= icct_nms_h($d['segment']) ?>"
+                    data-status="<?= icct_nms_h($d['status_label']) ?>"
+                    data-rack="<?= icct_nms_h($d['rack_name']) ?>"
+                    data-id="<?= $id ?>">
+                    <td> <?= icct_nms_h($d['description']) ?>
+ <small><?= icct_nms_h($d['short_name']) ?></small>
+                    </td>
+                    <td> <?= icct_nms_h($d['segment']) ?>
+ <small><?= icct_nms_h($d['device_type']) ?></small>
+                    </td>
+                    <td>
+                        <span class="device-status <?= icct_nms_status_class($d['status_label']) ?>"><?= icct_nms_h($d['status_label']) ?></span>
+                    </td>
+                    <td> <?= icct_nms_h($d['serial_number']) ?>
+ <small><?= icct_nms_h($d['mac_address']) ?></small>
+                    </td>
+                    <td><?= icct_nms_h($d['hostname']) ?></td>
+                    <td> <?= $d['start_unit']
                         ? icct_nms_h(
                             $d['start_unit'] .
                                 'U' .
@@ -141,149 +137,213 @@
                                     : ''),
                         )
                         : '' ?>
-                    <small><?= icct_nms_h($d['rack_name']) ?></small>
-                </td>
-                <td>
-                    <?= icct_nms_h(icct_nms_uptime($d['snmp_sysUpTimeInstance'])) ?>
-                    <small><?= icct_nms_h($d['polling_interval']) ?></small>
-                </td>
-                <td><?= $d['availability'] !== null
-                    ? number_format((float) $d['availability'], 2, '.', '') . '%'
-                    : '' ?></td>
-                <td>
-                    <div class="row-actions">
-                        <a
-                            href="inventory/controllers/device.php?id=<?= $id ?>&amp;view=1"
-                            aria-label="View <?= icct_nms_h($d['description']) ?>"
-                        >
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
-                        </a>
-                        <a
-                            href="<?= icct_nms_h(
-                                $config['url_path'],
-                            ) ?>graph_view.php?action=preview&amp;host_id=<?= $id ?>"
-                            aria-label="Graphs for <?= icct_nms_h($d['description']) ?>"
-                        >
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h4l3-9 6 18 3-9h4"/></svg>
-                        </a>
-                        <?php if ($management): ?>
-                        <a href="inventory/controllers/device.php?id=<?= $id ?>" aria-label="Edit <?= icct_nms_h(
-                            $d['description'],
-                        ) ?>">
-                            <svg class="icct-edit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5L8 21l-5 1 1-5ZM14 5l5 5"/></svg>
-                        </a>
-                        <details class="row-menu inventory-row-menu">
-                            <summary aria-label="More actions for <?= icct_nms_h(
-                                $d['description'],
-                            ) ?>">⋮</summary>
-                            <div class="row-menu-panel">
-                                <?php
-                                $quickTools = icct_backend_diag_selected_labels($id);
-                            foreach (
-                                [
-                                    'ping' => 'Ping',
-                                    'arp' => 'ARP',
-                                    'traceroute' => 'Trace Route',
-                                ] as $tool => $label
-                            ):
-
-                                $selectedTool = $tool;
-                                if ($tool === 'traceroute') {
-                                    foreach (
-                                        ['traceroute', 'traceroute_icmp', 'traceroute_tcp'] as $candidate
-                                    ) {
-                                        if (isset($quickTools[$candidate])) {
-                                            $selectedTool = $candidate;
-                                            break;
+ <small><?= icct_nms_h($d['rack_name']) ?></small>
+                    </td>
+                    <td> <?= icct_nms_h(icct_nms_uptime($d['snmp_sysUpTimeInstance'])) ?>
+ <small><?= icct_nms_h($d['polling_interval']) ?></small>
+                    </td>
+                    <td><?= $d['availability'] !== null ? number_format((float) $d['availability'], 2, '.', '') . '%' : '' ?></td>
+                    <td>
+                        <div class="row-actions">
+                            <a
+                                href="inventory/controllers/device.php?id=<?= $id ?>&amp;view=1"
+                                aria-label="View <?= icct_nms_h($d['description']) ?>">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true">
+                                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+                                    <circle
+                                        cx="12"
+                                        cy="12"
+                                        r="3" />
+                                </svg>
+                            </a>
+                            <a
+                                href="<?= icct_nms_h($config['url_path']) ?>graph_view.php?action=preview&amp;host_id=<?= $id ?>"
+                                aria-label="Graphs for <?= icct_nms_h($d['description']) ?>">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true">
+                                    <path d="M2 12h4l3-9 6 18 3-9h4" />
+                                </svg>
+                            </a>
+                            <?php if ($management): ?>
+                                <a
+                                    href="inventory/controllers/device.php?id=<?= $id ?>"
+                                    aria-label="Edit <?= icct_nms_h($d['description']) ?>">
+                                    <svg
+                                        class="icct-edit-icon"
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true">
+                                        <path d="m16 3 5 5L8 21l-5 1 1-5ZM14 5l5 5" />
+                                    </svg>
+                                </a>
+                                <details class="row-menu inventory-row-menu">
+                                    <summary aria-label="More actions for <?= icct_nms_h($d['description']) ?>">⋮</summary>
+                                    <div class="row-menu-panel">
+                                        <?php
+                                        $quickTools = icct_backend_diag_selected_labels($id);
+                                foreach (
+                                    [
+                                        'ping' => 'Ping',
+                                        'arp' => 'ARP',
+                                        'traceroute' => 'Trace Route',
+                                    ] as $tool => $label
+                                ):
+                                    $selectedTool = $tool;
+                                    if ($tool === 'traceroute') {
+                                        foreach (
+                                            ['traceroute', 'traceroute_icmp', 'traceroute_tcp'] as $candidate
+                                        ) {
+                                            if (isset($quickTools[$candidate])) {
+                                                $selectedTool = $candidate;
+                                                break;
+                                            }
                                         }
                                     }
-                                }
-                                ?>
-                                <?php if (isset($quickTools[$selectedTool])): ?>
-                                <a href="inventory/diagnostics/controllers/diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h(
-                                    $selectedTool,
-                                ) ?>#diagnostic-run"><?= $label ?></a>
-                                <?php else: ?><button type="button" disabled title="Enable <?= $label ?> in Device Diagnostics first."><?= $label ?></button><?php endif; ?>
-                                <?php
-                            endforeach;
+                                    ?>
+                                            <?php if (isset($quickTools[$selectedTool])): ?>
+                                                <a
+                                                    href="inventory/diagnostics/controllers/diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h($selectedTool) ?>#diagnostic-run">
+                                                    <?= $label ?></a>
+                                            <?php else: ?>
+                                                <button
+                                                    type="button"
+                                                    disabled
+                                                    title="Enable <?= $label ?> in Device Diagnostics first."><?= $label ?></button>
+                                            <?php endif; ?>
+                                        <?php
+                                endforeach;
                 ?>
-                                <?php $launch = icct_nms_meta('icct_cross_launch_' . $id); ?>
-                                <?php if (
-                                    $launch !== '' &&
-                                    filter_var($launch, FILTER_VALIDATE_URL) &&
-                                    in_array(
-                                        strtolower(parse_url($launch, PHP_URL_SCHEME)),
-                                        ['http', 'https'],
-                                        true,
-                                    )
-                                ): ?>
-                                <a href="<?= icct_nms_h(
-                                    $launch,
-                                ) ?>" target="_blank" rel="noopener noreferrer">Cross Launch URL</a>
-                                <?php else: ?><button type="button" disabled title="Set the device's Cross Launch URL first.">Cross Launch URL</button><?php endif; ?>
-                                <button type="button" disabled title="Alarm suppression unavailable.">Alarm Suppression</button>
-                                <form method="post" action="protocols/shared/controllers/protocol.php?id=<?= $id ?>">
-                                    <?php icct_nms_token(); ?>
-                                    <input type="hidden" name="action" value="reindex">
-                                    <button type="submit">Re-Index Device</button>
-                                </form>
-                                <a href="inventory/controllers/device.php?id=<?= $id ?>">Modify Device</a>
-                                <a href="inventory/controllers/device.php?clone_id=<?= $id ?>" data-clone-device data-device-name="<?= icct_nms_h(
-                                    $d['description'],
-                                ) ?>">Clone Device</a>
-                                <?php foreach (
-                                    [
-                                        ($d['disabled'] ?? '') === 'on' ? 2 : 3 =>
-                                            ($d['disabled'] ?? '') === 'on'
-                                                ? 'Enable Device'
-                                                : 'Disable Device',
-                                        1 => 'Delete Device',
-                                    ] as $action => $label
-                                ): ?>
-                                <form method="post" action="<?= icct_nms_h(
-                                    $config['url_path'],
-                                ) ?>host.php" <?= $action === 1 ? 'class="danger-action"' : '' ?>>
-                                    <?php icct_nms_token(); ?>
-                                    <input type="hidden" name="action" value="actions">
-                                    <input type="hidden" name="drp_action" value="<?= $action ?>">
-                                    <input type="hidden" name="chk_<?= $id ?>" value="on">
-                                    <button type="submit"><?= $label ?></button>
-                                </form>
-                                <?php endforeach; ?>
-                            </div>
-                        </details>
-                        <?php endif; ?>
-                    </div>
-                </td>
-            </tr>
+                                        <?php $launch = icct_nms_meta('icct_cross_launch_' . $id); ?>
+                                        <?php if (
+                                            $launch !== '' &&
+                                                                                filter_var($launch, FILTER_VALIDATE_URL) &&
+                                                                                in_array(
+                                                                                    strtolower(parse_url($launch, PHP_URL_SCHEME)),
+                                                                                    ['http', 'https'],
+                                                                                    true,
+                                                                                )
+                                        ): ?>
+                                            <a
+                                                href="<?= icct_nms_h($launch) ?>"
+                                                target="_blank"
+                                                rel="noopener noreferrer">Cross Launch URL</a>
+                                        <?php else: ?>
+                                            <button
+                                                type="button"
+                                                disabled
+                                                title="Set the device's Cross Launch URL first.">Cross Launch URL</button>
+                                        <?php endif; ?>
+                                        <button
+                                            type="button"
+                                            disabled
+                                            title="Alarm suppression unavailable.">Alarm Suppression</button>
+                                        <form
+                                            method="post"
+                                            action="protocols/shared/controllers/protocol.php?id=<?= $id ?>">
+                                            <?php icct_nms_token(); ?>
+                                            <input
+                                                type="hidden"
+                                                name="action"
+                                                value="reindex">
+                                            <button type="submit">Re-Index Device</button>
+                                        </form>
+                                        <a href="inventory/controllers/device.php?id=<?= $id ?>">Modify
+                                            Device</a>
+                                        <a
+                                            href="inventory/controllers/device.php?clone_id=<?= $id ?>"
+                                            data-clone-device
+                                            data-device-name="<?= icct_nms_h($d['description']) ?>">Clone Device</a>
+                                        <?php foreach (
+                                            [
+                                                ($d['disabled'] ?? '') === 'on' ? 2 : 3 =>
+                                                                                            ($d['disabled'] ?? '') === 'on'
+                                                                                                ? 'Enable Device'
+                                                                                                : 'Disable Device',
+                                                1 => 'Delete Device',
+                                            ] as $action => $label
+                                        ): ?>
+                                            <form
+                                                method="post"
+                                                action="<?= icct_nms_h($config['url_path']) ?>host.php"
+                                                <?= $action === 1 ? 'class="danger-action"' : '' ?>>
+                                                <?php icct_nms_token(); ?>
+                                                <input
+                                                    type="hidden"
+                                                    name="action"
+                                                    value="actions">
+                                                <input
+                                                    type="hidden"
+                                                    name="drp_action"
+                                                    value="<?= $action ?>">
+                                                <input
+                                                    type="hidden"
+                                                    name="chk_<?= $id ?>"
+                                                    value="on">
+                                                <button type="submit"><?= $label ?></button>
+                                            </form>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </details>
+                            <?php endif; ?>
+                        </div>
+                    </td>
+                </tr>
             <?php
             endforeach; ?>
         </tbody>
     </table>
-    <p id="empty-inventory" class="empty-state" <?= $devices ? 'hidden' : '' ?>>
-        No saved devices match these filters.
-    </p>
+    <p
+        id="empty-inventory"
+        class="empty-state"
+        <?= $devices ? 'hidden' : '' ?>> No saved devices match these filters. </p>
 </div>
-<div id="inventory-tree" hidden></div>
+<div
+    id="inventory-tree"
+    hidden></div>
 <footer class="inventory-pagination">
-    <label>
-        Items per page:
-        <select id="page-size">
+    <label> Items per page: <select id="page-size">
             <option>10</option>
             <option>25</option>
             <option>50</option>
             <option>100</option>
         </select>
     </label>
-    <span id="result-count" aria-live="polite"></span>
+    <span
+        id="result-count"
+        aria-live="polite"></span>
     <div class="page-controls">
         <label>
             <span class="sr-only">Page</span>
             <select id="page-number"></select>
         </label>
         <span id="page-count"></span>
-        <button type="button" id="page-previous" aria-label="Previous page" class="pagination-control"><svg class="pagination-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5 7 12 15 19Z"/></svg></button>
-        <button type="button" id="page-next" aria-label="Next page" class="pagination-control"><svg class="pagination-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5 17 12 9 19Z"/></svg></button>
+        <button
+            type="button"
+            id="page-previous"
+            aria-label="Previous page"
+            class="pagination-control">
+            <svg
+                class="pagination-arrow"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false">
+                <path d="M15 5 7 12 15 19Z" />
+            </svg>
+        </button>
+        <button
+            type="button"
+            id="page-next"
+            aria-label="Next page"
+            class="pagination-control">
+            <svg
+                class="pagination-arrow"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                focusable="false">
+                <path d="M9 5 17 12 9 19Z" />
+            </svg>
+        </button>
     </div>
 </footer>
-

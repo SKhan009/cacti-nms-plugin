@@ -30,7 +30,8 @@ try {
         header('Cache-Control: no-store');
         echo json_encode(
             db_fetch_assoc_prepared(
-                'SELECT event,actor_id,note,created_at,UNIX_TIMESTAMP(created_at) AS created_epoch FROM plugin_icct_nms_alarm_history WHERE alarm_key=? ORDER BY id DESC',
+                'SELECT event,actor_id,note,created_at,UNIX_TIMESTAMP(created_at) AS created_epoch FROM ' .
+                    'plugin_icct_nms_alarm_history WHERE alarm_key=? ORDER BY id DESC',
                 [$key],
             ),
             JSON_THROW_ON_ERROR,

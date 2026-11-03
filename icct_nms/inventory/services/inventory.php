@@ -11,21 +11,24 @@ require_once __DIR__ . '/backend/identity.php';
  */
 function icct_nms_inventory()
 {
-    $rows = db_fetch_assoc("SELECT h.id,h.description,h.hostname,h.status,h.disabled,h.availability,
-        h.snmp_sysName,h.snmp_sysUpTimeInstance,h.last_updated,h.site_id,h.poller_id,
-        (SELECT MIN(pi.rrd_step) FROM poller_item pi WHERE pi.host_id=h.id AND pi.rrd_step>0) AS polling_step,
-        c.category_id,c.device_type,c.device_role,cat.name AS segment,
-        m.serial_number AS manual_serial_number,m.mac_address,m.chassis_id,
-        s.meta_value AS short_name,r.name AS rack_name,r.id AS rack_id,rd.start_unit,rd.unit_height,
-        sites.name AS site_name
-        FROM host h LEFT JOIN plugin_icct_nms_device_classification c ON c.host_id=h.id
-        LEFT JOIN plugin_icct_nms_categories cat ON cat.id=c.category_id
-        LEFT JOIN plugin_icct_nms_device_metadata m ON m.host_id=h.id
-        LEFT JOIN plugin_icct_nms_meta s ON s.meta_key=CONCAT('device_short_name_',h.id)
-        LEFT JOIN plugin_icct_nms_rack_devices rd ON rd.host_id=h.id
-        LEFT JOIN plugin_icct_nms_meta peripheral ON peripheral.meta_key=CONCAT('rack_peripheral_',h.id)
-        LEFT JOIN plugin_icct_nms_racks r ON r.id=COALESCE(rd.rack_id,CAST(peripheral.meta_value AS UNSIGNED))
-        LEFT JOIN sites ON sites.id=h.site_id WHERE h.deleted='' ORDER BY h.description,h.id");
+    $rows = db_fetch_assoc(
+        "SELECT h.id,h.description,h.hostname,h.status,h.disabled,h.availability,\n        " .
+            "h.snmp_sysName,h.snmp_sysUpTimeInstance,h.last_updated,h.site_id,h.poller_id,\n        " .
+            '(SELECT MIN(pi.rrd_step) FROM poller_item pi WHERE pi.host_id=h.id AND pi.rrd_step>0) AS ' .
+            "polling_step,\n        c.category_id,c.device_type,c.device_role,cat.name AS segment,\n   " .
+            "     m.serial_number AS manual_serial_number,m.mac_address,m.chassis_id,\n        " .
+            's.meta_value AS short_name,r.name AS rack_name,r.id AS rack_id,rd.start_unit,' .
+            "rd.unit_height,\n        sites.name AS site_name\n        FROM host h LEFT JOIN " .
+            "plugin_icct_nms_device_classification c ON c.host_id=h.id\n        LEFT JOIN " .
+            "plugin_icct_nms_categories cat ON cat.id=c.category_id\n        LEFT JOIN " .
+            "plugin_icct_nms_device_metadata m ON m.host_id=h.id\n        LEFT JOIN " .
+            "plugin_icct_nms_meta s ON s.meta_key=CONCAT('device_short_name_',h.id)\n        LEFT JOIN " .
+            "plugin_icct_nms_rack_devices rd ON rd.host_id=h.id\n        LEFT JOIN " .
+            "plugin_icct_nms_meta peripheral ON peripheral.meta_key=CONCAT('rack_peripheral_',h.id)\n  " .
+            '      LEFT JOIN plugin_icct_nms_racks r ON r.id=COALESCE(rd.rack_id,' .
+            "CAST(peripheral.meta_value AS UNSIGNED))\n        LEFT JOIN sites ON sites.id=h.site_id " .
+            "WHERE h.deleted='' ORDER BY h.description,h.id",
+    );
     if (!is_array($rows)) {
         throw new RuntimeException('Could not read saved inventory.');
     }

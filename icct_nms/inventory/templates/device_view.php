@@ -1,5 +1,4 @@
-<?php
-/** Read-only device presentation. All data is loaded after device access checks. */
+<?php /** Read-only device presentation. All data is loaded after device access checks. */
 $deviceViewPage = true;
 $status = icct_backend_device_status_name($old);
 $segment = db_fetch_cell_prepared('SELECT name FROM plugin_icct_nms_categories WHERE id=?', [
@@ -69,204 +68,417 @@ foreach ($diagnostics as $tool => $label) {
 }
 $display = static function ($value) {
     return icct_nms_h(trim((string) $value) !== '' ? $value : '—');
-};
-?>
+}; ?>
 <div class="device-view">
-<header class="device-view-header">
- <a class="device-back" href="inventory/controllers/inventory.php" aria-label="Back to inventory">←</a>
- <div class="device-view-identity"><h1><span class="device-status-dot <?= $status === 'Up'
-     ? 'online'
-     : ($status === 'Down'
-         ? 'offline'
-         : 'other') ?>" aria-label="<?= icct_nms_h($status) ?>"></span><?= icct_nms_h(
-             $values['description'],
-         ) ?></h1><span><?= icct_nms_h($values['hostname']) ?></span></div>
- <dl class="device-view-metrics"><div><dt>Packet Loss</dt><dd><?= isset($old['cur_loss']) &&
- is_numeric($old['cur_loss'])
-     ? $display($old['cur_loss']) . '%'
-     : '—' ?></dd></div><div><dt>Response Time</dt><dd><?= isset($old['cur_time']) &&
-is_numeric($old['cur_time'])
-    ? number_format((float) $old['cur_time'], 2) . ' ms'
-    : '—' ?></dd></div><div><dt>System Uptime</dt><dd><?= icct_nms_h(
-        icct_nms_uptime($old['snmp_sysUpTimeInstance'] ?? 0),
-    ) ?></dd></div></dl>
- <div class="device-view-actions" aria-label="Device diagnostics and actions">
- <?php foreach ($diagnosticGroups as $family => $methods): ?>
- <?php if (in_array($family, ['traceroute', 'mtr'], true)):
-     $familyLabel = $family === 'traceroute' ? 'Traceroute' : 'MTR'; ?>
- <details class="row-menu device-diagnostic-menu"><summary class="device-tool" aria-label="<?= $familyLabel ?> protocols" data-tooltip="<?= $familyLabel ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="<?= $paths[
-    $family === 'traceroute' ? 'traceroute' : 'mtr_icmp'
-] ?>"/></svg><span class="device-tool-caret" aria-hidden="true">⌄</span></summary><div class="row-menu-panel">
- <?php foreach (
-     $methods as $tool => $label
- ): ?><a href="inventory/diagnostics/controllers/diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h(
-     $tool,
- ) ?>#diagnostic-run" data-host-id="<?= $id ?>" data-tool="<?= icct_nms_h(
-     $tool,
- ) ?>" data-device-name="<?= icct_nms_h($values['description']) ?>"><?= icct_nms_h(
-     $label,
- ) ?></a><?php endforeach; ?>
- </div></details>
- <?php else:
-
-     $tool = array_key_first($methods);
-     $label = $methods[$tool];
-     ?>
- <a class="device-tool" href="inventory/diagnostics/controllers/diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h(
-     $tool,
- ) ?>#diagnostic-run" data-host-id="<?= $id ?>" data-tool="<?= icct_nms_h(
-     $tool,
- ) ?>" data-device-name="<?= icct_nms_h($values['description']) ?>" aria-label="<?= icct_nms_h(
-     $label,
- ) ?>" data-tooltip="<?= icct_nms_h(
-     $label,
- ) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="<?= $paths[$tool] ??
-    'M4 5h16v14H4z M8 9l3 3-3 3 M13 15h4' ?>"/></svg></a>
- <?php
- endif;endforeach; ?>
- <?php if (
-     is_realm_allowed(3)
- ): ?><details class="row-menu device-view-menu"><summary class="device-tool" aria-label="More device actions">⋮</summary><div class="row-menu-panel">
- <button type="button" disabled title="Alarm suppression unavailable.">Alarm Suppression</button>
- <form method="post" action="protocols/shared/controllers/protocol.php?id=<?= $id ?>"><?php icct_nms_token(); ?><input type="hidden" name="action" value="reindex"><button type="submit">Re-Index Device</button></form>
- <a href="inventory/controllers/device.php?id=<?= $id ?>">Modify Device</a>
- <a href="inventory/controllers/device.php?clone_id=<?= $id ?>" data-clone-device data-device-name="<?= icct_nms_h(
-     $values['description'],
- ) ?>">Clone Device</a>
- <?php foreach (
-     [
-         $old['disabled'] === 'on' ? 2 : 3 =>
-             $old['disabled'] === 'on' ? 'Enable Device' : 'Disable Device',
-         1 => 'Delete Device',
-     ] as $action => $label
- ): ?><form method="post" action="<?= icct_nms_h($config['url_path']) ?>host.php" <?= $action === 1
-    ? 'class="danger-action"'
-    : '' ?>><?php icct_nms_token(); ?><input type="hidden" name="action" value="actions"><input type="hidden" name="drp_action" value="<?= $action ?>"><input type="hidden" name="chk_<?= $id ?>" value="on"><button type="submit"><?= $label ?></button></form><?php endforeach; ?>
- </div></details><?php endif; ?>
- </div>
-</header>
-<nav class="device-view-tabs" aria-label="Device view sections"><?php foreach (
-    [
-        'details' => 'Device Details',
-        'graphs' => 'Graphs',
-        'ports' =>
-            (int) $old['snmp_version'] === 0 && in_array('Serial', $protocols, true)
-                ? 'Serial Connection'
-                : 'Interfaces/Ports',
-        'fcaps' => 'FCAPS',
-        'syslog' => 'Syslog',
-        'netflow' => 'NetFlow / IPFIX',
-        'records' => 'Logs',
-    ] as $key => $label
-): ?><a href="inventory/controllers/device.php?id=<?= (int) $id ?>&amp;view=1#view-<?= $key ?>" data-device-view-tab="<?= $key ?>"><?= $label ?></a><?php endforeach; ?></nav>
-<section id="view-details" data-device-view-panel="details">
-<dl class="device-detail-grid">
-<?php foreach (
-    [
-        'Short Name' => $values['short_name'],
-        'Segment' => $segment,
-        'Device Type/Model' => $values['device_type'],
-        'Serial Number' => $values['serial_number'],
-        'MAC Address' => $values['mac_address'],
-        'Polling Interval (Sec)' => read_config_option('poller_interval'),
-        'Rack Placement' => $rackName
-            ? ($rack
-                ? 'U' .
-                    $rack['start_unit'] .
-                    '–U' .
-                    ($rack['start_unit'] + $rack['unit_height'] - 1) .
-                    ' (' .
-                    $rackName .
-                    ')'
-                : $rackName . ' (Peripheral)')
-            : '',
-        'Firmware Version' => $meta['firmware_version'] ?? '',
-        'Configured Protocols' => implode(', ', $protocols),
-        'Discovery Protocol' => implode(
-            ', ',
-            array_map(
-                static fn ($key) => [
-                    'lldp' => 'LLDP',
-                    'cdp' => 'CDP',
-                    'arp' => 'IP neighbours (IPv4/IPv6)',
-                    'fdb' => 'MAC/FDB',
-                ][$key] ?? strtoupper($key),
-                array_filter(explode(',', (string) ($discovery['protocol'] ?? ''))),
-            ),
-        ),
-        'Default SNMP Version' =>
-            [0 => 'None', 1 => 'SNMP v1', 2 => 'SNMP v2c', 3 => 'SNMP v3'][
-                (int) $old['snmp_version']
-            ] ?? '',
-        'Last Maintenance Date' => $meta['last_maintenance_date'] ?? '',
-    ] as $label => $value
-): ?><div><dt><?= icct_nms_h($label) ?></dt><dd><?= $display(
-    $value,
-) ?></dd></div><?php endforeach; ?>
-</dl>
-<?php if (
-    is_realm_allowed(3)
-): ?><section class="device-view-section"><h2>Device Login Credentials</h2><dl class="device-detail-grid"><div><dt>Username</dt><dd><?= $display(
-    $ssh['username'] ?? '',
-) ?></dd></div><div><dt>Password / Private Key</dt><dd>Hidden</dd></div></dl></section><?php endif; ?>
-<section class="device-view-section"><h2>Device Image</h2><?php
-$image = icct_nms_type_asset(array_replace($profile, ['display_modes' => ['network' => 'image']]));
+    <header class="device-view-header">
+        <a
+            class="device-back"
+            href="inventory/controllers/inventory.php"
+            aria-label="Back to inventory">←</a>
+        <div class="device-view-identity">
+            <h1>
+                <span
+                    class="device-status-dot <?= $status === 'Up' ? 'online' : ($status === 'Down' ? 'offline' : 'other') ?>"
+                    aria-label="<?= icct_nms_h($status) ?>"></span><?= icct_nms_h($values['description']) ?>
+            </h1>
+            <span><?= icct_nms_h($values['hostname']) ?></span>
+        </div>
+        <dl class="device-view-metrics">
+            <div>
+                <dt>Packet Loss</dt>
+                <dd><?= isset($old['cur_loss']) && is_numeric($old['cur_loss'])
+                    ? $display($old['cur_loss']) . '%'
+                    : '—' ?></dd>
+            </div>
+            <div>
+                <dt>Response Time</dt>
+                <dd><?= isset($old['cur_time']) && is_numeric($old['cur_time'])
+                    ? number_format((float) $old['cur_time'], 2) . ' ms'
+                    : '—' ?></dd>
+            </div>
+            <div>
+                <dt>System Uptime</dt>
+                <dd><?= icct_nms_h(icct_nms_uptime($old['snmp_sysUpTimeInstance'] ?? 0)) ?></dd>
+            </div>
+        </dl>
+        <div
+            class="device-view-actions"
+            aria-label="Device diagnostics and actions">
+            <?php foreach ($diagnosticGroups as $family => $methods): ?>
+                <?php if (in_array($family, ['traceroute', 'mtr'], true)):
+                    $familyLabel = $family === 'traceroute' ? 'Traceroute' : 'MTR'; ?>
+                    <details class="row-menu device-diagnostic-menu">
+                        <summary
+                            class="device-tool"
+                            aria-label="<?= $familyLabel ?> protocols"
+                            data-tooltip="<?= $familyLabel ?>">
+                            <svg
+                                viewBox="0 0 24 24"
+                                aria-hidden="true">
+                                <path d="<?= $paths[$family === 'traceroute' ? 'traceroute' : 'mtr_icmp'] ?>" />
+                            </svg>
+                            <span
+                                class="device-tool-caret"
+                                aria-hidden="true">⌄</span>
+                        </summary>
+                        <div class="row-menu-panel">
+                            <?php foreach (
+                                $methods as $tool => $label
+                            ): ?>
+                                <a
+                                    href="inventory/diagnostics/controllers/diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h($tool) ?>#diagnostic-run"
+                                    data-host-id="<?= $id ?>"
+                                    data-tool="<?= icct_nms_h($tool) ?>"
+                                    data-device-name="<?= icct_nms_h($values['description']) ?>"><?= icct_nms_h($label) ?></a>
+                            <?php endforeach; ?>
+                        </div>
+                    </details>
+                <?php else:
+                    $tool = array_key_first($methods);
+                    $label = $methods[$tool];
+                    ?>
+                    <a
+                        class="device-tool"
+                        href="inventory/diagnostics/controllers/diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h($tool) ?>#diagnostic-run"
+                        data-host-id="<?= $id ?>"
+                        data-tool="<?= icct_nms_h($tool) ?>"
+                        data-device-name="<?= icct_nms_h($values['description']) ?>"
+                        aria-label="<?= icct_nms_h($label) ?>"
+                        data-tooltip="<?= icct_nms_h($label) ?>">
+                        <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true">
+                            <path d="<?= $paths[$tool] ?? 'M4 5h16v14H4z M8 9l3 3-3 3 M13 15h4' ?>" />
+                        </svg>
+                    </a>
+            <?php
+                endif;endforeach; ?>
+            <?php if ($ssh): ?>
+                <?php require __DIR__ . '/../../protocols/ssh/templates/terminal_action.php'; ?>
+            <?php endif; ?>
+            <?php if (
+                is_realm_allowed(3)
+            ): ?>
+                <details class="row-menu device-view-menu">
+                    <summary
+                        class="device-tool"
+                        aria-label="More device actions">⋮</summary>
+                    <div class="row-menu-panel">
+                        <button
+                            type="button"
+                            disabled
+                            title="Alarm suppression unavailable.">Alarm Suppression</button>
+                        <form
+                            method="post"
+                            action="protocols/shared/controllers/protocol.php?id=<?= $id ?>">
+                            <?php icct_nms_token(); ?>
+                            <input
+                                type="hidden"
+                                name="action"
+                                value="reindex">
+                            <button type="submit">Re-Index Device</button>
+                        </form>
+                        <a href="inventory/controllers/device.php?id=<?= $id ?>">Modify Device</a>
+                        <a
+                            href="inventory/controllers/device.php?clone_id=<?= $id ?>"
+                            data-clone-device
+                            data-device-name="<?= icct_nms_h($values['description']) ?>">Clone Device</a>
+                        <?php foreach (
+                            [
+                                $old['disabled'] === 'on' ? 2 : 3 =>
+                                             $old['disabled'] === 'on' ? 'Enable Device' : 'Disable Device',
+                                1 => 'Delete Device',
+                            ] as $action => $label
+                        ): ?>
+                            <form
+                                method="post"
+                                action="<?= icct_nms_h($config['url_path']) ?>host.php"
+                                <?= $action === 1 ? 'class="danger-action"' : '' ?>>
+                                <?php icct_nms_token(); ?>
+                                <input
+                                    type="hidden"
+                                    name="action"
+                                    value="actions">
+                                <input
+                                    type="hidden"
+                                    name="drp_action"
+                                    value="<?= $action ?>">
+                                <input
+                                    type="hidden"
+                                    name="chk_<?= $id ?>"
+                                    value="on">
+                                <button type="submit"><?= $label ?></button>
+                            </form>
+                        <?php endforeach; ?>
+                    </div>
+                </details>
+            <?php endif; ?>
+        </div>
+    </header>
+    <nav
+        class="device-view-tabs"
+        aria-label="Device view sections">
+        <?php foreach (
+            [
+                'details' => 'Device Details',
+                'graphs' => 'Graphs',
+                'ports' =>
+                            (int) $old['snmp_version'] === 0 && in_array('Serial', $protocols, true)
+                                ? 'Serial Connection'
+                                : 'Interfaces/Ports',
+                'fcaps' => 'FCAPS',
+                'syslog' => 'Syslog',
+                'netflow' => 'NetFlow / IPFIX',
+                'records' => 'Logs',
+            ] as $key => $label
+        ): ?>
+            <a
+                href="inventory/controllers/device.php?id=<?= (int) $id ?>&amp;view=1#view-<?= $key ?>"
+                data-device-view-tab="<?= $key ?>"><?= $label ?></a>
+        <?php endforeach; ?>
+    </nav>
+    <section
+        id="view-details"
+        data-device-view-panel="details">
+        <dl class="device-detail-grid">
+            <?php foreach (
+                [
+                    'Short Name' => $values['short_name'],
+                    'Segment' => $segment,
+                    'Device Type/Model' => $values['device_type'],
+                    'Serial Number' => $values['serial_number'],
+                    'MAC Address' => $values['mac_address'],
+                    'Polling Interval (Sec)' => read_config_option('poller_interval'),
+                    'Rack Placement' => $rackName
+                                ? (
+                                    $rack
+                                    ? 'U' .
+                                        $rack['start_unit'] .
+                                        '–U' .
+                                        ($rack['start_unit'] + $rack['unit_height'] - 1) .
+                                        ' (' .
+                                        $rackName .
+                                        ')'
+                                    : $rackName . ' (Peripheral)'
+                                )
+                                : '',
+                    'Firmware Version' => $meta['firmware_version'] ?? '',
+                    'Configured Protocols' => implode(', ', $protocols),
+                    'Discovery Protocol' => implode(
+                        ', ',
+                        array_map(
+                            static fn ($key) => [
+                                'lldp' => 'LLDP',
+                                'cdp' => 'CDP',
+                                'arp' => 'IP neighbours (IPv4/IPv6)',
+                                'fdb' => 'MAC/FDB',
+                            ][$key] ?? strtoupper($key),
+                            array_filter(explode(',', (string) ($discovery['protocol'] ?? ''))),
+                        ),
+                    ),
+                    'Default SNMP Version' =>
+                                [0 => 'None', 1 => 'SNMP v1', 2 => 'SNMP v2c', 3 => 'SNMP v3'][
+                                    (int) $old['snmp_version']
+                                ] ?? '',
+                    'Last Maintenance Date' => $meta['last_maintenance_date'] ?? '',
+                ] as $label => $value
+            ): ?>
+                <div>
+                    <dt><?= icct_nms_h($label) ?></dt>
+                    <dd><?= $display($value) ?></dd>
+                </div>
+            <?php endforeach; ?>
+        </dl>
+        <?php if (
+            is_realm_allowed(3)
+        ): ?>
+            <section class="device-view-section">
+                <h2>Device Login Credentials</h2>
+                <dl class="device-detail-grid">
+                    <div>
+                        <dt>Username</dt>
+                        <dd><?= $display($ssh['username'] ?? '') ?></dd>
+                    </div>
+                    <div>
+                        <dt>Password / Private Key</dt>
+                        <dd>Hidden</dd>
+                    </div>
+                </dl>
+            </section>
+        <?php endif; ?>
+        <section class="device-view-section">
+            <h2>Device Image</h2>
+            <?php
+            $image = icct_nms_type_asset(array_replace($profile, ['display_modes' => ['network' => 'image']]));
 if (
     !empty($profile['image']) &&
     str_contains($image, '/uploads/')
-): ?><img class="device-view-image" src="<?= icct_nms_h($image) ?>" alt="<?= icct_nms_h(
-    $values['device_type'],
-) ?>"><?php else: ?><p>No image saved for this device type.</p><?php endif;
-?></section>
-<?php if (
-    trim($values['notes']) !== ''
-): ?><section class="device-view-section"><h2>Notes</h2><p><?= nl2br(
-    icct_nms_h($values['notes']),
-) ?></p></section><?php endif; ?>
-</section>
-<section id="view-graphs" data-device-view-panel="graphs" hidden><h2>Graphs</h2><?php require __DIR__ .
-    '/../../graphs/templates/device_graph_filters.php'; ?><p id="device-graph-count" role="status" aria-live="polite"></p><div class="device-view-graphs" id="device-view-graphs" data-columns="2"><?php
-$viewGraphs = icct_nms_device_graphs($id);
+): ?>
+                <img
+                    class="device-view-image"
+                    src="<?= icct_nms_h($image) ?>"
+                    alt="<?= icct_nms_h($values['device_type']) ?>">
+            <?php else: ?>
+                <p>No image saved for this device type.</p>
+            <?php endif;
+?>
+        </section>
+        <?php if (
+            trim($values['notes']) !== ''
+        ): ?>
+            <section class="device-view-section">
+                <h2>Notes</h2>
+                <p><?= nl2br(icct_nms_h($values['notes'])) ?></p>
+            </section>
+        <?php endif; ?>
+    </section>
+    <section
+        id="view-graphs"
+        data-device-view-panel="graphs"
+        hidden>
+        <h2>Graphs</h2>
+        <?php require __DIR__ . '/../../graphs/templates/device_graph_filters.php'; ?>
+        <p
+            id="device-graph-count"
+            role="status"
+            aria-live="polite"></p>
+        <div
+            class="device-view-graphs"
+            id="device-view-graphs"
+            data-columns="2">
+            <?php
+            $viewGraphs = icct_nms_device_graphs($id);
 foreach ($viewGraphs as $graph):
-    $graphId = (int) $graph['local_graph_id']; ?><figure><figcaption><?= icct_nms_h(
-        $graph['title_cache'],
-    ) ?></figcaption><div class="device-graph-body"><a class="device-graph-image" href="<?= icct_nms_h(
-        $config['url_path'],
-    ) ?>graph.php?action=view&amp;local_graph_id=<?= $graphId ?>"><img loading="lazy" src="<?= icct_nms_h(
-        $config['url_path'],
-    ) ?>graph_image.php?local_graph_id=<?= $graphId ?>&amp;rra_id=0" alt="<?= icct_nms_h(
-        $graph['title_cache'],
-    ) ?>"></a><?php require __DIR__ .
-    '/../../graphs/templates/device_graph_actions.php'; ?></div></figure><?php
+    $graphId = (int) $graph['local_graph_id']; ?>
+                <figure>
+                    <figcaption><?= icct_nms_h($graph['title_cache']) ?></figcaption>
+                    <div class="device-graph-body">
+                        <a
+                            class="device-graph-image"
+                            href="<?= icct_nms_h($config['url_path']) ?>graph.php?action=view&amp;local_graph_id=<?= $graphId ?>">
+                            <img
+                                loading="lazy"
+                                src="<?= icct_nms_h($config['url_path']) ?>graph_image.php?local_graph_id=<?= $graphId ?>&amp;rra_id=0"
+                                alt="<?= icct_nms_h($graph['title_cache']) ?>">
+                        </a>
+                        <?php require __DIR__ . '/../../graphs/templates/device_graph_actions.php'; ?>
+                    </div>
+                </figure>
+            <?php
 endforeach;
-if (!$viewGraphs): ?><p>No accessible graphs are available for this device.</p><?php endif;
-?></div><p id="device-graph-empty" hidden>No graphs match your search.</p><div class="type-pagination"><button type="button" id="device-graph-prev" class="pagination-control" aria-label="Previous graph page"><svg class="pagination-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5 7 12 15 19Z"/></svg></button><span id="device-graph-page"></span><button type="button" id="device-graph-next" class="pagination-control" aria-label="Next graph page"><svg class="pagination-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5 17 12 9 19Z"/></svg></button></div></section>
-<?php require __DIR__ . '/../../ports/templates/device_view_ports.php'; ?>
-<section id="view-fcaps" data-device-view-panel="fcaps" hidden><h2>FCAPS</h2><p>Saved fault rules and current device observations.</p><div class="site-table-wrap"><table class="site-table"><thead><tr><th>Rule</th><th>Severity</th><th>Minimum</th><th>Maximum</th><th>Description</th><th>Fix</th><th>Enabled</th></tr></thead><tbody><?php
-$viewRules = icct_nms_fault_rules($id);
-foreach ($viewRules as $rule): ?><tr><td><?= $display($rule['name']) ?></td><td><?= $display(
-    $rule['severity'],
-) ?></td><td><?= $display($rule['minimum']) ?></td><td><?= $display(
-    $rule['maximum'],
-) ?></td><td><?= $display($rule['description'] ?? '') ?></td><td><?= $display(
-    $rule['corrective_action'] ?? '',
-) ?></td><td><?= $rule['enabled'] ? 'Yes' : 'No' ?></td></tr><?php endforeach;
-if (!$viewRules): ?><tr><td colspan="7">No fault rules configured.</td></tr><?php endif;
-?></tbody></table></div><?php
-$faults = icct_nms_fault_observations($old);
+if (!$viewGraphs): ?>
+                <p>No accessible graphs are available for this device.</p>
+            <?php endif;
+?>
+        </div>
+        <p
+            id="device-graph-empty"
+            hidden>No graphs match your search.</p>
+        <div class="type-pagination">
+            <button
+                type="button"
+                id="device-graph-prev"
+                class="pagination-control"
+                aria-label="Previous graph page">
+                <svg
+                    class="pagination-arrow"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false">
+                    <path d="M15 5 7 12 15 19Z" />
+                </svg>
+            </button>
+            <span id="device-graph-page"></span>
+            <button
+                type="button"
+                id="device-graph-next"
+                class="pagination-control"
+                aria-label="Next graph page">
+                <svg
+                    class="pagination-arrow"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false">
+                    <path d="M9 5 17 12 9 19Z" />
+                </svg>
+            </button>
+        </div>
+    </section>
+    <?php require __DIR__ . '/../../ports/templates/device_view_ports.php'; ?>
+    <section
+        id="view-fcaps"
+        data-device-view-panel="fcaps"
+        hidden>
+        <h2>FCAPS</h2>
+        <p>Saved fault rules and current device observations.</p>
+        <div class="site-table-wrap">
+            <table class="site-table">
+                <thead>
+                    <tr>
+                        <th>Rule</th>
+                        <th>Severity</th>
+                        <th>Minimum</th>
+                        <th>Maximum</th>
+                        <th>Description</th>
+                        <th>Fix</th>
+                        <th>Enabled</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $viewRules = icct_nms_fault_rules($id);
+foreach ($viewRules as $rule): ?>
+                        <tr>
+                            <td><?= $display($rule['name']) ?></td>
+                            <td><?= $display($rule['severity']) ?></td>
+                            <td><?= $display($rule['minimum']) ?></td>
+                            <td><?= $display($rule['maximum']) ?></td>
+                            <td><?= $display($rule['description'] ?? '') ?></td>
+                            <td><?= $display($rule['corrective_action'] ?? '') ?></td>
+                            <td><?= $rule['enabled'] ? 'Yes' : 'No' ?></td>
+                        </tr>
+                    <?php endforeach;
+if (!$viewRules): ?>
+                        <tr>
+                            <td colspan="7">No fault rules configured.</td>
+                        </tr>
+                    <?php endif;
+?>
+                </tbody>
+            </table>
+        </div>
+        <?php
+        $faults = icct_nms_fault_observations($old);
 if (
     $faults
-): ?><h3>Current observations</h3><div class="site-table-wrap"><table class="site-table"><thead><tr><th>Graph</th><th>Value</th><th>State</th></tr></thead><tbody><?php foreach (
-    $faults as $fault
-): ?><tr><td><?= $display($fault['graph']) ?></td><td><?= $display(
-    $fault['value'],
-) ?></td><td><?= $display(
-    $fault['state'],
-) ?></td></tr><?php endforeach; ?></tbody></table></div><?php endif;
-?></section>
-<?php
-require __DIR__ . '/../../protocols/syslog/templates/device_view_syslog.php';
-require __DIR__ . '/../../protocols/netflow/templates/device_view_netflow.php';
+): ?>
+            <h3>Current observations</h3>
+            <div class="site-table-wrap">
+                <table class="site-table">
+                    <thead>
+                        <tr>
+                            <th>Graph</th>
+                            <th>Value</th>
+                            <th>State</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach (
+                            $faults as $fault
+                        ): ?>
+                            <tr>
+                                <td><?= $display($fault['graph']) ?></td>
+                                <td><?= $display($fault['value']) ?></td>
+                                <td><?= $display($fault['state']) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif;
 ?>
-<?php require __DIR__ . '/device_records.php'; ?>
+    </section>
+    <?php require __DIR__ . '/../../protocols/syslog/templates/device_view_syslog.php';
+require __DIR__ . '/../../protocols/netflow/templates/device_view_netflow.php'; ?>
+    <?php require __DIR__ . '/device_records.php'; ?>
 </div>

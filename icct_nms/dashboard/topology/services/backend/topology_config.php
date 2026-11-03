@@ -66,7 +66,8 @@ function icct_backend_topology_config_apply($action, $site_id, $input)
             }
             if (
                 (int) db_fetch_cell_prepared(
-                    'SELECT COUNT(*) FROM plugin_icct_nms_rack_devices WHERE rack_id = ? AND host_id != ? AND start_unit <= ? AND start_unit + unit_height - 1 >= ?',
+                    'SELECT COUNT(*) FROM plugin_icct_nms_rack_devices WHERE rack_id = ? AND host_id != ? ' .
+                        'AND start_unit <= ? AND start_unit + unit_height - 1 >= ?',
                     [$rack_id, $host_id, $start + $height - 1, $start],
                 )
             ) {
@@ -78,7 +79,10 @@ function icct_backend_topology_config_apply($action, $site_id, $input)
                 }
             }
             icct_backend_category_execute(
-                'INSERT INTO plugin_icct_nms_rack_devices (host_id, rack_id, start_unit, unit_height, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE rack_id = VALUES(rack_id), start_unit = VALUES(start_unit), unit_height = VALUES(unit_height), updated_by = VALUES(updated_by), updated_at = NOW()',
+                'INSERT INTO plugin_icct_nms_rack_devices (host_id, rack_id, start_unit, unit_height, ' .
+                    'updated_by, updated_at) VALUES (?, ?, ?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE rack_id = ' .
+                    'VALUES(rack_id), start_unit = VALUES(start_unit), unit_height = VALUES(unit_height), ' .
+                    'updated_by = VALUES(updated_by), updated_at = NOW()',
                 [$host_id, $rack_id, $start, $height, $user],
             );
         }

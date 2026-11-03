@@ -165,7 +165,8 @@ function icct_nms_save_device($id, $old, $input)
         icct_backend_manual_serial_save($saved, $serial);
         icct_backend_identity_manual_save($saved, $identity);
         icct_backend_category_execute(
-            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
             ['icct_cross_launch_' . $saved, $url],
         );
         $units = $placement
@@ -275,7 +276,10 @@ function icct_nms_save_snmp($id, $old, $input)
         }
     }
     foreach (
-        ['snmp_password' => 'snmp_password_confirm', 'snmp_priv_passphrase' => 'snmp_priv_confirm'] as $secret => $confirm
+        [
+            'snmp_password' => 'snmp_password_confirm',
+            'snmp_priv_passphrase' => 'snmp_priv_confirm',
+        ] as $secret => $confirm
     ) {
         if (isset($input[$confirm]) && ($input[$secret] ?? '') !== $input[$confirm]) {
             throw new InvalidArgumentException(

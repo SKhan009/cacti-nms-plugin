@@ -4,4 +4,8 @@ protocols/snmp/mibs/queries/
 protocols/snmp/mibs/storage/
 shared/assets/
 
+# Mixed PHP/HTML templates require PHP-aware, scope-preserving formatting.
 **/*.php
+
+# Installer files use dedicated language checks and preserve release manifests.
+installation/

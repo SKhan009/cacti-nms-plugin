@@ -30,17 +30,23 @@ document.addEventListener('DOMContentLoaded', function () {
         trigger.setAttribute('aria-expanded', String(open));
         panel.hidden = !open;
     };
-    menu.addEventListener('mouseenter', function () { setOpen(true); });
+    menu.addEventListener('mouseenter', function () {
+        setOpen(true);
+    });
     menu.addEventListener('mouseleave', function () {
         if (!menu.contains(document.activeElement)) setOpen(false);
     });
-    menu.addEventListener('focusin', function () { setOpen(true); });
+    menu.addEventListener('focusin', function () {
+        setOpen(true);
+    });
     menu.addEventListener('focusout', function () {
         Promise.resolve().then(function () {
             if (!menu.contains(document.activeElement)) setOpen(false);
         });
     });
-    trigger.addEventListener('click', function () { setOpen(true); });
+    trigger.addEventListener('click', function () {
+        setOpen(true);
+    });
     menu.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
             trigger.focus();

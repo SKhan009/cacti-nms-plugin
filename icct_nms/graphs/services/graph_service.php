@@ -15,13 +15,13 @@ function icct_nms_device_graphs($id)
 function icct_nms_available_graph_templates($id)
 {
     return db_fetch_assoc_prepared(
-        'SELECT DISTINCT gt.id,gt.name FROM graph_templates gt
-        LEFT JOIN snmp_query_graph sqg ON sqg.graph_template_id=gt.id
-        JOIN graph_templates_item gti ON gti.graph_template_id=gt.id
-        JOIN data_template_rrd dtr ON gti.task_item_id=dtr.id
-        JOIN data_template_data dtd ON dtd.data_template_id=dtr.data_template_id
-        WHERE sqg.name IS NULL AND gti.local_graph_id=0 AND dtr.local_data_id=0
-        AND gt.id NOT IN (SELECT graph_template_id FROM host_graph WHERE host_id=?) ORDER BY gt.name',
+        "SELECT DISTINCT gt.id,gt.name FROM graph_templates gt\n        LEFT JOIN snmp_query_graph " .
+            "sqg ON sqg.graph_template_id=gt.id\n        JOIN graph_templates_item gti ON " .
+            "gti.graph_template_id=gt.id\n        JOIN data_template_rrd dtr ON " .
+            "gti.task_item_id=dtr.id\n        JOIN data_template_data dtd ON " .
+            "dtd.data_template_id=dtr.data_template_id\n        WHERE sqg.name IS NULL AND " .
+            "gti.local_graph_id=0 AND dtr.local_data_id=0\n        AND gt.id NOT IN (SELECT " .
+            'graph_template_id FROM host_graph WHERE host_id=?) ORDER BY gt.name',
         [$id],
     );
 }
@@ -30,7 +30,11 @@ function icct_nms_graph_associations($id)
 {
     $allowed = icct_nms_device_graphs($id);
     $templates = db_fetch_assoc_prepared(
-        "SELECT gt.id,gt.name,COALESCE(ht.name,'') AS device_template_name FROM host_graph hg JOIN graph_templates gt ON gt.id=hg.graph_template_id JOIN host h ON h.id=hg.host_id LEFT JOIN host_template_graph htg ON htg.host_template_id=h.host_template_id AND htg.graph_template_id=gt.id LEFT JOIN host_template ht ON ht.id=htg.host_template_id WHERE hg.host_id=? ORDER BY gt.name",
+        'SELECT gt.id,gt.name,COALESCE(ht.name,\'\') AS device_template_name FROM host_graph hg ' .
+            'JOIN graph_templates gt ON gt.id=hg.graph_template_id JOIN host h ON h.id=hg.host_id ' .
+            'LEFT JOIN host_template_graph htg ON htg.host_template_id=h.host_template_id AND ' .
+            'htg.graph_template_id=gt.id LEFT JOIN host_template ht ON ht.id=htg.host_template_id ' .
+            'WHERE hg.host_id=? ORDER BY gt.name',
         [$id],
     );
     $graphTemplateIds = array_column(
@@ -69,7 +73,15 @@ function icct_nms_graph_parameters($templateId, $graphId)
         [$templateId, $graphId],
     );
     $items = db_fetch_assoc_prepared(
-        'SELECT gti.*, dtr.data_source_name,dtr.rrd_minimum,dtr.rrd_maximum,dtr.rrd_heartbeat,dtr.data_source_type_id,c.hex AS color_hex, dt.name AS data_template_name, cd.name AS cdef_name, vd.name AS vdef_name, gp.name AS gprint_name FROM graph_templates_item gti LEFT JOIN data_template_rrd dtr ON dtr.id=gti.task_item_id LEFT JOIN colors c ON c.id=gti.color_id LEFT JOIN data_template dt ON dt.id=dtr.data_template_id LEFT JOIN cdef cd ON cd.id=gti.cdef_id LEFT JOIN vdef vd ON vd.id=gti.vdef_id LEFT JOIN graph_templates_gprint gp ON gp.id=gti.gprint_id WHERE gti.graph_template_id=? AND gti.local_graph_id=? ORDER BY gti.sequence',
+        'SELECT gti.*, ' .
+            'dtr.data_source_name,dtr.rrd_minimum,dtr.rrd_maximum,dtr.rrd_heartbeat,dtr.data_source_type_id,c.hex ' .
+            'AS color_hex, dt.name AS data_template_name, cd.name AS cdef_name, vd.name AS ' .
+            'vdef_name, gp.name AS gprint_name FROM graph_templates_item gti LEFT JOIN ' .
+            'data_template_rrd dtr ON dtr.id=gti.task_item_id LEFT JOIN colors c ON ' .
+            'c.id=gti.color_id LEFT JOIN data_template dt ON dt.id=dtr.data_template_id LEFT JOIN ' .
+            'cdef cd ON cd.id=gti.cdef_id LEFT JOIN vdef vd ON vd.id=gti.vdef_id LEFT JOIN ' .
+            'graph_templates_gprint gp ON gp.id=gti.gprint_id WHERE gti.graph_template_id=? AND ' .
+            'gti.local_graph_id=? ORDER BY gti.sequence',
         [$templateId, $graphId],
     );
     return ['graph_id' => $graphId, 'settings' => $parameters, 'items' => $items];

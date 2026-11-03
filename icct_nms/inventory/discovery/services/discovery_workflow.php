@@ -295,7 +295,10 @@ function icct_nms_scan_rows($allowedHosts)
     $seen = [];
     foreach (
         db_fetch_assoc(
-            "SELECT r.*,j.network_id,j.name AS scan_name,j.poller_id,p.name AS collector FROM plugin_icct_nms_scan_results r JOIN plugin_icct_nms_scan_jobs j ON j.id=r.job_id LEFT JOIN poller p ON p.id=j.poller_id WHERE r.state<>'pending' ORDER BY r.observed_at DESC,r.id DESC",
+            'SELECT r.*,j.network_id,j.name AS scan_name,j.poller_id,p.name AS collector FROM ' .
+                'plugin_icct_nms_scan_results r JOIN plugin_icct_nms_scan_jobs j ON j.id=r.job_id LEFT ' .
+                'JOIN poller p ON p.id=j.poller_id WHERE r.state<>\'pending\' ORDER BY r.observed_at ' .
+                'DESC,r.id DESC',
         ) as $r
     ) {
         $key = $r['poller_id'] . '|' . $r['network_id'] . '|' . $r['address'];
@@ -516,7 +519,7 @@ function icct_nms_scan_neighbour_rows($results)
                     'name' => $item['remote_name'] ?? ($item['peer_label'] ?? 'Unnamed neighbour'),
                     'address' => implode(
                         ', ',
-                        icct_nms_discovery_addresses($item['management_addresses'] ?? []),
+                        icct_nms_management_addresses($item['management_addresses'] ?? []),
                     ),
                     'reporter' => $r['name'],
                     'protocol' => strtoupper($protocol),

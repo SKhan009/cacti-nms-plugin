@@ -1,3 +1,4 @@
+<!-- Repository actions operate on local MIB records without requiring an external catalogue. -->
 <?php if ($mode === 'configuration_view' && isset($viewBundle)):
     require __DIR__ . '/mib_configuration_view.php';
     return;
@@ -11,23 +12,51 @@ endif; ?>
     return;
 endif; ?>
 <?php if ($mode === 'list'): ?>
-<div class="titlebar mib-browser-titlebar"><div><p class="breadcrumb"><a href="dashboard/controllers/topology.php">Dashboard</a> / MIB Repository</p><h1><?= isset(
-    $repositoryBundle,
-)
-    ? icct_nms_h($repositoryBundle['name'])
-    : 'MIB Repository' ?></h1></div><div class="mib-browser-title-actions"><?php
-if (
-    isset($repositoryBundle)
-): ?><a class="button" href="protocols/snmp/mibs/controllers/mib_repository.php">Back to Repository</a><?php endif;
+    <div class="titlebar mib-browser-titlebar">
+        <div>
+            <p class="breadcrumb">
+                <a href="dashboard/controllers/topology.php">Dashboard</a> / MIB Repository
+            </p>
+            <h1><?= isset($repositoryBundle) ? icct_nms_h($repositoryBundle['name']) : 'MIB Repository' ?></h1>
+        </div>
+        <div class="mib-browser-title-actions">
+            <?php
+        if (
+            isset($repositoryBundle)
+        ): ?>
+                <a
+                    class="button"
+                    href="protocols/snmp/mibs/controllers/mib_repository.php">Back to Repository</a>
+            <?php endif;
     if (
         $management
-    ): ?><button class="button primary" type="button" data-mib-upload-open>Upload</button><?php endif;
-    ?></div></div>
-<?php if (
-    $deletedId
-): ?><form method="post" id="mibUndoForm" hidden><?php icct_nms_token(); ?><input type="hidden" name="action" value="restore"><input type="hidden" name="bundle_id" value="<?= icct_nms_h(
-    $deletedId,
-) ?>"></form><?php endif; ?>
+    ): ?>
+                <button
+                    class="button primary"
+                    type="button"
+                    data-mib-upload-open>Upload</button>
+            <?php endif;
+    ?>
+        </div>
+    </div>
+    <?php if (
+        $deletedId
+    ): ?>
+        <form
+            method="post"
+            id="mibUndoForm"
+            hidden>
+            <?php icct_nms_token(); ?>
+            <input
+                type="hidden"
+                name="action"
+                value="restore">
+            <input
+                type="hidden"
+                name="bundle_id"
+                value="<?= icct_nms_h($deletedId) ?>">
+        </form>
+    <?php endif; ?>
 <?php
 if ($bundles) {
     require __DIR__ . '/mib_repository_list.php';
@@ -40,243 +69,432 @@ if ($management) {
 }
 return;
 endif; ?>
-<div class="titlebar"><h1>MIB Repository</h1><?php if (
-    $management &&
-    $mode === 'list'
-): ?><a class="button primary" href="<?= icct_nms_h(
-    parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH),
-) ?>?upload=1">Upload MIB</a><?php elseif (
-    $mode !== 'list'
-): ?><a class="button" href="protocols/snmp/mibs/controllers/mib_repository.php">Back to MIB Repository</a><?php endif; ?></div>
+<div class="titlebar">
+    <h1>MIB Repository</h1>
+    <?php if (
+        $management &&
+        $mode === 'list'
+    ): ?>
+        <a
+            class="button primary"
+            href="<?= icct_nms_h(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ?>?upload=1">Upload MIB</a>
+    <?php elseif (
+        $mode !== 'list'
+    ): ?>
+        <a
+            class="button"
+            href="protocols/snmp/mibs/controllers/mib_repository.php">Back to MIB Repository</a>
+    <?php endif; ?>
+</div>
 <?php if ($mode === 'wizard'):
     require __DIR__ . '/mib_wizard.php'; ?>
 <?php elseif ($mode === 'review' && $preview):
         $base = $reviewValues['template_name'] ?? icct_mib_default_name($preview); ?>
-<form method="post" class="mib-editor" id="mibReview" novalidate>
-<?php icct_nms_token(); ?><input type="hidden" name="action" value="review"><input type="hidden" name="draft_id" value="<?= icct_nms_h(
-    $preview['id'],
-) ?>">
-<h2>Review MIB templates</h2><?php
-if (!empty($preview['parse_error'])): ?><p class="notice error"><?= icct_nms_h(
-    $preview['parse_error'],
-) ?></p><p>You can confirm saving the original files to the database now. Upload the missing modules, then use Review Again. Templates remain unavailable until parsing succeeds.</p><?php endif;
-if (!empty($preview['dependencies'])): ?><p>Dependencies loaded from database: <?= icct_nms_h(
-    implode(', ', $preview['dependencies']),
-) ?></p><?php endif;
-?><p><?= icct_nms_h(implode(', ', array_column($preview['files'], 'name'))) ?></p>
-<div class="protocol-grid cols-2"><label class="field"><span class="field-label">Device Type *</span><select name="type_id" required><?php foreach (
-    $types as $key => $type
-): ?><option value="<?= icct_nms_h($key) ?>" <?= $key ===
-($reviewValues['type_id'] ?? $preview['type_id'])
-    ? 'selected'
-    : '' ?>><?= icct_nms_h(
-        $type['name'],
-    ) ?></option><?php endforeach; ?></select></label><?php icct_nms_input(
-        'Device Template / Base Name *',
-        'template_name',
-        $base,
-        'text',
-        'required maxlength="150"',
-    ); ?></div>
-<fieldset class="mib-create-options"><legend>Create automatically</legend><?php foreach (
-    ['data' => 'Data Source Templates', 'graph' => 'Graph Templates', 'device' => 'Device Template'] as $key => $label
-): ?><label><input type="checkbox" name="create_<?= $key ?>" value="1" <?= empty(
-    $preview['parse_error']
-) &&
-(!$reviewValues || !empty($reviewValues['create_' . $key]))
-    ? 'checked'
-    : '' ?> <?= !empty($preview['parse_error'])
-     ? 'disabled'
-     : '' ?>> <?= $label ?></label><?php endforeach; ?></fieldset>
-<div class="mib-filters"><label class="field"><span class="field-label">Search objects</span><input type="search" data-mib-search placeholder="Name, OID, syntax or description"></label></div>
-<div class="mib-selection"><label><input type="checkbox" data-mib-select-all> Select all numeric objects (all pages)</label><button type="button" class="button" data-mib-select-filtered>Select matching objects</button><button type="button" class="button" data-mib-clear>Clear selection</button><span data-mib-selected-count></span></div>
-<p>Fields are filled from the MIB with editable graph defaults. Table instance indexes can be set when applying templates.</p>
-<div class="mib-object-list" data-mib-list>
-<?php foreach ($preview['records'] as $i => $record):
-
-    $r = $reviewValues['records'][$i] ?? [];
-    $selected = $reviewValues ? !empty($reviewValues['selected'][$i]) : $record['numeric'];
-    ?>
-<details class="mib-object" data-mib-object><summary><input aria-label="Select <?= icct_nms_h(
-    $record['symbol'],
-) ?>" type="checkbox" name="selected[<?= $i ?>]" value="1" <?= $selected
-? 'checked'
-: '' ?> <?= !$record['numeric'] ? 'disabled' : '' ?>><strong><?= icct_nms_h(
-    $record['symbol'],
-) ?></strong><span><?= icct_nms_h($record['syntax'] ?: $record['kind']) ?></span></summary>
-<div class="mib-object-body"><p><?= icct_nms_h(
-    $record['description'],
-) ?></p><p><strong><?= icct_nms_h($record['reason']) ?></strong> · Access: <?= icct_nms_h(
-    $record['access'] ?: 'Not applicable',
-) ?> · Base OID: <?= icct_nms_h($record['base_oid'] ?: '—') ?></p>
-<?php if ($record['numeric']): ?><div class="protocol-grid cols-3">
-<?php
-icct_nms_input(
-    'OID',
-    'records[' . $i . '][oid]',
-    $r['oid'] ?? $record['oid'],
-    'text',
-    'maxlength="255" data-base-oid="' . icct_nms_h($record['base_oid']) . '"',
-);
-    if ($record['table']) {
-        icct_nms_input(
-            'Instance Index (optional)',
-            'records[' . $i . '][instance_index]',
-            $r['instance_index'] ?? '',
-            'text',
-            'maxlength="128" placeholder="Set when applying to a device" data-mib-index',
-        );
-    }
-    icct_nms_input('Parameter Label', 'records[' . $i . '][label]', $r['label'] ?? $record['label']);
-    icct_nms_input(
-        'Units',
-        'records[' . $i . '][units]',
-        $r['units'] ?? $record['units'],
-        'text',
-        'maxlength="20"',
-    );
-    icct_nms_input(
-        'Data Source Template Name',
-        'records[' . $i . '][data_name]',
-        $r['data_name'] ?? $base . ' - ' . $record['label'],
-        'text',
-        'maxlength="190"',
-    );
-    icct_nms_input(
-        'Graph Template Name',
-        'records[' . $i . '][graph_name]',
-        $r['graph_name'] ?? $base . ' - ' . $record['label'],
-        'text',
-        'maxlength="190"',
-    );
-    ?>
-<label class="field"><span class="field-label">Data Source Type</span><select name="records[<?= $i ?>][ds_type]"><?php foreach (
-    [1 => 'Gauge', 2 => 'Counter (rate)', 3 => 'Derive', 4 => 'Absolute'] as $key => $label
-): ?><option value="<?= $key ?>" <?= $key == ($r['ds_type'] ?? $record['ds_type'])
-    ? 'selected'
-    : '' ?>><?= $label ?></option><?php endforeach; ?></select></label>
-<?php
-icct_nms_input(
-    'RRD Minimum (U = unknown)',
-    'records[' . $i . '][min]',
-    $r['min'] ?? ($record['min'] ?? 'U'),
-);
-    icct_nms_input(
-        'RRD Maximum (U = unknown)',
-        'records[' . $i . '][max]',
-        $r['max'] ?? ($record['max'] ?? 'U'),
-    );
-    ?></div>
-<h3>Graph items and threshold lines</h3><div class="protocol-grid cols-3">
-<?php
-    icct_nms_select(
-        'Graph Item',
-        'records[' . $i . '][graph_type]',
-        [4 => 'Line 1', 5 => 'Line 2', 6 => 'Line 3', 7 => 'Area'],
-        $r['graph_type'] ?? 4,
-    );
-    icct_nms_select(
-        'Consolidation Function',
-        'records[' . $i . '][cf]',
-        [1 => 'Average', 2 => 'Minimum', 3 => 'Maximum', 4 => 'Last'],
-        $r['cf'] ?? 1,
-    );
-    $color = strtoupper((string) ($r['color'] ?? '00CF00'));
-    $swatch = preg_match('/^[A-F0-9]{6}$/D', $color) ? $color : '00CF00';
-    ?>
-<div class="field"><label class="field-label" for="mib-color-<?= $i ?>">Graph Color</label><div class="mib-color-control" data-mib-color><input type="color" value="#<?= icct_nms_h(
-    $swatch,
-) ?>" aria-label="Choose graph color for <?= icct_nms_h(
-    $record['label'],
-) ?>" data-mib-color-picker><input type="text" id="mib-color-<?= $i ?>" name="records[<?= $i ?>][color]" value="<?= icct_nms_h(
-    $color,
-) ?>" maxlength="6" pattern="[a-fA-F0-9]{6}" aria-label="Graph color hex for <?= icct_nms_h(
-    $record['label'],
-) ?>" data-mib-color-hex></div></div>
-<?php
-icct_nms_input('Graph Legend', 'records[' . $i . '][legend]', $r['legend'] ?? $record['label']);
-    icct_nms_select(
-        'Statistics (Current / Average / Maximum)',
-        'records[' . $i . '][statistics]',
-        [1 => 'Show', 0 => 'Hide'],
-        $r['statistics'] ?? 1,
-    );
-    icct_nms_input(
-        'Lower Threshold Line (optional)',
-        'records[' . $i . '][threshold_low]',
-        $r['threshold_low'] ?? '',
-    );
-    icct_nms_input(
-        'Upper Threshold Line (optional)',
-        'records[' . $i . '][threshold_high]',
-        $r['threshold_high'] ?? '',
-    );
-    ?></div>
-<?php endif; ?></div></details>
-<?php
-endforeach; ?></div><footer class="inventory-pagination" data-mib-pagination><label>Items per page: <select data-mib-size><option>10</option><option selected>25</option><option>50</option><option>100</option><option value="all">All</option></select></label><span data-mib-range></span><div class="page-controls"><select data-mib-page aria-label="Object page number"></select><span data-mib-pages></span><button type="button" data-mib-prev aria-label="Previous object page" class="pagination-control"><svg class="pagination-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5 7 12 15 19Z"/></svg></button><button type="button" data-mib-next aria-label="Next object page" class="pagination-control"><svg class="pagination-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5 17 12 9 19Z"/></svg></button></div></footer><div class="type-editor-actions"><button type="submit" name="action" value="discard" formnovalidate class="button">Discard Upload</button><input type="hidden" name="review_complete" value="1"><button class="button primary">Review Selected Options</button></div></form>
+    <form
+        method="post"
+        class="mib-editor"
+        id="mibReview"
+        novalidate>
+        <?php icct_nms_token(); ?>
+        <input
+            type="hidden"
+            name="action"
+            value="review">
+        <input
+            type="hidden"
+            name="draft_id"
+            value="<?= icct_nms_h($preview['id']) ?>">
+        <h2>Review MIB templates</h2>
+        <?php
+        if (!empty($preview['parse_error'])): ?>
+            <p class="notice error"><?= icct_nms_h($preview['parse_error']) ?></p>
+            <p>You can confirm saving the original files to the database now. Upload the missing modules,
+                then use Review Again. Templates remain unavailable until parsing succeeds.</p>
+        <?php endif;
+if (!empty($preview['dependencies'])): ?>
+            <p>Dependencies loaded from database: <?= icct_nms_h(implode(', ', $preview['dependencies'])) ?></p>
+        <?php endif;
+?>
+        <p><?= icct_nms_h(implode(', ', array_column($preview['files'], 'name'))) ?></p>
+        <div class="protocol-grid cols-2">
+            <label class="field">
+                <span class="field-label">Device Type *</span>
+                <select
+                    name="type_id"
+                    required>
+                    <?php foreach (
+                        $types as $key => $type
+                    ): ?>
+                        <option
+                            value="<?= icct_nms_h($key) ?>"
+                            <?= $key === ($reviewValues['type_id'] ?? $preview['type_id']) ? 'selected' : '' ?>><?= icct_nms_h($type['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <?php icct_nms_input(
+                'Device Template / Base Name *',
+                'template_name',
+                $base,
+                'text',
+                'required maxlength="150"',
+            ); ?>
+        </div>
+        <fieldset class="mib-create-options">
+            <legend>Create automatically</legend>
+            <?php foreach (
+                [
+                    'data' => 'Data Source Templates',
+                    'graph' => 'Graph Templates',
+                    'device' => 'Device Template'
+                ] as $key => $label
+            ): ?>
+                <label>
+                    <input
+                        type="checkbox"
+                        name="create_<?= $key ?>"
+                        value="1"
+                        <?= empty($preview['parse_error']) && (!$reviewValues || !empty($reviewValues['create_' . $key]))
+                            ? 'checked'
+                            : '' ?>
+                        <?= !empty($preview['parse_error']) ? 'disabled' : '' ?>> <?= $label ?>
+                </label>
+            <?php endforeach; ?>
+        </fieldset>
+        <div class="mib-filters">
+            <label class="field">
+                <span class="field-label">Search objects</span>
+                <input
+                    type="search"
+                    data-mib-search
+                    placeholder="Name, OID, syntax or description">
+            </label>
+        </div>
+        <div class="mib-selection">
+            <label>
+                <input
+                    type="checkbox"
+                    data-mib-select-all> Select all numeric objects (all pages)
+            </label>
+            <button
+                type="button"
+                class="button"
+                data-mib-select-filtered>Select matching objects</button>
+            <button
+                type="button"
+                class="button"
+                data-mib-clear>Clear selection</button>
+            <span data-mib-selected-count></span>
+        </div>
+        <p>Fields are filled from the MIB with editable graph defaults. Table instance indexes can be
+            set when applying templates.</p>
+        <div
+            class="mib-object-list"
+            data-mib-list>
+            <?php foreach ($preview['records'] as $i => $record):
+                $r = $reviewValues['records'][$i] ?? [];
+                $selected = $reviewValues ? !empty($reviewValues['selected'][$i]) : $record['numeric'];
+                ?>
+                <details
+                    class="mib-object"
+                    data-mib-object>
+                    <summary>
+                        <input
+                            aria-label="Select <?= icct_nms_h($record['symbol']) ?>"
+                            type="checkbox"
+                            name="selected[<?= $i ?>]"
+                            value="1"
+                            <?= $selected ? 'checked' : '' ?>
+                            <?= !$record['numeric'] ? 'disabled' : '' ?>>
+                        <strong><?= icct_nms_h($record['symbol']) ?></strong>
+                        <span><?= icct_nms_h($record['syntax'] ?: $record['kind']) ?></span>
+                    </summary>
+                    <div class="mib-object-body">
+                        <p><?= icct_nms_h($record['description']) ?></p>
+                        <p>
+                            <strong><?= icct_nms_h($record['reason']) ?></strong> · Access: <?= icct_nms_h($record['access'] ?: 'Not applicable') ?> · Base OID: <?= icct_nms_h($record['base_oid'] ?: '—') ?>
+                        </p>
+                        <?php if ($record['numeric']): ?>
+                            <div class="protocol-grid cols-3">
+                                <?php icct_nms_input(
+                                    'OID',
+                                    'records[' . $i . '][oid]',
+                                    $r['oid'] ?? $record['oid'],
+                                    'text',
+                                    'maxlength="255" data-base-oid="' . icct_nms_h($record['base_oid']) . '"',
+                                );
+                            if ($record['table']) {
+                                icct_nms_input(
+                                    'Instance Index (optional)',
+                                    'records[' . $i . '][instance_index]',
+                                    $r['instance_index'] ?? '',
+                                    'text',
+                                    'maxlength="128" placeholder="Set when applying to a device" data-mib-index',
+                                );
+                            }
+                            icct_nms_input('Parameter Label', 'records[' . $i . '][label]', $r['label'] ?? $record['label']);
+                            icct_nms_input(
+                                'Units',
+                                'records[' . $i . '][units]',
+                                $r['units'] ?? $record['units'],
+                                'text',
+                                'maxlength="20"',
+                            );
+                            icct_nms_input(
+                                'Data Source Template Name',
+                                'records[' . $i . '][data_name]',
+                                $r['data_name'] ?? $base . ' - ' . $record['label'],
+                                'text',
+                                'maxlength="190"',
+                            );
+                            icct_nms_input(
+                                'Graph Template Name',
+                                'records[' . $i . '][graph_name]',
+                                $r['graph_name'] ?? $base . ' - ' . $record['label'],
+                                'text',
+                                'maxlength="190"',
+                            ); ?>
+                                <label class="field">
+                                    <span class="field-label">Data Source Type</span>
+                                    <select name="records[<?= $i ?>][ds_type]">
+                                        <?php foreach (
+                                            [1 => 'Gauge', 2 => 'Counter (rate)', 3 => 'Derive', 4 => 'Absolute'] as $key => $label
+                                        ): ?>
+                                            <option
+                                                value="<?= $key ?>"
+                                                <?= $key == ($r['ds_type'] ?? $record['ds_type']) ? 'selected' : '' ?>><?= $label ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </label>
+                                <?php icct_nms_input(
+                                    'RRD Minimum (U = unknown)',
+                                    'records[' . $i . '][min]',
+                                    $r['min'] ?? ($record['min'] ?? 'U'),
+                                );
+                            icct_nms_input(
+                                'RRD Maximum (U = unknown)',
+                                'records[' . $i . '][max]',
+                                $r['max'] ?? ($record['max'] ?? 'U'),
+                            ); ?>
+                            </div>
+                            <h3>Graph items and threshold lines</h3>
+                            <div class="protocol-grid cols-3">
+                                <?php icct_nms_select(
+                                    'Graph Item',
+                                    'records[' . $i . '][graph_type]',
+                                    [4 => 'Line 1', 5 => 'Line 2', 6 => 'Line 3', 7 => 'Area'],
+                                    $r['graph_type'] ?? 4,
+                                );
+                            icct_nms_select(
+                                'Consolidation Function',
+                                'records[' . $i . '][cf]',
+                                [1 => 'Average', 2 => 'Minimum', 3 => 'Maximum', 4 => 'Last'],
+                                $r['cf'] ?? 1,
+                            );
+                            $color = strtoupper((string) ($r['color'] ?? '00CF00'));
+                            $swatch = preg_match('/^[A-F0-9]{6}$/D', $color) ? $color : '00CF00'; ?>
+                                <div class="field">
+                                    <label
+                                        class="field-label"
+                                        for="mib-color-<?= $i ?>">Graph Color</label>
+                                    <div
+                                        class="mib-color-control"
+                                        data-mib-color>
+                                        <input
+                                            type="color"
+                                            value="#<?= icct_nms_h($swatch) ?>"
+                                            aria-label="Choose graph color for <?= icct_nms_h($record['label']) ?>"
+                                            data-mib-color-picker>
+                                        <input
+                                            type="text"
+                                            id="mib-color-<?= $i ?>"
+                                            name="records[<?= $i ?>][color]"
+                                            value="<?= icct_nms_h($color) ?>"
+                                            maxlength="6"
+                                            pattern="[a-fA-F0-9]{6}"
+                                            aria-label="Graph color hex for <?= icct_nms_h($record['label']) ?>"
+                                            data-mib-color-hex>
+                                    </div>
+                                </div>
+                                <?php icct_nms_input('Graph Legend', 'records[' . $i . '][legend]', $r['legend'] ?? $record['label']);
+                            icct_nms_select(
+                                'Statistics (Current / Average / Maximum)',
+                                'records[' . $i . '][statistics]',
+                                [1 => 'Show', 0 => 'Hide'],
+                                $r['statistics'] ?? 1,
+                            );
+                            icct_nms_input(
+                                'Lower Threshold Line (optional)',
+                                'records[' . $i . '][threshold_low]',
+                                $r['threshold_low'] ?? '',
+                            );
+                            icct_nms_input(
+                                'Upper Threshold Line (optional)',
+                                'records[' . $i . '][threshold_high]',
+                                $r['threshold_high'] ?? '',
+                            ); ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </details>
+            <?php
+            endforeach; ?>
+        </div>
+        <footer
+            class="inventory-pagination"
+            data-mib-pagination>
+            <label>Items per page: <select data-mib-size>
+                    <option>10</option>
+                    <option selected>25</option>
+                    <option>50</option>
+                    <option>100</option>
+                    <option value="all">All</option>
+                </select>
+            </label>
+            <span data-mib-range></span>
+            <div class="page-controls">
+                <select
+                    data-mib-page
+                    aria-label="Object page number"></select>
+                <span data-mib-pages></span>
+                <button
+                    type="button"
+                    data-mib-prev
+                    aria-label="Previous object page"
+                    class="pagination-control">
+                    <svg
+                        class="pagination-arrow"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                        focusable="false">
+                        <path d="M15 5 7 12 15 19Z" />
+                    </svg>
+                </button>
+                <button
+                    type="button"
+                    data-mib-next
+                    aria-label="Next object page"
+                    class="pagination-control">
+                    <svg
+                        class="pagination-arrow"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                        focusable="false">
+                        <path d="M9 5 17 12 9 19Z" />
+                    </svg>
+                </button>
+            </div>
+        </footer>
+        <div class="type-editor-actions">
+            <button
+                type="submit"
+                name="action"
+                value="discard"
+                formnovalidate
+                class="button">Discard Upload</button>
+            <input
+                type="hidden"
+                name="review_complete"
+                value="1">
+            <button class="button primary">Review Selected Options</button>
+        </div>
+    </form>
 <?php elseif ($mode === 'confirm' && $preview && $plan): ?>
-<div class="mib-editor"><h2>Confirm before saving</h2><p>Device Type: <strong><?= icct_nms_h(
-    $plan['type_name'],
-) ?></strong> · Device Template: <strong><?= icct_nms_h(
-    $plan['name'],
-) ?></strong></p><p>Selected creation options: <strong><?= icct_nms_h(
-    implode(
-        ', ',
-        array_intersect_key(
-            [
-                'data' => 'Data Source Templates',
-                'graph' => 'Graph Templates',
-                'device' => 'Device Template',
-            ],
-            array_filter($plan['options']),
-        ),
-    ),
-) ?:
-    'Store files only' ?></strong></p>
-<div class="table-wrap"><table class="site-table"><thead><tr><th>Parameter</th><th>Instance OID</th><th>Data Source Template</th><th>Graph Template</th><th>Type / Units / Bounds</th><th>Graph Items / Threshold Lines</th></tr></thead><tbody><?php foreach (
-    $plan['records'] as $record
-): ?><tr><td><?= icct_nms_h($record['label']) ?></td><td><?= icct_nms_h(
-    $record['oid'],
-) ?></td><td><?= $plan['options']['data']
-    ? icct_nms_h($record['data_name'])
-    : 'Not selected' ?></td><td><?= $plan['options']['graph']
-    ? icct_nms_h($record['graph_name'])
-    : 'Not selected' ?></td><td><?= icct_nms_h(
-        [1 => 'Gauge', 2 => 'Counter', 3 => 'Derive', 4 => 'Absolute'][$record['ds_type']] .
-        ' / ' .
-        $record['units'] .
-        ' / ' .
-        $record['min'] .
-        ' – ' .
-        $record['max'],
-    ) ?></td><td><?= icct_nms_h(
-        [4 => 'Line 1', 5 => 'Line 2', 6 => 'Line 3', 7 => 'Area'][$record['graph_type']] .
-        ' / ' .
-        [1 => 'Average', 2 => 'Minimum', 3 => 'Maximum', 4 => 'Last'][$record['cf']] .
-        ' / #' .
-        $record['color'] .
-        ' / ' .
-        $record['legend'],
-    ) ?><small><?= $record['statistics']
-    ? 'Current / Average / Maximum'
-    : 'No statistics' ?> · Lower: <?= icct_nms_h(
-        $record['threshold_low'] === '' ? 'None' : $record['threshold_low'],
-    ) ?> · Upper: <?= icct_nms_h(
-        $record['threshold_high'] === '' ? 'None' : $record['threshold_high'],
-    ) ?></small></td></tr><?php endforeach; ?></tbody></table></div>
-<p>Nothing has been saved yet. Edit any option or parameter before confirming.</p><form method="post"><?php icct_nms_token(); ?><input type="hidden" name="draft_id" value="<?= icct_nms_h(
-    $preview['id'],
-) ?>"><input type="hidden" name="action" value="confirm"><label><input type="checkbox" name="confirmed" value="1" required> I confirm these files and template selections.</label><div class="type-editor-actions"><a class="button" href="<?= icct_nms_h(
-    parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH),
-) ?>?review=1">Back to Edit</a><button class="button primary">Confirm and Save</button></div></form></div>
+    <div class="mib-editor">
+        <h2>Confirm before saving</h2>
+        <p>Device Type: <strong><?= icct_nms_h($plan['type_name']) ?></strong> · Device Template: <strong><?= icct_nms_h($plan['name']) ?></strong>
+        </p>
+        <p>Selected creation options: <strong><?= icct_nms_h(
+            implode(
+                ', ',
+                array_intersect_key(
+                    [
+                        'data' => 'Data Source Templates',
+                        'graph' => 'Graph Templates',
+                        'device' => 'Device Template',
+                    ],
+                    array_filter($plan['options']),
+                ),
+            ),
+        ) ?:
+            'Store files only' ?></strong>
+        </p>
+        <div class="table-wrap">
+            <table class="site-table">
+                <thead>
+                    <tr>
+                        <th>Parameter</th>
+                        <th>Instance OID</th>
+                        <th>Data Source Template</th>
+                        <th>Graph Template</th>
+                        <th>Type / Units / Bounds</th>
+                        <th>Graph Items / Threshold Lines</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach (
+                        $plan['records'] as $record
+                    ): ?>
+                        <tr>
+                            <td><?= icct_nms_h($record['label']) ?></td>
+                            <td><?= icct_nms_h($record['oid']) ?></td>
+                            <td><?= $plan['options']['data'] ? icct_nms_h($record['data_name']) : 'Not selected' ?></td>
+                            <td><?= $plan['options']['graph'] ? icct_nms_h($record['graph_name']) : 'Not selected' ?></td>
+                            <td><?= icct_nms_h(
+                                [1 => 'Gauge', 2 => 'Counter', 3 => 'Derive', 4 => 'Absolute'][$record['ds_type']] .
+                                    ' / ' .
+                                    $record['units'] .
+                                    ' / ' .
+                                    $record['min'] .
+                                    ' – ' .
+                                    $record['max'],
+                            ) ?></td>
+                            <td><?= icct_nms_h(
+                                [4 => 'Line 1', 5 => 'Line 2', 6 => 'Line 3', 7 => 'Area'][$record['graph_type']] .
+                                    ' / ' .
+                                    [1 => 'Average', 2 => 'Minimum', 3 => 'Maximum', 4 => 'Last'][$record['cf']] .
+                                    ' / #' .
+                                    $record['color'] .
+                                    ' / ' .
+                                    $record['legend'],
+                            ) ?><small><?= $record['statistics'] ? 'Current / Average / Maximum' : 'No statistics' ?> · Lower: <?= icct_nms_h($record['threshold_low'] === '' ? 'None' : $record['threshold_low']) ?> · Upper: <?= icct_nms_h($record['threshold_high'] === '' ? 'None' : $record['threshold_high']) ?>
+                                </small>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <p>Nothing has been saved yet. Edit any option or parameter before confirming.</p>
+        <form method="post">
+            <?php icct_nms_token(); ?>
+            <input
+                type="hidden"
+                name="draft_id"
+                value="<?= icct_nms_h($preview['id']) ?>">
+            <input
+                type="hidden"
+                name="action"
+                value="confirm">
+            <label>
+                <input
+                    type="checkbox"
+                    name="confirmed"
+                    value="1"
+                    required> I confirm these files and template selections.
+            </label>
+            <div class="type-editor-actions">
+                <a
+                    class="button"
+                    href="<?= icct_nms_h(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ?>?review=1">Back to Edit</a>
+                <button class="button primary">Confirm and Save</button>
+            </div>
+        </form>
+    </div>
 <?php elseif ($mode === 'inspect' && $inspection): ?>
-<?php
-    $wizardBundle = $inspection;
+    <?php $wizardBundle = $inspection;
     $wizardObjects = $objects;
     $wizardStep = 4;
     $wizardValues = [];
     $wizardReadOnly = true;
-    require __DIR__ . '/mib_wizard.php';
-    ?>
+    require __DIR__ . '/mib_wizard.php'; ?>
 <?php endif; ?>

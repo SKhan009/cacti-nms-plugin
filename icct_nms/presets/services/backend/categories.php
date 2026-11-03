@@ -55,11 +55,11 @@ function icct_backend_device_classification_save($host_id, $category_id, $type, 
     $type = icct_backend_classification_text($type, 150);
     $role = icct_backend_classification_text($role, 150);
     icct_backend_category_execute(
-        "INSERT INTO plugin_icct_nms_device_classification
-		(host_id, category_id, device_type, device_role, assignment_source, updated_by, updated_at)
-		VALUES (?, ?, ?, ?, 'manual', ?, NOW()) ON DUPLICATE KEY UPDATE category_id = VALUES(category_id),
-		device_type = VALUES(device_type), device_role = VALUES(device_role), assignment_source = 'manual',
-		updated_by = VALUES(updated_by), updated_at = NOW()",
+        "INSERT INTO plugin_icct_nms_device_classification\n\t\t(host_id, category_id, device_type," .
+            " device_role, assignment_source, updated_by, updated_at)\n\t\tVALUES (?, ?, ?, ?, " .
+            "'manual', ?, NOW()) ON DUPLICATE KEY UPDATE category_id = VALUES(category_id),\n\t\t" .
+            'device_type = VALUES(device_type), device_role = VALUES(device_role), assignment_source = ' .
+            "'manual',\n\t\tupdated_by = VALUES(updated_by), updated_at = NOW()",
         [$host_id, $category_id, $type, $role, icct_backend_current_user_id()],
     );
 }
@@ -81,7 +81,9 @@ function icct_backend_category_device_type($category_id, $host_id = 0)
         return '';
     }
     $types = db_fetch_assoc_prepared(
-        "SELECT DISTINCT TRIM(device_type) AS device_type FROM plugin_icct_nms_device_classification WHERE category_id=? AND TRIM(device_type)<>'' LIMIT 2",
+        'SELECT DISTINCT TRIM(device_type) AS device_type FROM ' .
+            'plugin_icct_nms_device_classification WHERE category_id=? AND TRIM(device_type)<>\'\' ' .
+            'LIMIT 2',
         [(int) $category_id],
     );
     if (count($types) === 1) {

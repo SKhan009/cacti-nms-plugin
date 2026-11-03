@@ -1,24 +1,35 @@
 # SSH terminal installation
 
-PHP client and browser assets are bundled. The native terminal needs a strict-auth patched Guacamole server, HTTPS and a dedicated account; an ordinary guacd package alone is insufficient.
+The PHP SSH client, browser terminal assets and strict-auth Guacamole source patch are bundled. Runtime uses the verified local build, a dedicated broker account, a separate Guacamole account and the administrator's explicit HTTPS origin. Password and key authentication never switch methods; host-key approval remains required.
 
-1. Obtain Guacamole Server 1.6.0 from Apache's official distribution. Verify the signature and SHA-256 in `guacamole/manifest.json`.
-2. Build/package for the target OS and CPU with `guacamole/strict-auth.patch` applied, following upstream build instructions and preserving licences/NOTICE. No cross-architecture executable is supplied.
-3. Configure HTTPS and identify the native poller ID. Run the bundled adapter with your actual Cacti path, HTTPS origin, web group and poller ID:
+Build the pinned native bundle on matching RHEL release and CPU architecture, using approved offline build prerequisites:
 
 ```sh
-sudo python3 protocols/ssh/configure.py --cacti-path /path/to/cacti --origin https://nms.example.org --web-group apache --poller-id 1
+python3 installation/cli/native.py build --component guacamole-strict --bundle /media/guacamole-native
 ```
 
-Use the real web group (often `www-data` on Debian/Ubuntu). The adapter creates its private account/key and socket configuration, refuses to overwrite a different existing configuration, and leaves device credentials and host-key approvals unchanged.
-
-4. Review the generated service and `guacamole/nms-guacd.service` for the approved binary location and matching local port. Start them after settings match; verify Installation Checks and a real SSH device session.
-
-The pinned native source and strict-auth patch are now bundled. Build on the matching Linux OS/CPU as a regular user:
+Include this directory in the offline release with `installation/cli/package.py --native-bundle /media/guacamole-native`, together with the matching OS package bundle. On the target, the release bootstrap verifies all files and configures SSH in one command:
 
 ```sh
-python3 installation/cli/native.py build --component guacamole-strict --bundle /tmp/guacamole-native
-sudo python3 installation/cli/native.py install --bundle /tmp/guacamole-native --web-group apache
+sudo python3 install.py --cacti-root /var/www/html/cacti --ssh-origin https://nms.example.org
 ```
 
-The verified native binary is installed at `/opt/icct-nms/native/guacamole-1.6.0/sbin/guacd`. It can also be included in a complete offline release through `package.py --native-bundle /tmp/guacamole-native`; the release installer installs it automatically. Build prerequisites are listed in `installation/README.md`. Native dependency installation does not replace a running custom service. Point the dedicated Guacamole service to the verified binary when configuring the actual HTTPS origin, then test a real SSH session.
+Use the exact browser origin, including a nonstandard HTTPS port. Provision the site's certificate and HTTPS virtual host first; setup does not create a certificate or bypass certificate verification. No Internet access is required by this command when the release carries its verified package and native bundles.
+
+For a provisioned Cacti installation with the native bundle already installed:
+
+```sh
+sudo python3 protocols/ssh/configure.py --cacti-path /var/www/html/cacti --origin https://nms.example.org --web-user apache --web-group apache --poller-id 1 --native-bundle /media/guacamole-native
+```
+
+The adapter verifies installed native hashes against the pinned bundle, provisions `icct-nms-ssh.service` and `icct-nms-guacd.service`, retains SELinux enforcement, installs the scoped broker-socket policy, starts both services and checks access from the PHP account. Guacamole listens only on loopback port 4823 by preset default; `--guacd-port` explicitly selects another unprivileged port. The installer bootstrap uses `--ssh-guacd-port` for the same setting.
+
+Existing encrypted credentials are retained. For an explicitly selected existing private store, use `--service-user` and `--state-directory` with its current noninteractive account and `/var/lib/<name>` directory. The bootstrap equivalents are `--ssh-service-user` and `--ssh-state-directory`. Setup rejects another account's directory, changed private keys, symlinks and a different existing configuration. It does not copy credentials, create devices, assign presets or enable monitoring.
+
+Installation Checks verifies the strict native file hashes and the broker socket; it also reports both services independently. Device credentials and pinned host keys are validated separately when opening a terminal. Optional packages alone do not establish SSH readiness.
+
+## Plugin terminal
+
+Open **Open SSH Terminal (HTTPS)** from the existing device view or its SSH settings. **Test saved credential** performs actual host-key verification and authentication through the broker. **Connect** starts the bundled Guacamole display; **Disconnect** revokes its browser-bound authorization. No password or private key is returned to the browser. Terminal operations retain the device's monitoring switch and never create devices or replace host-key approvals.
+
+Each console requires the native Inventory/protocol and device permissions plus management access. HTTPS, native CSRF tokens, one-use connection tickets, browser-session binding, live permission/revision checks and bounded authorization leases protect every operation. Browser certificate warnings must be reviewed by the user; the plugin does not bypass them or substitute an HTTP terminal.

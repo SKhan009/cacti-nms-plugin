@@ -10,7 +10,10 @@
 function icct_nms_discovery_assignment($id)
 {
     return db_fetch_row_prepared(
-        'SELECT d.*,p.name,p.protocol,p.enabled,p.interval_seconds,p.stale_seconds,p.refresh_seconds FROM plugin_icct_nms_discovery_devices d LEFT JOIN plugin_icct_nms_discovery_presets p ON p.id=d.preset_id WHERE d.host_id=?',
+        'SELECT ' .
+            'd.*,p.name,p.protocol,p.enabled,p.interval_seconds,p.stale_seconds,p.refresh_seconds ' .
+            'FROM plugin_icct_nms_discovery_devices d LEFT JOIN plugin_icct_nms_discovery_presets p ' .
+            'ON p.id=d.preset_id WHERE d.host_id=?',
         [$id],
     );
 }
@@ -67,7 +70,9 @@ function icct_nms_save_discovery($id, $input)
     }
     // Create a device-specific snapshot, never mutate a preset used by other devices.
     icct_backend_category_execute(
-        'INSERT INTO plugin_icct_nms_discovery_presets(name,protocol,enabled,interval_seconds,stale_seconds,refresh_seconds,updated_by,updated_at) VALUES(?,?,?,?,?,?,?,NOW())',
+        'INSERT INTO ' .
+            'plugin_icct_nms_discovery_presets(name,protocol,enabled,interval_seconds,stale_seconds,refresh_seconds,updated_by,updated_at) ' .
+            'VALUES(?,?,?,?,?,?,?,NOW())',
         array_merge(array_values($preset), [icct_backend_current_user_id()]),
     );
     $presetId = (int) db_fetch_cell('SELECT LAST_INSERT_ID()');
@@ -101,7 +106,11 @@ function icct_nms_save_diagnostics($id, $input)
         ],
     );
     icct_backend_category_execute(
-        'INSERT INTO plugin_icct_nms_diagnostic_profiles(name,tools,ping_count,trace_hops,bandwidth_seconds,mtr_cycles,mtr_background,mtr_interval,arp_interface,pathchar_hops,pathchar_timeout,updated_by,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,NOW())',
+        'INSERT INTO ' .
+            ('plugin_icct_nms_diagnostic_profiles(name,tools,ping_count,trace_hops,bandwidth_seconds,' .
+                'mtr_cycles,mtr_background,mtr_interval,arp_interface,pathchar_hops,pathchar_timeout,' .
+                'updated_by,updated_at) ') .
+            'VALUES(?,?,?,?,?,?,?,?,?,?,?,?,NOW())',
         array_merge(array_values($profile), [icct_backend_current_user_id()]),
     );
     icct_backend_category_execute(
@@ -192,7 +201,10 @@ function icct_nms_save_ssh($id, $input)
     }
     // Keep verification evidence. Existing NMS compares it against the current endpoint before use.
     icct_backend_category_execute(
-        'INSERT INTO plugin_icct_nms_ssh_devices(host_id,preset_id,monitoring,updated_by,updated_at) VALUES(?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE preset_id=VALUES(preset_id),monitoring=VALUES(monitoring),revision=revision+1,updated_by=VALUES(updated_by),updated_at=NOW()',
+        'INSERT INTO ' .
+            'plugin_icct_nms_ssh_devices(host_id,preset_id,monitoring,updated_by,updated_at) ' .
+            'VALUES(?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE ' .
+            'preset_id=VALUES(preset_id),monitoring=VALUES(monitoring),revision=revision+1,updated_by=VALUES(updated_by),updated_at=NOW()',
         [$id, $preset, isset($input['monitoring']) ? 1 : 0, icct_backend_current_user_id()],
     );
 }

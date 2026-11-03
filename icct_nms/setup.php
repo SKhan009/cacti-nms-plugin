@@ -37,7 +37,10 @@ function plugin_icct_nms_upgrade()
 function plugin_icct_nms_check_config()
 {
     if (!icct_nms_check_dependencies()) {
-        $message = 'ICCT NMS requires Cacti 1.2.31+, PHP 8.0+ and PHP json/session/mbstring/openssl/pdo_mysql/xml. Run installation/cli/setup.py plan to review OS requirements.';
+        $message =
+            'ICCT NMS requires Cacti 1.2.31+, PHP 8.0+ and PHP ' .
+            'json/session/mbstring/openssl/pdo_mysql/xml. Run installation/cli/setup.py plan to ' .
+            'review OS requirements.';
         cacti_log($message, false, 'ICCT NMS');
         if (PHP_SAPI === 'cli') {
             fwrite(STDERR, $message . PHP_EOL);
@@ -80,7 +83,10 @@ function icct_nms_setup_registration()
     );
     api_plugin_register_realm(
         'icct_nms',
-        'installation.php,collectors.php,discovery.php,netflow.php,alarms.php,mib_repository.php,topology_configuration.php,rack_placement.php,topology.php,inventory.php,device.php,protocol.php,export.php,diagnostics.php,wizard_save.php,wizard_templates.php,presets.php,ports.php,syslog.php',
+        'installation.php,collectors.php,discovery.php,netflow.php,alarms.php,mib_repository.php,' .
+            'topology_configuration.php,rack_placement.php,topology.php,inventory.php,device.php,' .
+            'protocol.php,export.php,diagnostics.php,wizard_save.php,wizard_templates.php,presets.php,' .
+            'ports.php,syslog.php,ssh_terminal.php,ssh_console.php',
         'View ICCT NMS Inventory',
         1,
     );

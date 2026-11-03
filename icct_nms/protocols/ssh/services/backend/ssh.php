@@ -16,7 +16,8 @@ function icct_backend_ssh_config()
         is_link($path)
     ) {
         throw new RuntimeException(
-            'SSH backend is not configured. Install ssh.config.local.json in the ICCT NMS plugin, or set the administrator-managed icct_backend_ssh_config path in Cacti configuration.',
+            'SSH backend is not configured. Install ssh.config.local.json in the ICCT NMS plugin, or ' .
+                'set the administrator-managed icct_backend_ssh_config path in Cacti configuration.',
         );
     }
     if (
@@ -109,12 +110,13 @@ function icct_backend_ssh_config()
 function icct_backend_ssh_device($id, $require_enabled = true)
 {
     $row = db_fetch_row_prepared(
-        'SELECT h.id AS host_id,h.hostname,h.description,h.poller_id,h.disabled,h.deleted,
-        d.profile_id,d.monitoring,d.interval_seconds,d.host_key,d.verified_endpoint,d.revision AS device_revision,
-        d.preset_id,p.name AS preset_name,p.enabled,p.username,p.auth_method,p.credential_ref,p.port,p.connect_timeout,
-        p.command_timeout,p.retries,p.keepalive,p.revision AS preset_revision
-        FROM host h INNER JOIN plugin_icct_nms_ssh_devices d ON d.host_id=h.id
-        INNER JOIN plugin_icct_nms_ssh_presets p ON p.id=d.preset_id WHERE h.id=?',
+        "SELECT h.id AS host_id,h.hostname,h.description,h.poller_id,h.disabled,h.deleted,\n       " .
+            ' d.profile_id,d.monitoring,d.interval_seconds,d.host_key,d.verified_endpoint,d.revision ' .
+            "AS device_revision,\n        d.preset_id,p.name AS preset_name,p.enabled,p.username," .
+            "p.auth_method,p.credential_ref,p.port,p.connect_timeout,\n        p.command_timeout," .
+            "p.retries,p.keepalive,p.revision AS preset_revision\n        FROM host h INNER JOIN " .
+            "plugin_icct_nms_ssh_devices d ON d.host_id=h.id\n        INNER JOIN " .
+            'plugin_icct_nms_ssh_presets p ON p.id=d.preset_id WHERE h.id=?',
         [(int) $id],
     );
     if (!$row || $row['deleted'] !== '') {
@@ -261,7 +263,10 @@ function icct_backend_ssh_ticket($kind, $host_id = 0)
         }
         if (
             !db_execute_prepared(
-                'INSERT INTO plugin_icct_nms_ssh_sessions (id,ticket_hash,session_hash,session_cookie,user_id,host_id,kind,preset_revision,device_revision,created_at,expires_at,lease_until) VALUES (?,?,?,?,?,?,?,?,?,NOW(),DATE_ADD(NOW(),INTERVAL 30 SECOND),DATE_ADD(NOW(),INTERVAL 12 SECOND))',
+                'INSERT INTO plugin_icct_nms_ssh_sessions ' .
+                    '(id,ticket_hash,session_hash,session_cookie,user_id,host_id,kind,preset_revision,device_revision,created_at,expires_at,lease_until) ' .
+                    'VALUES (?,?,?,?,?,?,?,?,?,NOW(),DATE_ADD(NOW(),INTERVAL 30 ' .
+                    'SECOND),DATE_ADD(NOW(),INTERVAL 12 SECOND))',
                 [
                     $id,
                     hash('sha256', $token),
@@ -281,4 +286,17 @@ function icct_backend_ssh_ticket($kind, $host_id = 0)
         db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)', [$lock]);
     }
     return ['id' => $id, 'token' => $token];
+}
+
+/**
+ * Handles ssh close session.
+ */
+function icct_backend_ssh_close_session($id, $outcome)
+{
+    if (!db_execute_prepared(
+        "UPDATE plugin_icct_nms_ssh_sessions SET status='closed',ended_at=NOW(),outcome=? WHERE id=? AND status IN ('issued','active')",
+        [substr($outcome, 0, 250), $id],
+    )) {
+        throw new RuntimeException('SSH session authorization could not be closed.');
+    }
 }

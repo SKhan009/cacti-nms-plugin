@@ -20,7 +20,9 @@ function icct_mib_edit_revision_state($bundle)
             [$id],
         );
         $state[] = db_fetch_assoc_prepared(
-            'SELECT did.* FROM data_input_data did JOIN data_template_data d ON d.id=did.data_template_data_id WHERE d.data_template_id=? AND d.local_data_id=0 ORDER BY did.data_input_field_id',
+            'SELECT did.* FROM data_input_data did JOIN data_template_data d ON ' .
+                'd.id=did.data_template_data_id WHERE d.data_template_id=? AND d.local_data_id=0 ORDER ' .
+                'BY did.data_input_field_id',
             [$id],
         );
     }
@@ -86,7 +88,8 @@ function icct_mib_edit_open($bundle, $token = null)
         $r['profile_id'] = (int) $data['data_source_profile_id'];
         if (($r['resolved_method'] ?? 'get') === 'get') {
             $nativeOid = db_fetch_cell_prepared(
-                "SELECT did.value FROM data_input_data did JOIN data_input_fields f ON f.id=did.data_input_field_id WHERE did.data_template_data_id=? AND f.data_name='oid'",
+                'SELECT did.value FROM data_input_data did JOIN data_input_fields f ON ' .
+                    'f.id=did.data_input_field_id WHERE did.data_template_data_id=? AND f.data_name=\'oid\'',
                 [$data['id']],
             );
             if ($nativeOid) {
@@ -100,7 +103,8 @@ function icct_mib_edit_open($bundle, $token = null)
         $r['max'] = $rrd['rrd_maximum'];
         $r['ds_type'] = (int) $rrd['data_source_type_id'];
         $graph = db_fetch_row_prepared(
-            'SELECT g.*,t.name,t.multiple,t.test_source FROM graph_templates t JOIN graph_templates_graph g ON g.graph_template_id=t.id AND g.local_graph_id=0 WHERE t.id=?',
+            'SELECT g.*,t.name,t.multiple,t.test_source FROM graph_templates t JOIN ' .
+                'graph_templates_graph g ON g.graph_template_id=t.id AND g.local_graph_id=0 WHERE t.id=?',
             [(int) $row['graph_template_id']],
         );
         if ($graph) {
@@ -225,7 +229,9 @@ function icct_mib_edit_graph($group, $existing)
     $bindings = [];
     foreach (
         db_fetch_assoc_prepared(
-            'SELECT DISTINCT i.local_graph_id,r.local_data_template_rrd_id,r.id FROM graph_templates_item i JOIN data_template_rrd r ON r.id=i.task_item_id WHERE i.graph_template_id=? AND i.local_graph_id>0',
+            'SELECT DISTINCT i.local_graph_id,r.local_data_template_rrd_id,r.id FROM ' .
+                'graph_templates_item i JOIN data_template_rrd r ON r.id=i.task_item_id WHERE ' .
+                'i.graph_template_id=? AND i.local_graph_id>0',
             [$target],
         ) as $binding
     ) {
@@ -391,7 +397,10 @@ function icct_mib_edit_save($id, $token, $stage)
                 if (
                     $record['resolved_method'] === 'get' &&
                     db_fetch_cell_prepared(
-                        "SELECT dt.id FROM data_template dt JOIN data_template_data d ON d.data_template_id=dt.id AND d.local_data_id=0 JOIN data_input_data did ON did.data_template_data_id=d.id JOIN data_input_fields f ON f.id=did.data_input_field_id WHERE f.data_name='oid' AND TRIM(LEADING '.' FROM did.value)=? AND dt.id<>? LIMIT 1",
+                        'SELECT dt.id FROM data_template dt JOIN data_template_data d ON ' .
+                            'd.data_template_id=dt.id AND d.local_data_id=0 JOIN data_input_data did ON ' .
+                            'did.data_template_data_id=d.id JOIN data_input_fields f ON f.id=did.data_input_field_id ' .
+                            'WHERE f.data_name=\'oid\' AND TRIM(LEADING \'.\' FROM did.value)=? AND dt.id<>? LIMIT 1',
                         [$record['oid'], $row['data_template_id']],
                     )
                 ) {

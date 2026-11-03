@@ -133,7 +133,8 @@ function icct_nms_dashboard_save($value)
 {
     $clean = icct_nms_dashboard_validate($value);
     icct_backend_category_execute(
-        'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+        'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+            'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
         [
             'dashboard_user_' . icct_backend_current_user_id(),
             json_encode($clean, JSON_THROW_ON_ERROR),

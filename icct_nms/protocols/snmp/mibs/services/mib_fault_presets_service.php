@@ -118,7 +118,11 @@ function icct_mib_saved_fault_presets($record, $bundle)
     $sources = icct_mib_existing_source_indexes([$record]);
     if (isset($sources[0])) {
         $stored = db_fetch_assoc_prepared(
-            "SELECT DISTINCT m.meta_value,r.id AS metric_id FROM graph_templates_item gi JOIN graph_templates gt ON gt.id=gi.graph_template_id JOIN data_template_rrd r ON r.id=gi.task_item_id JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT('graph_fault_presets_',gt.id) WHERE r.data_template_id=? AND r.local_data_id=0 AND gi.local_graph_id=0",
+            'SELECT DISTINCT m.meta_value,r.id AS metric_id FROM graph_templates_item gi JOIN ' .
+                'graph_templates gt ON gt.id=gi.graph_template_id JOIN data_template_rrd r ON ' .
+                'r.id=gi.task_item_id JOIN plugin_icct_nms_meta m ON ' .
+                'm.meta_key=CONCAT(\'graph_fault_presets_\',gt.id) WHERE r.data_template_id=? AND ' .
+                'r.local_data_id=0 AND gi.local_graph_id=0',
             [(int) $sources[0]],
         );
         foreach ($stored ?: [] as $source) {

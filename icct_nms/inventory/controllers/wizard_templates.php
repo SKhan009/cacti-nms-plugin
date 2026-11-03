@@ -23,7 +23,9 @@ try {
     $id = 0;
     $host = icct_nms_defaults();
     $graphAssociations = db_fetch_assoc_prepared(
-        'SELECT gt.id,gt.name,ht.name AS device_template_name FROM host_template_graph htg JOIN graph_templates gt ON gt.id=htg.graph_template_id JOIN host_template ht ON ht.id=htg.host_template_id WHERE htg.host_template_id=? ORDER BY gt.name',
+        'SELECT gt.id,gt.name,ht.name AS device_template_name FROM host_template_graph htg JOIN ' .
+            'graph_templates gt ON gt.id=htg.graph_template_id JOIN host_template ht ON ' .
+            'ht.id=htg.host_template_id WHERE htg.host_template_id=? ORDER BY gt.name',
         [$templateId],
     );
     foreach ($graphAssociations as &$template) {
@@ -34,7 +36,9 @@ try {
     unset($template);
     $availableGraphTemplates = [];
     $dataQueryAssociations = db_fetch_assoc_prepared(
-        'SELECT sq.id,sq.name,0 AS reindex_method,0 AS item_count,0 AS row_count FROM host_template_snmp_query htq JOIN snmp_query sq ON sq.id=htq.snmp_query_id WHERE htq.host_template_id=? ORDER BY sq.name',
+        'SELECT sq.id,sq.name,0 AS reindex_method,0 AS item_count,0 AS row_count FROM ' .
+            'host_template_snmp_query htq JOIN snmp_query sq ON sq.id=htq.snmp_query_id WHERE ' .
+            'htq.host_template_id=? ORDER BY sq.name',
         [$templateId],
     );
     $availableDataQueries = [];

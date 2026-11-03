@@ -248,14 +248,18 @@ function icct_backend_config_worker_once($collector)
     }
     try {
         icct_backend_category_execute(
-            "UPDATE plugin_icct_nms_config_jobs SET status=IF(operation='write','unverified','failed'),finished_at=NOW(),result_json=? WHERE poller_id=? AND status='running'",
+            'UPDATE plugin_icct_nms_config_jobs SET ' .
+                'status=IF(operation=\'write\',\'unverified\',\'failed\'),finished_at=NOW(),result_json=? ' .
+                'WHERE poller_id=? AND status=\'running\'',
             [
                 json_encode(['error' => 'Previous worker stopped; request was not replayed.']),
                 $collector,
             ],
         );
         icct_backend_category_execute(
-            "UPDATE plugin_icct_nms_config_jobs SET status='failed',finished_at=NOW(),result_json=? WHERE poller_id=? AND status='queued' AND requested_at < DATE_SUB(NOW(),INTERVAL 5 MINUTE)",
+            'UPDATE plugin_icct_nms_config_jobs SET status=\'failed\',finished_at=NOW(),result_json=? ' .
+                'WHERE poller_id=? AND status=\'queued\' AND requested_at < DATE_SUB(NOW(),INTERVAL 5 ' .
+                'MINUTE)',
             [json_encode(['error' => 'Request expired before execution.']), $collector],
         );
         $job = db_fetch_row_prepared(
@@ -348,7 +352,10 @@ function icct_backend_config_worker_once($collector)
         }
         if ($job['operation'] === 'read') {
             icct_backend_category_execute(
-                'INSERT INTO plugin_icct_nms_serial_readings(host_id,field_key,signature,value_json,status,error_text,observed_at) VALUES (?,?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE signature=VALUES(signature),value_json=VALUES(value_json),status=VALUES(status),error_text=VALUES(error_text),observed_at=NOW()',
+                'INSERT INTO ' .
+                    'plugin_icct_nms_serial_readings(host_id,field_key,signature,value_json,status,error_text,observed_at) ' .
+                    'VALUES (?,?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE ' .
+                    'signature=VALUES(signature),value_json=VALUES(value_json),status=VALUES(status),error_text=VALUES(error_text),observed_at=NOW()',
                 [
                     $job['host_id'],
                     $job['field_key'],

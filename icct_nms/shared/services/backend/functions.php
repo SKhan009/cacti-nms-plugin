@@ -163,10 +163,12 @@ function icct_backend_require_device_access($host_id)
                 $where,
             );
         }
-        $allowed = db_fetch_cell("SELECT COUNT(DISTINCT h.id) FROM host h
+        $allowed = db_fetch_cell(
+            "SELECT COUNT(DISTINCT h.id) FROM host h
             LEFT JOIN graph_local gl ON h.id=gl.host_id
             LEFT JOIN graph_templates gt ON gt.id=gl.graph_template_id
-            LEFT JOIN host_template ht ON h.host_template_id=ht.id $where");
+            LEFT JOIN host_template ht ON h.host_template_id=ht.id $where",
+        );
         if ((int) $allowed > 0) {
             return;
         }

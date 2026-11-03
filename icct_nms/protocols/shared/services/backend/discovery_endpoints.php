@@ -111,7 +111,9 @@ function icct_backend_nd_parse_arp($values, $interfaces)
         'neighbors' => [],
         'endpoints' => array_values($rows),
         'scope' =>
-            'IPv4 ARP and IPv4/IPv6 IP-MIB neighbour tables in the configured SNMP context. Empty tables may be unsupported, excluded by the SNMP view, or have no entries. Link-local addresses are scoped to the reporting interface.',
+            'IPv4 ARP and IPv4/IPv6 IP-MIB neighbour tables in the configured SNMP context. Empty ' .
+            'tables may be unsupported, excluded by the SNMP view, or have no entries. Link-local ' .
+            'addresses are scoped to the reporting interface.',
     ];
 }
 
@@ -194,7 +196,8 @@ function icct_backend_nd_parse_fdb($values, $interfaces)
         'neighbors' => [],
         'endpoints' => $rows,
         'scope' =>
-            'Configured SNMP context only. Learned ports may be uplinks or aggregate interfaces; physical members are not inferred. Empty tables do not prove support.',
+            'Configured SNMP context only. Learned ports may be uplinks or aggregate interfaces; ' .
+            'physical members are not inferred. Empty tables do not prove support.',
     ];
 }
 

@@ -1,0 +1,19 @@
+.ssh-terminal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0;
+}
+.ssh-terminal-display {
+    height: 60vh;
+    min-height: 320px;
+    overflow: auto;
+    background: #111;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    outline-offset: 3px;
+}
+#ssh-terminal-status[data-error='true'] {
+    color: #b91c1c;
+}

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Register the Inventory console menu while this presentation plugin is enabled.
  */
@@ -14,14 +15,34 @@ function icct_nms_navigation()
     }
     // Cacti's native external-link flag bypasses its AJAX #main fragment loader.
     // The responsive Inventory is a complete document and opens in its own tab.
-    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/dashboard/controllers/topology.php'] = 'Dashboard';
+    $menu['ICCT NMS'][
+        'EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/dashboard/controllers/topology.php'
+    ] = 'Dashboard';
     $url = $config['url_path'] . 'plugins/icct_nms/inventory/controllers/inventory.php';
     $menu['ICCT NMS']['EXTERNAL::' . $url] = 'Inventory';
-    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/presets/controllers/presets.php'] = 'Presets';
-    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/dashboard/topology/controllers/topology_configuration.php'] = 'Topology Configuration';
-    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/protocols/snmp/mibs/controllers/mib_repository.php'] = 'MIB Repository';
-    $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/alarms/controllers/alarms.php'] = 'Alarms';
-    if (is_realm_allowed(26)) $menu['Settings']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/installation/controllers/installation.php'] = 'Installation Checks';
+    $menu['ICCT NMS'][
+        'EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/presets/controllers/presets.php'
+    ] = 'Presets';
+    $menu['ICCT NMS'][
+        'EXTERNAL::' .
+            $config['url_path'] .
+            'plugins/icct_nms/dashboard/topology/controllers/topology_configuration.php'
+    ] = 'Topology Configuration';
+    $menu['ICCT NMS'][
+        'EXTERNAL::' .
+            $config['url_path'] .
+            'plugins/icct_nms/protocols/snmp/mibs/controllers/mib_repository.php'
+    ] = 'MIB Repository';
+    $menu['ICCT NMS'][
+        'EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/alarms/controllers/alarms.php'
+    ] = 'Alarms';
+    if (is_realm_allowed(26)) {
+        $menu['Settings'][
+            'EXTERNAL::' .
+                $config['url_path'] .
+                'plugins/icct_nms/installation/controllers/installation.php'
+        ] = 'Installation Checks';
+    }
     $menu_glyphs['Settings'] = 'fas fa-cog';
     $menu_glyphs['ICCT NMS'] = 'fas fa-network-wired';
 }

@@ -52,7 +52,9 @@ function icct_mib_repository_usage($bundles)
     $hosts = [];
     foreach (
         db_fetch_assoc(
-            "SELECT h.id,h.description,COALESCE(ht.id,0) AS host_template_id FROM host h LEFT JOIN host_template ht ON ht.id=h.host_template_id WHERE h.deleted='' ORDER BY h.description,h.id",
+            'SELECT h.id,h.description,COALESCE(ht.id,0) AS host_template_id FROM host h LEFT JOIN ' .
+                'host_template ht ON ht.id=h.host_template_id WHERE h.deleted=\'\' ORDER BY ' .
+                'h.description,h.id',
         ) ?:
         [] as $host
     ) {
@@ -67,7 +69,9 @@ function icct_mib_repository_usage($bundles)
     }
     $associations =
         db_fetch_assoc(
-            'SELECT hg.host_id,hg.graph_template_id FROM host_graph hg JOIN graph_templates gt ON gt.id=hg.graph_template_id UNION SELECT gl.host_id,gl.graph_template_id FROM graph_local gl JOIN graph_templates gt ON gt.id=gl.graph_template_id WHERE gl.host_id>0',
+            'SELECT hg.host_id,hg.graph_template_id FROM host_graph hg JOIN graph_templates gt ON ' .
+                'gt.id=hg.graph_template_id UNION SELECT gl.host_id,gl.graph_template_id FROM ' .
+                'graph_local gl JOIN graph_templates gt ON gt.id=gl.graph_template_id WHERE gl.host_id>0',
         ) ?:
         [];
     foreach ($associations as $association) {
@@ -81,7 +85,13 @@ function icct_mib_repository_usage($bundles)
     }
     $sources =
         db_fetch_assoc(
-            "SELECT DISTINCT dl.host_id,did.value AS oid FROM data_local dl JOIN data_template dt ON dt.id=dl.data_template_id JOIN data_template_data dtd ON dtd.local_data_id=dl.id JOIN data_input_data did ON did.data_template_data_id=dtd.id JOIN data_input_fields f ON f.id=did.data_input_field_id WHERE dl.host_id>0 AND f.data_name='oid' AND did.value<>'' UNION SELECT pi.host_id,pi.arg1 AS oid FROM poller_item pi JOIN data_local dl ON dl.id=pi.local_data_id AND dl.host_id=pi.host_id JOIN data_template dt ON dt.id=dl.data_template_id WHERE pi.action=0 AND pi.host_id>0",
+            'SELECT DISTINCT dl.host_id,did.value AS oid FROM data_local dl JOIN data_template dt ON ' .
+                'dt.id=dl.data_template_id JOIN data_template_data dtd ON dtd.local_data_id=dl.id JOIN ' .
+                'data_input_data did ON did.data_template_data_id=dtd.id JOIN data_input_fields f ON ' .
+                'f.id=did.data_input_field_id WHERE dl.host_id>0 AND f.data_name=\'oid\' AND did.value<>\'\' ' .
+                'UNION SELECT pi.host_id,pi.arg1 AS oid FROM poller_item pi JOIN data_local dl ON ' .
+                'dl.id=pi.local_data_id AND dl.host_id=pi.host_id JOIN data_template dt ON ' .
+                'dt.id=dl.data_template_id WHERE pi.action=0 AND pi.host_id>0',
         ) ?:
         [];
     foreach ($sources as $source) {

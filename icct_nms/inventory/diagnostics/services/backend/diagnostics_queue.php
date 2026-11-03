@@ -93,7 +93,9 @@ function icct_backend_diag_execution_context($job, $collector)
 function icct_backend_diag_job($id)
 {
     $job = db_fetch_row_prepared(
-        'SELECT id,host_id,user_id,poller_id,tool,config_hash,status,requested_at,started_at,finished_at FROM plugin_icct_nms_diagnostic_jobs WHERE id=? AND user_id=?',
+        'SELECT ' .
+            'id,host_id,user_id,poller_id,tool,config_hash,status,requested_at,started_at,finished_at ' .
+            'FROM plugin_icct_nms_diagnostic_jobs WHERE id=? AND user_id=?',
         [(int) $id, icct_backend_current_user_id()],
     );
     if (!$job) {
@@ -111,7 +113,8 @@ function icct_backend_diag_job($id)
         $job['status'] = 'expired';
         $job['result_json'] = json_encode([
             'output' =>
-                'The collector did not start or finish this test in time. Check its diagnostic runner and retry. This test will not be repeated automatically.',
+                'The collector did not start or finish this test in time. Check its diagnostic runner ' .
+                'and retry. This test will not be repeated automatically.',
         ]);
     }
     return $job;
@@ -134,7 +137,10 @@ function icct_backend_diag_poll()
     try {
         // After a crashed worker, do not repeat potentially disruptive bandwidth traffic.
         icct_backend_category_execute(
-            "UPDATE plugin_icct_nms_diagnostic_jobs SET status='failed',finished_at=NOW(),result_json=? WHERE poller_id=? AND ((status='running' AND started_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE)) OR (status='queued' AND requested_at < DATE_SUB(NOW(), INTERVAL 15 SECOND)))",
+            'UPDATE plugin_icct_nms_diagnostic_jobs SET ' .
+                'status=\'failed\',finished_at=NOW(),result_json=? WHERE poller_id=? AND ' .
+                '((status=\'running\' AND started_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE)) OR ' .
+                '(status=\'queued\' AND requested_at < DATE_SUB(NOW(), INTERVAL 15 SECOND)))',
             [
                 json_encode([
                     'output' =>
@@ -214,7 +220,8 @@ function icct_backend_diag_run($host_id, $tool)
         ]) !== 1
     ) {
         throw new RuntimeException(
-            'The ICCT NMS plugin is disabled in Cacti. Enable it in Cacti Plugin Management so the poller can start the diagnostic runner. No test was submitted.',
+            'The ICCT NMS plugin is disabled in Cacti. Enable it in Cacti Plugin Management so the ' .
+                'poller can start the diagnostic runner. No test was submitted.',
         );
     }
     if (
@@ -230,7 +237,10 @@ function icct_backend_diag_run($host_id, $tool)
     }
     try {
         $pending = db_fetch_row_prepared(
-            "SELECT id FROM plugin_icct_nms_diagnostic_jobs WHERE user_id=? AND host_id=? AND tool=? AND ((status='queued' AND requested_at > DATE_SUB(NOW(),INTERVAL 15 SECOND)) OR (status='running' AND started_at > DATE_SUB(NOW(),INTERVAL 2 MINUTE))) ORDER BY id DESC LIMIT 1",
+            'SELECT id FROM plugin_icct_nms_diagnostic_jobs WHERE user_id=? AND host_id=? AND tool=? ' .
+                'AND ((status=\'queued\' AND requested_at > DATE_SUB(NOW(),INTERVAL 15 SECOND)) OR ' .
+                '(status=\'running\' AND started_at > DATE_SUB(NOW(),INTERVAL 2 MINUTE))) ORDER BY id DESC ' .
+                'LIMIT 1',
             [$user, (int) $host_id, (string) $tool],
         );
         if ($pending) {
@@ -238,7 +248,9 @@ function icct_backend_diag_run($host_id, $tool)
         }
         if (
             (int) db_fetch_cell_prepared(
-                "SELECT COUNT(*) FROM plugin_icct_nms_diagnostic_jobs WHERE user_id=? AND ((status='queued' AND requested_at > DATE_SUB(NOW(), INTERVAL 15 SECOND)) OR (status='running' AND started_at > DATE_SUB(NOW(), INTERVAL 2 MINUTE)))",
+                'SELECT COUNT(*) FROM plugin_icct_nms_diagnostic_jobs WHERE user_id=? AND ' .
+                    '((status=\'queued\' AND requested_at > DATE_SUB(NOW(), INTERVAL 15 SECOND)) OR ' .
+                    '(status=\'running\' AND started_at > DATE_SUB(NOW(), INTERVAL 2 MINUTE)))',
                 [$user],
             )
         ) {
@@ -248,7 +260,9 @@ function icct_backend_diag_run($host_id, $tool)
         }
         if (
             (int) db_fetch_cell_prepared(
-                "SELECT COUNT(*) FROM plugin_icct_nms_diagnostic_jobs WHERE poller_id=? AND ((status='queued' AND requested_at > DATE_SUB(NOW(), INTERVAL 15 SECOND)) OR (status='running' AND started_at > DATE_SUB(NOW(), INTERVAL 2 MINUTE)))",
+                'SELECT COUNT(*) FROM plugin_icct_nms_diagnostic_jobs WHERE poller_id=? AND ' .
+                    '((status=\'queued\' AND requested_at > DATE_SUB(NOW(), INTERVAL 15 SECOND)) OR ' .
+                    '(status=\'running\' AND started_at > DATE_SUB(NOW(), INTERVAL 2 MINUTE)))',
                 [(int) $row['poller_id']],
             ) >= 1
         ) {
@@ -259,7 +273,8 @@ function icct_backend_diag_run($host_id, $tool)
         $runner = icct_backend_diag_runner((int) $row['poller_id']);
         if (!$runner) {
             throw new RuntimeException(
-                'The collector diagnostic runner is offline. The existing Cacti poller starts it automatically; retry when it is ready. No test was submitted.',
+                'The collector diagnostic runner is offline. The existing Cacti poller starts it ' .
+                    'automatically; retry when it is ready. No test was submitted.',
             );
         }
         if (empty($runner['tools'][$tool])) {
@@ -268,7 +283,9 @@ function icct_backend_diag_run($host_id, $tool)
             );
         }
         icct_backend_category_execute(
-            "INSERT INTO plugin_icct_nms_diagnostic_jobs (host_id,poller_id,user_id,tool,config_hash,status,result_json,requested_at) VALUES (?,?,?,?,?,'queued','',NOW())",
+            'INSERT INTO plugin_icct_nms_diagnostic_jobs ' .
+                '(host_id,poller_id,user_id,tool,config_hash,status,result_json,requested_at) VALUES ' .
+                '(?,?,?,?,?,\'queued\',\'\',NOW())',
             [
                 (int) $host_id,
                 (int) $row['poller_id'],
@@ -351,7 +368,12 @@ function icct_backend_mtr_monitor_once($collector)
             return false;
         }
         $devices = db_fetch_assoc_prepared(
-            "SELECT h.id AS host_id,p.tools,p.updated_by FROM host h JOIN plugin_icct_nms_diagnostic_devices d ON d.host_id=h.id JOIN plugin_icct_nms_diagnostic_profiles p ON p.id=d.profile_id WHERE h.poller_id=? AND h.disabled='' AND h.deleted='' AND p.mtr_background=1 ORDER BY COALESCE((SELECT MAX(j.requested_at) FROM plugin_icct_nms_diagnostic_jobs j WHERE j.host_id=h.id AND j.is_background=1),'1970-01-01') LIMIT 32",
+            'SELECT h.id AS host_id,p.tools,p.updated_by FROM host h JOIN ' .
+                'plugin_icct_nms_diagnostic_devices d ON d.host_id=h.id JOIN ' .
+                'plugin_icct_nms_diagnostic_profiles p ON p.id=d.profile_id WHERE h.poller_id=? AND ' .
+                'h.disabled=\'\' AND h.deleted=\'\' AND p.mtr_background=1 ORDER BY COALESCE((SELECT ' .
+                'MAX(j.requested_at) FROM plugin_icct_nms_diagnostic_jobs j WHERE j.host_id=h.id AND ' .
+                'j.is_background=1),\'1970-01-01\') LIMIT 32',
             [$collector],
         );
         foreach ($devices as $device) {
@@ -386,7 +408,9 @@ function icct_backend_mtr_monitor_once($collector)
                         continue;
                     }
                     icct_backend_category_execute(
-                        "INSERT INTO plugin_icct_nms_diagnostic_jobs(host_id,poller_id,user_id,tool,config_hash,is_background,status,result_json,requested_at) VALUES(?,?,?,?,?,1,'queued','',NOW())",
+                        'INSERT INTO ' .
+                            'plugin_icct_nms_diagnostic_jobs(host_id,poller_id,user_id,tool,config_hash,is_background,status,result_json,requested_at) ' .
+                            'VALUES(?,?,?,?,?,1,\'queued\',\'\',NOW())',
                         [$job['host_id'], $collector, $job['user_id'], $tool, $hash],
                     );
                     return true;

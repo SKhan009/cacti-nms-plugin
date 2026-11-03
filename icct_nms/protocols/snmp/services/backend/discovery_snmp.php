@@ -293,7 +293,9 @@ function icct_backend_nd_discovery_session($host)
     require_once $config['base_path'] . '/lib/snmp.php';
     if (!$config['php_snmp_support'] || !extension_loaded('snmp')) {
         throw new RuntimeException(
-            'PHP SNMP is unavailable on the assigned Cacti collector. Install and enable php-snmp, then restart Apache/PHP. lldpcli and ip neigh show the local RHEL neighbour cache; they do not provide SNMP discovery evidence for this device.',
+            'PHP SNMP is unavailable on the assigned Cacti collector. Install and enable php-snmp, ' .
+                'then restart Apache/PHP. lldpcli and ip neigh show the local RHEL neighbour cache; they ' .
+                'do not provide SNMP discovery evidence for this device.',
         );
     }
     if ($host['disabled'] !== '' || (int) $host['poller_id'] !== (int) $config['poller_id']) {

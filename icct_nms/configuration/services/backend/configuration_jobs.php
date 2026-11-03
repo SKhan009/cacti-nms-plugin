@@ -34,7 +34,12 @@ function icct_backend_config_target($host_id, $authorize = true)
         icct_backend_require_device_access($host_id);
     }
     $host = db_fetch_row_prepared(
-        "SELECT h.id,h.description,h.hostname,h.site_id,h.poller_id,h.disabled,h.snmp_version,h.snmp_port,h.snmp_timeout,h.snmp_community,h.snmp_username,h.snmp_password,h.snmp_auth_protocol,h.snmp_priv_passphrase,h.snmp_priv_protocol,h.snmp_context,h.snmp_engine_id FROM host h JOIN poller p ON p.id=h.poller_id WHERE h.id=? AND h.deleted='' AND p.disabled=''",
+        'SELECT ' .
+            ('h.id,h.description,h.hostname,h.site_id,h.poller_id,h.disabled,h.snmp_version,h.snmp_port,' .
+                'h.snmp_timeout,h.snmp_community,h.snmp_username,h.snmp_password,h.snmp_auth_protocol,' .
+                'h.snmp_priv_passphrase,h.snmp_priv_protocol,h.snmp_context,h.snmp_engine_id ') .
+            'FROM host h JOIN poller p ON p.id=h.poller_id WHERE h.id=? AND h.deleted=\'\' AND ' .
+            'p.disabled=\'\'',
         [$host_id],
     );
     if (!$host || $host['disabled'] !== '') {
@@ -60,7 +65,9 @@ function icct_backend_config_target($host_id, $authorize = true)
             throw new RuntimeException('Serial protocol is disabled for this device.');
         }
         $serial = db_fetch_row_prepared(
-            'SELECT d.device_address,d.revision AS device_revision,c.* FROM plugin_icct_nms_serial_devices d JOIN plugin_icct_nms_serial_connections c ON c.id=d.connection_id WHERE d.host_id=?',
+            'SELECT d.device_address,d.revision AS device_revision,c.* FROM ' .
+                'plugin_icct_nms_serial_devices d JOIN plugin_icct_nms_serial_connections c ON ' .
+                'c.id=d.connection_id WHERE d.host_id=?',
             [$host_id],
         );
         if (

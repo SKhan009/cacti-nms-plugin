@@ -49,7 +49,8 @@ function icct_nms_netflow_command($args, $timeout = 20)
 function icct_nms_netflow_assignments()
 {
     return db_fetch_assoc_prepared(
-        "SELECT d.*,h.poller_id,h.disabled FROM plugin_icct_nms_netflow_devices d JOIN host h ON h.id=d.host_id WHERE h.deleted='' AND h.disabled='' AND d.enabled=1 AND h.poller_id=?",
+        'SELECT d.*,h.poller_id,h.disabled FROM plugin_icct_nms_netflow_devices d JOIN host h ON ' .
+            'h.id=d.host_id WHERE h.deleted=\'\' AND h.disabled=\'\' AND d.enabled=1 AND h.poller_id=?',
         [icct_backend_inventory_collector_id()],
     );
 }
@@ -153,14 +154,26 @@ function icct_nms_netflow_import_file($assignment, $file)
                     ((int) date('i', strtotime($flow['last_seen'])) % 5) * 60,
             );
             icct_backend_category_execute(
-                'INSERT INTO plugin_icct_nms_netflow_buckets(host_id,bucket_start,total_bytes,total_packets,total_flows,updated_at) VALUES(?,?,?,?,1,NOW()) ON DUPLICATE KEY UPDATE total_bytes=total_bytes+VALUES(total_bytes),total_packets=total_packets+VALUES(total_packets),total_flows=total_flows+1,updated_at=NOW()',
+                'INSERT INTO ' .
+                    'plugin_icct_nms_netflow_buckets(host_id,bucket_start,total_bytes,total_packets,total_flows,updated_at) ' .
+                    'VALUES(?,?,?,?,1,NOW()) ON DUPLICATE KEY UPDATE ' .
+                    'total_bytes=total_bytes+VALUES(total_bytes),total_packets=total_packets+VALUES(total_packets),total_flows=total_flows+1,updated_at=NOW()',
                 [$id, $bucket, $flow['bytes'], $flow['packets']],
             );
         }
         $bytes = array_sum(array_column($flows, 'bytes'));
         $packets = array_sum(array_column($flows, 'packets'));
         icct_backend_category_execute(
-            "INSERT INTO plugin_icct_nms_netflow_state(host_id,status,last_attempt,last_success,last_data_at,last_error,collector_path,total_bytes,total_packets,total_flows,top_json,updated_at) VALUES(?,'receiving',NOW(),NOW(),IF(? > 0,NOW(),NULL),'',?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE status=IF(? > 0,'receiving',status),last_attempt=NOW(),last_success=NOW(),last_data_at=IF(? > 0,NOW(),last_data_at),last_error='',collector_path=VALUES(collector_path),total_bytes=total_bytes+VALUES(total_bytes),total_packets=total_packets+VALUES(total_packets),total_flows=total_flows+VALUES(total_flows),updated_at=NOW()",
+            'INSERT INTO ' .
+                ('plugin_icct_nms_netflow_state(host_id,status,last_attempt,last_success,last_data_at,' .
+                    'last_error,collector_path,total_bytes,total_packets,total_flows,top_json,updated_at) ') .
+                'VALUES(?,\'receiving\',NOW(),NOW(),IF(? > 0,NOW(),NULL),\'\',?,?,?,?,?,NOW()) ON DUPLICATE ' .
+                'KEY UPDATE status=IF(? > ' .
+                '0,\'receiving\',status),last_attempt=NOW(),last_success=NOW(),last_data_at=IF(? > ' .
+                ("0,NOW(),last_data_at),last_error='',collector_path=VALUES(collector_path)," .
+                    'total_bytes=total_bytes+VALUES(total_bytes),' .
+                    'total_packets=total_packets+VALUES(total_packets),' .
+                    'total_flows=total_flows+VALUES(total_flows),updated_at=NOW()'),
             [
                 $id,
                 count($flows),
@@ -187,7 +200,12 @@ function icct_nms_netflow_anomalies($id)
         return;
     }
     $rows = db_fetch_assoc_prepared(
-        'SELECT src_addr,COUNT(DISTINCT dst_addr) AS peers,COUNT(DISTINCT dst_port) AS ports,SUM(bytes) AS bytes,SUM(packets) AS packets,SUM(CASE WHEN tcp_flags LIKE ? AND tcp_flags NOT LIKE ? THEN packets ELSE 0 END) AS syn_packets,SUM(CASE WHEN dst_port IN(135,139,445) THEN 1 ELSE 0 END) AS smb FROM plugin_icct_nms_netflow_flows WHERE host_id=? AND last_seen>=DATE_SUB(NOW(),INTERVAL 5 MINUTE) GROUP BY src_addr ORDER BY bytes DESC',
+        'SELECT src_addr,COUNT(DISTINCT dst_addr) AS peers,COUNT(DISTINCT dst_port) AS ' .
+            'ports,SUM(bytes) AS bytes,SUM(packets) AS packets,SUM(CASE WHEN tcp_flags LIKE ? AND ' .
+            'tcp_flags NOT LIKE ? THEN packets ELSE 0 END) AS syn_packets,SUM(CASE WHEN dst_port ' .
+            'IN(135,139,445) THEN 1 ELSE 0 END) AS smb FROM plugin_icct_nms_netflow_flows WHERE ' .
+            'host_id=? AND last_seen>=DATE_SUB(NOW(),INTERVAL 5 MINUTE) GROUP BY src_addr ORDER BY ' .
+            'bytes DESC',
         ['%S%', '%A%', (int) $id],
     );
     $findings = [];
@@ -229,7 +247,9 @@ function icct_nms_netflow_anomalies($id)
     }
     $total = array_sum(array_column($rows, 'bytes'));
     $baseline = (float) db_fetch_cell_prepared(
-        'SELECT AVG(total_bytes) FROM plugin_icct_nms_netflow_buckets WHERE host_id=? AND bucket_start BETWEEN DATE_SUB(NOW(),INTERVAL 65 MINUTE) AND DATE_SUB(NOW(),INTERVAL 10 MINUTE)',
+        'SELECT AVG(total_bytes) FROM plugin_icct_nms_netflow_buckets WHERE host_id=? AND ' .
+            'bucket_start BETWEEN DATE_SUB(NOW(),INTERVAL 65 MINUTE) AND DATE_SUB(NOW(),INTERVAL 10 ' .
+            'MINUTE)',
         [(int) $id],
     );
     if (
@@ -260,7 +280,9 @@ function icct_nms_netflow_anomalies($id)
             );
         } else {
             icct_backend_category_execute(
-                "INSERT INTO plugin_icct_nms_netflow_events(host_id,event_key,severity,state,message,opened_at,updated_at) VALUES(?,?,?,'Active',?,NOW(),NOW())",
+                'INSERT INTO ' .
+                    'plugin_icct_nms_netflow_events(host_id,event_key,severity,state,message,opened_at,updated_at) ' .
+                    'VALUES(?,?,?,\'Active\',?,NOW(),NOW())',
                 [(int) $id, $key, $severity, $message],
             );
         }

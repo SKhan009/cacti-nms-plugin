@@ -47,11 +47,13 @@
         ['h3', 'Pathchar raw-socket permission'],
         [
             'p',
-            'If Pathchar reports “socket: Operation not permitted”, an administrator can grant the pchar executable raw-socket access. These commands assume the collector runs as apache.',
+            'If Pathchar reports “socket: Operation not permitted”, an administrator can grant the ' +
+                'pchar executable raw-socket access. These commands assume the collector runs as apache.',
         ],
         [
             'pre',
-            'sudo chown root:apache /usr/local/bin/pchar\nsudo chmod 750 /usr/local/bin/pchar\nsudo setcap cap_net_raw=ep /usr/local/bin/pchar\ngetcap /usr/local/bin/pchar',
+            'sudo chown root:apache /usr/local/bin/pchar\nsudo chmod 750 /usr/local/bin/pchar\nsudo ' +
+                'setcap cap_net_raw=ep /usr/local/bin/pchar\ngetcap /usr/local/bin/pchar',
         ],
         [
             'p',

@@ -1,6 +1,8 @@
 <?php
 
 /** Manual connections are plugin metadata; discovery remains owned by the collectors. */
+require_once __DIR__ . '/../../../protocols/shared/services/backend/discovery_management_addresses.php';
+
 function icct_nms_manual_links()
 {
     $json = db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?', [
@@ -76,7 +78,8 @@ function icct_nms_connection_save($input)
                 'updated_at' => date('Y-m-d H:i:s'),
             ];
         icct_backend_category_execute(
-            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
             ['topology_manual_links', json_encode($links, JSON_THROW_ON_ERROR)],
         );
     } finally {
@@ -100,7 +103,8 @@ function icct_nms_connection_delete($key)
         }
         unset($links[$key]);
         icct_backend_category_execute(
-            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
             ['topology_manual_links', json_encode($links, JSON_THROW_ON_ERROR)],
         );
     } finally {
@@ -117,18 +121,6 @@ function icct_nms_discovery_current($snapshot, $host)
         hash_equals(icct_backend_nd_hash($host), (string) ($snapshot['config_hash'] ?? '')) &&
         strtotime($snapshot['succeeded_at'] ?? '') >= time() - (int) $host['stale_seconds'];
 }
-/** Normalize collector address objects and legacy strings for display and matching. */
-function icct_nms_discovery_addresses($values)
-{
-    $addresses = [];
-    foreach ($values as $value) {
-        $address = is_array($value) ? $value['address'] ?? '' : $value;
-        if (is_string($address) && filter_var($address, FILTER_VALIDATE_IP)) {
-            $addresses[$address] = $address;
-        }
-    }
-    return array_values($addresses);
-}
 function icct_nms_topology_discovery_rows($devices)
 {
     $rows = [];
@@ -141,7 +133,8 @@ function icct_nms_topology_discovery_rows($devices)
         $selectedMethods = icct_backend_nd_host_methods($host);
         foreach (
             db_fetch_assoc_prepared(
-                'SELECT protocol,status,succeeded_at,attempted_at,config_hash,data_json,error FROM plugin_icct_nms_discovery_snapshots WHERE host_id=? AND protocol IN (?,?,?,?)',
+                'SELECT protocol,status,succeeded_at,attempted_at,config_hash,data_json,error FROM ' .
+                    'plugin_icct_nms_discovery_snapshots WHERE host_id=? AND protocol IN (?,?,?,?)',
                 [$device['id'], 'lldp', 'cdp', 'arp', 'fdb'],
             ) as $snapshot
         ) {
@@ -162,7 +155,7 @@ function icct_nms_topology_discovery_rows($devices)
                         ($item['peer_label'] ?? ($item['ip'] ?? ($item['mac'] ?? 'Unknown'))),
                     'address' => implode(
                         ', ',
-                        icct_nms_discovery_addresses(
+                        icct_nms_management_addresses(
                             $item['management_addresses'] ??
                                 (isset($item['ip']) ? [$item['ip']] : []),
                         ),

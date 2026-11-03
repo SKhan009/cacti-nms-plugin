@@ -5,7 +5,11 @@ require_once __DIR__ . '/../../ports/services/port_monitoring_service.php';
 function icct_nms_fault_catalogue()
 {
     return db_fetch_assoc(
-        'SELECT DISTINCT gt.id AS template_id,gt.name AS template_name,dtr.id AS metric_id,dtr.data_template_id,dtr.data_source_name,dtr.rrd_minimum,dtr.rrd_maximum FROM graph_templates gt JOIN graph_templates_item gti ON gti.graph_template_id=gt.id AND gti.local_graph_id=0 JOIN data_template_rrd dtr ON dtr.id=gti.task_item_id WHERE dtr.local_data_id=0 ORDER BY gt.name,dtr.data_source_name',
+        'SELECT DISTINCT gt.id AS template_id,gt.name AS template_name,dtr.id AS ' .
+            'metric_id,dtr.data_template_id,dtr.data_source_name,dtr.rrd_minimum,dtr.rrd_maximum ' .
+            'FROM graph_templates gt JOIN graph_templates_item gti ON gti.graph_template_id=gt.id ' .
+            'AND gti.local_graph_id=0 JOIN data_template_rrd dtr ON dtr.id=gti.task_item_id WHERE ' .
+            'dtr.local_data_id=0 ORDER BY gt.name,dtr.data_source_name',
     );
 }
 /** Convert only explicitly declared unit factors; never infer scaling from an alarm bound. */
@@ -65,25 +69,30 @@ function icct_nms_fault_parameters($id)
     }
     if ($id) {
         $rows = db_fetch_assoc_prepared(
-            'SELECT DISTINCT pi.arg1 AS oid,r.data_source_name,dt.name,origin.id AS metric_id,gti.graph_template_id AS template_id
-            FROM poller_item pi JOIN data_local dl ON dl.id=pi.local_data_id
-            JOIN data_template dt ON dt.id=dl.data_template_id
-            JOIN data_template_rrd r ON r.local_data_id=dl.id AND r.data_source_name=pi.rrd_name
-            LEFT JOIN data_template_rrd origin ON origin.local_data_id=0 AND origin.data_template_id=r.data_template_id AND origin.data_source_name=r.data_source_name
-            LEFT JOIN graph_templates_item gti ON gti.task_item_id=origin.id AND gti.local_graph_id=0
-            WHERE dl.host_id=? AND pi.action=0 ORDER BY dt.name,r.data_source_name',
+            'SELECT DISTINCT pi.arg1 AS oid,r.data_source_name,dt.name,origin.id AS metric_id,' .
+                "gti.graph_template_id AS template_id\n            FROM poller_item pi JOIN data_local dl " .
+                "ON dl.id=pi.local_data_id\n            JOIN data_template dt ON " .
+                "dt.id=dl.data_template_id\n            JOIN data_template_rrd r ON r.local_data_id=dl.id " .
+                "AND r.data_source_name=pi.rrd_name\n            LEFT JOIN data_template_rrd origin ON " .
+                'origin.local_data_id=0 AND origin.data_template_id=r.data_template_id AND ' .
+                "origin.data_source_name=r.data_source_name\n            LEFT JOIN graph_templates_item " .
+                "gti ON gti.task_item_id=origin.id AND gti.local_graph_id=0\n            WHERE " .
+                'dl.host_id=? AND pi.action=0 ORDER BY dt.name,r.data_source_name',
             [$id],
         );
         // Native single-OID inputs may exist before Cacti rebuilds its poller cache.
         $inputs = db_fetch_assoc_prepared(
-            "SELECT DISTINCT did.value AS oid,r.data_source_name,dt.name,origin.id AS metric_id,gti.graph_template_id AS template_id
-            FROM data_local dl JOIN data_template_data dtd ON dtd.local_data_id=dl.id
-            JOIN data_input_data did ON did.data_template_data_id=dtd.id
-            JOIN data_input_fields f ON f.id=did.data_input_field_id AND f.data_name='oid'
-            JOIN data_template dt ON dt.id=dl.data_template_id JOIN data_template_rrd r ON r.local_data_id=dl.id
-            LEFT JOIN data_template_rrd origin ON origin.local_data_id=0 AND origin.data_template_id=r.data_template_id AND origin.data_source_name=r.data_source_name
-            LEFT JOIN graph_templates_item gti ON gti.task_item_id=origin.id AND gti.local_graph_id=0
-            WHERE dl.host_id=? ORDER BY dt.name,r.data_source_name",
+            'SELECT DISTINCT did.value AS oid,r.data_source_name,dt.name,origin.id AS metric_id,' .
+                "gti.graph_template_id AS template_id\n            FROM data_local dl JOIN " .
+                "data_template_data dtd ON dtd.local_data_id=dl.id\n            JOIN data_input_data did " .
+                "ON did.data_template_data_id=dtd.id\n            JOIN data_input_fields f ON " .
+                "f.id=did.data_input_field_id AND f.data_name='oid'\n            JOIN data_template dt ON " .
+                "dt.id=dl.data_template_id JOIN data_template_rrd r ON r.local_data_id=dl.id\n            " .
+                'LEFT JOIN data_template_rrd origin ON origin.local_data_id=0 AND ' .
+                'origin.data_template_id=r.data_template_id AND ' .
+                "origin.data_source_name=r.data_source_name\n            LEFT JOIN graph_templates_item " .
+                "gti ON gti.task_item_id=origin.id AND gti.local_graph_id=0\n            WHERE " .
+                'dl.host_id=? ORDER BY dt.name,r.data_source_name',
             [$id],
         );
         foreach (array_merge($rows ?: [], $inputs ?: []) as $row) {
@@ -158,7 +167,10 @@ function icct_nms_fault_rules($id)
     $rules = is_array($rules) ? $rules : [];
     $overrides = array_fill_keys(array_filter(array_column($rules, 'preset_key')), true);
     $presets = db_fetch_assoc_prepared(
-        "SELECT DISTINCT m.meta_value FROM graph_templates gt JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT('graph_fault_presets_',gt.id) WHERE EXISTS(SELECT 1 FROM host_graph hg WHERE hg.graph_template_id=gt.id AND hg.host_id=?) OR EXISTS(SELECT 1 FROM graph_local gl WHERE gl.graph_template_id=gt.id AND gl.host_id=?)",
+        'SELECT DISTINCT m.meta_value FROM graph_templates gt JOIN plugin_icct_nms_meta m ON ' .
+            'm.meta_key=CONCAT(\'graph_fault_presets_\',gt.id) WHERE EXISTS(SELECT 1 FROM host_graph ' .
+            'hg WHERE hg.graph_template_id=gt.id AND hg.host_id=?) OR EXISTS(SELECT 1 FROM ' .
+            'graph_local gl WHERE gl.graph_template_id=gt.id AND gl.host_id=?)',
         [$id, $id],
     );
     foreach ($presets ?: [] as $preset) {
@@ -360,7 +372,8 @@ function icct_nms_save_faults($id, $input)
     );
     $rules = icct_nms_fault_validate($rules, icct_nms_fault_catalogue(), $associated);
     icct_backend_category_execute(
-        'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+        'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+            'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
         ['fault_rules_' . $id, json_encode($rules, JSON_THROW_ON_ERROR)],
     );
 }
@@ -408,7 +421,13 @@ function icct_backend_collect_faults()
     $now = time();
     $interval = max(60, (int) read_config_option('poller_interval'));
     $hosts = db_fetch_assoc_prepared(
-        "SELECT h.* FROM host h WHERE h.deleted='' AND h.disabled='' AND h.poller_id=? AND (EXISTS(SELECT 1 FROM plugin_icct_nms_meta m WHERE m.meta_key=CONCAT('fault_rules_',h.id)) OR EXISTS(SELECT 1 FROM host_graph hg JOIN plugin_icct_nms_meta p ON p.meta_key=CONCAT('graph_fault_presets_',hg.graph_template_id) WHERE hg.host_id=h.id) OR EXISTS(SELECT 1 FROM graph_local gl JOIN plugin_icct_nms_meta p ON p.meta_key=CONCAT('graph_fault_presets_',gl.graph_template_id) WHERE gl.host_id=h.id))",
+        'SELECT h.* FROM host h WHERE h.deleted=\'\' AND h.disabled=\'\' AND h.poller_id=? AND ' .
+            '(EXISTS(SELECT 1 FROM plugin_icct_nms_meta m WHERE ' .
+            'm.meta_key=CONCAT(\'fault_rules_\',h.id)) OR EXISTS(SELECT 1 FROM host_graph hg JOIN ' .
+            'plugin_icct_nms_meta p ON ' .
+            'p.meta_key=CONCAT(\'graph_fault_presets_\',hg.graph_template_id) WHERE hg.host_id=h.id) ' .
+            'OR EXISTS(SELECT 1 FROM graph_local gl JOIN plugin_icct_nms_meta p ON ' .
+            'p.meta_key=CONCAT(\'graph_fault_presets_\',gl.graph_template_id) WHERE gl.host_id=h.id))',
         [$collector],
     );
     foreach ($hosts as $host) {
@@ -452,7 +471,14 @@ function icct_backend_collect_faults()
             }
             // Bind the chosen template source to actual graphs on this host; never poll another host's data.
             $sources = db_fetch_assoc_prepared(
-                'SELECT DISTINCT gl.id AS graph_id,gtg.title_cache,dtr.local_data_id,dtr.data_source_name FROM graph_local gl JOIN graph_templates_graph gtg ON gtg.local_graph_id=gl.id JOIN graph_templates_item gti ON gti.local_graph_id=gl.id JOIN data_template_rrd dtr ON dtr.id=gti.task_item_id JOIN data_template_rrd origin ON origin.id=? AND origin.data_template_id=dtr.data_template_id AND origin.data_source_name=dtr.data_source_name WHERE gl.host_id=? AND gl.graph_template_id=?',
+                'SELECT DISTINCT gl.id AS ' .
+                    'graph_id,gtg.title_cache,dtr.local_data_id,dtr.data_source_name FROM graph_local gl ' .
+                    'JOIN graph_templates_graph gtg ON gtg.local_graph_id=gl.id JOIN graph_templates_item ' .
+                    'gti ON gti.local_graph_id=gl.id JOIN data_template_rrd dtr ON dtr.id=gti.task_item_id ' .
+                    'JOIN data_template_rrd origin ON origin.id=? AND ' .
+                    'origin.data_template_id=dtr.data_template_id AND ' .
+                    'origin.data_source_name=dtr.data_source_name WHERE gl.host_id=? AND ' .
+                    'gl.graph_template_id=?',
                 [$rule['metric_id'], $id, $rule['template_id']],
             );
             if (!$sources) {
@@ -522,7 +548,8 @@ function icct_backend_collect_faults()
             'results' => $results,
         ];
         icct_backend_category_execute(
-            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
             ['fault_status_' . $id, json_encode($snapshot, JSON_THROW_ON_ERROR)],
         );
     }

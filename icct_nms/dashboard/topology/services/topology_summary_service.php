@@ -56,7 +56,12 @@ function icct_nms_topology_capacity($host)
         return $result;
     }
     $rows = db_fetch_assoc_prepared(
-        'SELECT DISTINCT gl.id,gtg.title_cache,gtg.vertical_label,dtr.local_data_id,dtr.data_source_name FROM graph_local gl JOIN graph_templates_graph gtg ON gtg.local_graph_id=gl.id JOIN graph_templates_item gti ON gti.local_graph_id=gl.id JOIN data_template_rrd dtr ON dtr.id=gti.task_item_id JOIN data_local dl ON dl.id=dtr.local_data_id AND dl.host_id=gl.host_id WHERE gl.host_id=? AND gl.id IN (' .
+        'SELECT DISTINCT ' .
+            'gl.id,gtg.title_cache,gtg.vertical_label,dtr.local_data_id,dtr.data_source_name FROM ' .
+            'graph_local gl JOIN graph_templates_graph gtg ON gtg.local_graph_id=gl.id JOIN ' .
+            'graph_templates_item gti ON gti.local_graph_id=gl.id JOIN data_template_rrd dtr ON ' .
+            'dtr.id=gti.task_item_id JOIN data_local dl ON dl.id=dtr.local_data_id AND ' .
+            'dl.host_id=gl.host_id WHERE gl.host_id=? AND gl.id IN (' .
             implode(',', $allowed) .
             ') AND gti.graph_type_id IN (4,5,6,7)',
         [(int) $host['id']],

@@ -141,7 +141,13 @@ function icct_nms_netflow_save($id, $host, $input)
     icct_backend_category_execute('START TRANSACTION', []);
     try {
         icct_backend_category_execute(
-            'INSERT INTO plugin_icct_nms_netflow_devices(host_id,enabled,exporter_address,version,sampling_rate,active_timeout,inactive_timeout,updated_by,updated_at) VALUES(?,?,?,?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE enabled=VALUES(enabled),exporter_address=VALUES(exporter_address),version=VALUES(version),sampling_rate=VALUES(sampling_rate),active_timeout=VALUES(active_timeout),inactive_timeout=VALUES(inactive_timeout),updated_by=VALUES(updated_by),updated_at=NOW()',
+            'INSERT INTO ' .
+                ('plugin_icct_nms_netflow_devices(host_id,enabled,exporter_address,version,sampling_rate,' .
+                    'active_timeout,inactive_timeout,updated_by,updated_at) ') .
+                'VALUES(?,?,?,?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE ' .
+                ('enabled=VALUES(enabled),exporter_address=VALUES(exporter_address),version=VALUES(version),' .
+                    'sampling_rate=VALUES(sampling_rate),active_timeout=VALUES(active_timeout),' .
+                    'inactive_timeout=VALUES(inactive_timeout),updated_by=VALUES(updated_by),updated_at=NOW()'),
             [
                 (int) $id,
                 icct_backend_protocol_enabled($id, 'netflow') ? 1 : 0,
@@ -154,7 +160,8 @@ function icct_nms_netflow_save($id, $host, $input)
             ],
         );
         icct_backend_category_execute(
-            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
             ['netflow_config_' . (int) $id, json_encode($v, JSON_THROW_ON_ERROR)],
         );
         icct_backend_category_execute('COMMIT', []);
@@ -367,7 +374,9 @@ function icct_nms_netflow_read($id, $input)
         $size = 25;
     }
     $totals = db_fetch_row_prepared(
-        'SELECT COUNT(*) AS flows,COALESCE(SUM(bytes),0) AS bytes,COALESCE(SUM(packets),0) AS packets,COUNT(DISTINCT src_addr) AS sources,MAX(last_seen) AS latest FROM plugin_icct_nms_netflow_flows WHERE ' .
+        'SELECT COUNT(*) AS flows,COALESCE(SUM(bytes),0) AS bytes,COALESCE(SUM(packets),0) AS ' .
+            'packets,COUNT(DISTINCT src_addr) AS sources,MAX(last_seen) AS latest FROM ' .
+            'plugin_icct_nms_netflow_flows WHERE ' .
             $where,
         $args,
     );
@@ -419,7 +428,9 @@ function icct_nms_netflow_read($id, $input)
         $args,
     );
     $events = db_fetch_assoc_prepared(
-        'SELECT *,UNIX_TIMESTAMP(opened_at) AS opened_epoch,UNIX_TIMESTAMP(updated_at) AS updated_epoch FROM plugin_icct_nms_netflow_events WHERE host_id=? AND updated_at BETWEEN ? AND ? ORDER BY updated_at DESC LIMIT 100',
+        'SELECT *,UNIX_TIMESTAMP(opened_at) AS opened_epoch,UNIX_TIMESTAMP(updated_at) AS ' .
+            'updated_epoch FROM plugin_icct_nms_netflow_events WHERE host_id=? AND updated_at ' .
+            'BETWEEN ? AND ? ORDER BY updated_at DESC LIMIT 100',
         [(int) $id, date('Y-m-d H:i:s', $filter['start']), date('Y-m-d H:i:s', $filter['end'])],
     );
     $worker =

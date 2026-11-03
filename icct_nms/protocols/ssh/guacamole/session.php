@@ -119,7 +119,7 @@ function icct_backend_guac_console($session, $request)
                 if ($op === 'ready') {
                     $ready = true;
                     icct_backend_ssh_emit(['type' => 'connected']);
-                    continue;
+                    // Preserve the server's real ready instruction for the browser Guacamole client.
                 }
                 if ($op === 'error') {
                     throw new RuntimeException(

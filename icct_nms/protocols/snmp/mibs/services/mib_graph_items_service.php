@@ -16,7 +16,9 @@ function icct_mib_core_graph_item_fields()
     $out = [];
     $base =
         db_fetch_row(
-            "SELECT gi.* FROM graph_templates_item gi JOIN graph_templates gt ON gt.id=gi.graph_template_id WHERE gt.name='SNMP - Generic OID Template' AND gi.local_graph_id=0 ORDER BY gi.sequence,gi.id LIMIT 1",
+            'SELECT gi.* FROM graph_templates_item gi JOIN graph_templates gt ON ' .
+                'gt.id=gi.graph_template_id WHERE gt.name=\'SNMP - Generic OID Template\' AND ' .
+                'gi.local_graph_id=0 ORDER BY gi.sequence,gi.id LIMIT 1',
         ) ?:
         [];
     foreach ($struct_graph_item as $key => $field) {
@@ -163,7 +165,9 @@ function icct_mib_deleted_graph_items($input)
     }
     $valid =
         db_fetch_assoc(
-            "SELECT sequence FROM graph_templates_item WHERE local_graph_id=0 AND graph_template_id=(SELECT id FROM graph_templates WHERE name='SNMP - Generic OID Template' LIMIT 1)",
+            'SELECT sequence FROM graph_templates_item WHERE local_graph_id=0 AND ' .
+                'graph_template_id=(SELECT id FROM graph_templates WHERE name=\'SNMP - Generic OID ' .
+                'Template\' LIMIT 1)',
         ) ?:
         [];
     $allowed = array_map('intval', array_column($valid, 'sequence'));

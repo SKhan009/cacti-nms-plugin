@@ -50,7 +50,10 @@ function icct_backend_ssh_fingerprint($key)
 /** ICCT-owned SSH service: ssh linux command. */
 function icct_backend_ssh_linux_command()
 {
-    return "LC_ALL=C; export LC_ALL; printf 'NMS_STAT_A\\n'; head -n 1 /proc/stat; sleep 1; printf 'NMS_STAT_B\\n'; head -n 1 /proc/stat; printf 'NMS_MEMORY\\n'; cat /proc/meminfo; printf 'NMS_UPTIME\\n'; cat /proc/uptime; printf 'NMS_IDENTITY\\n'; hostname; uname -s; uname -r; printf 'NMS_END\\n'";
+    return 'LC_ALL=C; export LC_ALL; printf \'NMS_STAT_A\\n\'; head -n 1 /proc/stat; sleep 1; printf ' .
+        '\'NMS_STAT_B\\n\'; head -n 1 /proc/stat; printf \'NMS_MEMORY\\n\'; cat /proc/meminfo; printf ' .
+        '\'NMS_UPTIME\\n\'; cat /proc/uptime; printf \'NMS_IDENTITY\\n\'; hostname; uname -s; uname ' .
+        '-r; printf \'NMS_END\\n\'';
 }
 
 /** ICCT-owned SSH service: ssh linux parse. */

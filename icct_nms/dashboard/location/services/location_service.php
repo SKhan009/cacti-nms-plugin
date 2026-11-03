@@ -163,7 +163,10 @@ function icct_nms_gnss_save($input)
         throw new InvalidArgumentException('Assign the GNSS device to the selected collector.');
     }
     icct_backend_category_execute(
-        'INSERT INTO plugin_icct_nms_gnss_sources(poller_id,enabled,config_json,updated_by,updated_at) VALUES(?,1,?,?,NOW()) ON DUPLICATE KEY UPDATE enabled=1,config_json=VALUES(config_json),updated_by=VALUES(updated_by),updated_at=NOW()',
+        'INSERT INTO ' .
+            'plugin_icct_nms_gnss_sources(poller_id,enabled,config_json,updated_by,updated_at) ' .
+            'VALUES(?,1,?,?,NOW()) ON DUPLICATE KEY UPDATE ' .
+            'enabled=1,config_json=VALUES(config_json),updated_by=VALUES(updated_by),updated_at=NOW()',
         [$poller, json_encode($v, JSON_THROW_ON_ERROR), icct_backend_current_user_id()],
     );
 }
@@ -284,7 +287,9 @@ function icct_nms_gnss_collect($poller)
     }
     try {
         $source = db_fetch_row_prepared(
-            "SELECT s.*,r.last_attempt FROM plugin_icct_nms_gnss_sources s LEFT JOIN plugin_icct_nms_gnss_readings r ON r.poller_id=s.poller_id JOIN poller p ON p.id=s.poller_id WHERE s.poller_id=? AND s.enabled=1 AND p.disabled=''",
+            'SELECT s.*,r.last_attempt FROM plugin_icct_nms_gnss_sources s LEFT JOIN ' .
+                'plugin_icct_nms_gnss_readings r ON r.poller_id=s.poller_id JOIN poller p ON ' .
+                'p.id=s.poller_id WHERE s.poller_id=? AND s.enabled=1 AND p.disabled=\'\'',
             [$poller],
         );
         if (!$source) {
@@ -297,7 +302,11 @@ function icct_nms_gnss_collect($poller)
         try {
             $fix = icct_nms_gnss_probe($v, $poller);
             icct_backend_category_execute(
-                "INSERT INTO plugin_icct_nms_gnss_readings(poller_id,latitude,longitude,status,last_attempt,last_fix,source_time,last_error) VALUES(?,?,?,'valid',NOW(),NOW(),?,'') ON DUPLICATE KEY UPDATE latitude=VALUES(latitude),longitude=VALUES(longitude),status='valid',last_attempt=NOW(),last_fix=NOW(),source_time=VALUES(source_time),last_error=''",
+                'INSERT INTO ' .
+                    'plugin_icct_nms_gnss_readings(poller_id,latitude,longitude,status,last_attempt,last_fix,source_time,last_error) ' .
+                    'VALUES(?,?,?,\'valid\',NOW(),NOW(),?,\'\') ON DUPLICATE KEY UPDATE ' .
+                    ("latitude=VALUES(latitude),longitude=VALUES(longitude),status='valid',last_attempt=NOW()," .
+                        "last_fix=NOW(),source_time=VALUES(source_time),last_error=''"),
                 [
                     $poller,
                     $fix['latitude'],
@@ -307,7 +316,9 @@ function icct_nms_gnss_collect($poller)
             );
         } catch (Throwable $e) {
             icct_backend_category_execute(
-                "INSERT INTO plugin_icct_nms_gnss_readings(poller_id,status,last_attempt,last_error) VALUES(?,'no_fix',NOW(),?) ON DUPLICATE KEY UPDATE status='no_fix',last_attempt=NOW(),last_error=VALUES(last_error)",
+                'INSERT INTO plugin_icct_nms_gnss_readings(poller_id,status,last_attempt,last_error) ' .
+                    'VALUES(?,\'no_fix\',NOW(),?) ON DUPLICATE KEY UPDATE ' .
+                    'status=\'no_fix\',last_attempt=NOW(),last_error=VALUES(last_error)',
                 [$poller, substr($e->getMessage(), 0, 255)],
             );
         }
@@ -320,7 +331,10 @@ function icct_nms_gnss_readings()
     $out = [];
     foreach (
         db_fetch_assoc(
-            'SELECT s.poller_id,s.config_json,r.latitude,r.longitude,r.status,r.last_fix,r.source_time,r.last_error FROM plugin_icct_nms_gnss_sources s LEFT JOIN plugin_icct_nms_gnss_readings r ON r.poller_id=s.poller_id WHERE s.enabled=1',
+            'SELECT ' .
+                's.poller_id,s.config_json,r.latitude,r.longitude,r.status,r.last_fix,r.source_time,r.last_error ' .
+                'FROM plugin_icct_nms_gnss_sources s LEFT JOIN plugin_icct_nms_gnss_readings r ON ' .
+                'r.poller_id=s.poller_id WHERE s.enabled=1',
         ) as $row
     ) {
         $v = json_decode($row['config_json'], true, 32, JSON_THROW_ON_ERROR);

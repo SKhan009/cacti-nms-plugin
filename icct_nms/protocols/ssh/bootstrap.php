@@ -9,6 +9,8 @@ if (!in_array(PHP_OS_FAMILY, ['Linux', 'Windows', 'Darwin'], true)) {
     throw new RuntimeException('Unsupported SSH backend operating system.');
 }
 require_once __DIR__ . '/../../../../include/cli_check.php';
+require_once $config['base_path'] . '/lib/auth.php';
+api_plugin_load_realms();
 
 require_once __DIR__ . '/../../shared/services/backend.php';
 icct_backend_ssh_require_schema();

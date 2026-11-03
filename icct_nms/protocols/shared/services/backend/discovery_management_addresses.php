@@ -2,6 +2,22 @@
 
 /** ICCT-owned discovery management addresses services, derived from the existing ICCT NMS implementation. */
 
+/**
+ * Normalize supported collector records and string observations once for ports and topology.
+ * Invalid addresses are omitted; the first occurrence keeps its discovery order.
+ */
+function icct_nms_management_addresses($values)
+{
+    $addresses = [];
+    foreach ($values as $value) {
+        $address = is_array($value) ? $value['address'] ?? '' : $value;
+        if (is_string($address) && filter_var($address, FILTER_VALIDATE_IP)) {
+            $addresses[$address] = $address;
+        }
+    }
+    return array_values($addresses);
+}
+
 /** Reused Inventory service: nd cdp management addresses. */
 function icct_backend_nd_management_address($bytes, $family, $source)
 {

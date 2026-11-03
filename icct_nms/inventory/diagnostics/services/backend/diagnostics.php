@@ -154,10 +154,10 @@ function icct_backend_diag_assignment($host_id, $tool)
         throw new InvalidArgumentException('Unsupported diagnostic tool.');
     }
     $row = db_fetch_row_prepared(
-        "SELECT h.id AS host_id, h.hostname, h.description, h.poller_id, h.disabled, p.*
-		FROM host h JOIN plugin_icct_nms_diagnostic_devices d ON d.host_id=h.id
-		JOIN plugin_icct_nms_diagnostic_profiles p ON p.id=d.profile_id
-		WHERE h.id=? AND h.deleted=''",
+        "SELECT h.id AS host_id, h.hostname, h.description, h.poller_id, h.disabled, p.*\n\t\tFROM " .
+            "host h JOIN plugin_icct_nms_diagnostic_devices d ON d.host_id=h.id\n\t\tJOIN " .
+            "plugin_icct_nms_diagnostic_profiles p ON p.id=d.profile_id\n\t\tWHERE h.id=? AND " .
+            "h.deleted=''",
         [(int) $host_id],
     );
     if (!$row || $row['disabled'] !== '') {
@@ -198,7 +198,9 @@ function icct_backend_diag_selected_labels($host_id)
 {
     icct_backend_require_device_access($host_id);
     $row = db_fetch_row_prepared(
-        "SELECT h.disabled,p.tools FROM host h JOIN plugin_icct_nms_diagnostic_devices d ON d.host_id=h.id JOIN plugin_icct_nms_diagnostic_profiles p ON p.id=d.profile_id WHERE h.id=? AND h.deleted=''",
+        'SELECT h.disabled,p.tools FROM host h JOIN plugin_icct_nms_diagnostic_devices d ON ' .
+            'd.host_id=h.id JOIN plugin_icct_nms_diagnostic_profiles p ON p.id=d.profile_id WHERE ' .
+            'h.id=? AND h.deleted=\'\'',
         [(int) $host_id],
     );
     if (!$row || $row['disabled'] !== '') {
@@ -216,7 +218,9 @@ function icct_backend_diag_command($row, $tool)
     [$name, $binary] = icct_backend_diag_executable($tool);
     if (!$binary && $tool === 'pathchar') {
         throw new RuntimeException(
-            'Path capacity estimation requires pathchar or pchar on this collector. Install an approved build matching the collector OS and architecture; raw-socket permission is also required. Traceroute cannot replace this measurement.',
+            'Path capacity estimation requires pathchar or pchar on this collector. Install an ' .
+                'approved build matching the collector OS and architecture; raw-socket permission is ' .
+                'also required. Traceroute cannot replace this measurement.',
         );
     }
     if (!$binary) {
@@ -456,7 +460,8 @@ function icct_backend_diag_result($row, $tool, $command, $result)
             $result['output'];
     } elseif ($tool === 'iperf3' && stripos($result['output'], 'Bad file descriptor') !== false) {
         $result['output'] =
-            "No bandwidth measurement completed. iPerf3 could not establish its control connection. Check that the target runs an iPerf3 server on TCP 5201.\n\n" .
+            'No bandwidth measurement completed. iPerf3 could not establish its control connection. ' .
+            "Check that the target runs an iPerf3 server on TCP 5201.\n\n" .
             $result['output'];
     }
     $result['output'] =

@@ -233,7 +233,8 @@ function icct_nms_save_protocol_preset($input)
                 $profiles = icct_nms_netflow_profiles();
                 $profiles[(int) $values['version']] = $values;
                 icct_backend_category_execute(
-                    'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+                    'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                        'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
                     ['protocol_netflow_versions', json_encode($profiles, JSON_THROW_ON_ERROR)],
                 );
             }
@@ -241,12 +242,14 @@ function icct_nms_save_protocol_preset($input)
                 $profiles = icct_nms_protocol_profiles();
                 $profiles[$protocol][(string) $values[$variant['field']]] = $values;
                 icct_backend_category_execute(
-                    'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+                    'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                        'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
                     ['protocol_versions', json_encode($profiles, JSON_THROW_ON_ERROR)],
                 );
             }
             icct_backend_category_execute(
-                'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+                'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                    'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
                 ['protocol_defaults', json_encode($presets, JSON_THROW_ON_ERROR)],
             );
             if ($transaction) {
@@ -345,7 +348,8 @@ function icct_nms_protocol_record_overrides($id, $action, $input)
         }
     }
     icct_backend_category_execute(
-        'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+        'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+            'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
         [
             'device_preset_overrides_' . $id . '_' . $protocol,
             json_encode($overrides, JSON_THROW_ON_ERROR),

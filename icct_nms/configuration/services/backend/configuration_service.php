@@ -70,7 +70,11 @@ function icct_backend_serial_assign_locked($host_id, array $input)
         throw new InvalidArgumentException('This address is already used on the connection.');
     }
     icct_backend_category_execute(
-        'INSERT INTO plugin_icct_nms_serial_devices (host_id,connection_id,device_address,revision,updated_by,updated_at) VALUES (?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE connection_id=VALUES(connection_id),device_address=VALUES(device_address),revision=VALUES(revision),updated_by=VALUES(updated_by),updated_at=NOW()',
+        'INSERT INTO plugin_icct_nms_serial_devices ' .
+            '(host_id,connection_id,device_address,revision,updated_by,updated_at) VALUES ' .
+            '(?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE ' .
+            ('connection_id=VALUES(connection_id),device_address=VALUES(device_address),' .
+                'revision=VALUES(revision),updated_by=VALUES(updated_by),updated_at=NOW()'),
         [$host_id, $connection_id, $address, $revision + 1, icct_backend_current_user_id()],
     );
 }
@@ -80,7 +84,10 @@ function icct_backend_serial_assignment($host_id)
 {
     icct_backend_require_device_access($host_id);
     $assignment = db_fetch_row_prepared(
-        'SELECT d.*,c.name AS connection_name,c.poller_id,c.transport,c.endpoint,c.enabled,c.settings_json FROM plugin_icct_nms_serial_devices d JOIN plugin_icct_nms_serial_connections c ON c.id=d.connection_id WHERE d.host_id=?',
+        'SELECT d.*,c.name AS ' .
+            'connection_name,c.poller_id,c.transport,c.endpoint,c.enabled,c.settings_json FROM ' .
+            'plugin_icct_nms_serial_devices d JOIN plugin_icct_nms_serial_connections c ON ' .
+            'c.id=d.connection_id WHERE d.host_id=?',
         [(int) $host_id],
     );
     if ($assignment) {

@@ -95,7 +95,10 @@ try {
             }
         }
         $coreDevices = db_fetch_assoc(
-            'SELECT d.id,d.network_id,d.hostname,d.ip,d.sysName,d.sysLocation,d.os,d.snmp,d.known,d.up,FROM_UNIXTIME(d.time) AS last_check,n.name AS network FROM automation_devices d LEFT JOIN automation_networks n ON n.id=d.network_id ORDER BY d.ip',
+            'SELECT ' .
+                'd.id,d.network_id,d.hostname,d.ip,d.sysName,d.sysLocation,d.os,d.snmp,d.known,d.up,FROM_UNIXTIME(d.time) ' .
+                'AS last_check,n.name AS network FROM automation_devices d LEFT JOIN automation_networks ' .
+                'n ON n.id=d.network_id ORDER BY d.ip',
         );
     }
     $networkOptions = [];

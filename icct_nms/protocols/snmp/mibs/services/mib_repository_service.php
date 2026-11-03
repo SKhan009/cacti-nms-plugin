@@ -76,7 +76,8 @@ function icct_mib_command($args)
     );
     if (!is_resource($p)) {
         throw new RuntimeException(
-            'Net-SNMP snmptranslate is required locally. On offline RHEL, install net-snmp-utils and its dependencies from matching RHEL installation media or an offline RPM repository.',
+            'Net-SNMP snmptranslate is required locally. On offline RHEL, install net-snmp-utils and ' .
+                'its dependencies from matching RHEL installation media or an offline RPM repository.',
         );
     }
     fclose($pipes[0]);
@@ -110,14 +111,17 @@ function icct_mib_command($args)
     }
     if ($exit === 127) {
         throw new RuntimeException(
-            'Cannot run snmptranslate. Install net-snmp-utils locally on RHEL and check the configured executable path. Offline installation can use matching RHEL media or an offline RPM repository.',
+            'Cannot run snmptranslate. Install net-snmp-utils locally on RHEL and check the ' .
+                'configured executable path. Offline installation can use matching RHEL media or an ' .
+                'offline RPM repository.',
         );
     }
     if (preg_match_all('/Cannot find module \(([^)]+)\)/', $err, $missing)) {
         throw new RuntimeException(
             'Missing MIB dependencies: ' .
                 implode(', ', array_unique($missing[1])) .
-                '. Upload these modules to the MIB Repository. Saved modules and bundled dependencies are loaded from the plugin folder. Internet access is not required.',
+                ('. Upload these modules to the MIB Repository. Saved modules and bundled dependencies ' .
+                    'are loaded from the plugin folder. Internet access is not required.'),
         );
     }
     if (
@@ -301,21 +305,25 @@ function icct_mib_device_inputs($preview, $hostId)
         );
     }
     $inputs = db_fetch_assoc_prepared(
-        "SELECT DISTINCT dl.id AS local_data_id,dl.data_template_id,dtd.id AS input_id,did.value AS oid,dt.name AS data_name,r.data_source_name,r.data_source_type_id AS ds_type,r.rrd_minimum AS min,r.rrd_maximum AS max,r.id AS rrd_id
-        FROM data_local dl JOIN data_template_data dtd ON dtd.local_data_id=dl.id
-        JOIN data_template dt ON dt.id=dl.data_template_id
-        JOIN data_input_data did ON did.data_template_data_id=dtd.id
-        JOIN data_input_fields f ON f.id=did.data_input_field_id AND f.data_name='oid'
-        JOIN data_template_rrd r ON r.local_data_id=dl.id WHERE dl.host_id=? ORDER BY dl.id",
+        'SELECT DISTINCT dl.id AS local_data_id,dl.data_template_id,dtd.id AS input_id,did.value ' .
+            'AS oid,dt.name AS data_name,r.data_source_name,r.data_source_type_id AS ds_type,' .
+            "r.rrd_minimum AS min,r.rrd_maximum AS max,r.id AS rrd_id\n        FROM data_local dl JOIN " .
+            "data_template_data dtd ON dtd.local_data_id=dl.id\n        JOIN data_template dt ON " .
+            "dt.id=dl.data_template_id\n        JOIN data_input_data did ON " .
+            "did.data_template_data_id=dtd.id\n        JOIN data_input_fields f ON " .
+            "f.id=did.data_input_field_id AND f.data_name='oid'\n        JOIN data_template_rrd r ON " .
+            'r.local_data_id=dl.id WHERE dl.host_id=? ORDER BY dl.id',
         [$hostId],
     );
     // Indexed data queries keep their resolved OIDs in the device poller cache.
     $indexed = db_fetch_assoc_prepared(
-        'SELECT DISTINCT dl.id AS local_data_id,dl.data_template_id,dtd.id AS input_id,pi.arg1 AS oid,dt.name AS data_name,r.data_source_name,r.data_source_type_id AS ds_type,r.rrd_minimum AS min,r.rrd_maximum AS max,r.id AS rrd_id
-        FROM poller_item pi JOIN data_local dl ON dl.id=pi.local_data_id
-        JOIN data_template_data dtd ON dtd.local_data_id=dl.id JOIN data_template dt ON dt.id=dl.data_template_id
-        JOIN data_template_rrd r ON r.local_data_id=dl.id AND r.data_source_name=pi.rrd_name
-        WHERE dl.host_id=? AND pi.action=0 ORDER BY dl.id',
+        'SELECT DISTINCT dl.id AS local_data_id,dl.data_template_id,dtd.id AS input_id,pi.arg1 AS ' .
+            'oid,dt.name AS data_name,r.data_source_name,r.data_source_type_id AS ds_type,' .
+            "r.rrd_minimum AS min,r.rrd_maximum AS max,r.id AS rrd_id\n        FROM poller_item pi " .
+            "JOIN data_local dl ON dl.id=pi.local_data_id\n        JOIN data_template_data dtd ON " .
+            "dtd.local_data_id=dl.id JOIN data_template dt ON dt.id=dl.data_template_id\n        JOIN " .
+            "data_template_rrd r ON r.local_data_id=dl.id AND r.data_source_name=pi.rrd_name\n        " .
+            'WHERE dl.host_id=? AND pi.action=0 ORDER BY dl.id',
         [$hostId],
     );
     $inputs = array_merge($inputs ?: [], $indexed ?: []);
@@ -338,10 +346,13 @@ function icct_mib_device_inputs($preview, $hostId)
                 continue;
             }
             $graph = db_fetch_row_prepared(
-                'SELECT gt.name AS graph_name,gg.vertical_label AS units,i.graph_type_id AS graph_type,i.consolidation_function_id AS cf,c.hex AS color,i.text_format AS legend,i.graph_template_id,i.local_graph_id
-                FROM graph_templates_item i JOIN graph_local gl ON gl.id=i.local_graph_id
-                JOIN graph_templates gt ON gt.id=i.graph_template_id JOIN graph_templates_graph gg ON gg.local_graph_id=gl.id
-                LEFT JOIN colors c ON c.id=i.color_id WHERE gl.host_id=? AND i.task_item_id=? AND i.graph_type_id IN (4,5,6,7) ORDER BY i.sequence LIMIT 1',
+                'SELECT gt.name AS graph_name,gg.vertical_label AS units,i.graph_type_id AS graph_type,' .
+                    'i.consolidation_function_id AS cf,c.hex AS color,i.text_format AS legend,' .
+                    "i.graph_template_id,i.local_graph_id\n                FROM graph_templates_item i JOIN " .
+                    "graph_local gl ON gl.id=i.local_graph_id\n                JOIN graph_templates gt ON " .
+                    "gt.id=i.graph_template_id JOIN graph_templates_graph gg ON gg.local_graph_id=gl.id\n      " .
+                    '          LEFT JOIN colors c ON c.id=i.color_id WHERE gl.host_id=? AND i.task_item_id=? ' .
+                    'AND i.graph_type_id IN (4,5,6,7) ORDER BY i.sequence LIMIT 1',
                 [$hostId, $input['rrd_id']],
             );
             if (isset($seen[$i][$oid])) {
@@ -427,7 +438,8 @@ function icct_mib_preview($upload, $typeId, $allowUnresolved = false, $progress 
             !preg_match('/\b([A-Za-z][A-Za-z0-9-]*)\s+DEFINITIONS\s*::=\s*BEGIN\b/', $clean, $m)
         ) {
             throw new InvalidArgumentException(
-                'This file is not a MIB definition. Upload the vendor .mib, .my or .txt file containing a DEFINITIONS ::= BEGIN module, rather than an HTML download page.',
+                'This file is not a MIB definition. Upload the vendor .mib, .my or .txt file containing ' .
+                    'a DEFINITIONS ::= BEGIN module, rather than an HTML download page.',
             );
         }
         $module = $m[1];
@@ -768,7 +780,9 @@ function icct_mib_collection($record, $values)
 function icct_mib_collection_names()
 {
     $get = db_fetch_cell(
-        "SELECT di.name FROM data_input di JOIN data_template_data dtd ON dtd.data_input_id=di.id JOIN data_template dt ON dt.id=dtd.data_template_id WHERE dt.name='SNMP - Generic OID Template' AND dtd.local_data_id=0 AND di.type_id=2 LIMIT 1",
+        'SELECT di.name FROM data_input di JOIN data_template_data dtd ON ' .
+            'dtd.data_input_id=di.id JOIN data_template dt ON dt.id=dtd.data_template_id WHERE ' .
+            'dt.name=\'SNMP - Generic OID Template\' AND dtd.local_data_id=0 AND di.type_id=2 LIMIT 1',
     );
     $indexed = db_fetch_cell('SELECT name FROM data_input WHERE type_id=3 ORDER BY id LIMIT 1');
     return [
@@ -1026,7 +1040,10 @@ function icct_mib_query_xml($record)
         $oid .
         '</oid_index><oid_index_parse>OID/REGEXP:' .
         $regex .
-        '</oid_index_parse><index_order>oidIndex</index_order><index_order_type>numeric</index_order_type><index_title_format>|chosen_order_field|</index_title_format><fields><oidIndex><name>Instance index</name><method>walk</method><source>OID/REGEXP:' .
+        ('</oid_index_parse><index_order>oidIndex</index_order><index_order_type>' .
+            'numeric</index_order_type><index_title_format>|chosen_order_field|</index_title_format>' .
+            '<fields><oidIndex><name>Instance ' .
+            'index</name><method>walk</method><source>OID/REGEXP:') .
         $regex .
         '</source><direction>input</direction><oid>.' .
         $oid .
@@ -1126,7 +1143,11 @@ function icct_mib_validate_duplicates($records)
         }
         if ($record['resolved_method'] === 'get') {
             $name = db_fetch_cell_prepared(
-                "SELECT dt.name FROM data_template dt JOIN data_template_data dtd ON dtd.data_template_id=dt.id AND dtd.local_data_id=0 JOIN data_input_data did ON did.data_template_data_id=dtd.id JOIN data_input_fields f ON f.id=did.data_input_field_id WHERE f.data_name='oid' AND TRIM(LEADING '.' FROM did.value)=? LIMIT 1",
+                'SELECT dt.name FROM data_template dt JOIN data_template_data dtd ON ' .
+                    'dtd.data_template_id=dt.id AND dtd.local_data_id=0 JOIN data_input_data did ON ' .
+                    'did.data_template_data_id=dtd.id JOIN data_input_fields f ON ' .
+                    'f.id=did.data_input_field_id WHERE f.data_name=\'oid\' AND TRIM(LEADING \'.\' FROM ' .
+                    'did.value)=? LIMIT 1',
                 [$record['oid']],
             );
             if ($name) {
@@ -1197,7 +1218,10 @@ function icct_mib_native_metric($record, $options, $existing = [])
         [$pair['data_template_id']],
     );
     $field = (int) db_fetch_cell(
-        "SELECT f.id FROM data_input_fields f JOIN data_template_data dtd ON dtd.data_input_id=f.data_input_id JOIN data_template dt ON dt.id=dtd.data_template_id WHERE dt.name='SNMP - Generic OID Template' AND dtd.local_data_id=0 AND f.data_name='oid' LIMIT 1",
+        'SELECT f.id FROM data_input_fields f JOIN data_template_data dtd ON ' .
+            'dtd.data_input_id=f.data_input_id JOIN data_template dt ON dt.id=dtd.data_template_id ' .
+            'WHERE dt.name=\'SNMP - Generic OID Template\' AND dtd.local_data_id=0 AND ' .
+            'f.data_name=\'oid\' LIMIT 1',
     );
     if (!$data || !$rrd || !$field) {
         throw new RuntimeException('The duplicated data template is incomplete.');
@@ -1228,7 +1252,9 @@ function icct_mib_native_metric($record, $options, $existing = [])
             [$record['heartbeat'], $rrd],
         );
         icct_mib_write(
-            "UPDATE data_template_rrd SET data_source_name=?,data_source_type_id=?,rrd_minimum=?,rrd_maximum=?,t_rrd_minimum='',t_rrd_maximum='' WHERE id=?",
+            'UPDATE data_template_rrd SET ' .
+                'data_source_name=?,data_source_type_id=?,rrd_minimum=?,rrd_maximum=?,t_rrd_minimum=\'\',t_rrd_maximum=\'\' ' .
+                'WHERE id=?',
             [$ds, $record['ds_type'], $record['min'], $record['max'], $rrd],
         );
         if (($record['resolved_method'] ?? 'get') === 'indexed') {
@@ -1307,14 +1333,18 @@ function icct_mib_native_metric($record, $options, $existing = [])
         }
     }
     icct_mib_write(
-        'UPDATE graph_templates_item SET graph_type_id=?,consolidation_function_id=?,color_id=?,text_format=? WHERE graph_template_id=? AND local_graph_id=0 AND graph_type_id IN (4,5,6,7)',
+        'UPDATE graph_templates_item SET ' .
+            'graph_type_id=?,consolidation_function_id=?,color_id=?,text_format=? WHERE ' .
+            'graph_template_id=? AND local_graph_id=0 AND graph_type_id IN (4,5,6,7)',
         [$record['graph_type'], $record['cf'], $colorId, $record['legend'], $graphId],
     );
     foreach (
         icct_mib_deleted_graph_items($record['graph_deleted_items'] ?? []) as $deletedSequence
     ) {
         icct_mib_write(
-            'DELETE d FROM graph_template_input_defs d JOIN graph_templates_item i ON i.id=d.graph_template_item_id WHERE i.graph_template_id=? AND i.local_graph_id=0 AND i.sequence=?',
+            'DELETE d FROM graph_template_input_defs d JOIN graph_templates_item i ON ' .
+                'i.id=d.graph_template_item_id WHERE i.graph_template_id=? AND i.local_graph_id=0 AND ' .
+                'i.sequence=?',
             [$graphId, $deletedSequence],
         );
         icct_mib_write(
@@ -1324,7 +1354,9 @@ function icct_mib_native_metric($record, $options, $existing = [])
     }
     if (!$record['statistics']) {
         icct_mib_write(
-            'DELETE d FROM graph_template_input_defs d JOIN graph_templates_item i ON i.id=d.graph_template_item_id WHERE i.graph_template_id=? AND i.local_graph_id=0 AND i.graph_type_id=9',
+            'DELETE d FROM graph_template_input_defs d JOIN graph_templates_item i ON ' .
+                'i.id=d.graph_template_item_id WHERE i.graph_template_id=? AND i.local_graph_id=0 AND ' .
+                'i.graph_type_id=9',
             [$graphId],
         );
         icct_mib_write(

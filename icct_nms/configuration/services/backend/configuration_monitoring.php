@@ -7,7 +7,8 @@ function icct_backend_config_connection_status($host_id)
 {
     icct_backend_require_device_access($host_id);
     $serial = db_fetch_row_prepared(
-        'SELECT c.transport,c.endpoint,d.device_address FROM plugin_icct_nms_serial_devices d LEFT JOIN plugin_icct_nms_serial_connections c ON c.id=d.connection_id WHERE d.host_id=?',
+        'SELECT c.transport,c.endpoint,d.device_address FROM plugin_icct_nms_serial_devices d ' .
+            'LEFT JOIN plugin_icct_nms_serial_connections c ON c.id=d.connection_id WHERE d.host_id=?',
         [$host_id],
     );
     if (!$serial) {
@@ -47,7 +48,11 @@ function icct_backend_config_monitor_once($collector)
         throw new RuntimeException('Scheduled collection is CLI-only.');
     }
     $devices = db_fetch_assoc_prepared(
-        "SELECT a.host_id,a.updated_by FROM plugin_icct_nms_config_devices a JOIN host h ON h.id=a.host_id JOIN poller p ON p.id=h.poller_id LEFT JOIN plugin_icct_nms_serial_readings r ON r.host_id=a.host_id WHERE h.poller_id=? AND h.deleted='' AND h.disabled='' AND p.disabled='' GROUP BY a.host_id,a.updated_by ORDER BY MIN(r.observed_at),a.host_id",
+        'SELECT a.host_id,a.updated_by FROM plugin_icct_nms_config_devices a JOIN host h ON ' .
+            'h.id=a.host_id JOIN poller p ON p.id=h.poller_id LEFT JOIN ' .
+            'plugin_icct_nms_serial_readings r ON r.host_id=a.host_id WHERE h.poller_id=? AND ' .
+            'h.deleted=\'\' AND h.disabled=\'\' AND p.disabled=\'\' GROUP BY a.host_id,a.updated_by ORDER ' .
+            'BY MIN(r.observed_at),a.host_id',
         [$collector],
     );
     $previous = $_SESSION ?? [];
@@ -67,7 +72,8 @@ function icct_backend_config_monitor_once($collector)
                     }
                     foreach ($target['fields'] as $key => $field) {
                         $row = db_fetch_row_prepared(
-                            'SELECT signature,TIMESTAMPDIFF(SECOND,observed_at,NOW()) AS age_seconds FROM plugin_icct_nms_serial_readings WHERE host_id=? AND field_key=?',
+                            'SELECT signature,TIMESTAMPDIFF(SECOND,observed_at,NOW()) AS age_seconds FROM ' .
+                                'plugin_icct_nms_serial_readings WHERE host_id=? AND field_key=?',
                             [$device['host_id'], $key],
                         );
                         if (
@@ -149,7 +155,10 @@ function icct_backend_config_store_reading(array $target, $key, array $result)
 {
     $status = ($result['status'] ?? '') === 'read' ? 'complete' : 'failed';
     icct_backend_category_execute(
-        'INSERT INTO plugin_icct_nms_serial_readings(host_id,field_key,signature,value_json,status,error_text,observed_at) VALUES (?,?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE signature=VALUES(signature),value_json=VALUES(value_json),status=VALUES(status),error_text=VALUES(error_text),observed_at=NOW()',
+        'INSERT INTO ' .
+            'plugin_icct_nms_serial_readings(host_id,field_key,signature,value_json,status,error_text,observed_at) ' .
+            'VALUES (?,?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE ' .
+            'signature=VALUES(signature),value_json=VALUES(value_json),status=VALUES(status),error_text=VALUES(error_text),observed_at=NOW()',
         [
             $target['host']['id'],
             $key,

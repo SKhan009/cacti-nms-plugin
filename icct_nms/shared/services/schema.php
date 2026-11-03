@@ -50,7 +50,9 @@ function icct_nms_schema_install()
     // Start immutable history snapshots from current saved facts; never invent past content.
     foreach (
         db_fetch_assoc(
-            'SELECT a.* FROM plugin_icct_nms_alarms a WHERE NOT EXISTS(SELECT 1 FROM plugin_icct_nms_alarm_history h WHERE h.alarm_key=a.alarm_key AND h.snapshot_json IS NOT NULL)',
+            'SELECT a.* FROM plugin_icct_nms_alarms a WHERE NOT EXISTS(SELECT 1 FROM ' .
+                'plugin_icct_nms_alarm_history h WHERE h.alarm_key=a.alarm_key AND h.snapshot_json IS ' .
+                'NOT NULL)',
         ) as $alarm
     ) {
         $snapshot = array_intersect_key(
@@ -120,7 +122,8 @@ function icct_nms_schema_install()
     icct_nms_seed_protocol_presets();
     if (
         !db_execute_prepared(
-            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
             ['icct_nms_schema_version', '1.2.10'],
         )
     ) {
@@ -146,7 +149,9 @@ function icct_nms_schema_sites_migration()
         );
     }
     icct_nms_schema_execute(
-        "UPDATE plugin_icct_nms_racks r JOIN plugin_icct_nms_rack_nodes n ON n.id=r.node_id LEFT JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT('node_rack_profile_',n.id) SET r.site_id=n.site_id,r.profile_id=COALESCE(m.meta_value,'')",
+        'UPDATE plugin_icct_nms_racks r JOIN plugin_icct_nms_rack_nodes n ON n.id=r.node_id LEFT ' .
+            'JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT(\'node_rack_profile_\',n.id) SET ' .
+            'r.site_id=n.site_id,r.profile_id=COALESCE(m.meta_value,\'\')',
     );
     if (db_fetch_cell('SELECT COUNT(*) FROM plugin_icct_nms_racks WHERE site_id=0')) {
         throw new RuntimeException('A legacy rack has no site. Restore its site before upgrading.');
@@ -371,7 +376,8 @@ function icct_nms_schema_rack_catalogue_migration()
         }
         unset($profile);
         $execute(
-            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
             ['rack_profiles', json_encode($profiles, JSON_THROW_ON_ERROR)],
         );
         $execute(
@@ -431,15 +437,14 @@ function icct_nms_schema_mtr_background_migration()
 function icct_nms_schema_syslog_availability_migration()
 {
     if (
-        !db_execute('CREATE TABLE IF NOT EXISTS `plugin_icct_nms_syslog_availability_state` (
-  `host_id` mediumint(8) unsigned NOT NULL,
-  `last_status` tinyint(3) unsigned NOT NULL DEFAULT 0,
-  `last_disabled` tinyint(3) unsigned NOT NULL DEFAULT 0,
-  `initialized_at` datetime NOT NULL,
-  `last_changed_at` datetime DEFAULT NULL,
-  `updated_at` datetime NOT NULL,
-  PRIMARY KEY (`host_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;')
+        !db_execute(
+            "CREATE TABLE IF NOT EXISTS `plugin_icct_nms_syslog_availability_state` (\n  `host_id` " .
+                "mediumint(8) unsigned NOT NULL,\n  `last_status` tinyint(3) unsigned NOT NULL DEFAULT 0,\n" .
+                "  `last_disabled` tinyint(3) unsigned NOT NULL DEFAULT 0,\n  `initialized_at` datetime " .
+                "NOT NULL,\n  `last_changed_at` datetime DEFAULT NULL,\n  `updated_at` datetime NOT NULL,\n" .
+                "  PRIMARY KEY (`host_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 " .
+                'COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC;',
+        )
     ) {
         throw new RuntimeException('Syslog availability state migration failed.');
     }

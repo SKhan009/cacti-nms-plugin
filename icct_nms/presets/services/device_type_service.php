@@ -349,7 +349,9 @@ function icct_nms_save_device_type($input, $file = null, $ownTransaction = true)
         }
         if ($reclassify) {
             icct_backend_category_execute(
-                'UPDATE plugin_icct_nms_device_classification SET category_id=?,device_type=?,updated_by=?,updated_at=NOW() WHERE category_id=? AND device_type=?',
+                'UPDATE plugin_icct_nms_device_classification SET ' .
+                    'category_id=?,device_type=?,updated_by=?,updated_at=NOW() WHERE category_id=? AND ' .
+                    'device_type=?',
                 [
                     $category,
                     $name,
@@ -360,7 +362,8 @@ function icct_nms_save_device_type($input, $file = null, $ownTransaction = true)
             );
         }
         icct_backend_category_execute(
-            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
             ['device_type_profiles', $json],
         );
         if ($transaction) {

@@ -75,7 +75,7 @@ function icct_backend_ssh_consume($request, $expected_kind = null)
         }
         if (
             !db_execute_prepared(
-                "UPDATE plugin_icct_nms_ssh_sessions SET status='active',started_at=NOW(),ticket_hash='' WHERE id=?",
+                "UPDATE plugin_icct_nms_ssh_sessions SET status='active',started_at=NOW(),ticket_hash='',lease_until=DATE_ADD(NOW(),INTERVAL 30 SECOND) WHERE id=?",
                 [$id],
             )
         ) {
@@ -95,10 +95,19 @@ function icct_backend_ssh_consume($request, $expected_kind = null)
 function icct_backend_ssh_session_live($id)
 {
     $s = db_fetch_row_prepared(
-        "SELECT s.* FROM plugin_icct_nms_ssh_sessions s INNER JOIN user_auth u ON u.id=s.user_id WHERE s.id=? AND s.status='active' AND s.lease_until>NOW() AND u.enabled='on'",
+        'SELECT s.* FROM plugin_icct_nms_ssh_sessions s INNER JOIN user_auth u ON u.id=s.user_id ' .
+            'WHERE s.id=? AND s.status=\'active\' AND s.lease_until>NOW() AND u.enabled=\'on\'',
         [$id],
     );
     if (!$s || !icct_backend_ssh_enabled()) {
+        return false;
+    }
+    global $user_auth_realm_filenames;
+    $realm = $user_auth_realm_filenames['protocol.php'] ?? null;
+    // Workers recheck current permissions; an already-open terminal does not retain revoked access.
+    if ($realm === null || !is_realm_allowed((int) $realm, (int) $s['user_id']) ||
+        !is_realm_allowed(3, (int) $s['user_id']) ||
+        !is_device_allowed((int) $s['host_id'], (int) $s['user_id'])) {
         return false;
     }
     try {
@@ -109,17 +118,6 @@ function icct_backend_ssh_session_live($id)
     } catch (Throwable $e) {
         return false;
     }
-}
-
-/**
- * Handles ssh close session.
- */
-function icct_backend_ssh_close_session($id, $outcome)
-{
-    db_execute_prepared(
-        "UPDATE plugin_icct_nms_ssh_sessions SET status='closed',ended_at=NOW(),outcome=? WHERE id=? AND status IN ('issued','active')",
-        [substr($outcome, 0, 250), $id],
-    );
 }
 
 /** Enforce a wall-clock budget even while an SSH peer stalls inside a blocking read. */
@@ -298,7 +296,9 @@ function icct_backend_ssh_collect($host_id)
             return;
         }
         db_execute_prepared(
-            "INSERT INTO plugin_icct_nms_ssh_state (host_id,status,last_attempt) VALUES (?,'collecting',NOW()) ON DUPLICATE KEY UPDATE status='collecting',last_attempt=NOW(),last_error=''",
+            'INSERT INTO plugin_icct_nms_ssh_state (host_id,status,last_attempt) VALUES ' .
+                '(?,\'collecting\',NOW()) ON DUPLICATE KEY UPDATE ' .
+                'status=\'collecting\',last_attempt=NOW(),last_error=\'\'',
             [$host_id],
         );
         if (
@@ -349,7 +349,9 @@ function icct_backend_ssh_collect($host_id)
         }
         if (
             !db_execute_prepared(
-                "UPDATE plugin_icct_nms_ssh_state SET status='ok',last_success=NOW(),last_error='',sample_json=?,preset_revision=?,device_revision=?,endpoint=? WHERE host_id=?",
+                'UPDATE plugin_icct_nms_ssh_state SET ' .
+                    'status=\'ok\',last_success=NOW(),last_error=\'\',sample_json=?,preset_revision=?,device_revision=?,endpoint=? ' .
+                    'WHERE host_id=?',
                 [
                     json_encode($sample, JSON_THROW_ON_ERROR),
                     $d['preset_revision'],
@@ -376,7 +378,9 @@ function icct_backend_ssh_collect($host_id)
         }
     } catch (Throwable $e) {
         db_execute_prepared(
-            "INSERT INTO plugin_icct_nms_ssh_state (host_id,status,last_attempt,last_error) VALUES (?,'failed',NOW(),?) ON DUPLICATE KEY UPDATE status='failed',last_error=VALUES(last_error),last_attempt=NOW()",
+            'INSERT INTO plugin_icct_nms_ssh_state (host_id,status,last_attempt,last_error) VALUES ' .
+                '(?,\'failed\',NOW(),?) ON DUPLICATE KEY UPDATE ' .
+                'status=\'failed\',last_error=VALUES(last_error),last_attempt=NOW()',
             [$host_id, substr($e->getMessage(), 0, 250)],
         );
     } finally {

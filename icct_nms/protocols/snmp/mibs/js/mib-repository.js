@@ -751,7 +751,8 @@
         min: 'Minimum valid value stored in the RRD. U means unknown. This is a storage bound, not an alarm threshold.',
         max: 'Maximum valid value stored in the RRD. U means unknown. This is a storage bound, not an alarm threshold.',
         instance_index:
-            'For SNMP GET on a table, enter the numeric instance suffix. Indexed SNMP discovers instances automatically and requires this field to remain blank.',
+            'For SNMP GET on a table, enter the numeric instance suffix. Indexed SNMP discovers ' +
+            'instances automatically and requires this field to remain blank.',
         name: 'Name identifying this alarm preset for the selected OID.',
         condition: 'Comparison applied to the collected value and the numeric alarm threshold.',
         threshold:

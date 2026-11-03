@@ -118,7 +118,8 @@ function icct_nms_map_measurement($host)
         return $empty;
     }
     $job = db_fetch_row_prepared(
-        "SELECT * FROM plugin_icct_nms_diagnostic_jobs WHERE host_id=? AND user_id=? AND tool='ping' AND status IN ('complete','failed') ORDER BY id DESC LIMIT 1",
+        'SELECT * FROM plugin_icct_nms_diagnostic_jobs WHERE host_id=? AND user_id=? AND ' .
+            'tool=\'ping\' AND status IN (\'complete\',\'failed\') ORDER BY id DESC LIMIT 1',
         [(int) $host['id'], icct_backend_current_user_id()],
     );
     if (!$job) {
@@ -245,7 +246,9 @@ function icct_nms_map_data()
         }
         if ($device['serial'] === '') {
             $device['serial'] = (string) db_fetch_cell_prepared(
-                "SELECT observed_value FROM plugin_icct_nms_device_inventory WHERE host_id=? AND inventory_key='serial_number' AND status IN ('ok','changed') AND last_success>=DATE_SUB(NOW(),INTERVAL 10 MINUTE)",
+                'SELECT observed_value FROM plugin_icct_nms_device_inventory WHERE host_id=? AND ' .
+                    'inventory_key=\'serial_number\' AND status IN (\'ok\',\'changed\') AND ' .
+                    'last_success>=DATE_SUB(NOW(),INTERVAL 10 MINUTE)',
                 [$id],
             );
         }

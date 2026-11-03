@@ -111,7 +111,9 @@ function icct_nms_alarm_record($host, $rule, $observation)
             $fix = $rule['corrective_action'] ?? '';
             if (!$previous) {
                 icct_backend_category_execute(
-                    'INSERT INTO plugin_icct_nms_alarms(alarm_key,host_id,source,graph_id,name,description,fix,severity,state,first_seen,last_seen,sample_time) VALUES(?,?,?,?,?,?,?,?,?,NOW(),NOW(),?)',
+                    'INSERT INTO ' .
+                        'plugin_icct_nms_alarms(alarm_key,host_id,source,graph_id,name,description,fix,severity,state,first_seen,last_seen,sample_time) ' .
+                        'VALUES(?,?,?,?,?,?,?,?,?,NOW(),NOW(),?)',
                     [
                         $key,
                         (int) $host['id'],
@@ -127,7 +129,10 @@ function icct_nms_alarm_record($host, $rule, $observation)
                 );
             } else {
                 icct_backend_category_execute(
-                    'UPDATE plugin_icct_nms_alarms SET graph_id=?,name=?,description=?,fix=?,severity=?,state=?,last_seen=NOW(),sample_time=?,occurrences=?,acknowledged=?,escalated=?,ticket_state=?,revision=revision+1 WHERE alarm_key=?',
+                    'UPDATE plugin_icct_nms_alarms SET ' .
+                        ('graph_id=?,name=?,description=?,fix=?,severity=?,state=?,last_seen=NOW(),sample_time=?,' .
+                            'occurrences=?,acknowledged=?,escalated=?,ticket_state=?,revision=revision+1 ') .
+                        'WHERE alarm_key=?',
                     [
                         (int) $observation['graph_id'],
                         $name,
@@ -253,7 +258,8 @@ function icct_nms_alarm_rows()
     }
     $ids = array_map('intval', array_keys($devices));
     $rows = db_fetch_assoc(
-        'SELECT *,UNIX_TIMESTAMP(first_seen) AS occurred_epoch,UNIX_TIMESTAMP(last_seen) AS observed_epoch FROM plugin_icct_nms_alarms WHERE host_id IN (' .
+        'SELECT *,UNIX_TIMESTAMP(first_seen) AS occurred_epoch,UNIX_TIMESTAMP(last_seen) AS ' .
+            'observed_epoch FROM plugin_icct_nms_alarms WHERE host_id IN (' .
             implode(',', $ids) .
             ') ORDER BY first_seen DESC,alarm_key',
     );
@@ -423,7 +429,8 @@ function icct_nms_alarm_detail($key)
         throw new InvalidArgumentException('Alarm unavailable.');
     }
     $row = db_fetch_row_prepared(
-        'SELECT *,UNIX_TIMESTAMP(first_seen) AS occurred_epoch,UNIX_TIMESTAMP(last_seen) AS observed_epoch FROM plugin_icct_nms_alarms WHERE alarm_key=?',
+        'SELECT *,UNIX_TIMESTAMP(first_seen) AS occurred_epoch,UNIX_TIMESTAMP(last_seen) AS ' .
+            'observed_epoch FROM plugin_icct_nms_alarms WHERE alarm_key=?',
         [$key],
     );
     if (!$row) {
@@ -443,7 +450,10 @@ function icct_nms_alarm_detail($key)
         'device_status' => $device['status_label'] ?? 'Unknown',
     ];
     $history = db_fetch_assoc_prepared(
-        "SELECT h.*,UNIX_TIMESTAMP(h.created_at) AS created_epoch,COALESCE(NULLIF(u.full_name,''),u.username) AS actor_name,u.username AS actor_username,u.email_address AS actor_email FROM plugin_icct_nms_alarm_history h LEFT JOIN user_auth u ON u.id=h.actor_id WHERE h.alarm_key=? ORDER BY h.id DESC",
+        'SELECT h.*,UNIX_TIMESTAMP(h.created_at) AS ' .
+            'created_epoch,COALESCE(NULLIF(u.full_name,\'\'),u.username) AS actor_name,u.username AS ' .
+            'actor_username,u.email_address AS actor_email FROM plugin_icct_nms_alarm_history h LEFT ' .
+            'JOIN user_auth u ON u.id=h.actor_id WHERE h.alarm_key=? ORDER BY h.id DESC',
         [$key],
     );
     $ack = null;

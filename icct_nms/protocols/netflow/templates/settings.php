@@ -1,4 +1,4 @@
-<?php
+<?php /** NetFlow settings expose the local collector configuration and its validation errors. */
 $nfFields = [
     'version' => [
         'Version',
@@ -53,40 +53,88 @@ $nfRanges = [
     'bandwidth_limit_mbps' => [1, 1000000],
     'scan_threshold' => [2, 1000000],
     'syn_pps_threshold' => [1, 100000000],
-];
-?>
+]; ?>
 <div class="protocol-grid cols-4">
-<?php foreach (
-    $nfFields as $name => [$label, $type, $help]
-): ?><label class="field"><span class="field-label"><?= $label ?> <span class="field-info" tabindex="0" role="img" aria-label="Information about <?= icct_nms_h(
-    $label,
-) ?>" data-tooltip="<?= icct_nms_h(
-    $nfHelp[$name],
-) ?>"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span></span>
-<?php if ($type === 'select'): ?><select name="<?= $name ?>"><?php foreach (
-    $help as $v => $caption
-): ?><option value="<?= $v ?>" <?= (int) $netflow[$name] === $v
-    ? 'selected'
-    : '' ?>><?= $caption ?></option><?php endforeach; ?></select>
-<?php else: ?><input name="<?= $name ?>" type="<?= $type ?>" value="<?= icct_nms_h(
-    $netflow[$name],
-) ?>" placeholder="<?= icct_nms_h($help) ?>" <?= isset(
-    ['collector' => 253, 'lan_cidrs' => 1000, 'wan_interfaces' => 512][$name],
-)
-    ? 'maxlength="' .
-        ['collector' => 253, 'lan_cidrs' => 1000, 'wan_interfaces' => 512][$name] .
-        '"'
-    : '' ?> <?= in_array($name, ['wan_interfaces', 'lan_cidrs'], true)
-     ? ''
-     : 'required' ?> <?= $type === 'number'
-     ? 'min="' . $nfRanges[$name][0] . '" max="' . $nfRanges[$name][1] . '"'
-     : '' ?>><?php endif; ?></label><?php endforeach; ?>
-<?php if (
-         !$presetMode
-     ): ?><label class="field"><span class="field-label">Exporter Source IP <span class="field-info" tabindex="0" role="img" aria-label="Information about Exporter Source IP" data-tooltip="<?= icct_nms_h(
-         $nfHelp['exporter_address'],
-     ) ?>"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6v.5"/></svg></span></span><input name="exporter_address" required value="<?= icct_nms_h(
-         $netflow['exporter_address'] ?? ($host['hostname'] ?? ''),
-     ) ?>" placeholder="Source IP observed by the collector"></label><?php endif; ?>
+    <?php foreach (
+        $nfFields as $name => [$label, $type, $help]
+    ): ?>
+        <label class="field">
+            <span class="field-label"><?= $label ?> <span
+                    class="field-info"
+                    tabindex="0"
+                    role="img"
+                    aria-label="Information about <?= icct_nms_h($label) ?>"
+                    data-tooltip="<?= icct_nms_h($nfHelp[$name]) ?>">
+                    <svg
+                        viewBox="0 0 20 20"
+                        aria-hidden="true">
+                        <circle
+                            cx="10"
+                            cy="10"
+                            r="8" />
+                        <path d="M10 9v5M10 6v.5" />
+                    </svg>
+                </span>
+            </span>
+            <?php if ($type === 'select'): ?>
+                <select name="<?= $name ?>">
+                    <?php foreach (
+                        $help as $v => $caption
+                    ): ?>
+                        <option
+                            value="<?= $v ?>"
+                            <?= (int) $netflow[$name] === $v ? 'selected' : '' ?>><?= $caption ?></option>
+                    <?php endforeach; ?>
+                </select>
+            <?php else: ?>
+                <input
+                    name="<?= $name ?>"
+                    type="<?= $type ?>"
+                    value="<?= icct_nms_h($netflow[$name]) ?>"
+                    placeholder="<?= icct_nms_h($help) ?>"
+                    <?= isset(['collector' => 253, 'lan_cidrs' => 1000, 'wan_interfaces' => 512][$name])
+                        ? 'maxlength="' .
+                            ['collector' => 253, 'lan_cidrs' => 1000, 'wan_interfaces' => 512][$name] .
+                            '"'
+                        : '' ?>
+                    <?= in_array($name, ['wan_interfaces', 'lan_cidrs'], true) ? '' : 'required' ?>
+                    <?= $type === 'number'
+                        ? 'min="' . $nfRanges[$name][0] . '" max="' . $nfRanges[$name][1] . '"'
+                        : '' ?>>
+            <?php endif; ?>
+        </label>
+    <?php endforeach; ?>
+    <?php if (
+        !$presetMode
+    ): ?>
+        <label class="field">
+            <span class="field-label">Exporter Source IP <span
+                    class="field-info"
+                    tabindex="0"
+                    role="img"
+                    aria-label="Information about Exporter Source IP"
+                    data-tooltip="<?= icct_nms_h($nfHelp['exporter_address']) ?>">
+                    <svg
+                        viewBox="0 0 20 20"
+                        aria-hidden="true">
+                        <circle
+                            cx="10"
+                            cy="10"
+                            r="8" />
+                        <path d="M10 9v5M10 6v.5" />
+                    </svg>
+                </span>
+            </span>
+            <input
+                name="exporter_address"
+                required
+                value="<?= icct_nms_h($netflow['exporter_address'] ?? ($host['hostname'] ?? '')) ?>"
+                placeholder="Source IP observed by the collector">
+        </label>
+    <?php endif; ?>
 </div>
-<div class="protocol-actions"><button class="button primary" type="submit">Save</button></div>
+<div class="protocol-actions">
+    <button
+        class="button primary"
+        type="submit">Save</button>
+</div>

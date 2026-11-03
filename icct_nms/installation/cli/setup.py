@@ -4,6 +4,7 @@ import argparse
 import datetime
 import grp
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -40,7 +41,10 @@ def os_info():
             "Unsupported OS. Use the check page and provision dependencies manually on this OS."
         )
     return dict(
-        family=family, id=values["ID"], version=values["VERSION_ID"], arch=platform.machine()
+        family=family,
+        id=values["ID"],
+        version=values["VERSION_ID"],
+        arch=platform.machine(),
     )
 
 
@@ -58,20 +62,30 @@ def validate_root(value):
 
 def check_python_runtime(version=None):
     current = tuple(sys.version_info[:3] if version is None else version)
-    required = tuple(int(part) for part in MANIFEST['python_min'].split('.'))
+    required = tuple(int(part) for part in MANIFEST["python_min"].split("."))
     if current < required:
-        raise ValueError('Python '+MANIFEST['python_min']+' or newer is required for setup and collectors; use a supported Python runtime.')
+        raise ValueError(
+            "Python "
+            + MANIFEST["python_min"]
+            + " or newer is required for setup and collectors; use a supported Python runtime."
+        )
 
 
 def component_packages(target, component=None):
-    packages = list(MANIFEST['packages'][target['family']] if component is None else MANIFEST['optional_components'][component]['packages'][target['family']])
+    packages = list(
+        MANIFEST["packages"][target["family"]]
+        if component is None
+        else MANIFEST["optional_components"][component]["packages"][target["family"]]
+    )
     if not packages:
-        raise ValueError('No supported repository package for this component on this OS; use the approved native build guide.')
-    version = tuple(int(part) for part in re.findall(r'\d+', target.get('version', '0')))
-    for rule in MANIFEST.get('package_overrides', []):
-        minimum = tuple(int(part) for part in rule.get('min_version','0').split('.'))
-        if rule['id'] == target.get('id') and version >= minimum:
-            packages = [rule['replacements'].get(package, package) for package in packages]
+        raise ValueError(
+            "No supported repository package for this component on this OS; use the approved native build guide."
+        )
+    version = tuple(int(part) for part in re.findall(r"\d+", target.get("version", "0")))
+    for rule in MANIFEST.get("package_overrides", []):
+        minimum = tuple(int(part) for part in rule.get("min_version", "0").split("."))
+        if rule["id"] == target.get("id") and version >= minimum:
+            packages = [rule["replacements"].get(package, package) for package in packages]
     return packages
 
 
@@ -80,7 +94,10 @@ def verify_bundle(directory, target, component=None):
     data = json.loads((directory / "bundle.json").read_text())
     if data.get("format") != 1 or data.get("target") != target:
         raise ValueError("Offline bundle OS version or CPU architecture differs from this server.")
-    if data.get("packages") != component_packages(target, component) or data.get("component") != component:
+    if (
+        data.get("packages") != component_packages(target, component)
+        or data.get("component") != component
+    ):
         raise ValueError("Bundle package list does not match this plugin release; rebuild it.")
     files = []
     for name, expected in data.get("files", {}).items():
@@ -100,9 +117,9 @@ def verify_bundle(directory, target, component=None):
 
 
 def verify_component_bundle(directory, target):
-    component = json.loads((Path(directory) / 'bundle.json').read_text()).get('component')
-    if component not in MANIFEST['optional_components']:
-        raise ValueError('Unknown component bundle.')
+    component = json.loads((Path(directory) / "bundle.json").read_text()).get("component")
+    if component not in MANIFEST["optional_components"]:
+        raise ValueError("Unknown component bundle.")
     verify_bundle(directory, target, component)
     return component
 
@@ -147,7 +164,17 @@ def download_bundle(directory, target, component=None):
     if not files:
         raise ValueError("Package manager produced no packages.")
     (dest / "bundle.json").write_text(
-        json.dumps(dict(format=1, target=target, component=component, packages=packages, files=files), indent=2) + "\n"
+        json.dumps(
+            dict(
+                format=1,
+                target=target,
+                component=component,
+                packages=packages,
+                files=files,
+            ),
+            indent=2,
+        )
+        + "\n"
     )
     print("Bundle built for exactly: " + json.dumps(target))
 
@@ -156,31 +183,53 @@ def install_packages(target, bundle, online=False, component=None):
     if bundle and online:
         raise ValueError("--online cannot be combined with --bundle.")
     if bundle:
-        files = verify_bundle(bundle, target, component) if component else verify_bundle(bundle, target)
+        files = (
+            verify_bundle(bundle, target, component) if component else verify_bundle(bundle, target)
+        )
         if target["family"] == "rhel":
             run(["dnf", "-y", "--disablerepo=*", "install", *files])
         else:
             # APT 2.6's --no-download breaks local-DEB dependency installation.
             # Empty sources AND lists leave only installed packages and verified local DEBs.
-            with tempfile.TemporaryDirectory(prefix='icct-offline-apt-') as temporary:
+            with tempfile.TemporaryDirectory(prefix="icct-offline-apt-") as temporary:
                 location = Path(temporary)
                 os.chmod(location, 0o755)
-                (location / 'sources.list').touch()
-                (location / 'sources.list.d').mkdir()
-                (location / 'lists').mkdir()
-                run(['apt-get', '-y', '--no-remove',
-                     '-o', 'Dir::Etc::sourcelist=' + str(location / 'sources.list'),
-                     '-o', 'Dir::Etc::sourceparts=' + str(location / 'sources.list.d'),
-                     '-o', 'Dir::State::lists=' + str(location / 'lists'),
-                     '-o', 'Dir::Cache::pkgcache=', '-o', 'Dir::Cache::srcpkgcache=',
-                     'install', *files], env=dict(os.environ, DEBIAN_FRONTEND='noninteractive'))
+                (location / "sources.list").touch()
+                (location / "sources.list.d").mkdir()
+                (location / "lists").mkdir()
+                run(
+                    [
+                        "apt-get",
+                        "-y",
+                        "--no-remove",
+                        "-o",
+                        "Dir::Etc::sourcelist=" + str(location / "sources.list"),
+                        "-o",
+                        "Dir::Etc::sourceparts=" + str(location / "sources.list.d"),
+                        "-o",
+                        "Dir::State::lists=" + str(location / "lists"),
+                        "-o",
+                        "Dir::Cache::pkgcache=",
+                        "-o",
+                        "Dir::Cache::srcpkgcache=",
+                        "install",
+                        *files,
+                    ],
+                    env=dict(os.environ, DEBIAN_FRONTEND="noninteractive"),
+                )
     elif online:
         if target["family"] == "rhel":
             run(["dnf", "-y", "install", *component_packages(target, component)])
         else:
             run(["apt-get", "update"])
             run(
-                ["apt-get", "-y", "--no-remove", "install", *component_packages(target, component)],
+                [
+                    "apt-get",
+                    "-y",
+                    "--no-remove",
+                    "install",
+                    *component_packages(target, component),
+                ],
                 env=dict(os.environ, DEBIAN_FRONTEND="noninteractive"),
             )
     else:
@@ -220,28 +269,39 @@ def preflight(root):
 
 
 def configure_selinux_writable(paths):
-    getenforce = shutil.which('getenforce')
+    getenforce = shutil.which("getenforce")
     if not getenforce:
         return
-    state = subprocess.check_output([getenforce],text=True).strip()
-    if state not in ('Enforcing','Permissive'):
+    state = subprocess.check_output([getenforce], text=True).strip()
+    if state not in ("Enforcing", "Permissive"):
         return
-    semanage = shutil.which('semanage')
-    restorecon = shutil.which('restorecon')
+    semanage = shutil.which("semanage")
+    restorecon = shutil.which("restorecon")
     if not semanage or not restorecon:
-        raise ValueError('SELinux tools are required: install policycoreutils-python-utils before service setup.')
-    rules = subprocess.check_output([semanage,'fcontext','-l','-C'],text=True)
+        raise ValueError(
+            "SELinux tools are required: install policycoreutils-python-utils before service setup."
+        )
+    rules = subprocess.check_output([semanage, "fcontext", "-l", "-C"], text=True)
     for path in paths:
-        matchpathcon = shutil.which('matchpathcon')
+        matchpathcon = shutil.which("matchpathcon")
         if matchpathcon:
-            expected = subprocess.check_output([matchpathcon,'-n',str(path)],text=True).strip()
-            if ':httpd_sys_rw_content_t:' in expected:
-                run([restorecon,'-RF',path])
+            expected = subprocess.check_output([matchpathcon, "-n", str(path)], text=True).strip()
+            if ":httpd_sys_rw_content_t:" in expected:
+                run([restorecon, "-RF", path])
                 continue
-        pattern = re.escape(str(path))+'(/.*)?'
+        pattern = re.escape(str(path)) + "(/.*)?"
         existing = any(line.split() and line.split()[0] == pattern for line in rules.splitlines())
-        run([semanage,'fcontext','-m' if existing else '-a','-t','httpd_sys_rw_content_t',pattern])
-        run([restorecon,'-RF',path])
+        run(
+            [
+                semanage,
+                "fcontext",
+                "-m" if existing else "-a",
+                "-t",
+                "httpd_sys_rw_content_t",
+                pattern,
+            ]
+        )
+        run([restorecon, "-RF", path])
 
 
 def services(root, user, group):
@@ -252,10 +312,14 @@ def services(root, user, group):
     group_id = grp.getgrnam(group).gr_gid
     if account.pw_uid == 0:
         raise ValueError("Worker account must not be root.")
-    writable = [PLUGIN / 'protocols/snmp/mibs/storage', PLUGIN / 'shared/assets/images/device-types/uploads', root / 'resource/snmp_queries/icct_nms']
+    writable = [
+        PLUGIN / "protocols/snmp/mibs/storage",
+        PLUGIN / "shared/assets/images/device-types/uploads",
+        root / "resource/snmp_queries/icct_nms",
+    ]
     for path in writable:
-        if any(parent.is_symlink() for parent in [path,*path.parents]):
-            raise ValueError('Refusing writable directory symlink.')
+        if any(parent.is_symlink() for parent in [path, *path.parents]):
+            raise ValueError("Refusing writable directory symlink.")
         path.mkdir(parents=True, exist_ok=True)
         os.chown(path, account.pw_uid, group_id)
         path.chmod(0o750)
@@ -311,24 +375,113 @@ def services(root, user, group):
         )
 
 
+def validate_ssh_settings(origin, service_user, state_directory, guacd_port):
+    spec = importlib.util.spec_from_file_location(
+        "icct_ssh_configuration", PLUGIN / "protocols/ssh/configure.py"
+    )
+    adapter = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(adapter)
+    adapter.validate_settings(origin, service_user, state_directory, guacd_port)
+
+
+def ssh_bundle(bundles):
+    matches = [
+        directory
+        for directory in bundles
+        if json.loads((Path(directory) / "native.json").read_text()).get("component")
+        == "guacamole-strict"
+    ]
+    if len(matches) != 1:
+        raise ValueError(
+            "SSH setup requires exactly one verified guacamole-strict --native-bundle."
+        )
+    return matches[0]
+
+
+def configure_ssh(root, user, group, origin, bundles, service_user, state_directory, guacd_port):
+    # All dependencies are local; configure.py verifies installed bytes before starting either service.
+    run(
+        [
+            sys.executable,
+            PLUGIN / "protocols/ssh/configure.py",
+            "--cacti-path",
+            root,
+            "--origin",
+            origin,
+            "--web-user",
+            user,
+            "--web-group",
+            group,
+            "--poller-id",
+            str(poller_id(root)),
+            "--native-bundle",
+            ssh_bundle(bundles),
+            "--service-user",
+            service_user,
+            "--state-directory",
+            state_directory,
+            "--guacd-port",
+            str(guacd_port),
+        ]
+    )
+
+
+def poller_id(root):
+    code = 'require $argv[1]."/include/cli_check.php";echo (int)$config["poller_id"];'
+    value = subprocess.check_output([shutil.which("php"), "-r", code, str(root)], text=True).strip()
+    if not value.isdigit() or int(value) < 1:
+        raise ValueError("Cannot identify the native Cacti collector ID.")
+    return int(value)
+
+
 def main():
     check_python_runtime()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=["plan", "install", "bundle"])
     parser.add_argument("--cacti-root", default=str(PLUGIN.parents[1]))
     parser.add_argument(
-        "--bundle", help="Offline bundle directory (input for install, output for bundle)"
+        "--bundle",
+        help="Offline bundle directory (input for install, output for bundle)",
     )
     parser.add_argument(
         "--web-user",
         help="Existing PHP/collector account; defaults apache on RHEL, www-data on Debian",
     )
     parser.add_argument("--web-group")
-    parser.add_argument("--all-components", action="store_true", help="Install all available protocol dependency profiles")
-    parser.add_argument("--component-bundle", action="append", default=[], help="Offline optional dependency bundle; may be repeated")
-    parser.add_argument("--native-bundle", action="append", default=[], help="Verified native dependency bundle; may be repeated")
-    parser.add_argument("--component", choices=list(MANIFEST["optional_components"]), help="Install or bundle one optional dependency only; no plugin or service configuration")
-    parser.add_argument('--application-only', action='store_true', help='Install application pages/schema only; leave OS packages and services managed externally')
+    parser.add_argument(
+        "--ssh-origin",
+        help="Explicit browser HTTPS origin; configure the offline strict SSH broker",
+    )
+    parser.add_argument("--ssh-service-user", default="icct-nms-ssh")
+    parser.add_argument("--ssh-state-directory", default="/var/lib/icct-nms-ssh")
+    parser.add_argument("--ssh-guacd-port", type=int, default=4823)
+    parser.add_argument(
+        "--all-components",
+        action="store_true",
+        help="Install all available protocol dependency profiles",
+    )
+    parser.add_argument(
+        "--component-bundle",
+        action="append",
+        default=[],
+        help="Offline optional dependency bundle; may be repeated",
+    )
+    parser.add_argument(
+        "--native-bundle",
+        action="append",
+        default=[],
+        help="Verified native dependency bundle; may be repeated",
+    )
+    parser.add_argument(
+        "--component",
+        choices=list(MANIFEST["optional_components"]),
+        help="Install or bundle one optional dependency only; no plugin or service configuration",
+    )
+    parser.add_argument(
+        "--application-only",
+        action="store_true",
+        help="Install application pages/schema only; leave OS packages and services managed externally",
+    )
     parser.add_argument(
         "--online",
         action="store_true",
@@ -340,23 +493,44 @@ def main():
         help="Use packages already provisioned by the administrator",
     )
     args = parser.parse_args()
+    if args.ssh_origin:
+        if args.application_only or args.component:
+            parser.error("SSH setup requires full service setup.")
+        validate_ssh_settings(
+            args.ssh_origin,
+            args.ssh_service_user,
+            args.ssh_state_directory,
+            args.ssh_guacd_port,
+        )
+        ssh_bundle(args.native_bundle)
     if args.component and (args.native_bundle or args.component_bundle):
-        parser.error('--component cannot be combined with additional bundles.')
-    if args.application_only and (args.bundle or args.online or args.no_packages or args.native_bundle or args.component_bundle or args.all_components):
-        parser.error('--application-only cannot be combined with package options.')
+        parser.error("--component cannot be combined with additional bundles.")
+    if args.application_only and (
+        args.bundle
+        or args.online
+        or args.no_packages
+        or args.native_bundle
+        or args.component_bundle
+        or args.all_components
+    ):
+        parser.error("--application-only cannot be combined with package options.")
     if args.online and (args.bundle or args.no_packages):
         parser.error("--online cannot be combined with --bundle or --no-packages.")
     if args.all_components and (args.no_packages or args.component):
-        parser.error('--all-components cannot be combined with --component or --no-packages.')
+        parser.error("--all-components cannot be combined with --component or --no-packages.")
     if args.no_packages and args.component_bundle:
-        parser.error('--no-packages cannot install component packages.')
+        parser.error("--no-packages cannot install component packages.")
     target = os_info()
-    if args.action == 'bundle':
+    if args.action == "bundle":
         if os.geteuid() != 0:
-            raise ValueError('Run bundle as root on the matching build system.')
+            raise ValueError("Run bundle as root on the matching build system.")
         if not args.bundle:
-            raise ValueError('bundle requires --bundle OUTPUT_DIRECTORY')
-        download_bundle(args.bundle, target, args.component) if args.component else download_bundle(args.bundle, target)
+            raise ValueError("bundle requires --bundle OUTPUT_DIRECTORY")
+        (
+            download_bundle(args.bundle, target, args.component)
+            if args.component
+            else download_bundle(args.bundle, target)
+        )
         return
     root = validate_root(args.cacti_root)
     user = args.web_user or ("apache" if target["family"] == "rhel" else "www-data")
@@ -369,13 +543,20 @@ def main():
     for directory in args.component_bundle:
         component = verify_component_bundle(directory, target)
         if component in component_bundles:
-            raise ValueError('Duplicate component bundle.')
+            raise ValueError("Duplicate component bundle.")
         component_bundles[component] = directory
     selected_components = list(component_bundles)
     if args.all_components:
-        selected_components = [name for name, spec in MANIFEST['optional_components'].items() if spec['packages'][target['family']]]
+        selected_components = [
+            name
+            for name, spec in MANIFEST["optional_components"].items()
+            if spec["packages"][target["family"]]
+        ]
         if not args.online and set(selected_components) - set(component_bundles):
-            raise ValueError('Offline --all-components requires bundles for: '+', '.join(sorted(set(selected_components)-set(component_bundles))))
+            raise ValueError(
+                "Offline --all-components requires bundles for: "
+                + ", ".join(sorted(set(selected_components) - set(component_bundles)))
+            )
     plan = dict(
         target=target,
         cacti=str(root),
@@ -388,6 +569,8 @@ def main():
         selected_components=selected_components,
         offline=not args.online,
         pending=MANIFEST["pending_features"],
+        ssh_origin=args.ssh_origin,
+        ssh_guacd_port=args.ssh_guacd_port if args.ssh_origin else None,
         additional=[
             "Strict SSH/HTTPS setup",
             "Pathchar binary from an approved source",
@@ -397,7 +580,17 @@ def main():
     )
     if args.action == "plan":
         for directory in args.native_bundle:
-            subprocess.run([sys.executable, str(PLUGIN / 'installation/cli/native.py'), 'verify', '--bundle', directory], check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(PLUGIN / "installation/cli/native.py"),
+                    "verify",
+                    "--bundle",
+                    directory,
+                ],
+                check=True,
+                stdout=subprocess.DEVNULL,
+            )
         if args.bundle:
             verify_bundle(args.bundle, target, args.component)
         print(json.dumps(plan, indent=2))
@@ -406,12 +599,22 @@ def main():
         raise ValueError("Run install/bundle as root; plan is read-only and needs no privileges.")
     if args.component:
         if args.application_only or args.no_packages:
-            raise ValueError('--component requires --online or --bundle.')
+            raise ValueError("--component requires --online or --bundle.")
         install_packages(target, args.bundle, args.online, args.component)
-        print('Dependency installed. Application integration and service configuration are separate.')
+        print(
+            "Dependency installed. Application integration and service configuration are separate."
+        )
         return
     for directory in args.native_bundle:
-        run([sys.executable, PLUGIN / 'installation/cli/native.py', 'verify', '--bundle', directory])
+        run(
+            [
+                sys.executable,
+                PLUGIN / "installation/cli/native.py",
+                "verify",
+                "--bundle",
+                directory,
+            ]
+        )
     php = preflight(root)
     if not args.application_only and not args.no_packages:
         install_packages(target, args.bundle, args.online)
@@ -419,7 +622,12 @@ def main():
         raise ValueError("--no-packages cannot be combined with --bundle.")
     for component in selected_components:
         directory = component_bundles.get(component)
-        install_packages(target, directory, online=directory is None and args.online, component=component)
+        install_packages(
+            target,
+            directory,
+            online=directory is None and args.online,
+            component=component,
+        )
     # Use native Cacti lifecycle APIs; never grant all user realms or create core devices.
     php = shutil.which("php")
     if not php:
@@ -429,11 +637,34 @@ def main():
     code = 'try {require $argv[1]."/include/cli_check.php"; if ((int)db_fetch_cell("SELECT status FROM plugin_config WHERE directory=\'icct_nms\'") !== 1) throw new RuntimeException("Install/enable ICCT NMS in Cacti Plugin Management first.");} catch(Throwable $e){fwrite(STDERR,$e->getMessage().PHP_EOL);exit(1);}'
     run([php, "-r", code, root])
     if args.application_only:
-        print('Application pages/schema installed through native Cacti. OS packages and services were not changed.')
+        print(
+            "Application pages/schema installed through native Cacti. OS packages and services were not changed."
+        )
         return
     for directory in args.native_bundle:
-        run([sys.executable, PLUGIN / 'installation/cli/native.py', 'install', '--bundle', directory, '--web-group', group])
+        run(
+            [
+                sys.executable,
+                PLUGIN / "installation/cli/native.py",
+                "install",
+                "--bundle",
+                directory,
+                "--web-group",
+                group,
+            ]
+        )
     services(root, user, group)
+    if args.ssh_origin:
+        configure_ssh(
+            root,
+            user,
+            group,
+            args.ssh_origin,
+            args.native_bundle,
+            args.ssh_service_user,
+            args.ssh_state_directory,
+            args.ssh_guacd_port,
+        )
     run([php, PLUGIN / "installation/cli/check.php", "--save"])
     print(
         "Selected packages and common services installed and checked. Open Settings > Installation Checks for feature readiness and remaining configuration."

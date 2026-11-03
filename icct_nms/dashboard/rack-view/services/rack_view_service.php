@@ -109,7 +109,8 @@ function icct_nms_rack_place(
         }
         if ($rack && $peripheral) {
             icct_backend_category_execute(
-                'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+                'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                    'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
                 ['rack_peripheral_' . $id, (string) $rack],
             );
         } else {
@@ -368,7 +369,8 @@ function icct_nms_rack_save_draft($moves, $reservations = [])
                 $clean[] = ['id' => $id, 'start' => $start, 'height' => $height];
             }
             icct_backend_category_execute(
-                'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+                'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                    'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
                 ['rack_reserved_' . $rack, json_encode($clean, JSON_THROW_ON_ERROR)],
             );
         }

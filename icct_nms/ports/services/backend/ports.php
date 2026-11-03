@@ -1,6 +1,8 @@
 <?php
 
 /** Read-only IF-MIB/IF-X-MIB observations; preset capacity never creates observed ports. */
+require_once __DIR__ . '/../../../protocols/shared/services/backend/discovery_management_addresses.php';
+
 function icct_backend_ports_signature($host)
 {
     $fields = [
@@ -150,13 +152,13 @@ function icct_backend_ports_linux_parse($json)
             'oper' => $loopbackActive
                 ? 1
                 : [
-                        'UP' => 1,
-                        'DOWN' => 2,
-                        'TESTING' => 3,
-                        'NOTPRESENT' => 6,
-                        'DORMANT' => 5,
-                        'LOWERLAYERDOWN' => 7,
-                    ][$state] ?? 4,
+                    'UP' => 1,
+                    'DOWN' => 2,
+                    'TESTING' => 3,
+                    'NOTPRESENT' => 6,
+                    'DORMANT' => 5,
+                    'LOWERLAYERDOWN' => 7,
+                ][$state] ?? 4,
             'oper_note' => $loopbackActive ? 'Up (loopback)' : '',
             'reported_operstate' => $state,
             'connector' => ($row['link_type'] ?? '') === 'loopback' ? 2 : null,
@@ -220,7 +222,8 @@ function icct_backend_ports_store($host, $ports, $source, $key = 'ports_snapshot
             'error' => '',
         ] + $extra;
     icct_backend_category_execute(
-        'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+        'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+            'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
         [$key . $host['id'], json_encode($snapshot, JSON_THROW_ON_ERROR)],
     );
 }
@@ -315,7 +318,8 @@ function icct_backend_collect_ports()
         }
         $snapshot['time'] = time();
         icct_backend_category_execute(
-            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
             ['ports_snapshot_' . $host['id'], json_encode($snapshot, JSON_THROW_ON_ERROR)],
         );
     }
@@ -519,19 +523,6 @@ function icct_backend_ports_view($host)
     ];
 }
 
-/** Discovery stores management addresses as either strings or typed address records. */
-function icct_nms_port_management_addresses($values)
-{
-    $addresses = [];
-    foreach ($values as $value) {
-        $address = is_array($value) ? $value['address'] ?? '' : $value;
-        if (is_string($address) && filter_var($address, FILTER_VALIDATE_IP)) {
-            $addresses[$address] = $address;
-        }
-    }
-    return array_values($addresses);
-}
-
 /** Current neighbour reports from this authorized device, matched by ifIndex or name. */
 function icct_nms_port_connections($id, $ports)
 {
@@ -542,7 +533,8 @@ function icct_nms_port_connections($id, $ports)
     $connections = [];
     foreach (
         db_fetch_assoc_prepared(
-            "SELECT protocol,status,succeeded_at,config_hash,data_json FROM plugin_icct_nms_discovery_snapshots WHERE host_id=? AND protocol IN ('lldp','cdp')",
+            'SELECT protocol,status,succeeded_at,config_hash,data_json FROM ' .
+                'plugin_icct_nms_discovery_snapshots WHERE host_id=? AND protocol IN (\'lldp\',\'cdp\')',
             [$id],
         ) as $snapshot
     ) {
@@ -565,7 +557,7 @@ function icct_nms_port_connections($id, $ports)
                 $connections[$port['index']]['names'][] =
                     $peer['remote_name'] ?? ($peer['peer_label'] ?? '');
                 foreach (
-                    icct_nms_port_management_addresses($peer['management_addresses'] ?? []) as $address
+                    icct_nms_management_addresses($peer['management_addresses'] ?? []) as $address
                 ) {
                     $connections[$port['index']]['addresses'][] = $address;
                 }

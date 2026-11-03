@@ -167,7 +167,10 @@ function icct_nms_save_serial($id, $input)
                 );
             }
             icct_backend_category_execute(
-                "INSERT INTO plugin_icct_nms_config_profiles(name,manufacturer,model,manual_reference,protocol,fields_json,updated_by,updated_at) VALUES(?,'','','','modbus_rtu',?,?,NOW()) ON DUPLICATE KEY UPDATE fields_json=VALUES(fields_json),revision=revision+1,updated_by=VALUES(updated_by),updated_at=NOW()",
+                'INSERT INTO ' .
+                    'plugin_icct_nms_config_profiles(name,manufacturer,model,manual_reference,protocol,fields_json,updated_by,updated_at) ' .
+                    'VALUES(?,\'\',\'\',\'\',\'modbus_rtu\',?,?,NOW()) ON DUPLICATE KEY UPDATE ' .
+                    'fields_json=VALUES(fields_json),revision=revision+1,updated_by=VALUES(updated_by),updated_at=NOW()',
                 [
                     $profileName,
                     json_encode($registers, JSON_THROW_ON_ERROR),
@@ -179,7 +182,10 @@ function icct_nms_save_serial($id, $input)
                 [$profileName],
             );
             icct_backend_category_execute(
-                'INSERT INTO plugin_icct_nms_config_devices(host_id,profile_id,interval_seconds,updated_by,updated_at) VALUES(?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE profile_id=VALUES(profile_id),interval_seconds=VALUES(interval_seconds),revision=revision+1,updated_by=VALUES(updated_by),updated_at=NOW()',
+                'INSERT INTO ' .
+                    'plugin_icct_nms_config_devices(host_id,profile_id,interval_seconds,updated_by,updated_at) ' .
+                    'VALUES(?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE ' .
+                    'profile_id=VALUES(profile_id),interval_seconds=VALUES(interval_seconds),revision=revision+1,updated_by=VALUES(updated_by),updated_at=NOW()',
                 [$id, $profileId, $interval, icct_backend_current_user_id()],
             );
         } elseif ($registers !== null && $assignment) {
@@ -189,7 +195,8 @@ function icct_nms_save_serial($id, $input)
         }
         // Save a private snapshot; never change the shared collector connection.
         icct_backend_category_execute(
-            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
             [
                 'serial_settings_' . $id,
                 json_encode(
@@ -206,7 +213,8 @@ function icct_nms_save_serial($id, $input)
         }
         // Retain timing even for a connection without an equipment reading profile.
         icct_backend_category_execute(
-            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
             ['serial_interval_' . $id, (string) $interval],
         );
     });

@@ -12,13 +12,11 @@ function icct_backend_device_activate_imported_templates(
     $host_template_id = (int) $host_template_id;
     $indexedCreated = 0;
     $templates = db_fetch_assoc_prepared(
-        "SELECT DISTINCT o.graph_template_id
-		FROM plugin_icct_nms_snmprec_imports AS i
-		INNER JOIN plugin_icct_nms_snmprec_oids AS o ON o.import_id = i.id
-		WHERE i.host_template_id = ? AND o.graphable = 'on' AND o.graph_template_id > 0
-		AND NOT EXISTS (SELECT 1 FROM graph_local AS gl
-			WHERE gl.host_id = ? AND gl.graph_template_id = o.graph_template_id)
-		ORDER BY o.graph_template_id",
+        "SELECT DISTINCT o.graph_template_id\n\t\tFROM plugin_icct_nms_snmprec_imports AS i\n\t\t" .
+            "INNER JOIN plugin_icct_nms_snmprec_oids AS o ON o.import_id = i.id\n\t\tWHERE " .
+            "i.host_template_id = ? AND o.graphable = 'on' AND o.graph_template_id > 0\n\t\tAND NOT " .
+            "EXISTS (SELECT 1 FROM graph_local AS gl\n\t\t\tWHERE gl.host_id = ? AND " .
+            "gl.graph_template_id = o.graph_template_id)\n\t\tORDER BY o.graph_template_id",
         [$host_template_id, $device_id],
     );
     // Resolve MIB graphs by native associations, including graph-only MIB saves.

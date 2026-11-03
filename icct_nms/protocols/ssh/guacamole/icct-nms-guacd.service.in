@@ -3,9 +3,9 @@ Description=Apache Guacamole SSH protocol daemon for NMS
 After=network.target
 [Service]
 Type=simple
-User=nms-guacd
-Group=nms-guacd
-ExecStart=/opt/nms-guacamole/1.6.0/sbin/guacd -f -b 127.0.0.1 -l 4822 -L warning
+User=icct-nms-guacd
+Group=icct-nms-guacd
+ExecStart=@GUACD_BINARY@ -f -b 127.0.0.1 -l @GUACD_PORT@ -L warning
 Restart=on-failure
 RestartSec=5
 KillMode=control-group

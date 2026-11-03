@@ -121,3 +121,7 @@ APT NTP profiles use `ntpsec-ntpdig`, a client-only query tool, so installing pr
 The release source is aligned with the running VM's public application source, including its database-backed diagnostics queue and shared UI helpers. Installing a Redis dependency does not switch diagnostics to another backend. Local credentials, MIB sessions, generated plugin query XML and uploaded device images are excluded from release archives and rejected as deployment targets. Existing source is backed up before replacement, and the bootstrap refuses a plugin version downgrade.
 
 Setup provisions only the required writable application paths: MIB storage, uploaded device images and Cacti's `resource/snmp_queries/icct_nms` directory. On SELinux systems it preserves enforcement and applies persistent writable labels only to those paths. Other application source stays administrator-owned and read-only to the web account.
+
+## Offline SSH service setup
+
+Include a verified `guacamole-strict` native bundle and matching OS package bundle in the release, then add `--ssh-origin https://nms.example.org` to `install.py`. The installer forwards the exact origin, verifies the strict build and starts the dedicated broker and loopback Guacamole services. RHEL bundles include SELinux policy build tools; enforcement stays enabled. See `protocols/ssh/README.md` for explicit existing-store and account options. Without an explicit origin, setup leaves SSH configuration unchanged and Installation Checks reports its measured state. NTP and TACACS+ backends remain unavailable.

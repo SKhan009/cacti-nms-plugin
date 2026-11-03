@@ -123,7 +123,8 @@ function icct_nms_save_connection($input)
             throw new InvalidArgumentException('The network connection catalogue is full.');
         }
         icct_backend_category_execute(
-            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
             ['connection_profiles', $json],
         );
         return ($input['action'] ?? '') === 'delete_connection'

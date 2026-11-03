@@ -165,7 +165,9 @@ function icct_nms_topology_data($mapData)
             $addIdentity($value, $device['id']);
         }
         $rows = db_fetch_assoc_prepared(
-            "SELECT data_json,protocol,status,succeeded_at,config_hash FROM plugin_icct_nms_discovery_snapshots WHERE host_id=? AND protocol IN ('cdp','lldp') AND status='success'",
+            'SELECT data_json,protocol,status,succeeded_at,config_hash FROM ' .
+                'plugin_icct_nms_discovery_snapshots WHERE host_id=? AND protocol IN (\'cdp\',\'lldp\') AND ' .
+                'status=\'success\'',
             [$device['id']],
         );
         foreach ($rows as $row) {
@@ -204,7 +206,7 @@ function icct_nms_topology_data($mapData)
                     foreach (
                         array_merge(
                             [$neighbor['peer_label'] ?? '', $neighbor['remote_name'] ?? ''],
-                            icct_nms_discovery_addresses($neighbor['management_addresses'] ?? []),
+                            icct_nms_management_addresses($neighbor['management_addresses'] ?? []),
                         ) as $value
                     ) {
                         if (is_string($value)) {
@@ -315,7 +317,8 @@ function icct_nms_topology_save($positions, $revision)
             $layout[$coreId] = [0.5, 0.5];
         }
         icct_backend_category_execute(
-            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
             ['topology_layout', json_encode($layout, JSON_THROW_ON_ERROR)],
         );
     } finally {

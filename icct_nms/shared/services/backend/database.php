@@ -16,7 +16,8 @@ function icct_backend_require_database()
     if (!icct_backend_database_ready()) {
         http_response_code(503);
         die(
-            'ICCT NMS database upgrade is required. Back up the database and run the ICCT NMS upgrade from Cacti Plugin Management. No fallback schema is used.'
+            'ICCT NMS database upgrade is required. Back up the database and run the ICCT NMS ' .
+                'upgrade from Cacti Plugin Management. No fallback schema is used.'
         );
     }
 }

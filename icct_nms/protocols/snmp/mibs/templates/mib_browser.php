@@ -1,4 +1,5 @@
 <?php
+/** The MIB tree uses stable node identifiers to preserve selection across filtering. */
 $browser = icct_mib_browser_data($bundles);
 $initialObject = $initialObject ?? null;
 $icon = function ($name) {
@@ -41,23 +42,36 @@ $renderTree = function ($node, $depth = 0) use (&$renderTree, $browser, $icon, $
         }
         foreach ($child['records'] as $id) {
             $record = $browser['records'][$id]; ?>
-        <?php if (
-            !empty($mibSelecting)
-        ): ?><div class="mib-tree-select-row"><label class="mib-tree-checkbox"><input type="checkbox" data-tree-selection="<?= $id ?>" aria-label="Select <?= icct_nms_h(
-            $record['name'],
-        ) ?>" <?= !$record['can_create'] ? 'disabled' : '' ?>></label><?php endif; ?>
-        <button type="button" class="mib-browser-leaf" data-mib-node="<?= $id ?>" aria-pressed="false" title="<?= icct_nms_h(
-            $record['symbol'] . ' · ' . $record['base_oid'],
-        ) ?>"><?= $icon('file') ?><span><?= icct_nms_h(
-            $record['name'],
-        ) ?></span><span class="mib-browser-state" data-source-state="<?= $record[
-    'source_state'
-] ?>" title="<?= icct_nms_h($record['source_status']) ?>" aria-label="<?= icct_nms_h(
-    $record['source_status'],
-) ?>"><?= $icon($record['source_state']) ?></span></button><?php if (
-    !empty($mibSelecting)
-): ?></div><?php endif; ?>
-        <?php
+            <?php if (
+                !empty($mibSelecting)
+            ): ?>
+                <div class="mib-tree-select-row">
+                    <label class="mib-tree-checkbox">
+                        <input
+                            type="checkbox"
+                            data-tree-selection="<?= $id ?>"
+                            aria-label="Select <?= icct_nms_h($record['name']) ?>"
+                            <?= !$record['can_create'] ? 'disabled' : '' ?>>
+                    </label>
+                <?php endif; ?>
+                <button
+                    type="button"
+                    class="mib-browser-leaf"
+                    data-mib-node="<?= $id ?>"
+                    aria-pressed="false"
+                    title="<?= icct_nms_h($record['symbol'] . ' · ' . $record['base_oid']) ?>"><?= $icon('file') ?><span><?= icct_nms_h($record['name']) ?></span>
+                    <span
+                        class="mib-browser-state"
+                        data-source-state="<?= $record['source_state'] ?>"
+                        title="<?= icct_nms_h($record['source_status']) ?>"
+                        aria-label="<?= icct_nms_h($record['source_status']) ?>"><?= $icon($record['source_state']) ?></span>
+                </button>
+                <?php if (
+                    !empty($mibSelecting)
+                ): ?>
+                </div>
+            <?php endif; ?>
+<?php
         }
         $renderTree($child, $depth + 1);
         if ($hasChildren) {
@@ -66,57 +80,114 @@ $renderTree = function ($node, $depth = 0) use (&$renderTree, $browser, $icon, $
     }
 };
 ?>
-<section class="mib-repository-browser" aria-label="MIB browser">
-<aside class="mib-browser-sidebar" aria-label="MIB tree">
-<label class="mib-browser-search"><?= $icon(
-    'search',
-) ?><input type="search" id="mibBrowserSearch" aria-label="Search MIB name or OID" placeholder="Search With MIB Name or OID Number"></label>
-<details class="mib-browser-root" open><summary>MIB Tree</summary><div id="mibBrowserTree"><?php $renderTree(
-    $browser['tree'],
-); ?></div></details>
-<div id="mibBrowserEmpty" class="mib-browser-empty mib-empty-state" <?= $browser['records']
-    ? 'hidden'
-    : '' ?> role="status"><img src="protocols/snmp/mibs/assets/mib-empty.svg" width="98" height="60" alt=""><p><?= $browser[
-     'records'
- ]
-     ? 'No matching MIB objects.'
-     : 'No OIDs found. Upload a MIB file to view its info.' ?></p></div>
-</aside>
-<div class="mib-browser-detail is-empty">
-<div id="mibBrowserPlaceholder" class="mib-empty-state" role="status"><img src="protocols/snmp/mibs/assets/mib-empty.svg" width="98" height="60" alt=""><p><?= $browser[
-    'records'
-]
-    ? 'Select an OID from the sidebar to view details.'
-    : 'No OIDs found. Upload a MIB file to view its info.' ?></p></div>
-<div id="mibBrowserContent" hidden>
-<div class="mib-browser-detail-heading"><h2 id="mibBrowserName">Select an OID</h2><div class="mib-browser-detail-actions"><span id="mibBrowserBadge" class="mib-browser-badge" hidden><?= $icon(
-    'exists',
-) ?><span></span></span><?php if (
-    $management &&
-    empty($mibBrowserReadOnly) &&
-    empty($mibSelecting)
-): ?><button type="button" class="button" id="mibBrowserCreate" disabled>Create</button><?php endif; ?></div></div>
-<table class="mib-browser-properties" aria-label="Selected OID details"><tbody><?php foreach (
-    [
-        'name' => 'Name',
-        'base_oid' => 'OID',
-        'module' => 'MIB',
-        'syntax' => 'Syntax',
-        'access' => 'Access',
-        'status' => 'Status',
-        'defval' => 'Defval',
-        'indexes' => 'Indexes',
-        'description' => 'Description',
-    ] as $key => $label
-): ?><tr><th scope="row"><?= $label ?></th><td data-mib-property="<?= $key ?>">—</td></tr><?php endforeach; ?></tbody></table>
-</div>
-<?php foreach ($browser['warnings'] as $warning): ?><p class="notice error"><?= icct_nms_h(
-    $warning,
-) ?></p><?php endforeach; ?>
-</div></section>
-<script type="application/json" id="mibBrowserData" data-initial-object="<?= $initialObject === null
-    ? ''
-    : $initialObject ?>"><?= json_encode(
+<section
+    class="mib-repository-browser"
+    aria-label="MIB browser">
+    <aside
+        class="mib-browser-sidebar"
+        aria-label="MIB tree">
+        <label class="mib-browser-search"><?= $icon('search') ?>
+            <input
+                type="search"
+                id="mibBrowserSearch"
+                aria-label="Search MIB name or OID"
+                placeholder="Search With MIB Name or OID Number">
+        </label>
+        <details
+            class="mib-browser-root"
+            open>
+            <summary>MIB Tree</summary>
+            <div id="mibBrowserTree">
+                <?php $renderTree($browser['tree']); ?>
+            </div>
+        </details>
+        <div
+            id="mibBrowserEmpty"
+            class="mib-browser-empty mib-empty-state"
+            <?= $browser['records'] ? 'hidden' : '' ?>
+            role="status">
+            <img
+                src="protocols/snmp/mibs/assets/mib-empty.svg"
+                width="98"
+                height="60"
+                alt="">
+            <p><?= $browser['records']
+                ? 'No matching MIB objects.'
+                : 'No OIDs found. Upload a MIB file to view its info.' ?></p>
+        </div>
+    </aside>
+    <div class="mib-browser-detail is-empty">
+        <div
+            id="mibBrowserPlaceholder"
+            class="mib-empty-state"
+            role="status">
+            <img
+                src="protocols/snmp/mibs/assets/mib-empty.svg"
+                width="98"
+                height="60"
+                alt="">
+            <p><?= $browser['records']
+                ? 'Select an OID from the sidebar to view details.'
+                : 'No OIDs found. Upload a MIB file to view its info.' ?></p>
+        </div>
+        <div
+            id="mibBrowserContent"
+            hidden>
+            <div class="mib-browser-detail-heading">
+                <h2 id="mibBrowserName">Select an OID</h2>
+                <div class="mib-browser-detail-actions">
+                    <span
+                        id="mibBrowserBadge"
+                        class="mib-browser-badge"
+                        hidden><?= $icon('exists') ?><span></span>
+                    </span>
+                    <?php if (
+                        $management &&
+                        empty($mibBrowserReadOnly) &&
+                        empty($mibSelecting)
+                    ): ?>
+                        <button
+                            type="button"
+                            class="button"
+                            id="mibBrowserCreate"
+                            disabled>Create</button>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <table
+                class="mib-browser-properties"
+                aria-label="Selected OID details">
+                <tbody>
+                    <?php foreach (
+                        [
+                            'name' => 'Name',
+                            'base_oid' => 'OID',
+                            'module' => 'MIB',
+                            'syntax' => 'Syntax',
+                            'access' => 'Access',
+                            'status' => 'Status',
+                            'defval' => 'Defval',
+                            'indexes' => 'Indexes',
+                            'description' => 'Description',
+                        ] as $key => $label
+                    ): ?>
+                        <tr>
+                            <th scope="row"><?= $label ?></th>
+                            <td data-mib-property="<?= $key ?>">—</td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php foreach ($browser['warnings'] as $warning): ?>
+            <p class="notice error"><?= icct_nms_h($warning) ?></p>
+        <?php endforeach; ?>
+    </div>
+</section>
+<script
+    type="application/json"
+    id="mibBrowserData"
+    data-initial-object="<?= $initialObject === null ? '' : $initialObject ?>"><?= json_encode(
         $browser['records'],
         JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR,
     ) ?></script>

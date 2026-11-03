@@ -46,7 +46,8 @@ function icct_nms_save_rack_preset($input)
             ]);
             unset($profiles[$id]);
             icct_backend_category_execute(
-                'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+                'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                    'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
                 ['rack_profiles', json_encode($profiles, JSON_THROW_ON_ERROR)],
             );
             icct_backend_category_execute('COMMIT');
@@ -78,7 +79,8 @@ function icct_nms_save_rack_preset($input)
             throw new InvalidArgumentException('Rack configuration catalogue is full.');
         }
         icct_backend_category_execute(
-            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
             ['rack_profiles', $json],
         );
         icct_nms_apply_site_rack_preset(0, $id);

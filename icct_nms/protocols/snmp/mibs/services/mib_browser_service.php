@@ -201,13 +201,18 @@ function icct_mib_existing_source_indexes($records)
 {
     $sources =
         db_fetch_assoc(
-            "SELECT DISTINCT dt.id AS data_template_id,did.value AS oid FROM data_template dt JOIN data_template_data dtd ON dtd.data_template_id=dt.id JOIN data_input_data did ON did.data_template_data_id=dtd.id JOIN data_input_fields f ON f.id=did.data_input_field_id WHERE f.data_name='oid' AND did.value<>''",
+            'SELECT DISTINCT dt.id AS data_template_id,did.value AS oid FROM data_template dt JOIN ' .
+                'data_template_data dtd ON dtd.data_template_id=dt.id JOIN data_input_data did ON ' .
+                'did.data_template_data_id=dtd.id JOIN data_input_fields f ON ' .
+                'f.id=did.data_input_field_id WHERE f.data_name=\'oid\' AND did.value<>\'\'',
         ) ?:
         [];
     $sources = array_merge(
         $sources,
         db_fetch_assoc(
-            'SELECT DISTINCT dl.data_template_id,pi.arg1 AS oid FROM poller_item pi JOIN data_local dl ON dl.id=pi.local_data_id JOIN data_template dt ON dt.id=dl.data_template_id WHERE pi.action=0',
+            'SELECT DISTINCT dl.data_template_id,pi.arg1 AS oid FROM poller_item pi JOIN data_local ' .
+                'dl ON dl.id=pi.local_data_id JOIN data_template dt ON dt.id=dl.data_template_id WHERE ' .
+                'pi.action=0',
         ) ?:
         [],
     );

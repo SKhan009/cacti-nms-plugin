@@ -223,13 +223,20 @@ try {
         public function schedule()
         {
             db_execute(
-                "UPDATE plugin_icct_nms_ssh_sessions SET status='closed',ended_at=NOW(),outcome='Authorization expired' WHERE (status='issued' AND expires_at<=NOW()) OR (status='active' AND lease_until<=NOW() AND kind='console')",
+                'UPDATE plugin_icct_nms_ssh_sessions SET ' .
+                    'status=\'closed\',ended_at=NOW(),outcome=\'Authorization expired\' WHERE (status=\'issued\' ' .
+                    'AND expires_at<=NOW()) OR (status=\'active\' AND lease_until<=NOW() AND kind=\'console\')',
             );
             if (!icct_backend_ssh_enabled()) {
                 return;
             }
             $rows = db_fetch_assoc_prepared(
-                "SELECT d.host_id FROM plugin_icct_nms_ssh_devices d JOIN host h ON h.id=d.host_id JOIN plugin_icct_nms_ssh_presets p ON p.id=d.preset_id LEFT JOIN plugin_icct_nms_ssh_state s ON s.host_id=d.host_id WHERE h.disabled='' AND h.deleted='' AND h.poller_id=? AND d.monitoring=1 AND p.enabled=1 AND (s.last_attempt IS NULL OR TIMESTAMPDIFF(SECOND,s.last_attempt,NOW())>=d.interval_seconds) ORDER BY s.last_attempt LIMIT 4",
+                'SELECT d.host_id FROM plugin_icct_nms_ssh_devices d JOIN host h ON h.id=d.host_id JOIN ' .
+                    'plugin_icct_nms_ssh_presets p ON p.id=d.preset_id LEFT JOIN plugin_icct_nms_ssh_state s ' .
+                    'ON s.host_id=d.host_id WHERE h.disabled=\'\' AND h.deleted=\'\' AND h.poller_id=? AND ' .
+                    'd.monitoring=1 AND p.enabled=1 AND (s.last_attempt IS NULL OR ' .
+                    'TIMESTAMPDIFF(SECOND,s.last_attempt,NOW())>=d.interval_seconds) ORDER BY s.last_attempt ' .
+                    'LIMIT 4',
                 [(int) $this->config['poller_id']],
             );
             foreach ($rows as $row) {

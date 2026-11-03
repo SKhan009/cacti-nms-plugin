@@ -209,7 +209,9 @@ function icct_backend_collect_identity($only_host_id = 0)
             !icct_backend_inventory_snmp_failed($get('.1.3.6.1.2.1.1.3.0'))
         ) {
             $mapped = db_fetch_assoc_prepared(
-                "SELECT inventory_key,observed_value FROM plugin_icct_nms_device_inventory WHERE host_id=? AND inventory_key IN ('mac_address','serial_number','chassis_id') AND status IN ('ok','changed') AND last_success>=DATE_SUB(NOW(), INTERVAL ? SECOND)",
+                'SELECT inventory_key,observed_value FROM plugin_icct_nms_device_inventory WHERE ' .
+                    'host_id=? AND inventory_key IN (\'mac_address\',\'serial_number\',\'chassis_id\') AND status ' .
+                    'IN (\'ok\',\'changed\') AND last_success>=DATE_SUB(NOW(), INTERVAL ? SECOND)',
                 [$host['id'], max(120, 2 * (int) read_config_option('poller_interval'))],
             );
             foreach ($mapped as $row) {
@@ -307,7 +309,8 @@ function icct_backend_collect_identity($only_host_id = 0)
             }
         }
         icct_backend_category_execute(
-            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
             [
                 'identity_snapshot_' . $host['id'],
                 json_encode(

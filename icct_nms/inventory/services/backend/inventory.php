@@ -55,11 +55,11 @@ function icct_backend_collect_inventory_values($only_host_id = 0)
             $error =
                 'SNMP is disabled on this Cacti device; live inventory polling was not attempted.';
             icct_backend_category_execute(
-                'INSERT INTO plugin_icct_nms_device_inventory
-				(host_id, inventory_key, oid, display_name, status, last_attempt, last_error)
-				VALUES (?, ?, ?, ?, ?, NOW(), ?)
-				ON DUPLICATE KEY UPDATE oid = VALUES(oid), display_name = VALUES(display_name),
-					status = VALUES(status), last_attempt = NOW(), last_error = VALUES(last_error)',
+                "INSERT INTO plugin_icct_nms_device_inventory\n\t\t\t\t(host_id, inventory_key, oid, " .
+                    "display_name, status, last_attempt, last_error)\n\t\t\t\tVALUES (?, ?, ?, ?, ?, NOW(), " .
+                    "?)\n\t\t\t\tON DUPLICATE KEY UPDATE oid = VALUES(oid), display_name = " .
+                    "VALUES(display_name),\n\t\t\t\t\tstatus = VALUES(status), last_attempt = NOW(), " .
+                    'last_error = VALUES(last_error)',
                 [
                     $definition['host_id'],
                     $definition['inventory_key'],
@@ -100,11 +100,11 @@ function icct_backend_collect_inventory_values($only_host_id = 0)
                 $definition['oid'] .
                 '. Check the endpoint, credentials and protocol configured in Cacti.';
             icct_backend_category_execute(
-                "INSERT INTO plugin_icct_nms_device_inventory
-				(host_id, inventory_key, oid, display_name, status, last_attempt, last_error)
-				VALUES (?, ?, ?, ?, 'failed', NOW(), ?)
-				ON DUPLICATE KEY UPDATE oid = VALUES(oid), display_name = VALUES(display_name),
-					status = 'failed', last_attempt = NOW(), last_error = VALUES(last_error)",
+                "INSERT INTO plugin_icct_nms_device_inventory\n\t\t\t\t(host_id, inventory_key, oid, " .
+                    "display_name, status, last_attempt, last_error)\n\t\t\t\tVALUES (?, ?, ?, ?, 'failed', " .
+                    "NOW(), ?)\n\t\t\t\tON DUPLICATE KEY UPDATE oid = VALUES(oid), display_name = " .
+                    "VALUES(display_name),\n\t\t\t\t\tstatus = 'failed', last_attempt = NOW(), last_error = " .
+                    'VALUES(last_error)',
                 [
                     $definition['host_id'],
                     $definition['inventory_key'],
@@ -128,13 +128,12 @@ function icct_backend_collect_inventory_values($only_host_id = 0)
         }
         $status = strcasecmp($baseline, $value) === 0 ? 'ok' : 'changed';
         icct_backend_category_execute(
-            "INSERT INTO plugin_icct_nms_device_inventory
-			(host_id, inventory_key, oid, display_name, baseline_value, observed_value,
-			 status, last_attempt, last_success, last_error)
-			VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), '')
-			ON DUPLICATE KEY UPDATE oid = VALUES(oid), display_name = VALUES(display_name),
-				baseline_value = VALUES(baseline_value), observed_value = VALUES(observed_value),
-				status = VALUES(status), last_attempt = NOW(), last_success = NOW(), last_error = ''",
+            "INSERT INTO plugin_icct_nms_device_inventory\n\t\t\t(host_id, inventory_key, oid, " .
+                "display_name, baseline_value, observed_value,\n\t\t\t status, last_attempt, last_success, " .
+                "last_error)\n\t\t\tVALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), '')\n\t\t\tON DUPLICATE KEY " .
+                "UPDATE oid = VALUES(oid), display_name = VALUES(display_name),\n\t\t\t\tbaseline_value = " .
+                "VALUES(baseline_value), observed_value = VALUES(observed_value),\n\t\t\t\tstatus = " .
+                "VALUES(status), last_attempt = NOW(), last_success = NOW(), last_error = ''",
             [
                 $definition['host_id'],
                 $definition['inventory_key'],

@@ -12,7 +12,13 @@ function icct_backend_nd_assignment_write($host_id, $assignment)
     }
     // Keep explicit unassigned rows so future-assignment rules cannot override a deliberate choice.
     icct_backend_category_execute(
-        'INSERT INTO plugin_icct_nms_discovery_devices(host_id,preset_id,methods,collection_enabled,last_attempt) VALUES (?,?,?,?,NULL) ON DUPLICATE KEY UPDATE last_attempt=IF(preset_id<>VALUES(preset_id) OR methods<>VALUES(methods) OR collection_enabled<>VALUES(collection_enabled),NULL,last_attempt),preset_id=VALUES(preset_id),methods=VALUES(methods),collection_enabled=VALUES(collection_enabled)',
+        'INSERT INTO ' .
+            'plugin_icct_nms_discovery_devices(host_id,preset_id,methods,collection_enabled,last_attempt) ' .
+            'VALUES (?,?,?,?,NULL) ON DUPLICATE KEY UPDATE ' .
+            'last_attempt=IF(preset_id<>VALUES(preset_id) OR methods<>VALUES(methods) OR ' .
+            ('collection_enabled<>VALUES(collection_enabled),NULL,last_attempt),' .
+                'preset_id=VALUES(preset_id),methods=VALUES(methods),' .
+                'collection_enabled=VALUES(collection_enabled)'),
         [
             $host_id,
             $assignment['preset_id'],
@@ -80,7 +86,10 @@ function icct_backend_nd_host_methods($host, $active_only = true)
 function icct_backend_nd_hosts($include_disabled = false)
 {
     return db_fetch_assoc(
-        "SELECT h.*,d.preset_id,d.last_attempt,d.methods,d.collection_enabled,p.name AS preset_name,p.protocol,p.enabled,p.interval_seconds,p.stale_seconds,p.refresh_seconds FROM host h JOIN plugin_icct_nms_discovery_devices d ON d.host_id=h.id JOIN plugin_icct_nms_discovery_presets p ON p.id=d.preset_id WHERE h.deleted=''" .
+        'SELECT h.*,d.preset_id,d.last_attempt,d.methods,d.collection_enabled,p.name AS ' .
+            'preset_name,p.protocol,p.enabled,p.interval_seconds,p.stale_seconds,p.refresh_seconds ' .
+            'FROM host h JOIN plugin_icct_nms_discovery_devices d ON d.host_id=h.id JOIN ' .
+            'plugin_icct_nms_discovery_presets p ON p.id=d.preset_id WHERE h.deleted=\'\'' .
             ($include_disabled ? '' : " AND h.disabled=''"),
     );
 }
@@ -183,7 +192,10 @@ function icct_backend_nd_poll()
                     ? json_decode($previousIdentity['data_json'], true)
                     : [];
             icct_backend_category_execute(
-                "INSERT INTO plugin_icct_nms_discovery_snapshots(host_id,protocol,status,attempted_at,config_hash,data_json) VALUES (?,'identity','running',NOW(),?,'{}') ON DUPLICATE KEY UPDATE status='running',attempted_at=NOW(),error=''",
+                'INSERT INTO ' .
+                    'plugin_icct_nms_discovery_snapshots(host_id,protocol,status,attempted_at,config_hash,data_json) ' .
+                    'VALUES (?,\'identity\',\'running\',NOW(),?,\'{}\') ON DUPLICATE KEY UPDATE ' .
+                    'status=\'running\',attempted_at=NOW(),error=\'\'',
                 [$host['id'], $hash],
             );
             try {
@@ -194,7 +206,9 @@ function icct_backend_nd_poll()
                     (int) ($host['stale_seconds'] ?? 600),
                 );
                 icct_backend_category_execute(
-                    "UPDATE plugin_icct_nms_discovery_snapshots SET status='success',succeeded_at=NOW(),config_hash=?,data_json=?,error='' WHERE host_id=? AND protocol='identity'",
+                    'UPDATE plugin_icct_nms_discovery_snapshots SET ' .
+                        'status=\'success\',succeeded_at=NOW(),config_hash=?,data_json=?,error=\'\' WHERE host_id=? ' .
+                        'AND protocol=\'identity\'',
                     [$hash, json_encode($identity, JSON_THROW_ON_ERROR), $host['id']],
                 );
             } catch (Throwable $e) {
@@ -229,7 +243,10 @@ function icct_backend_nd_poll()
                     [$host['id'], $protocol],
                 );
                 icct_backend_category_execute(
-                    "INSERT INTO plugin_icct_nms_discovery_snapshots(host_id,protocol,status,attempted_at,config_hash,data_json) VALUES (?,?,'running',NOW(),?,'{}') ON DUPLICATE KEY UPDATE status='running',attempted_at=NOW(),error=''",
+                    'INSERT INTO ' .
+                        'plugin_icct_nms_discovery_snapshots(host_id,protocol,status,attempted_at,config_hash,data_json) ' .
+                        'VALUES (?,?,\'running\',NOW(),?,\'{}\') ON DUPLICATE KEY UPDATE ' .
+                        'status=\'running\',attempted_at=NOW(),error=\'\'',
                     [$host['id'], $protocol, $hash],
                 );
                 try {
@@ -253,7 +270,9 @@ function icct_backend_nd_poll()
                         time(),
                     );
                     icct_backend_category_execute(
-                        "UPDATE plugin_icct_nms_discovery_snapshots SET status='success',succeeded_at=NOW(),config_hash=?,data_json=?,error='' WHERE host_id=? AND protocol=?",
+                        'UPDATE plugin_icct_nms_discovery_snapshots SET ' .
+                            'status=\'success\',succeeded_at=NOW(),config_hash=?,data_json=?,error=\'\' WHERE host_id=? ' .
+                            'AND protocol=?',
                         [$hash, json_encode($data, JSON_THROW_ON_ERROR), $host['id'], $protocol],
                     );
                 } catch (Throwable $e) {
@@ -360,7 +379,8 @@ function icct_backend_nd_test_queue($host_id, $site_id)
         throw new InvalidArgumentException('Select an enabled device in this site.');
     }
     $preset = db_fetch_row_prepared(
-        'SELECT p.enabled,d.collection_enabled FROM plugin_icct_nms_discovery_devices d JOIN plugin_icct_nms_discovery_presets p ON p.id=d.preset_id WHERE d.host_id=?',
+        'SELECT p.enabled,d.collection_enabled FROM plugin_icct_nms_discovery_devices d JOIN ' .
+            'plugin_icct_nms_discovery_presets p ON p.id=d.preset_id WHERE d.host_id=?',
         [$host_id],
     );
     if (!$preset || !$preset['enabled'] || !$preset['collection_enabled']) {
@@ -385,8 +405,10 @@ function icct_backend_nd_test_queue($host_id, $site_id)
     );
     $hash = icct_backend_nd_hash($host);
     icct_backend_category_execute(
-        "INSERT INTO plugin_icct_nms_discovery_snapshots(host_id,protocol,status,attempted_at,config_hash,data_json,error)
-  VALUES (?,'identity','queued',NOW(),?,'{}',?) ON DUPLICATE KEY UPDATE status='queued',attempted_at=NOW(),config_hash=VALUES(config_hash),data_json='{}',succeeded_at=NULL,error=VALUES(error)",
+        'INSERT INTO plugin_icct_nms_discovery_snapshots(host_id,protocol,status,attempted_at,' .
+            "config_hash,data_json,error)\n  VALUES (?,'identity','queued',NOW(),?,'{}',?) ON " .
+            "DUPLICATE KEY UPDATE status='queued',attempted_at=NOW(),config_hash=VALUES(config_hash)," .
+            "data_json='{}',succeeded_at=NULL,error=VALUES(error)",
         [
             $host_id,
             $hash,
@@ -395,8 +417,10 @@ function icct_backend_nd_test_queue($host_id, $site_id)
     );
     foreach (icct_backend_nd_host_methods($host) as $method) {
         icct_backend_category_execute(
-            "INSERT INTO plugin_icct_nms_discovery_snapshots(host_id,protocol,status,attempted_at,config_hash,data_json,error)
-   VALUES (?,?,'queued',NOW(),?,'{}',?) ON DUPLICATE KEY UPDATE status='queued',attempted_at=NOW(),config_hash=VALUES(config_hash),data_json='{}',succeeded_at=NULL,error=VALUES(error)",
+            'INSERT INTO plugin_icct_nms_discovery_snapshots(host_id,protocol,status,attempted_at,' .
+                "config_hash,data_json,error)\n   VALUES (?,?,'queued',NOW(),?,'{}',?) ON DUPLICATE KEY " .
+                "UPDATE status='queued',attempted_at=NOW(),config_hash=VALUES(config_hash),data_json='{}'," .
+                'succeeded_at=NULL,error=VALUES(error)',
             [
                 $host_id,
                 $method,

@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 """Configure the native macOS launchd adapter; requires an existing dedicated service account."""
-import argparse, grp, json, os, pathlib, plistlib, pwd, subprocess, sys
+import argparse
+import grp
+import json
+import os
+import pathlib
+import plistlib
+import pwd
+import subprocess
+import sys
 
 
 def main():
@@ -39,7 +47,11 @@ def main():
         ],
         check=True,
     )
-    code = 'require $argv[1]."/include/cli_check.php";if(!db_fetch_cell_prepared("SELECT id FROM poller WHERE id=? AND disabled=?",[(int)$argv[2],""]))exit(3);echo json_encode(["url"=>$config["url_path"],"log"=>read_config_option("path_cactilog")]);'
+    code = (
+        'require $argv[1]."/include/cli_check.php";if(!db_fetch_cell_prepared("SELECT id FROM '
+        'poller WHERE id=? AND disabled=?",[(int)$argv[2],""]))exit(3);echo '
+        'json_encode(["url"=>$config["url_path"],"log"=>read_config_option("path_cactilog")]);'
+    )
     native = json.loads(
         subprocess.check_output([str(php), "-r", code, str(base), str(a.poller_id)], text=True)
     )

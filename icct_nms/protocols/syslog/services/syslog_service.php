@@ -20,7 +20,9 @@ function icct_nms_save_syslog($id, $host, $input)
         throw new InvalidArgumentException('Enter a valid Syslog source address or hostname.');
     }
     $duplicate = db_fetch_row_prepared(
-        "SELECT d.host_id,h.description,h.hostname FROM plugin_icct_nms_syslog_devices d INNER JOIN host h ON h.id=d.host_id WHERE d.host_id<>? AND d.enabled=1 AND d.source_address=? AND h.deleted='' ORDER BY d.host_id LIMIT 1",
+        'SELECT d.host_id,h.description,h.hostname FROM plugin_icct_nms_syslog_devices d INNER ' .
+            'JOIN host h ON h.id=d.host_id WHERE d.host_id<>? AND d.enabled=1 AND d.source_address=? ' .
+            'AND h.deleted=\'\' ORDER BY d.host_id LIMIT 1',
         [(int) $id, $source],
     );
     if ($duplicate) {
@@ -54,10 +56,13 @@ function icct_nms_save_syslog($id, $host, $input)
     }
     $enabled = icct_backend_protocol_enabled($id, 'syslog') ? 1 : 0;
     icct_backend_category_execute(
-        'INSERT INTO plugin_icct_nms_syslog_devices(host_id,enabled,source_address,transport,max_severity,severity_codes,facility_codes,match_strings,updated_by,updated_at)
-         VALUES(?,?,?,?,?,?,?,?,?,NOW())
-         ON DUPLICATE KEY UPDATE enabled=VALUES(enabled),source_address=VALUES(source_address),transport=VALUES(transport),
-         max_severity=VALUES(max_severity),severity_codes=VALUES(severity_codes),facility_codes=VALUES(facility_codes),match_strings=VALUES(match_strings),updated_by=VALUES(updated_by),updated_at=NOW()',
+        'INSERT INTO plugin_icct_nms_syslog_devices(host_id,enabled,source_address,transport,' .
+            "max_severity,severity_codes,facility_codes,match_strings,updated_by,updated_at)\n         " .
+            "VALUES(?,?,?,?,?,?,?,?,?,NOW())\n         ON DUPLICATE KEY UPDATE enabled=VALUES(enabled)," .
+            "source_address=VALUES(source_address),transport=VALUES(transport),\n         " .
+            'max_severity=VALUES(max_severity),severity_codes=VALUES(severity_codes),' .
+            'facility_codes=VALUES(facility_codes),match_strings=VALUES(match_strings),' .
+            'updated_by=VALUES(updated_by),updated_at=NOW()',
         [
             (int) $id,
             $enabled,

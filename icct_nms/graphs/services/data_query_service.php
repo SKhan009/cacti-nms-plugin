@@ -24,7 +24,11 @@ function icct_nms_data_query_associations($id)
 {
     icct_backend_require_device_access($id);
     return db_fetch_assoc_prepared(
-        'SELECT sq.id,sq.name,hsq.reindex_method,COUNT(hsc.snmp_index) AS item_count,COUNT(DISTINCT hsc.snmp_index) AS row_count FROM host_snmp_query hsq JOIN snmp_query sq ON sq.id=hsq.snmp_query_id LEFT JOIN host_snmp_cache hsc ON hsc.host_id=hsq.host_id AND hsc.snmp_query_id=hsq.snmp_query_id WHERE hsq.host_id=? GROUP BY sq.id,sq.name,hsq.reindex_method ORDER BY sq.name',
+        'SELECT sq.id,sq.name,hsq.reindex_method,COUNT(hsc.snmp_index) AS ' .
+            'item_count,COUNT(DISTINCT hsc.snmp_index) AS row_count FROM host_snmp_query hsq JOIN ' .
+            'snmp_query sq ON sq.id=hsq.snmp_query_id LEFT JOIN host_snmp_cache hsc ON ' .
+            'hsc.host_id=hsq.host_id AND hsc.snmp_query_id=hsq.snmp_query_id WHERE hsq.host_id=? ' .
+            'GROUP BY sq.id,sq.name,hsq.reindex_method ORDER BY sq.name',
         [$id],
     );
 }
