@@ -1,10 +1,12 @@
-<dialog id="mibUploadDialog" class="mib-upload-dialog" data-auto-open="<?= !empty($uploadOpen)?'true':'false' ?>" aria-labelledby="mibUploadTitle">
+<dialog id="mibUploadDialog" class="mib-upload-dialog" data-auto-open="<?= !empty($uploadOpen)
+    ? 'true'
+    : 'false' ?>" aria-labelledby="mibUploadTitle">
 <header class="mib-upload-heading"><h2 id="mibUploadTitle">Upload MIB</h2><button type="button" data-mib-upload-close aria-label="Close MIB upload">×</button></header>
 <div class="mib-upload-body">
 <p id="mibUploadError" class="notice error" role="alert" hidden></p>
 <section id="mibUploadRepositoryWarning" class="mib-upload-repository-warning" role="status" hidden><strong>Repository warning</strong><ul id="mibUploadRepositoryMatches"></ul><p>Saving keeps a separate entry. Existing files and Cacti templates will not be replaced.</p></section>
 <div class="mib-upload-notice" id="mibUploadIntro"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 5.5v.5"/></svg><p>The application scans the MIB to identify OIDs, check Data Source eligibility, and flag existing Cacti configurations.</p></div>
-<?php if(!empty($uploadChooser)): ?>
+<?php if (!empty($uploadChooser)): ?>
 <form method="post" action="protocols/snmp/mibs/controllers/mib_repository.php" enctype="multipart/form-data" data-mib-upload-form id="mibUploadChooser">
 <?php icct_nms_token(); ?><input type="hidden" name="action" value="upload">
 

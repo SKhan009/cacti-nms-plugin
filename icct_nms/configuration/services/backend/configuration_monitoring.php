@@ -1,4 +1,5 @@
 <?php
+
 /** ICCT-owned configuration monitoring services, derived from the existing ICCT NMS implementation. */
 
 /** Reused Inventory service: config connection status. */
@@ -7,7 +8,7 @@ function icct_backend_config_connection_status($host_id)
     icct_backend_require_device_access($host_id);
     $serial = db_fetch_row_prepared(
         'SELECT c.transport,c.endpoint,d.device_address FROM plugin_icct_nms_serial_devices d LEFT JOIN plugin_icct_nms_serial_connections c ON c.id=d.connection_id WHERE d.host_id=?',
-        [$host_id]
+        [$host_id],
     );
     if (!$serial) {
         return null;
@@ -24,13 +25,15 @@ function icct_backend_config_connection_status($host_id)
         foreach ($target['fields'] as $key => $field) {
             $states[] = icct_backend_config_reading($host_id, $key)['status'];
         }
-        $status = !$states ? 'Unavailable' : (in_array('failed', $states, true)
-            ? 'Read failed'
-            : (in_array('unavailable', $states, true)
-                ? 'Unavailable'
-                : (in_array('stale', $states, true)
-                    ? 'Stale'
-                    : 'Responding')));
+        $status = !$states
+            ? 'Unavailable'
+            : (in_array('failed', $states, true)
+                ? 'Read failed'
+                : (in_array('unavailable', $states, true)
+                    ? 'Unavailable'
+                    : (in_array('stale', $states, true)
+                        ? 'Stale'
+                        : 'Responding')));
     } catch (Throwable $e) {
         $status = 'Unavailable';
     }
@@ -45,7 +48,7 @@ function icct_backend_config_monitor_once($collector)
     }
     $devices = db_fetch_assoc_prepared(
         "SELECT a.host_id,a.updated_by FROM plugin_icct_nms_config_devices a JOIN host h ON h.id=a.host_id JOIN poller p ON p.id=h.poller_id LEFT JOIN plugin_icct_nms_serial_readings r ON r.host_id=a.host_id WHERE h.poller_id=? AND h.deleted='' AND h.disabled='' AND p.disabled='' GROUP BY a.host_id,a.updated_by ORDER BY MIN(r.observed_at),a.host_id",
-        [$collector]
+        [$collector],
     );
     $previous = $_SESSION ?? [];
     try {
@@ -54,7 +57,7 @@ function icct_backend_config_monitor_once($collector)
                 // Monitoring retains the assigning operator's device scope; revoked access stops reads.
                 icct_backend_config_job_authorize([
                     'host_id' => $device['host_id'],
-                    'user_id' => $device['updated_by']
+                    'user_id' => $device['updated_by'],
                 ]);
                 $_SESSION = ['sess_user_id' => (int) $device['updated_by']];
                 $done = icct_backend_serial_mutation(function () use ($device, $collector) {
@@ -65,7 +68,7 @@ function icct_backend_config_monitor_once($collector)
                     foreach ($target['fields'] as $key => $field) {
                         $row = db_fetch_row_prepared(
                             'SELECT signature,TIMESTAMPDIFF(SECOND,observed_at,NOW()) AS age_seconds FROM plugin_icct_nms_serial_readings WHERE host_id=? AND field_key=?',
-                            [$device['host_id'], $key]
+                            [$device['host_id'], $key],
                         );
                         if (
                             $row &&
@@ -85,7 +88,7 @@ function icct_backend_config_monitor_once($collector)
                             $result = [
                                 'status' => 'failed',
                                 'error' =>
-                                    'Collector read failed. Check connection settings and collector logs.'
+                                    'Collector read failed. Check connection settings and collector logs.',
                             ];
                         }
                         icct_backend_config_store_reading($target, $key, $result);
@@ -122,7 +125,7 @@ function icct_backend_config_reading($host_id, $key, $authorize = true)
     }
     $row = db_fetch_row_prepared(
         'SELECT *,TIMESTAMPDIFF(SECOND,observed_at,NOW()) AS age_seconds FROM plugin_icct_nms_serial_readings WHERE host_id=? AND field_key=?',
-        [$host_id, $key]
+        [$host_id, $key],
     );
     if (!$row || !hash_equals($target['signature'], $row['signature'])) {
         return ['status' => 'unavailable', 'value' => null, 'observed_at' => null];
@@ -137,7 +140,7 @@ function icct_backend_config_reading($host_id, $key, $authorize = true)
     return [
         'status' => $status,
         'value' => $status === 'current' ? json_decode($row['value_json'], true) : null,
-        'observed_at' => $row['observed_at']
+        'observed_at' => $row['observed_at'],
     ];
 }
 
@@ -153,7 +156,7 @@ function icct_backend_config_store_reading(array $target, $key, array $result)
             $target['signature'],
             json_encode($result['value'] ?? null, JSON_THROW_ON_ERROR),
             $status,
-            substr($result['error'] ?? '', 0, 512)
-        ]
+            substr($result['error'] ?? '', 0, 512),
+        ],
     );
 }

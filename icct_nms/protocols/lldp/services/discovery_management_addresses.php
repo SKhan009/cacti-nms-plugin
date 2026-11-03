@@ -1,4 +1,5 @@
 <?php
+
 /** LLDP discovery parsing. */
 
 function icct_backend_nd_lldp_management_addresses($values)
@@ -34,7 +35,7 @@ function icct_backend_nd_lldp_management_addresses($values)
             $address = icct_backend_nd_management_address(
                 $bytes,
                 $family === 1 ? 4 : 6,
-                'LLDP management address'
+                'LLDP management address',
             );
             if ($address) {
                 $rows[implode('.', array_slice($parts, 1, 3))][$address['address']] = $address;

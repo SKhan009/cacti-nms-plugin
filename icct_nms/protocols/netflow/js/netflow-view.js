@@ -1,21 +1,349 @@
-(()=>{'use strict';
-const form=document.querySelector('#netflow-filters');if(!form)return;
-const section=document.querySelector('#view-netflow'),feedback=document.querySelector('#netflow-feedback');let page=1,busy=false,pending=false,applied=new URLSearchParams(new FormData(form));
-const make=(tag,text='',cls='')=>{const n=document.createElement(tag);n.textContent=text;if(cls)n.className=cls;return n;};
-const number=v=>Number(v||0).toLocaleString('en-IN'),bytes=v=>{v=Number(v||0);for(const unit of ['B','KB','MB','GB','TB']){if(v<1000||unit==='TB')return v.toLocaleString('en-IN',{maximumFractionDigits:2})+' '+unit;v/=1000;}};
-const date=epoch=>Number(epoch)?new Date(Number(epoch)*1000).toLocaleString('en-GB',{timeZone:'Asia/Kolkata',hour12:false}):'—';
-const proto=v=>({1:'ICMP',6:'TCP',17:'UDP',58:'ICMPv6'})[v]||String(v);
-function cell(text,small){const td=make('td',text);if(small)td.append(make('small',small));return td;}
-function drawChart(rows,interval){const svg=document.querySelector('#netflow-chart');svg.replaceChildren();const ns='http://www.w3.org/2000/svg',add=(tag,attrs,text)=>{const n=document.createElementNS(ns,tag);for(const [k,v]of Object.entries(attrs))n.setAttribute(k,v);if(text)n.textContent=text;svg.append(n);return n;};if(!rows.length){add('text',{x:450,y:110,'text-anchor':'middle',fill:'#777'},'No flow readings in this time range.');return;}
-const times=rows.map(r=>Number(r.epoch)),start=Math.min(...times),end=Math.max(...times),max=Math.max(1,...rows.map(r=>Number(r.bps))),divisor=max>=1e9?1e9:max>=1e6?1e6:max>=1e3?1e3:1,unit=max>=1e9?'Gbps':max>=1e6?'Mbps':max>=1e3?'kbps':'bps';for(let i=0;i<=4;i++){const y=20+i*42;add('line',{x1:80,y1:y,x2:880,y2:y,stroke:'#e5e5e5'});add('text',{x:70,y:y+4,'text-anchor':'end',fill:'#777','font-size':12},((1-i/4)*max/divisor).toFixed(2)+' '+unit);}
-for(const [scope,color] of [['LAN','#155cff'],['WAN','#42aa8b'],['Unknown','#888']]){const map=new Map(rows.filter(r=>r.traffic_scope===scope).map(r=>[Number(r.epoch),Number(r.bps)])),points=[];for(let t=start;t<=end;t+=Number(interval))points.push([80+(t-start)/Math.max(300,end-start)*800,188-(map.get(t)||0)/max*168]);add('polyline',{points:points.map(p=>p.join(',')).join(' '),fill:'none',stroke:color,'stroke-width':2});for(const [x,y]of points)add('circle',{cx:x,cy:y,r:2,fill:color});}
-add('text',{x:80,y:215,fill:'#777','font-size':12},date(start));add('text',{x:880,y:215,'text-anchor':'end',fill:'#777','font-size':12},date(end));}
-function render(data){document.querySelector('#netflow-health').textContent=data.health+(data.last_data_epoch?' · Last received '+date(data.last_data_epoch):'');document.querySelector('#netflow-health').className='netflow-health '+(data.health==='Receiving'?'online':'');const a=data.assignment;document.querySelector('#netflow-configuration').textContent=a?'Exporter '+a.exporter_address+' → '+a.collector+':'+a.port+' · '+(Number(a.version)===10?'IPFIX':'NetFlow v'+a.version):'Configure NetFlow under Protocol Config to associate this device with an exporter.';feedback.textContent=data.error||'';
-const totals=document.querySelector('#netflow-totals');totals.replaceChildren();for(const [label,value]of [['Traffic',bytes(data.totals.bytes)],['Packets',number(data.totals.packets)],['Flows',number(data.totals.flows)],['Source Hosts',number(data.totals.sources)]]){const block=make('div');block.append(make('span',label),make('strong',value));totals.append(block);}document.querySelector('#netflow-chart-interval').textContent=(Number(data.chart_interval)/60)+'-minute average throughput from exported flow records.';drawChart(data.chart,data.chart_interval);
-const rankings=document.querySelector('#netflow-rankings');rankings.replaceChildren();for(const [key,label]of [['hosts','Top Source Hosts'],['destinations','Top Destination Hosts'],['protocols','Protocols'],['applications','Applications'],['conversations','Conversations']]){const panel=make('div','','netflow-ranking'),table=make('table','','site-table'),head=make('thead'),hr=make('tr'),body=make('tbody');hr.append(make('th',label),make('th','Bytes'),make('th','Flows'));head.append(hr);for(const r of data.rankings[key]){const tr=make('tr');const labelCell=cell(key==='protocols'?proto(r.label):r.label),bar=make('span','','netflow-bar');bar.setAttribute('aria-hidden','true');bar.style.width=(100*Number(r.bytes)/Math.max(1,Number(data.rankings[key][0]?.bytes)))+'%';labelCell.append(bar);tr.append(labelCell,cell(bytes(r.bytes)),cell(number(r.flows)));body.append(tr);}if(!body.children.length){const tr=make('tr'),td=cell('No readings.');td.colSpan=3;tr.append(td);body.append(tr);}table.append(head,body);panel.append(table);rankings.append(panel);}
-const records=document.querySelector('#netflow-records');records.replaceChildren();for(const r of data.rows){const tr=make('tr');tr.append(cell(date(r.first_epoch),date(r.last_epoch)),cell(Number(r.version)===10?'IPFIX':'v'+r.version),cell(r.src_addr,String(r.src_port)),cell(r.dst_addr,String(r.dst_port)),cell(proto(r.protocol)),cell(bytes(r.bytes),number(r.packets)+' packets'+(Number(r.sampled)?' · sampled':'')),cell(r.application,r.application_basis),cell(r.traffic_scope==='Unknown'?'Unclassified':r.traffic_scope));records.append(tr);}if(!records.children.length){const tr=make('tr'),td=cell('No flow records match the selected filters.');td.colSpan=8;tr.append(td);records.append(tr);}
-page=data.page;const picker=document.querySelector('#netflow-page');picker.replaceChildren();for(let i=1;i<=data.pages;i++)picker.append(new Option(String(i),String(i)));picker.value=String(page);document.querySelector('#netflow-pages').textContent='of '+data.pages+' pages';document.querySelector('#netflow-range').textContent=Number(data.totals.flows)?((page-1)*data.size+1)+'–'+Math.min(page*data.size,Number(data.totals.flows))+' of '+number(data.totals.flows)+' items':'0 items';document.querySelector('#netflow-prev').disabled=page===1;document.querySelector('#netflow-next').disabled=page===data.pages;
-const events=document.querySelector('#netflow-events');events.replaceChildren();for(const r of data.events){const tr=make('tr'),sev=make('span',r.severity,'alarm-severity');sev.style.background=({Critical:'#f94144',Major:'#f3722b',Warning:'#42aa8b'})[r.severity]||'#ddd';const td=cell('');td.append(sev);tr.append(cell(date(r.opened_epoch),date(r.updated_epoch)),td,cell(r.state),cell(r.message));events.append(tr);}if(!events.children.length){const tr=make('tr'),td=cell('No recorded anomalies in this time range.');td.colSpan=4;tr.append(td);events.append(tr);}}
-async function load(){if(busy){pending=true;return;}busy=true;const query=new URLSearchParams(applied);query.set('id',form.dataset.deviceId);query.set('page',String(page));query.set('size',document.querySelector('#netflow-size').value);document.querySelector('#netflow-export').href='protocols/netflow/controllers/netflow.php?'+query.toString()+'&export=1';try{const response=await fetch('protocols/netflow/controllers/netflow.php?'+query,{credentials:'same-origin'});if(response.redirected||!response.headers.get('content-type')?.includes('application/json'))throw Error('Session expired. Reload and sign in.');const result=await response.json();if(!response.ok)throw Error(result.error||'Unable to load readings.');render(result);}catch(e){feedback.textContent=e.message;}finally{busy=false;if(pending){pending=false;load();}}}
-form.addEventListener('submit',e=>{e.preventDefault();applied=new URLSearchParams(new FormData(form));page=1;load();});form.addEventListener('reset',()=>{setTimeout(()=>{applied=new URLSearchParams(new FormData(form));page=1;load();},0);});document.querySelector('#netflow-size').addEventListener('change',()=>{page=1;load();});document.querySelector('#netflow-page').addEventListener('change',e=>{page=Number(e.target.value);load();});document.querySelector('#netflow-prev').addEventListener('click',()=>{page--;load();});document.querySelector('#netflow-next').addEventListener('click',()=>{page++;load();});document.querySelector('#netflow-refresh').addEventListener('click',load);window.addEventListener('hashchange',()=>{if(location.hash==='#view-netflow')load();});setInterval(()=>{if(!section.hidden&&!document.hidden)load();},30000);if(location.hash==='#view-netflow')load();
+(() => {
+    'use strict';
+    const form = document.querySelector('#netflow-filters');
+    if (!form) return;
+    const section = document.querySelector('#view-netflow'),
+        feedback = document.querySelector('#netflow-feedback');
+    let page = 1,
+        busy = false,
+        pending = false,
+        applied = new URLSearchParams(new FormData(form));
+    const make = (tag, text = '', cls = '') => {
+        const n = document.createElement(tag);
+        n.textContent = text;
+        if (cls) n.className = cls;
+        return n;
+    };
+    // Missing observations stay missing; a measured numeric zero remains valid.
+    const numeric = (value) => {
+        if (
+            (typeof value !== 'number' && typeof value !== 'string') ||
+            (typeof value === 'string' && value.trim() === '')
+        )
+            return null;
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    };
+    const number = (value) => {
+        const parsed = numeric(value);
+        return parsed === null ? '—' : parsed.toLocaleString('en-IN');
+    };
+    const bytes = (value) => {
+        let parsed = numeric(value);
+        if (parsed === null) return '—';
+        for (const unit of ['B', 'KB', 'MB', 'GB', 'TB']) {
+            if (parsed < 1000 || unit === 'TB') {
+                return parsed.toLocaleString('en-IN', { maximumFractionDigits: 2 }) + ' ' + unit;
+            }
+            parsed /= 1000;
+        }
+    };
+    const date = (epoch) =>
+        Number(epoch)
+            ? new Date(Number(epoch) * 1000).toLocaleString('en-GB', {
+                  timeZone: 'Asia/Kolkata',
+                  hour12: false,
+              })
+            : '—';
+    const proto = (v) => ({ 1: 'ICMP', 6: 'TCP', 17: 'UDP', 58: 'ICMPv6' })[v] || String(v);
+    function cell(text, small) {
+        const td = make('td', text);
+        if (small) td.append(make('small', small));
+        return td;
+    }
+    function drawChart(rows, interval) {
+        const svg = document.querySelector('#netflow-chart');
+        svg.replaceChildren();
+        const ns = 'http://www.w3.org/2000/svg',
+            add = (tag, attrs, text) => {
+                const n = document.createElementNS(ns, tag);
+                for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+                if (text) n.textContent = text;
+                svg.append(n);
+                return n;
+            };
+        if (!rows.length) {
+            add(
+                'text',
+                { x: 450, y: 110, 'text-anchor': 'middle', fill: '#777' },
+                'No flow readings in this time range.',
+            );
+            return;
+        }
+        if (numeric(interval) === null || Number(interval) <= 0) {
+            throw new Error('Invalid flow chart interval.');
+        }
+        if (rows.some((row) => numeric(row.epoch) === null || numeric(row.bps) === null)) {
+            throw new Error('Incomplete flow chart observation.');
+        }
+        const times = rows.map((r) => Number(r.epoch)),
+            start = Math.min(...times),
+            end = Math.max(...times),
+            max = Math.max(1, ...rows.map((r) => Number(r.bps))),
+            divisor = max >= 1e9 ? 1e9 : max >= 1e6 ? 1e6 : max >= 1e3 ? 1e3 : 1,
+            unit = max >= 1e9 ? 'Gbps' : max >= 1e6 ? 'Mbps' : max >= 1e3 ? 'kbps' : 'bps';
+        for (let i = 0; i <= 4; i++) {
+            const y = 20 + i * 42;
+            add('line', { x1: 80, y1: y, x2: 880, y2: y, stroke: '#e5e5e5' });
+            add(
+                'text',
+                { x: 70, y: y + 4, 'text-anchor': 'end', fill: '#777', 'font-size': 12 },
+                (((1 - i / 4) * max) / divisor).toFixed(2) + ' ' + unit,
+            );
+        }
+        for (const [scope, color] of [
+            ['LAN', '#155cff'],
+            ['WAN', '#42aa8b'],
+            ['Unknown', '#888'],
+        ]) {
+            const map = new Map(
+                    rows
+                        .filter((r) => r.traffic_scope === scope)
+                        .map((r) => [Number(r.epoch), Number(r.bps)]),
+                ),
+                points = [];
+            // End the line at an absent bucket; never invent traffic for missing intervals/scopes.
+            const drawSegment = () => {
+                if (points.length > 1) {
+                    add('polyline', {
+                        points: points.map((point) => point.join(',')).join(' '),
+                        fill: 'none',
+                        stroke: color,
+                        'stroke-width': 2,
+                    });
+                }
+                for (const [x, y] of points) add('circle', { cx: x, cy: y, r: 2, fill: color });
+                points.length = 0;
+            };
+            for (let t = start; t <= end; t += Number(interval)) {
+                if (!map.has(t)) {
+                    drawSegment();
+                    continue;
+                }
+                points.push([
+                    80 + ((t - start) / Math.max(300, end - start)) * 800,
+                    188 - (Number(map.get(t)) / max) * 168,
+                ]);
+            }
+            drawSegment();
+        }
+        add('text', { x: 80, y: 215, fill: '#777', 'font-size': 12 }, date(start));
+        add(
+            'text',
+            { x: 880, y: 215, 'text-anchor': 'end', fill: '#777', 'font-size': 12 },
+            date(end),
+        );
+    }
+    function render(data) {
+        document.querySelector('#netflow-health').textContent =
+            data.health +
+            (data.last_data_epoch ? ' · Last received ' + date(data.last_data_epoch) : '');
+        document.querySelector('#netflow-health').className =
+            'netflow-health ' + (data.health === 'Receiving' ? 'online' : '');
+        const a = data.assignment;
+        document.querySelector('#netflow-configuration').textContent = a
+            ? 'Exporter ' +
+              a.exporter_address +
+              ' → ' +
+              a.collector +
+              ':' +
+              a.port +
+              ' · ' +
+              (Number(a.version) === 10 ? 'IPFIX' : 'NetFlow v' + a.version)
+            : 'Configure NetFlow under Protocol Config to associate this device with an exporter.';
+        feedback.textContent = data.error || '';
+        const totals = document.querySelector('#netflow-totals');
+        totals.replaceChildren();
+        const hasReadings = numeric(data.totals.flows) !== null && Number(data.totals.flows) > 0;
+        for (const [label, value] of [
+            ['Traffic', hasReadings ? bytes(data.totals.bytes) : '—'],
+            ['Packets', hasReadings ? number(data.totals.packets) : '—'],
+            ['Flows', hasReadings ? number(data.totals.flows) : '—'],
+            ['Source Hosts', hasReadings ? number(data.totals.sources) : '—'],
+        ]) {
+            const block = make('div');
+            block.append(make('span', label), make('strong', value));
+            totals.append(block);
+        }
+        document.querySelector('#netflow-chart-interval').textContent =
+            Number(data.chart_interval) / 60 +
+            '-minute average throughput from exported flow records.';
+        drawChart(data.chart, data.chart_interval);
+        const rankings = document.querySelector('#netflow-rankings');
+        rankings.replaceChildren();
+        for (const [key, label] of [
+            ['hosts', 'Top Source Hosts'],
+            ['destinations', 'Top Destination Hosts'],
+            ['protocols', 'Protocols'],
+            ['applications', 'Applications'],
+            ['conversations', 'Conversations'],
+        ]) {
+            const panel = make('div', '', 'netflow-ranking'),
+                table = make('table', '', 'site-table'),
+                head = make('thead'),
+                hr = make('tr'),
+                body = make('tbody');
+            hr.append(make('th', label), make('th', 'Bytes'), make('th', 'Flows'));
+            head.append(hr);
+            for (const r of data.rankings[key]) {
+                const tr = make('tr');
+                const labelCell = cell(key === 'protocols' ? proto(r.label) : r.label),
+                    bar = make('span', '', 'netflow-bar');
+                bar.setAttribute('aria-hidden', 'true');
+                bar.style.width =
+                    (100 * Number(r.bytes)) / Math.max(1, Number(data.rankings[key][0]?.bytes)) +
+                    '%';
+                labelCell.append(bar);
+                tr.append(labelCell, cell(bytes(r.bytes)), cell(number(r.flows)));
+                body.append(tr);
+            }
+            if (!body.children.length) {
+                const tr = make('tr'),
+                    td = cell('No readings.');
+                td.colSpan = 3;
+                tr.append(td);
+                body.append(tr);
+            }
+            table.append(head, body);
+            panel.append(table);
+            rankings.append(panel);
+        }
+        const records = document.querySelector('#netflow-records');
+        records.replaceChildren();
+        for (const r of data.rows) {
+            const tr = make('tr');
+            tr.append(
+                cell(date(r.first_epoch), date(r.last_epoch)),
+                cell(Number(r.version) === 10 ? 'IPFIX' : 'v' + r.version),
+                cell(r.src_addr, String(r.src_port)),
+                cell(r.dst_addr, String(r.dst_port)),
+                cell(proto(r.protocol)),
+                cell(
+                    bytes(r.bytes),
+                    number(r.packets) + ' packets' + (Number(r.sampled) ? ' · sampled' : ''),
+                ),
+                cell(r.application, r.application_basis),
+                cell(r.traffic_scope === 'Unknown' ? 'Unclassified' : r.traffic_scope),
+            );
+            records.append(tr);
+        }
+        if (!records.children.length) {
+            const tr = make('tr'),
+                td = cell('No flow records match the selected filters.');
+            td.colSpan = 8;
+            tr.append(td);
+            records.append(tr);
+        }
+        page = data.page;
+        const picker = document.querySelector('#netflow-page');
+        picker.replaceChildren();
+        for (let i = 1; i <= data.pages; i++) picker.append(new Option(String(i), String(i)));
+        picker.value = String(page);
+        document.querySelector('#netflow-pages').textContent = 'of ' + data.pages + ' pages';
+        document.querySelector('#netflow-range').textContent = Number(data.totals.flows)
+            ? (page - 1) * data.size +
+              1 +
+              '–' +
+              Math.min(page * data.size, Number(data.totals.flows)) +
+              ' of ' +
+              number(data.totals.flows) +
+              ' items'
+            : '0 items';
+        document.querySelector('#netflow-prev').disabled = page === 1;
+        document.querySelector('#netflow-next').disabled = page === data.pages;
+        const events = document.querySelector('#netflow-events');
+        events.replaceChildren();
+        for (const r of data.events) {
+            const tr = make('tr'),
+                sev = make('span', r.severity, 'alarm-severity');
+            sev.style.background = icctSeverityColors[r.severity] || '#ddd';
+            const td = cell('');
+            td.append(sev);
+            tr.append(
+                cell(date(r.opened_epoch), date(r.updated_epoch)),
+                td,
+                cell(r.state),
+                cell(r.message),
+            );
+            events.append(tr);
+        }
+        if (!events.children.length) {
+            const tr = make('tr'),
+                td = cell('No recorded anomalies in this time range.');
+            td.colSpan = 4;
+            tr.append(td);
+            events.append(tr);
+        }
+    }
+    async function load() {
+        if (busy) {
+            pending = true;
+            return;
+        }
+        busy = true;
+        const query = new URLSearchParams(applied);
+        query.set('id', form.dataset.deviceId);
+        query.set('page', String(page));
+        query.set('size', document.querySelector('#netflow-size').value);
+        document.querySelector('#netflow-export').href =
+            'protocols/netflow/controllers/netflow.php?' + query.toString() + '&export=1';
+        try {
+            const response = await fetch('protocols/netflow/controllers/netflow.php?' + query, {
+                credentials: 'same-origin',
+            });
+            if (
+                response.redirected ||
+                !response.headers.get('content-type')?.includes('application/json')
+            )
+                throw Error('Session expired. Reload and sign in.');
+            const result = await response.json();
+            if (!response.ok) throw Error(result.error || 'Unable to load readings.');
+            render(result);
+        } catch (e) {
+            feedback.textContent = e.message;
+        } finally {
+            busy = false;
+            if (pending) {
+                pending = false;
+                load();
+            }
+        }
+    }
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        applied = new URLSearchParams(new FormData(form));
+        page = 1;
+        load();
+    });
+    form.addEventListener('reset', () => {
+        setTimeout(() => {
+            applied = new URLSearchParams(new FormData(form));
+            page = 1;
+            load();
+        }, 0);
+    });
+    document.querySelector('#netflow-size').addEventListener('change', () => {
+        page = 1;
+        load();
+    });
+    document.querySelector('#netflow-page').addEventListener('change', (e) => {
+        page = Number(e.target.value);
+        load();
+    });
+    document.querySelector('#netflow-prev').addEventListener('click', () => {
+        page--;
+        load();
+    });
+    document.querySelector('#netflow-next').addEventListener('click', () => {
+        page++;
+        load();
+    });
+    document.querySelector('#netflow-refresh').addEventListener('click', load);
+    window.addEventListener('hashchange', () => {
+        if (location.hash === '#view-netflow') load();
+    });
+    setInterval(() => {
+        if (!section.hidden && !document.hidden) load();
+    }, 30000);
+    if (location.hash === '#view-netflow') load();
 })();

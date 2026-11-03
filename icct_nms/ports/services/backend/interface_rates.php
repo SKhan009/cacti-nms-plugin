@@ -1,4 +1,5 @@
 <?php
+
 /** ICCT-owned interface rates services, derived from the existing ICCT NMS implementation. */
 
 /** Reused Inventory service: interface counter delta. */
@@ -62,7 +63,7 @@ function icct_backend_interface_rates(array $current, array $previous, int $maxA
         foreach (['in', 'out'] as $direction) {
             $delta = icct_backend_interface_counter_delta(
                 $port[$direction . '_octets'] ?? null,
-                $old[$direction . '_octets'] ?? null
+                $old[$direction . '_octets'] ?? null,
             );
             if ($delta !== null) {
                 $port[$direction . '_bps'] = ($delta * 8) / $elapsed;

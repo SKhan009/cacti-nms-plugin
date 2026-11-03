@@ -1,4 +1,5 @@
 <?php
+
 /** ICCT-owned configuration runner services, derived from the existing ICCT NMS implementation. */
 
 /** Reused Inventory service: config serial execute. */
@@ -7,7 +8,7 @@ function icct_backend_config_serial_execute(
     array $field,
     $operation,
     $before = null,
-    $requested = null
+    $requested = null,
 ) {
     global $config;
     $serial = $target['serial'];
@@ -15,13 +16,13 @@ function icct_backend_config_serial_execute(
         'connection' => [
             'transport' => $serial['transport'],
             'endpoint' => $serial['endpoint'],
-            'settings' => $serial['settings']
+            'settings' => $serial['settings'],
         ],
         'unit' => (int) $serial['device_address'],
         'offset' => $field['offset'],
         'function' => $field['function'],
         'operation' => $operation,
-        'count' => 1
+        'count' => 1,
     ];
     if ($operation === 'write') {
         $job['expected'] = ((int) $before) & 65535;
@@ -42,7 +43,7 @@ function icct_backend_config_serial_execute(
         $pipes,
         null,
         null,
-        ['bypass_shell' => true]
+        ['bypass_shell' => true],
     );
     if (!is_resource($process)) {
         throw new RuntimeException('Cannot start serial adapter.');
@@ -88,7 +89,7 @@ function icct_backend_config_serial_execute(
     if ($timeout) {
         return [
             'status' => $operation === 'write' ? 'unverified' : 'failed',
-            'error' => 'Collector execution deadline exceeded. Writes are not replayed.'
+            'error' => 'Collector execution deadline exceeded. Writes are not replayed.',
         ];
     }
     try {
@@ -97,7 +98,7 @@ function icct_backend_config_serial_execute(
         return [
             'status' => $operation === 'write' ? 'unverified' : 'failed',
             'error' =>
-                'Serial adapter failed to return a valid result. Check collector installation.'
+                'Serial adapter failed to return a valid result. Check collector installation.',
         ];
     }
     if (!is_array($result) || !isset($result['status'])) {
@@ -123,7 +124,7 @@ function icct_backend_config_snmp_execute(
     array $field,
     $operation,
     $before = null,
-    $requested = null
+    $requested = null,
 ) {
     $session = null;
     try {
@@ -136,7 +137,7 @@ function icct_backend_config_snmp_execute(
             return [
                 'status' => 'failed',
                 'before' => $current,
-                'error' => 'Value changed since preview; no write sent.'
+                'error' => 'Value changed since preview; no write sent.',
             ];
         }
         $ack = false;
@@ -144,7 +145,7 @@ function icct_backend_config_snmp_execute(
             $ack = $session->set(
                 $field['oid'],
                 ['integer' => 'i', 'unsigned' => 'u', 'string' => 's'][$field['type']],
-                $requested
+                $requested,
             );
         } catch (Throwable $e) {
             /* Ambiguous result: read back without retrying SET. */
@@ -156,21 +157,21 @@ function icct_backend_config_snmp_execute(
                 'status' => 'unverified',
                 'before' => $before,
                 'acknowledged' => $ack,
-                'error' => 'SNMP read-back failed. Do not assume the setting is unchanged.'
+                'error' => 'SNMP read-back failed. Do not assume the setting is unchanged.',
             ];
         }
         return [
             'status' => $observed === $requested ? 'verified' : 'unverified',
             'before' => $before,
             'observed' => $observed,
-            'acknowledged' => $ack
+            'acknowledged' => $ack,
         ];
     } catch (Throwable $e) {
         // SNMP library exceptions may contain connection details; do not persist them.
         return [
             'status' => 'failed',
             'error' =>
-                'SNMP access failed. Check collector credentials, device permissions and the field definition.'
+                'SNMP access failed. Check collector credentials, device permissions and the field definition.',
         ];
     } finally {
         if ($session) {
@@ -193,7 +194,7 @@ function icct_backend_config_snmp_session(array $target, $write = false)
         $credentials = $config['icct_backend_configuration_credentials'][$ref] ?? null;
         if (!is_array($credentials)) {
             throw new RuntimeException(
-                'Write credential reference is not configured on this collector.'
+                'Write credential reference is not configured on this collector.',
             );
         }
         // Restrict credential use to explicit devices, not every user who guesses its name.
@@ -216,7 +217,7 @@ function icct_backend_config_snmp_session(array $target, $write = false)
         $endpoint,
         $version === 3 ? $credentials['snmp_username'] ?? '' : $credentials['snmp_community'] ?? '',
         min(10000000, max(100000, (int) $host['snmp_timeout'] * 1000)),
-        0
+        0,
     );
     $session->exceptions_enabled = SNMP::ERRNO_ANY;
     $session->valueretrieval = SNMP_VALUE_PLAIN;
@@ -229,7 +230,7 @@ function icct_backend_config_snmp_session(array $target, $write = false)
             $credentials['snmp_password'] ?? '',
             $priv === '[None]' ? '' : $priv,
             $credentials['snmp_priv_passphrase'] ?? '',
-            $host['snmp_context']
+            $host['snmp_context'],
         );
     }
     return $session;
@@ -250,16 +251,16 @@ function icct_backend_config_worker_once($collector)
             "UPDATE plugin_icct_nms_config_jobs SET status=IF(operation='write','unverified','failed'),finished_at=NOW(),result_json=? WHERE poller_id=? AND status='running'",
             [
                 json_encode(['error' => 'Previous worker stopped; request was not replayed.']),
-                $collector
-            ]
+                $collector,
+            ],
         );
         icct_backend_category_execute(
             "UPDATE plugin_icct_nms_config_jobs SET status='failed',finished_at=NOW(),result_json=? WHERE poller_id=? AND status='queued' AND requested_at < DATE_SUB(NOW(),INTERVAL 5 MINUTE)",
-            [json_encode(['error' => 'Request expired before execution.']), $collector]
+            [json_encode(['error' => 'Request expired before execution.']), $collector],
         );
         $job = db_fetch_row_prepared(
             "SELECT * FROM plugin_icct_nms_config_jobs WHERE poller_id=? AND status='queued' ORDER BY id LIMIT 1",
-            [$collector]
+            [$collector],
         );
         if (!$job) {
             icct_backend_config_monitor_once($collector);
@@ -267,7 +268,7 @@ function icct_backend_config_worker_once($collector)
         }
         icct_backend_category_execute(
             "UPDATE plugin_icct_nms_config_jobs SET status='running',started_at=NOW() WHERE id=?",
-            [$job['id']]
+            [$job['id']],
         );
         $previous_session = $_SESSION ?? [];
         $dispatched = false;
@@ -277,7 +278,7 @@ function icct_backend_config_worker_once($collector)
             $result = icct_backend_serial_mutation(function () use (
                 $job,
                 $collector,
-                &$dispatched
+                &$dispatched,
             ) {
                 // Hold the configuration lock through execution so connection/profile edits cannot race a write.
                 $target = icct_backend_config_target($job['host_id'], false);
@@ -286,7 +287,7 @@ function icct_backend_config_worker_once($collector)
                     !hash_equals($target['signature'], $job['signature'])
                 ) {
                     throw new RuntimeException(
-                        'Device, connection or equipment profile changed after submission.'
+                        'Device, connection or equipment profile changed after submission.',
                     );
                 }
                 $field = $target['fields'][$job['field_key']] ?? null;
@@ -309,21 +310,21 @@ function icct_backend_config_worker_once($collector)
                         $field,
                         $job['operation'],
                         $before,
-                        $requested
+                        $requested,
                     )
                     : icct_backend_config_snmp_execute(
                         $target,
                         $field,
                         $job['operation'],
                         $before,
-                        $requested
+                        $requested,
                     );
             });
         } catch (Throwable $e) {
             // Admission failures cannot have changed equipment; only dispatched writes are uncertain.
             $result = [
                 'status' => $job['operation'] === 'write' && $dispatched ? 'unverified' : 'failed',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ];
         } finally {
             $_SESSION = $previous_session;
@@ -333,16 +334,16 @@ function icct_backend_config_worker_once($collector)
                 'read' => 'complete',
                 'verified' => 'verified',
                 'unverified' => 'unverified',
-                'failed' => 'failed'
+                'failed' => 'failed',
             ][$result['status'] ?? ''] ?? 'failed';
         icct_backend_category_execute(
             'UPDATE plugin_icct_nms_config_jobs SET status=?,result_json=?,finished_at=NOW() WHERE id=?',
-            [$status, json_encode($result, JSON_THROW_ON_ERROR), $job['id']]
+            [$status, json_encode($result, JSON_THROW_ON_ERROR), $job['id']],
         );
         if ($job['operation'] === 'write') {
             icct_backend_category_execute(
                 'DELETE FROM plugin_icct_nms_serial_readings WHERE host_id=? AND field_key=?',
-                [$job['host_id'], $job['field_key']]
+                [$job['host_id'], $job['field_key']],
             );
         }
         if ($job['operation'] === 'read') {
@@ -354,8 +355,8 @@ function icct_backend_config_worker_once($collector)
                     $job['signature'],
                     json_encode($result['value'] ?? null),
                     $status,
-                    substr($result['error'] ?? '', 0, 512)
-                ]
+                    substr($result['error'] ?? '', 0, 512),
+                ],
             );
         }
     } finally {

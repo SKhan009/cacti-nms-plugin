@@ -1,4 +1,5 @@
 <?php
+
 /** ICCT-owned discovery neighbors services, derived from the existing ICCT NMS implementation. */
 
 /** Reused Inventory service: nd column. */
@@ -42,32 +43,32 @@ function icct_backend_nd_interfaces($values)
                 $values,
                 '1.3.6.1.2.1.31.1.1.1.6.' . $index,
                 70,
-                false
+                false,
             ),
             'out_octets' => icct_backend_nd_value(
                 $values,
                 '1.3.6.1.2.1.31.1.1.1.10.' . $index,
                 70,
-                false
+                false,
             ),
             'discontinuity' => icct_backend_nd_value(
                 $values,
                 '1.3.6.1.2.1.31.1.1.1.19.' . $index,
                 67,
-                false
+                false,
             ),
             'alias_hex' => $alias === null ? '' : bin2hex($alias),
             'mac_hex' => $mac === null ? '' : bin2hex($mac),
             'description' => icct_backend_nd_octets(
-                icct_backend_nd_value($values, $root . '.2.' . $index, 4, false)
+                icct_backend_nd_value($values, $root . '.2.' . $index, 4, false),
             ),
             'description_hex' => bin2hex(
-                icct_backend_nd_value($values, $root . '.2.' . $index, 4, false) ?? ''
+                icct_backend_nd_value($values, $root . '.2.' . $index, 4, false) ?? '',
             ),
             'admin' => icct_backend_nd_value($values, $root . '.7.' . $index, 2, false),
             'oper' => icct_backend_nd_value($values, $root . '.8.' . $index, 2, false),
             'speed_bps' => $speed === null ? 0 : (int) $speed,
-            'high_speed_mbps' => $high === null ? 0 : (int) $high
+            'high_speed_mbps' => $high === null ? 0 : (int) $high,
         ];
     }
     if (!$ports) {
@@ -118,7 +119,7 @@ function icct_backend_nd_table_indices($values, $root, $parts)
                 !preg_match(
                     '/^[0-9]+\.([0-9]+(?:\.[0-9]+){' . ($parts - 1) . '})$/D',
                     $suffix,
-                    $match
+                    $match,
                 )
             ) {
                 throw new RuntimeException('Malformed table row: ' . $oid);
@@ -137,7 +138,7 @@ function icct_backend_nd_value($values, $oid, $type, $required = true)
             return null;
         }
         throw new RuntimeException(
-            'Required MIB object is absent or excluded by the SNMP view: ' . $oid
+            'Required MIB object is absent or excluded by the SNMP view: ' . $oid,
         );
     }
     $v = $values[$oid];
@@ -147,6 +148,6 @@ function icct_backend_nd_value($values, $oid, $type, $required = true)
     return $v['value'];
 }
 
-require_once __DIR__.'/../../../cdp/services/discovery_neighbors.php';
+require_once __DIR__ . '/../../../cdp/services/discovery_neighbors.php';
 
-require_once __DIR__.'/../../../lldp/services/discovery_neighbors.php';
+require_once __DIR__ . '/../../../lldp/services/discovery_neighbors.php';

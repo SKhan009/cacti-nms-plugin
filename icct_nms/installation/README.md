@@ -73,7 +73,7 @@ Chrony is not a required plugin package: automatically installing a time daemon 
 
 ### Optional protocol dependencies
 
-Installation Checks now inventories Redis, Python WebSocket support, chrony, TACACS+ tools, Apache Guacamole and FTP/TFTP/Telnet clients separately from application integration. Installed dependencies have no Install button. Package-only setup does not configure plugin features, PAM, time sources or firewall rules. Repository package scripts may apply their distribution defaults.
+Installation Checks now inventories Redis, Python WebSocket support, NTP client tools, TACACS+ tools, Apache Guacamole and FTP/TFTP/Telnet clients separately from application integration. Installed dependencies have no Install button. Package-only setup does not configure plugin features, PAM, time sources or firewall rules. Repository package scripts may apply their distribution defaults.
 
 Use `setup.py install --component redis --online` (also `websocket`, `ntp`, `tacacs`, `guacamole`, `transfer`). Build an offline dependency bundle with `setup.py bundle --component redis --bundle /outside/webroot/redis-bundle`; install with `setup.py install --component redis --bundle /outside/webroot/redis-bundle`. Each bundle is pinned to its component, OS release and architecture; existing base bundles remain compatible.
 
@@ -107,3 +107,17 @@ For online setup, `setup.py install --online --all-components` installs the core
 For a complete offline release, add repeated `--component-bundle /path/to/profile-bundle` arguments to `package.py` together with the core `--bundle` and native bundles. The single resulting archive carries the profile manifests and packages outside the web root. Its bootstrap validates every selected profile's OS/CPU, component ID and SHA-256 hashes before updating source or invoking a package manager, then automatically forwards them to setup. The read-only `install.py --plan` lists the selected components.
 
 Direct offline setup accepts the same repeated `--component-bundle` arguments. Adding `--all-components` requires every available profile bundle and rejects incomplete sets before making changes. Existing Cacti pages, credentials and records are preserved. Debian's package manager is instructed not to remove existing packages; a conflicting installed time daemon must be resolved by the administrator rather than silently replaced.
+
+### Runtime and distribution compatibility
+
+Python 3.9+ is required by setup and the collectors. Installation Checks obtains the measured Python version from the local collector snapshot; missing, old, unmeasured or non-executable runtimes are not reported ready. The web page does not execute Python to probe it. Setup, native build/install, archive packaging and release deployment reject an old Python runtime before mutations.
+
+Package profiles resolve distribution-specific names rather than applying Debian 12 names to every APT system. Ubuntu uses `libjpeg-turbo8`; Ubuntu 24.04+ and Debian 13+ use `libssh2-1t64`. The resolved package list is included in and checked against the offline bundle manifest. Debian 12 and RHEL package lists remain unchanged. Ubuntu source builds and bundles must be produced on Ubuntu with the matching release and CPU, not reused from Debian.
+
+APT NTP profiles use `ntpsec-ntpdig`, a client-only query tool, so installing protocol dependencies does not replace an existing systemd-timesyncd, chrony or ntpd service. Checks also recognize existing chronyc/ntpdig/ntpq tools. RHEL retains its chrony package profile. Setup never invokes a command to set the system clock or rewrite time peers.
+
+### Preserve the working plugin during setup
+
+The release source is aligned with the running VM's public application source, including its database-backed diagnostics queue and shared UI helpers. Installing a Redis dependency does not switch diagnostics to another backend. Local credentials, MIB sessions, generated plugin query XML and uploaded device images are excluded from release archives and rejected as deployment targets. Existing source is backed up before replacement, and the bootstrap refuses a plugin version downgrade.
+
+Setup provisions only the required writable application paths: MIB storage, uploaded device images and Cacti's `resource/snmp_queries/icct_nms` directory. On SELinux systems it preserves enforcement and applies persistent writable labels only to those paths. Other application source stays administrator-owned and read-only to the web account.

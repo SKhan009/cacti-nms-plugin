@@ -2,13 +2,17 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Inventory designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
-## Version 1.4.2
-
-A release can include the complete plugin and a verified OS/CPU-specific offline package bundle in one installer archive. The bootstrap verifies checksums, backs up existing source, preserves local configuration and uploaded data, copies source atomically and invokes native Cacti setup. Release builds exclude credentials, runtime data and developer tests. Debian offline APT installation uses empty repository sources/lists so local package installation cannot fall back to network repositories.
-
 ## Version 1.4.1
 
 Installation Checks lists required PHP extensions, local binaries, bundled assets and worker states behind Cacti Installation/Upgrades permission. The explicit Linux administrator installer provides a read-only plan, native plugin installation, package provisioning, dynamic service paths/accounts, and checksummed offline package bundles tied to the target OS/release/architecture. See [installation instructions](installation/README.md). SSH/HTTPS, Pathchar and currently unimplemented NTP/TACACS+ backends remain explicit requirements; package installation alone does not imply all protocols are ready.
+
+## Version 1.4.1 — QA and offline RHEL
+
+Hidden fault validation opens the owning FCAPS tab before focus. Secure browser tokens use one HTTP-compatible implementation. Topology identifies cables by device/port pairs, merges reciprocal reports and preserves separate parallel cables. Alarm workflow charts read the authorized alarm journal. A shared local palette defines severity colors for PHP, JavaScript and CSS.
+
+Diagnostics use the database as their sole queue and result store; Redis is no longer used or required. Missing or mismatched saved Serial settings require review and Save instead of substituting connection settings. NetFlow application names require exporter evidence; absent identity is shown as Not reported. Invalid saved JSON is reported instead of silently resetting settings. Only preset/starter defaults initialize absent configuration.
+
+Install required RPMs and their dependencies from approved offline RHEL media before installing feature services. The NetFlow installer performs local preflight checks and does not invoke a package manager or download files. Cacti, MariaDB, PHP 8.0+, the listed PHP extensions, native SNMP/RRD tools, Python 3 and feature-specific tools must be installed. Fonts, map boundaries, Leaflet, SSH PHP dependencies and browser assets are bundled. SSH still requires HTTPS, the strict-auth patched guacd build and a configured private broker; plain HTTP supports the other browser workflows but cannot enroll SSH credentials. Preserve the installation's SELinux policy, secrets and user uploads during source updates.
 
 ## Version 1.3.5
 
@@ -32,7 +36,7 @@ Installation and upgrades save portable starter presets for SNMP, CDP, LLDP, SSH
 
 ## Version 1.3.0
 
-NetFlow/IPFIX now integrates enabled Presets, per-device exporter mappings, and a read-only Inventory reporting tab linked from topology. The nfdump receiver decodes v5, v7, v9 and IPFIX with IPv4/IPv6 transport. Owned tables retain decoded flows, trends and anomaly history; capture imports are transactional and idempotent. Reports include time/IP/port/protocol/version/application/LAN-WAN filters, bandwidth charts, top source/destination hosts, protocols, exporter application IDs or labelled service-port estimates, conversations, pagination and CSV export. Per-device rules flag scans, SYN floods, worm-like SMB/RPC fan-out and bandwidth overuse; fresh normal observations resolve findings. Collectors are isolated by native Cacti poller ID and run offline after package installation. See [deployment and operating notes](protocols/netflow/README.md) for exporter setup, retention, classification and sampling.
+NetFlow/IPFIX now integrates enabled Presets, per-device exporter mappings, and a read-only Inventory reporting tab linked from topology. The nfdump receiver decodes v5, v7, v9 and IPFIX with IPv4/IPv6 transport. Owned tables retain decoded flows, trends and anomaly history; capture imports are transactional and idempotent. Reports include time/IP/port/protocol/version/application/LAN-WAN filters, bandwidth charts, top source/destination hosts, protocols, exporter-reported application identities, conversations, pagination and CSV export. Per-device rules flag scans, SYN floods, worm-like SMB/RPC fan-out and bandwidth overuse; fresh normal observations resolve findings. Collectors are isolated by native Cacti poller ID and run offline after package installation. See [deployment and operating notes](protocols/netflow/README.md) for exporter setup, retention, classification and sampling.
 
 ## Version 1.2.19
 
@@ -86,7 +90,7 @@ Upgrade through Cacti Plugin Management after copying the plugin so the additive
 3. Grant the **View ICCT NMS Inventory** realm. Cacti's existing device-management permission and device ACLs remain authoritative.
 4. Open **ICCT NMS → Inventory**. On the configured VM: `http://127.0.0.1:8080/cacti/plugins/icct_nms/inventory/controllers/inventory.php`.
 
-Lifecycle setup creates the 49 owned tables from `shared/database/schema.sql`. Normal requests never create, repair or populate tables. Uninstall retains ICCT settings and all Cacti devices for a later reinstall. New installations contain no sample equipment. Native numeric SNMP polling, devices, sites, collectors, templates, graphs and RRD data stay under Cacti's ownership.
+Lifecycle setup creates the 40 owned tables from `shared/database/schema.sql`. Normal requests never create, repair or populate tables. Uninstall retains ICCT settings and all Cacti devices for a later reinstall. New installations contain no sample equipment. Native numeric SNMP polling, devices, sites, collectors, templates, graphs and RRD data stay under Cacti's ownership.
 
 ## Files
 
@@ -274,11 +278,7 @@ BLR sections 5.3.2.1.1 and 5.3.5.3.1 are partially covered: LLDP/CDP Layer 2 nei
 
 ### Live diagnostic queue and result delivery
 
-The diagnostic page submits once and reads job status automatically every 500 ms until completion. Its Run button and method selector are disabled while pending; repeat submissions for the same owner/device/tool return the existing job. Results and errors render as text without HTML interpretation. The collector receives FIFO Redis notifications and caches job results for 300 seconds; Cacti’s database remains authoritative for ownership, device access, job status, configuration hash and recovery. A Redis outage falls back to the database without repeating a test or bypassing permissions. The listener rechecks the explicitly requesting user’s registered plugin realm, rather than a web-only filename map that is absent in a CLI listener.
-
-Redis runs locally through `/run/redis/redis.sock`, with no TCP listener. The included `shared/deployment/redis-local.conf` and `shared/deployment/redis-systemd.conf` describe the deployed dedicated service configuration. The plugin contains its bounded RESP client in `includes/services/diagnostics_redis.php`; no PHP Redis extension is required. An administrator can set `$config['icct_nms_redis_socket']` to another private Unix socket. Remote collectors retain DB fallback when their local Redis is not shared with the web host. MySQL locks and saved authorization checks still prevent concurrent or repeated bandwidth execution. The test duration cannot be eliminated by Redis; the UI shows the result as soon as it completes.
-
-Validation: all 14 saved methods passed bounded execution on the local IPv4 device (Ping; UDP/ICMP/TCP traceroute; ICMP/TCP MTR, Nping and Hping; ARP; iPerf3; Netperf; Pathchar). iPerf3/Netperf used temporary local servers and are labelled collector self-tests, not external link bandwidth. Redis tests verify FIFO notifications, bounded binary-safe framing, expiry, ownership/device/collector/configuration matching and transport outage fallback. Authorization tests cover revoked account, device and plugin-realm access. Live browser checks verified automatic queued-to-complete Ping and the corrected Inventory ARP popup.
+The diagnostic page submits once and reads job status automatically every 500 ms until completion. Its Run button and method selector are disabled while pending; repeat submissions for the same owner/device/tool return the existing job. Results and errors render as text without HTML interpretation. The collector checks the durable database queue once per second. Job ownership, device access, status and configuration are checked against that same database. The listener rechecks the explicitly requesting user’s registered plugin realm, rather than a web-only filename map that is absent in a CLI listener.
 
 Topology Configuration → Device Connections contains the discovery and diagnostics actions beside existing connection results, using the same saved method selection, protocol gates, configuration hash and freshness rules as topology device popups. Legacy Discovery & Diagnostics URLs redirect to Device Connections. Discover Now queues only that authorized device through its assigned collector; diagnostics opens only its saved diagnostic choices. Layer 2 LLDP/CDP links are confirmed neighbour adjacencies; IP-MIB IPv4/IPv6 and BRIDGE/Q-BRIDGE MAC results remain observations and do not constitute a complete routed Layer 3 topology.
 
@@ -296,7 +296,7 @@ MIB review automatically fills declared numeric bounds along with names, syntax-
 
 ### Managed diagnostic listener on systemd collectors
 
-When Cacti's poller uses a one-shot systemd service, its child listeners are stopped with the poller's control group. Install `shared/deployment/icct-nms-diagnostics.service` as a separate enabled service to keep diagnostics available between poller runs. The supplied unit uses the standard `/var/www/html/cacti` path and `apache` account; adjust both for the installation. In Cacti's `include/config.php`, set `$config['icct_backend_diagnostic_listener_launcher'] = 'service';` so the poller does not also launch the listener. Use `systemctl enable --now icct-nms-diagnostics.service` after installing the unit and reloading systemd. The worker retains its device, owner, protocol selection, and registered plugin realm checks; Redis remains a wakeup/result cache with durable database fallback.
+When Cacti's poller uses a one-shot systemd service, its child listeners are stopped with the poller's control group. Install `shared/deployment/icct-nms-diagnostics.service` as a separate enabled service to keep diagnostics available between poller runs. The supplied unit uses the standard `/var/www/html/cacti` path and `apache` account; adjust both for the installation. In Cacti's `include/config.php`, set `$config['icct_backend_diagnostic_listener_launcher'] = 'service';` so the poller does not also launch the listener. Use `systemctl enable --now icct-nms-diagnostics.service` after installing the unit and reloading systemd. The worker retains its device, owner, protocol selection, and registered plugin realm checks; The database is the sole diagnostic queue and result store.
 
 ### Device preset inheritance
 

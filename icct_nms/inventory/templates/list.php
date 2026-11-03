@@ -1,6 +1,6 @@
 <?php
 /**
- * Saved inventory table, filters, tree view, pager and native discovery queue form.
+ * Saved inventory table, filters and pager; discovery opens the shared Networks screen.
  */
 ?>
 <div class="inventory-heading">
@@ -104,111 +104,116 @@
         </thead>
         <tbody>
             <?php foreach ($devices as $d):
-                $id = (int) $d["id"]; ?>
+                $id = (int) $d['id']; ?>
             <tr
-                data-name="<?= icct_nms_h($d["description"]) ?>"
+                data-name="<?= icct_nms_h($d['description']) ?>"
                 data-search="<?= icct_nms_h(
-                    $d["description"] .
-                        " " .
-                        $d["short_name"] .
-                        " " .
-                        $d["hostname"],
+                    $d['description'] . ' ' . $d['short_name'] . ' ' . $d['hostname'],
                 ) ?>"
-                data-segment="<?= icct_nms_h($d["segment"]) ?>"
-                data-status="<?= icct_nms_h($d["status_label"]) ?>"
-                data-rack="<?= icct_nms_h($d["rack_name"]) ?>"
+                data-segment="<?= icct_nms_h($d['segment']) ?>"
+                data-status="<?= icct_nms_h($d['status_label']) ?>"
+                data-rack="<?= icct_nms_h($d['rack_name']) ?>"
                 data-id="<?= $id ?>"
             >
                 <td>
-                    <?= icct_nms_h($d["description"]) ?>
-                    <small><?= icct_nms_h($d["short_name"]) ?></small>
+                    <?= icct_nms_h($d['description']) ?>
+                    <small><?= icct_nms_h($d['short_name']) ?></small>
                 </td>
                 <td>
-                    <?= icct_nms_h($d["segment"]) ?>
-                    <small><?= icct_nms_h($d["device_type"]) ?></small>
+                    <?= icct_nms_h($d['segment']) ?>
+                    <small><?= icct_nms_h($d['device_type']) ?></small>
                 </td>
-                <td><span class="device-status <?= icct_nms_status_class($d["status_label"]) ?>"><?= icct_nms_h($d["status_label"]) ?></span></td>
+                <td><span class="device-status <?= icct_nms_status_class(
+                    $d['status_label'],
+                ) ?>"><?= icct_nms_h($d['status_label']) ?></span></td>
                 <td>
-                    <?= icct_nms_h($d["serial_number"]) ?>
-                    <small><?= icct_nms_h($d["mac_address"]) ?></small>
+                    <?= icct_nms_h($d['serial_number']) ?>
+                    <small><?= icct_nms_h($d['mac_address']) ?></small>
                 </td>
-                <td><?= icct_nms_h($d["hostname"]) ?></td>
+                <td><?= icct_nms_h($d['hostname']) ?></td>
                 <td>
-                    <?= $d["start_unit"]
+                    <?= $d['start_unit']
                         ? icct_nms_h(
-                            $d["start_unit"] .
-                                "U" .
-                                ((int) $d["unit_height"] > 1
-                                    ? "–" .
-                                        ($d["start_unit"] +
-                                            $d["unit_height"] -
-                                            1) .
-                                        "U"
-                                    : ""),
+                            $d['start_unit'] .
+                                'U' .
+                                ((int) $d['unit_height'] > 1
+                                    ? '–' . ($d['start_unit'] + $d['unit_height'] - 1) . 'U'
+                                    : ''),
                         )
-                        : "" ?>
-                    <small><?= icct_nms_h($d["rack_name"]) ?></small>
+                        : '' ?>
+                    <small><?= icct_nms_h($d['rack_name']) ?></small>
                 </td>
                 <td>
-                    <?= icct_nms_h(
-                        icct_nms_uptime($d["snmp_sysUpTimeInstance"]),
-                    ) ?>
-                    <small><?= icct_nms_h($d["polling_interval"]) ?></small>
+                    <?= icct_nms_h(icct_nms_uptime($d['snmp_sysUpTimeInstance'])) ?>
+                    <small><?= icct_nms_h($d['polling_interval']) ?></small>
                 </td>
-                <td><?= $d["availability"] !== null
-                    ? number_format((float) $d["availability"], 2, ".", "") . "%"
-                    : "" ?></td>
+                <td><?= $d['availability'] !== null
+                    ? number_format((float) $d['availability'], 2, '.', '') . '%'
+                    : '' ?></td>
                 <td>
                     <div class="row-actions">
                         <a
                             href="inventory/controllers/device.php?id=<?= $id ?>&amp;view=1"
-                            aria-label="View <?= icct_nms_h(
-                                $d["description"],
-                            ) ?>"
+                            aria-label="View <?= icct_nms_h($d['description']) ?>"
                         >
                             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
                         </a>
                         <a
                             href="<?= icct_nms_h(
-                                $config["url_path"],
+                                $config['url_path'],
                             ) ?>graph_view.php?action=preview&amp;host_id=<?= $id ?>"
-                            aria-label="Graphs for <?= icct_nms_h(
-                                $d["description"],
-                            ) ?>"
+                            aria-label="Graphs for <?= icct_nms_h($d['description']) ?>"
                         >
                             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h4l3-9 6 18 3-9h4"/></svg>
                         </a>
                         <?php if ($management): ?>
                         <a href="inventory/controllers/device.php?id=<?= $id ?>" aria-label="Edit <?= icct_nms_h(
-    $d["description"],
-) ?>">
+                            $d['description'],
+                        ) ?>">
                             <svg class="icct-edit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5L8 21l-5 1 1-5ZM14 5l5 5"/></svg>
                         </a>
                         <details class="row-menu inventory-row-menu">
                             <summary aria-label="More actions for <?= icct_nms_h(
-                                $d["description"],
+                                $d['description'],
                             ) ?>">⋮</summary>
                             <div class="row-menu-panel">
-                                <?php $quickTools=icct_backend_diag_selected_labels($id);
-                                foreach (['ping'=>'Ping','arp'=>'ARP','traceroute'=>'Trace Route'] as $tool=>$label):
-                                    $selectedTool=$tool;
-                                    if($tool==='traceroute')foreach(['traceroute','traceroute_icmp','traceroute_tcp'] as $candidate)if(isset($quickTools[$candidate])){$selectedTool=$candidate;break;}
+                                <?php
+                                $quickTools = icct_backend_diag_selected_labels($id);
+                            foreach (
+                                [
+                                    'ping' => 'Ping',
+                                    'arp' => 'ARP',
+                                    'traceroute' => 'Trace Route',
+                                ] as $tool => $label
+                            ):
+
+                                $selectedTool = $tool;
+                                if ($tool === 'traceroute') {
+                                    foreach (
+                                        ['traceroute', 'traceroute_icmp', 'traceroute_tcp'] as $candidate
+                                    ) {
+                                        if (isset($quickTools[$candidate])) {
+                                            $selectedTool = $candidate;
+                                            break;
+                                        }
+                                    }
+                                }
                                 ?>
-                                <?php if(isset($quickTools[$selectedTool])): ?>
-                                <a href="inventory/diagnostics/controllers/diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h($selectedTool) ?>#diagnostic-run"><?= $label ?></a>
+                                <?php if (isset($quickTools[$selectedTool])): ?>
+                                <a href="inventory/diagnostics/controllers/diagnostics.php?host_id=<?= $id ?>&amp;tool=<?= icct_nms_h(
+                                    $selectedTool,
+                                ) ?>#diagnostic-run"><?= $label ?></a>
                                 <?php else: ?><button type="button" disabled title="Enable <?= $label ?> in Device Diagnostics first."><?= $label ?></button><?php endif; ?>
-                                <?php endforeach; ?>
-                                <?php $launch = icct_nms_meta(
-                                    "icct_cross_launch_" . $id,
-                                ); ?>
+                                <?php
+                            endforeach;
+                ?>
+                                <?php $launch = icct_nms_meta('icct_cross_launch_' . $id); ?>
                                 <?php if (
-                                    $launch !== "" &&
+                                    $launch !== '' &&
                                     filter_var($launch, FILTER_VALIDATE_URL) &&
                                     in_array(
-                                        strtolower(
-                                            parse_url($launch, PHP_URL_SCHEME),
-                                        ),
-                                        ["http", "https"],
+                                        strtolower(parse_url($launch, PHP_URL_SCHEME)),
+                                        ['http', 'https'],
                                         true,
                                     )
                                 ): ?>
@@ -224,25 +229,20 @@
                                 </form>
                                 <a href="inventory/controllers/device.php?id=<?= $id ?>">Modify Device</a>
                                 <a href="inventory/controllers/device.php?clone_id=<?= $id ?>" data-clone-device data-device-name="<?= icct_nms_h(
-    $d["description"],
-) ?>">Clone Device</a>
+                                    $d['description'],
+                                ) ?>">Clone Device</a>
                                 <?php foreach (
                                     [
-                                        ($d["disabled"] ?? "") === "on"
-                                            ? 2
-                                            : 3 =>
-                                            ($d["disabled"] ?? "") === "on"
-                                                ? "Enable Device"
-                                                : "Disable Device",
-                                        1 => "Delete Device",
-                                    ]
-                                    as $action => $label
+                                        ($d['disabled'] ?? '') === 'on' ? 2 : 3 =>
+                                            ($d['disabled'] ?? '') === 'on'
+                                                ? 'Enable Device'
+                                                : 'Disable Device',
+                                        1 => 'Delete Device',
+                                    ] as $action => $label
                                 ): ?>
                                 <form method="post" action="<?= icct_nms_h(
-                                    $config["url_path"],
-                                ) ?>host.php" <?= $action === 1
-    ? 'class="danger-action"'
-    : "" ?>>
+                                    $config['url_path'],
+                                ) ?>host.php" <?= $action === 1 ? 'class="danger-action"' : '' ?>>
                                     <?php icct_nms_token(); ?>
                                     <input type="hidden" name="action" value="actions">
                                     <input type="hidden" name="drp_action" value="<?= $action ?>">
@@ -260,7 +260,7 @@
             endforeach; ?>
         </tbody>
     </table>
-    <p id="empty-inventory" class="empty-state" <?= $devices ? "hidden" : "" ?>>
+    <p id="empty-inventory" class="empty-state" <?= $devices ? 'hidden' : '' ?>>
         No saved devices match these filters.
     </p>
 </div>
@@ -286,16 +286,4 @@
         <button type="button" id="page-next" aria-label="Next page" class="pagination-control"><svg class="pagination-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 5 17 12 9 19Z"/></svg></button>
     </div>
 </footer>
-<?php if ($management): ?>
-<dialog id="discovery-dialog">
-    <div class="dialog-heading">
-        <h2>Device Discovery</h2>
-        <button type="button" data-close-dialog aria-label="Close">×</button>
-    </div>
-    <form method="post" action="protocols/shared/controllers/protocol.php">
-        <?php icct_nms_token(); ?>
-        <input type="hidden" name="action" value="discover" />
-        <button class="button primary">Queue Discovery</button>
-    </form>
-</dialog>
-<?php endif; ?>
+

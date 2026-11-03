@@ -20,13 +20,13 @@ deploy = load('deploy')
 
 class ReleasePackaging(unittest.TestCase):
     def fixture(self, root):
-        for name in ['setup.php','installation/cli/setup.py','installation/cli/deploy.py',
-                     'config.local.json','ssh.config.local.json','protocols/snmp/mibs/storage/session.json',
+        for name in ['INFO','setup.php','installation/cli/setup.py','installation/cli/deploy.py',
+                     'config.local.json','ssh.config.local.json','protocols/snmp/mibs/storage/session.json','protocols/snmp/mibs/queries/private.xml',
                      'shared/assets/images/device-types/uploads/private.png',
                      'shared/assets/images/device-types/uploads/.htaccess']:
             path = root / name
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text('fixture')
+            path.write_text('version = 1.0.0\n' if name == 'INFO' else 'fixture')
 
     def test_archive_excludes_secrets_and_runtime_data(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -36,7 +36,7 @@ class ReleasePackaging(unittest.TestCase):
             package.build_archive(root, archive)
             with zipfile.ZipFile(archive) as stream:
                 names = stream.namelist()
-                for private in ['config.local.json','ssh.config.local.json','session.json','private.png']:
+                for private in ['config.local.json','ssh.config.local.json','session.json','private.xml','private.png']:
                     self.assertFalse(any(name.endswith(private) for name in names))
                 self.assertIn('icct_nms/shared/assets/images/device-types/uploads/.htaccess', names)
                 target = Path(directory) / 'unpacked'
@@ -84,12 +84,24 @@ class ReleasePackaging(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'symlink'):
                 deploy.validate_destination(cacti, ['icct_nms/setup.php'])
 
+    def test_upgrade_guard_rejects_downgrade_without_changing_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory);source=base/'release/icct_nms';source.mkdir(parents=True)
+            (source/'INFO').write_text('version = 1.4.6\n')
+            installed=base/'cacti/plugins/icct_nms';installed.mkdir(parents=True)
+            (installed/'INFO').write_text('version = 1.5.0\n')
+            with self.assertRaisesRegex(ValueError,'downgrade'):
+                deploy.check_release_version(base/'release',base/'cacti')
+            self.assertEqual((installed/'INFO').read_text(),'version = 1.5.0\n')
+            (installed/'INFO').write_text('version = 1.4.5\n')
+            self.assertEqual(deploy.check_release_version(base/'release',base/'cacti'),'1.4.6')
+
     def test_private_configuration_is_never_a_deployment_target(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'include').mkdir()
             (root / 'include/cli_check.php').touch()
-            for name in ['icct_nms/config.local.json','icct_nms/.env','icct_nms/protocols/snmp/mibs/storage/session.json','icct_nms/shared/assets/images/device-types/uploads/photo.png','icct_nms/../escape']:
+            for name in ['icct_nms/config.local.json','icct_nms/.env','icct_nms/protocols/snmp/mibs/storage/session.json','icct_nms/protocols/snmp/mibs/queries/private.xml','icct_nms/shared/assets/images/device-types/uploads/photo.png','icct_nms/../escape']:
                 with self.assertRaises(ValueError):
                     deploy.validate_destination(root, [name])
 

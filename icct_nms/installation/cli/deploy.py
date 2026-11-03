@@ -29,7 +29,7 @@ def verify_release(directory):
             raise ValueError('Refusing release symlink: ' + name)
         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
             raise ValueError('Missing or changed release file: ' + name)
-    for required in ['install.py','icct_nms/setup.php','icct_nms/installation/cli/setup.py']:
+    for required in ['install.py','icct_nms/INFO','icct_nms/setup.php','icct_nms/installation/cli/setup.py']:
         if required not in manifest['files']:
             raise ValueError('Release is incomplete: ' + required)
     return manifest
@@ -47,7 +47,7 @@ def validate_destination(root, names):
         if '..' in parts or '\\' in relative:
             raise ValueError('Invalid plugin destination.')
         local = '/'.join(parts[1:])
-        if parts[-1].startswith('.env') or parts[-1] in ('config.local.json','ssh.config.local.json') or (any(local.startswith(prefix + '/') for prefix in ('protocols/snmp/mibs/storage','shared/assets/images/device-types/uploads')) and parts[-1] not in ('.htaccess','.gitignore')):
+        if parts[-1].startswith('.env') or parts[-1] in ('config.local.json','ssh.config.local.json') or (any(local.startswith(prefix + '/') for prefix in ('protocols/snmp/mibs/storage','protocols/snmp/mibs/queries','shared/assets/images/device-types/uploads')) and parts[-1] not in ('.htaccess','.gitignore')):
             raise ValueError('Release contains local configuration or runtime data: ' + relative)
         path = root / 'plugins' / relative
         if destination not in path.parents:
@@ -58,6 +58,20 @@ def validate_destination(root, names):
             if candidate == root:
                 break
     return destination
+
+
+def check_release_version(directory, root):
+    def version(path):
+        if not path.is_file(): return None
+        match = re.search(r'^version\s*=\s*[\'"]?(\d+\.\d+\.\d+)', path.read_text(), re.MULTILINE | re.IGNORECASE)
+        if not match: raise ValueError('Cannot read plugin version from '+str(path))
+        return tuple(int(part) for part in match.group(1).split('.'))
+    incoming = version(Path(directory) / 'icct_nms/INFO')
+    if incoming is None: raise ValueError('Release INFO is missing.')
+    current = version(Path(root) / 'plugins/icct_nms/INFO')
+    if current and current > incoming:
+        raise ValueError('Refusing to downgrade an installed plugin; use the current release archive.')
+    return '.'.join(map(str,incoming))
 
 
 def copy_source(directory, root, manifest, backup_root=Path('/var/backups/icct-nms-install')):
@@ -104,9 +118,11 @@ def main():
     if not re.fullmatch(r'/[A-Za-z0-9_./-]+', str(root)):
         raise ValueError('Unsupported Cacti path characters.')
     destination = validate_destination(root, manifest['files'])
+    release_version = check_release_version(directory, root)
     spec = importlib.util.spec_from_file_location('icct_release_setup', directory / 'icct_nms/installation/cli/setup.py')
     setup = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(setup)
+    setup.check_python_runtime()
     target = setup.os_info()
     if args.application_only:
         pass
@@ -135,7 +151,7 @@ def main():
             data = native.verify_bundle(directory / 'native' / component, target)
             if data['component'] != component:
                 raise ValueError('Native component does not match release directory.')
-    plan = {'destination': str(destination), 'target': target, 'offline': bool(manifest['target']), 'package_components':package_components, 'source_files': sum(name.startswith('icct_nms/') for name in manifest['files'])}
+    plan = {'version':release_version, 'destination': str(destination), 'target': target, 'offline': bool(manifest['target']), 'package_components':package_components, 'source_files': sum(name.startswith('icct_nms/') for name in manifest['files'])}
     if args.plan:
         print(json.dumps(plan, indent=2))
         return

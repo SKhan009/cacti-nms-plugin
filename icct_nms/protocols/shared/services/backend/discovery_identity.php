@@ -1,4 +1,5 @@
 <?php
+
 /** ICCT-owned discovery identity services, derived from the existing ICCT NMS implementation. */
 
 /** Reused Inventory service: nd address key. */
@@ -66,7 +67,7 @@ function icct_backend_nd_own_addresses($values)
             'ifindex' => $index,
             'source' => $source,
             'type' => $type,
-            'status' => $status
+            'status' => $status,
         ];
     }
     ksort($rows, SORT_NATURAL);

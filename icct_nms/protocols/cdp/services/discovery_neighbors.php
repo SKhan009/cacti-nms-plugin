@@ -1,4 +1,5 @@
 <?php
+
 /** CDP discovery parsing. */
 
 function icct_backend_nd_parse_cdp($values, $interfaces)
@@ -46,10 +47,10 @@ function icct_backend_nd_parse_cdp($values, $interfaces)
             'remote_key' => bin2hex($port),
             'remote_port' => icct_backend_nd_octets($port),
             'remote_name' => icct_backend_nd_octets(
-                icct_backend_nd_value($values, $cache . '.17.' . $index, 4, false)
+                icct_backend_nd_value($values, $cache . '.17.' . $index, 4, false),
             ),
             'management_addresses' => $management['addresses'],
-            'management_address_errors' => $management['errors']
+            'management_address_errors' => $management['errors'],
         ];
     }
     return [
@@ -57,7 +58,7 @@ function icct_backend_nd_parse_cdp($values, $interfaces)
         'name' => icct_backend_nd_octets($id),
         'ports' => $ports,
         'interfaces' => $interfaces,
-        'neighbors' => $neighbors
+        'neighbors' => $neighbors,
     ];
 }
 

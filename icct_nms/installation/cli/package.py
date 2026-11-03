@@ -31,7 +31,7 @@ def source_files(root):
             continue
         if relative.parts[:2] == ('installation', 'bundles'):
             continue
-        private = ['protocols/snmp/mibs/storage', 'shared/assets/images/device-types/uploads']
+        private = ['protocols/snmp/mibs/storage', 'protocols/snmp/mibs/queries', 'shared/assets/images/device-types/uploads']
         if any(str(relative).startswith(prefix + '/') for prefix in private) and path.name not in ('.htaccess', '.gitignore'):
             continue
         files.append((path, relative.as_posix()))
@@ -39,6 +39,7 @@ def source_files(root):
 
 
 def build_archive(root, output, bundle=None, native_bundles=None, component_bundles=None):
+    setup.check_python_runtime()
     root, output = Path(root).resolve(), Path(output).resolve()
     if root in output.parents:
         raise ValueError('Release archives must be written outside the plugin directory.')

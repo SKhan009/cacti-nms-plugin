@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Read saved inventory and enforce native device access before exposing records.
  */
@@ -63,7 +64,9 @@ function icct_nms_device($id)
  */
 function icct_nms_metadata($id)
 {
-    return db_fetch_row_prepared('SELECT * FROM plugin_icct_nms_device_metadata WHERE host_id=?', [$id]);
+    return db_fetch_row_prepared('SELECT * FROM plugin_icct_nms_device_metadata WHERE host_id=?', [
+        $id,
+    ]);
 }
 
 /**
@@ -73,7 +76,7 @@ function icct_nms_meta($key)
 {
     return (string) db_fetch_cell_prepared(
         'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
-        [$key]
+        [$key],
     );
 }
 
@@ -91,6 +94,6 @@ function icct_nms_uptime($ticks)
         intdiv($s, 86400),
         intdiv($s % 86400, 3600),
         intdiv($s % 3600, 60),
-        $s % 60
+        $s % 60,
     );
 }

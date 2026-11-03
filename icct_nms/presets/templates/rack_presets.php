@@ -1,13 +1,54 @@
-<?php if($management): ?>
-<form method="post" id="rack-editor" class="site-editor" <?= $rackEditing?'':'hidden' ?>>
-<?php icct_nms_token(); ?><input type="hidden" name="action" value="save_rack_profile"><input type="hidden" name="rack_profile_id" value="<?= icct_nms_h(is_string($rackValues['rack_profile_id'] ?? '') ? ($rackValues['rack_profile_id'] ?? '') : '') ?>">
-<div class="type-editor-heading"><h2 id="rack-editor-title"><?= empty($rackValues['rack_profile_id'])?'Add':'Edit' ?> Rack Configuration</h2><div><button type="button" id="cancel-rack-config" class="button">Cancel</button><button type="submit" class="button primary">Save</button></div></div>
+<?php if ($management): ?>
+<form method="post" id="rack-editor" class="site-editor" <?= $rackEditing ? '' : 'hidden' ?>>
+<?php icct_nms_token(); ?><input type="hidden" name="action" value="save_rack_profile"><input type="hidden" name="rack_profile_id" value="<?= icct_nms_h(
+    is_string($rackValues['rack_profile_id'] ?? '') ? $rackValues['rack_profile_id'] ?? '' : '',
+) ?>">
+<div class="type-editor-heading"><h2 id="rack-editor-title"><?= empty(
+    $rackValues['rack_profile_id']
+)
+    ? 'Add'
+    : 'Edit' ?> Rack Configuration</h2><div><button type="button" id="cancel-rack-config" class="button">Cancel</button><button type="submit" class="button primary">Save</button></div></div>
 <div class="site-fields">
-<label class="field"><span class="field-label">Rack Name *</span><input name="rack_name" required maxlength="150" placeholder="Enter rack name" value="<?= icct_nms_h(is_string($rackValues['rack_name'] ?? '') ? ($rackValues['rack_name'] ?? '') : '') ?>"></label>
-<label class="field"><span class="field-label">Units per Rack *</span><input type="number" name="unit_count" min="1" max="100" step="1" required placeholder="Enter 1–100" value="<?= icct_nms_h(is_scalar($rackValues['unit_count'] ?? '') ? ($rackValues['unit_count'] ?? '') : '') ?>"></label>
+<label class="field"><span class="field-label">Rack Name *</span><input name="rack_name" required maxlength="150" placeholder="Enter rack name" value="<?= icct_nms_h(
+    is_string($rackValues['rack_name'] ?? '') ? $rackValues['rack_name'] ?? '' : '',
+) ?>"></label>
+<label class="field"><span class="field-label">Units per Rack *</span><input type="number" name="unit_count" min="1" max="100" step="1" required placeholder="Enter 1–100" value="<?= icct_nms_h(
+    is_scalar($rackValues['unit_count'] ?? '') ? $rackValues['unit_count'] ?? '' : '',
+) ?>"></label>
 </div><p>Rack names and unit counts are shared with Add/Edit Device and Dashboard Rack View.</p>
 </form><?php endif; ?>
 <section aria-label="Rack configurations"><label class="field site-search"><span class="field-label">Search racks</span><input type="search" id="rack-profile-search" placeholder="Search by rack name"></label>
 <div class="site-table-wrap"><table class="action-table site-table"><thead><tr><th>Rack Name</th><th>Units per Rack</th><th>Actions</th></tr></thead><tbody>
-<?php foreach($rackProfiles as $key=>$profile): $deleteBlocked=icct_nms_rack_delete_block_reason($key); ?><tr data-rack-profile-search="<?= icct_nms_h(mb_strtolower($profile['name'])) ?>"><td><?= icct_nms_h($profile['name']) ?></td><td><?= (int)$profile['unit_count'] ?> U</td><td><?php if($management): ?><div class="preset-actions"><button type="button" class="icon-button" aria-label="Edit <?= icct_nms_h($profile['name']) ?>" data-edit-rack-profile="<?= icct_nms_h(json_encode(['rack_profile_id'=>$key,'rack_name'=>$profile['name'],'unit_count'=>$profile['unit_count']],JSON_THROW_ON_ERROR)) ?>"><svg class="icct-edit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5L8 21l-5 1 1-5ZM14 5l5 5"/></svg></button><form method="post" data-delete-rack-profile data-delete-blocked="<?= icct_nms_h($deleteBlocked) ?>" data-rack-name="<?= icct_nms_h($profile['name']) ?>"><?php icct_nms_token(); ?><input type="hidden" name="action" value="delete_rack_profile"><input type="hidden" name="rack_profile_id" value="<?= icct_nms_h($key) ?>"><button type="submit" class="icon-button" aria-label="Delete <?= icct_nms_h($profile['name']) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7"/></svg></button></form></div><?php endif; ?></td></tr><?php endforeach; ?>
-</tbody></table></div><?php if(!$rackProfiles): ?><p class="empty-state">No rack configurations yet. Add a configuration, then select it in Add/Edit Device.</p><?php endif; ?></section>
+<?php foreach ($rackProfiles as $key => $profile):
+    $deleteBlocked = icct_nms_rack_delete_block_reason(
+        $key,
+    ); ?><tr data-rack-profile-search="<?= icct_nms_h(
+        mb_strtolower($profile['name']),
+    ) ?>"><td><?= icct_nms_h($profile['name']) ?></td><td><?= (int) $profile[
+    'unit_count'
+] ?> U</td><td><?php if (
+    $management
+): ?><div class="preset-actions"><button type="button" class="icon-button" aria-label="Edit <?= icct_nms_h(
+    $profile['name'],
+) ?>" data-edit-rack-profile="<?= icct_nms_h(
+    json_encode(
+        [
+           'rack_profile_id' => $key,
+           'rack_name' => $profile['name'],
+           'unit_count' => $profile['unit_count'],
+        ],
+        JSON_THROW_ON_ERROR,
+    ),
+) ?>"><svg class="icct-edit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5L8 21l-5 1 1-5ZM14 5l5 5"/></svg></button><form method="post" data-delete-rack-profile data-delete-blocked="<?= icct_nms_h(
+    $deleteBlocked,
+) ?>" data-rack-name="<?= icct_nms_h(
+    $profile['name'],
+) ?>"><?php icct_nms_token(); ?><input type="hidden" name="action" value="delete_rack_profile"><input type="hidden" name="rack_profile_id" value="<?= icct_nms_h(
+    $key,
+) ?>"><button type="submit" class="icon-button" aria-label="Delete <?= icct_nms_h(
+    $profile['name'],
+) ?>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7"/></svg></button></form></div><?php endif; ?></td></tr><?php
+endforeach; ?>
+</tbody></table></div><?php if (
+    !$rackProfiles
+): ?><p class="empty-state">No rack configurations yet. Add a configuration, then select it in Add/Edit Device.</p><?php endif; ?></section>

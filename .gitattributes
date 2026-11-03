@@ -1,3 +1,5 @@
 # Preserve upstream keys and unified-diff context byte-for-byte.
 icct_nms/installation/native-source/KEYS -whitespace
 icct_nms/installation/native-source/*.patch -whitespace
+# Keep the existing VM template's trailing blank line unchanged.
+icct_nms/inventory/templates/list.php whitespace=-blank-at-eof

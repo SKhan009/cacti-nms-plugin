@@ -1,4 +1,5 @@
 <?php
+
 /** LLDP discovery parsing. */
 
 function icct_backend_nd_lldp_identity($subtype, $id)
@@ -16,7 +17,7 @@ function icct_backend_nd_lldp_ifindex($subtype, $hex, $interfaces)
         1 => ['alias_hex'],
         3 => ['mac_hex'],
         5 => ['name_hex'],
-        7 => ['name_hex', 'description_hex']
+        7 => ['name_hex', 'description_hex'],
     ];
     if (!isset($fields[$subtype]) || $hex === '') {
         return 0;
@@ -50,7 +51,7 @@ function icct_backend_nd_parse_lldp($values, $interfaces)
     $remote = '1.0.8802.1.1.2.1.4.1.1';
     $identity = icct_backend_nd_lldp_identity(
         icct_backend_nd_value($values, $local . '.1.0', 2),
-        icct_backend_nd_value($values, $local . '.2.0', 4)
+        icct_backend_nd_value($values, $local . '.2.0', 4),
     );
     $ports = [];
     $neighbors = [];
@@ -62,7 +63,7 @@ function icct_backend_nd_parse_lldp($values, $interfaces)
             'key' => icct_backend_nd_lldp_identity($sub, $id),
             'label' =>
                 $interfaces[$ifindex]['name'] ?? '' ?: icct_backend_nd_lldp_label($sub, $id, 3),
-            'ifindex' => $ifindex
+            'ifindex' => $ifindex,
         ];
     }
     // Detect incomplete rows as an error instead of silently dropping their evidence.
@@ -75,12 +76,12 @@ function icct_backend_nd_parse_lldp($values, $interfaces)
         $chassis = icct_backend_nd_value($values, $remote . '.5.' . $index, 4);
         $peer = icct_backend_nd_lldp_identity(
             icct_backend_nd_value($values, $remote . '.4.' . $index, 2),
-            $chassis
+            $chassis,
         );
         $remotePort = icct_backend_nd_value($values, $remote . '.7.' . $index, 4);
         $remoteKey = icct_backend_nd_lldp_identity(
             icct_backend_nd_value($values, $remote . '.6.' . $index, 2),
-            $remotePort
+            $remotePort,
         );
         $key = hash('sha256', $ports[$number]['key'] . '|' . $peer . '|' . $remoteKey);
         $neighbors[$key] = [
@@ -92,18 +93,18 @@ function icct_backend_nd_parse_lldp($values, $interfaces)
             'peer_label' => icct_backend_nd_lldp_label(
                 icct_backend_nd_value($values, $remote . '.4.' . $index, 2),
                 $chassis,
-                4
+                4,
             ),
             'remote_key' => $remoteKey,
             'remote_port' => icct_backend_nd_lldp_label(
                 icct_backend_nd_value($values, $remote . '.6.' . $index, 2),
                 $remotePort,
-                3
+                3,
             ),
             'remote_name' => icct_backend_nd_octets(
-                icct_backend_nd_value($values, $remote . '.9.' . $index, 4, false)
+                icct_backend_nd_value($values, $remote . '.9.' . $index, 4, false),
             ),
-            'management_addresses' => $management['rows'][$index] ?? []
+            'management_addresses' => $management['rows'][$index] ?? [],
         ];
     }
     return [
@@ -112,7 +113,7 @@ function icct_backend_nd_parse_lldp($values, $interfaces)
         'name' => icct_backend_nd_octets(icct_backend_nd_value($values, $local . '.3.0', 4, false)),
         'ports' => array_values($ports),
         'interfaces' => $interfaces,
-        'neighbors' => $neighbors
+        'neighbors' => $neighbors,
     ];
 }
 

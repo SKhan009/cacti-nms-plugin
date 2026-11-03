@@ -1,0 +1,7 @@
+protocols/ssh/vendor/
+protocols/ssh/assets/guacamole-1.6.0.js
+protocols/snmp/mibs/queries/
+protocols/snmp/mibs/storage/
+shared/assets/
+
+**/*.php

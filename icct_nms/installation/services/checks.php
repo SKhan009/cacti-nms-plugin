@@ -87,6 +87,12 @@ function icct_nms_installation_checks()
         version_compare(PHP_VERSION, $manifest['php_min'], '>=') ? 'Ready' : 'Missing',
         PHP_VERSION . ' · minimum ' . $manifest['php_min'],
     );
+    $python = PHP_SAPI === 'cli' ? icct_nms_installation_python() : ($saved['python'] ?? []);
+    $pythonVersion = (string)($python['version'] ?? '');
+    $pythonPath = (string)($python['path'] ?? '');
+    $pythonStatus = icct_nms_installation_python_status($python, $manifest['python_min']);
+    $add('Workers', 'Python runtime', $pythonStatus, ($pythonVersion ?: ($pythonPath ?: 'Awaiting collector runtime check')).' · minimum '.$manifest['python_min']);
+    if ($pythonPath) $checks[count($checks)-1]['installed'] = true;
     foreach ($manifest['php_extensions'] as $ext) {
         $add(
             'Core',
@@ -180,6 +186,8 @@ function icct_nms_installation_checks()
             'Writable by the web account; all other source files should remain read-only.',
         );
     }
+    $queryDirectory = $config['base_path'].'/resource/snmp_queries/icct_nms';
+    $add('SNMP / MIB', 'Native query directory', is_writable($queryDirectory) ? 'Ready' : 'Needs setup', 'Cacti resource/snmp_queries/icct_nms must be writable by the collector/web account.');
     return $checks;
 }
 
@@ -254,7 +262,7 @@ function icct_nms_installation_save_services()
     }
     $components = [];
     foreach (icct_nms_installation_manifest()['optional_components'] ?? [] as $id => $spec) $components[$id] = icct_nms_installation_component($id, $spec);
-    $snapshot = json_encode(['components' => $components, 'time' => time(),'hostname' => gethostname(),'services' => $services,'installed_services' => $installedServices,'binaries' => $binaries], JSON_THROW_ON_ERROR);
+    $snapshot = json_encode(['python' => icct_nms_installation_python(), 'components' => $components, 'time' => time(),'hostname' => gethostname(),'services' => $services,'installed_services' => $installedServices,'binaries' => $binaries], JSON_THROW_ON_ERROR);
     if (!db_execute_prepared('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()', ['installation_services_'.(int)$config['poller_id'],$snapshot])) {
         throw new RuntimeException('Could not save collector service observations.');
     }
@@ -272,8 +280,8 @@ function icct_nms_installation_component($id, $spec)
         $path = icct_nms_installation_binary([$name], false);
         if ($path) $paths[] = $path;
     }
-    // Guacamole's approved custom build must not be replaced by a stock package.
-    if ($id === 'guacamole' && $paths) return ['installed'=>true,'detail'=>implode(', ', $paths)];
+    // Recognize existing Guacamole builds and NTP client tools without replacing them.
+    if (in_array($id, ['guacamole','ntp'], true) && $paths) return ['installed'=>true,'detail'=>implode(', ', $paths)];
     $packages = $spec['packages'][$family];
     if (!$packages) return ['installed'=>null,'detail'=>'Approved native build required for this OS.'];
     if (!is_callable('shell_exec') || !icct_nms_installation_binary('timeout')) return ['installed'=>null,'detail'=>'Package inventory unavailable.'];
@@ -286,4 +294,25 @@ function icct_nms_installation_component($id, $spec)
         if ($family === 'rhel' ? strpos($value, $package.' ') === 0 : strpos($value, 'installed ') === 0) $found[] = $package.': '.$value;
     }
     return ['installed'=>count($found) === count($packages),'detail'=>$found ? implode('; ', $found) : 'Not installed.'];
+}
+
+/** Measure the runtime only in a collector process, never from HTTP. */
+function icct_nms_installation_python()
+{
+    if (PHP_SAPI !== 'cli') throw new RuntimeException('Runtime inventory requires CLI.');
+    $path = icct_nms_installation_binary(['python3'], false);
+    $result = ['path'=>$path, 'version'=>'', 'executable'=>$path && is_executable($path)];
+    if (!$result['executable'] || !is_callable('shell_exec') || !icct_nms_installation_binary('timeout')) return $result;
+    $output = (string)shell_exec(escapeshellarg(icct_nms_installation_binary('timeout')).' 3s '.escapeshellarg($path).' --version 2>/dev/null');
+    if (preg_match('/Python\s+([0-9]+\.[0-9]+\.[0-9]+)/',$output,$match)) $result['version'] = $match[1];
+    return $result;
+}
+
+function icct_nms_installation_python_status($runtime, $minimum)
+{
+    if (!$runtime) return 'Not checked';
+    if (empty($runtime['path'])) return 'Missing';
+    if (empty($runtime['executable'])) return 'Needs setup';
+    if (empty($runtime['version'])) return 'Not checked';
+    return version_compare($runtime['version'], $minimum, '>=') ? 'Ready' : 'Needs setup';
 }

@@ -1,4 +1,5 @@
 <?php
+
 /** ICCT-owned configuration equipment services, derived from the existing ICCT NMS implementation. */
 
 /** Reused Inventory service: equipment fields. */
@@ -38,25 +39,25 @@ function icct_backend_equipment_fields($json, $protocol)
             'key' => $key,
             'label' => icct_backend_config_text($field['label'] ?? '', 100, 'Field label'),
             'unit' => icct_backend_config_text($field['unit'] ?? '', 30, 'Unit', false),
-            'writable' => $field['writable']
+            'writable' => $field['writable'],
         ];
         if ($protocol === 'modbus_rtu') {
             $item['offset'] = icct_backend_config_integer(
                 $field['offset'] ?? '',
                 0,
                 65535,
-                'Zero-based register offset'
+                'Zero-based register offset',
             );
             $item['function'] = icct_backend_config_integer(
                 $field['function'] ?? '',
                 3,
                 4,
-                'Read function'
+                'Read function',
             );
             $item['type'] = icct_backend_config_choice(
                 $field['type'] ?? '',
                 ['uint16', 'int16'],
-                'register type'
+                'register type',
             );
             if ($item['writable'] && $item['function'] !== 3) {
                 throw new InvalidArgumentException('Input registers are read-only.');
@@ -69,7 +70,7 @@ function icct_backend_equipment_fields($json, $protocol)
             $item['type'] = icct_backend_config_choice(
                 $field['type'] ?? '',
                 ['integer', 'unsigned', 'string'],
-                'SNMP type'
+                'SNMP type',
             );
         } else {
             throw new InvalidArgumentException('Unsupported equipment protocol.');
@@ -79,7 +80,7 @@ function icct_backend_equipment_fields($json, $protocol)
                 $field['max_length'] ?? '',
                 1,
                 255,
-                'String maximum length'
+                'String maximum length',
             );
         } else {
             $low = in_array($item['type'], ['int16', 'integer'], true)
@@ -98,7 +99,7 @@ function icct_backend_equipment_fields($json, $protocol)
                 $v = $field[$bound] ?? null;
                 if (!is_int($v) || $v < $low || $v > $high) {
                     throw new InvalidArgumentException(
-                        'Provide integer min/max within the field type range.'
+                        'Provide integer min/max within the field type range.',
                     );
                 }
                 $item[$bound] = $v;
@@ -125,7 +126,7 @@ function icct_backend_equipment_value(array $field, $value)
         (float) $value > $field['max']
     ) {
         throw new InvalidArgumentException(
-            'Setting must be an integer within its documented range.'
+            'Setting must be an integer within its documented range.',
         );
     }
     return (int) $value;

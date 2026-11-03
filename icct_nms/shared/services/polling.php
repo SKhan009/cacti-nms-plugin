@@ -1,4 +1,5 @@
 <?php
+
 /** ICCT collection hooks use only owned services and tables; core polling continues on errors. */
 function icct_nms_poller_bottom()
 {
@@ -20,7 +21,7 @@ function icct_nms_poller_bottom()
         icct_nms_backend();
         icct_nms_collect_alarms();
     } catch (Throwable $error) {
-        cacti_log('ICCT NMS alarm journal: '.$error->getMessage(),false,'ICCT NMS');
+        cacti_log('ICCT NMS alarm journal: ' . $error->getMessage(), false, 'ICCT NMS');
     }
     try {
         icct_nms_backend();
@@ -30,18 +31,23 @@ function icct_nms_poller_bottom()
     }
 
     try {
-        require_once __DIR__.'/../../inventory/discovery/services/discovery_workflow.php';
+        require_once __DIR__ . '/../../inventory/discovery/services/discovery_workflow.php';
         icct_nms_scan_dispatch();
-    } catch (Throwable $error) {cacti_log('ICCT discovery dispatcher: '.$error->getMessage(),false,'ICCT NMS');}
+    } catch (Throwable $error) {
+        cacti_log('ICCT discovery dispatcher: ' . $error->getMessage(), false, 'ICCT NMS');
+    }
 
     try {
-        require_once __DIR__.'/../../installation/services/checks.php';
+        require_once __DIR__ . '/../../installation/services/checks.php';
         icct_nms_installation_save_services();
-    } catch (Throwable $error) {cacti_log('ICCT installation checks: '.$error->getMessage(),false,'ICCT NMS');}
+    } catch (Throwable $error) {
+        cacti_log('ICCT installation checks: ' . $error->getMessage(), false, 'ICCT NMS');
+    }
 
     try {
-        require_once __DIR__.'/../../inventory/discovery/services/inventory_events.php';
-        icct_nms_inventory_observe((int)$config['poller_id']);
-    } catch (Throwable $error) {cacti_log('ICCT inventory events: '.$error->getMessage(),false,'ICCT NMS');}
-
+        require_once __DIR__ . '/../../inventory/discovery/services/inventory_events.php';
+        icct_nms_inventory_observe((int) $config['poller_id']);
+    } catch (Throwable $error) {
+        cacti_log('ICCT inventory events: ' . $error->getMessage(), false, 'ICCT NMS');
+    }
 }

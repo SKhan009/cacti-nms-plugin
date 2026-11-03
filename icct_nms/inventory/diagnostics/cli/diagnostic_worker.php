@@ -1,4 +1,5 @@
 <?php
+
 /** CLI-only worker rechecks the requesting account, device and saved profile before execution. */
 if (PHP_SAPI !== 'cli') {
     http_response_code(404);

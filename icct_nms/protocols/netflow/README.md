@@ -5,7 +5,7 @@ The wire collector is nfdump/nfcapd (BSD/GPL licensed, installed as a system pac
 ## Deployment
 
 1. Upgrade ICCT NMS using native Plugin Management to create the owned flow tables.
-2. Run `sudo bash protocols/netflow/rhel/install_netflow_rhel.sh /var/www/html/cacti/plugins/icct_nms` from the plugin root. This installs the distribution nfdump package and enables `icct-nms-netflow.service` as the apache account.
+2. Run `sudo bash protocols/netflow/rhel/install_netflow_rhel.sh /var/www/html/cacti/plugins/icct_nms` from the plugin root. Install the nfdump RPM and its dependencies from approved offline RHEL media first. The installer verifies local binaries, performs no network/package-manager calls, and enables `icct-nms-netflow.service` as the apache account.
 3. Under Presets → Protocols, configure collector IP/hostname reachable from exporters, UDP port, version, exporter timing, reporting classification, and anomaly thresholds.
 4. Add NetFlow under the device's Protocol Config and specify the actual source IP seen by the collector. Exporter IPs are unique: NAT sources shared by multiple devices cannot be distinguished and require distinct exporter source addresses.
 5. Configure the router/switch to export to the saved collector/port. Saving in NMS does not push vendor configuration to equipment. The nfcapd receiver accepts all four wire formats; the selected version describes intended exporter configuration, while records display their actually decoded version.
@@ -18,7 +18,7 @@ Capture rotation is 60 seconds and the importer checks every 5 seconds. Device r
 
 WAN ifIndex overrides take priority. Otherwise, two endpoints in configured LAN prefixes are classified LAN; exactly one inside is WAN; neither is unclassified. These rules are configurable classifications, not inferred physical links. Flow conversations are not treated as topology adjacency.
 
-Application identity is taken from exporter metadata where present. Without it, service-port estimates are explicitly labelled and must not be treated as DPI/confirmed encrypted application identity.
+Application identity is taken from exporter metadata where present. Without it, application identity is Not reported; destination ports never substitute for exporter evidence.
 
 Anomaly rules evaluate a five-minute window: destination/port fan-out, SYN-only packet rate, SMB/RPC fan-out suggesting worm-like scanning, and bandwidth above a configured limit or three times a usable prior baseline. These are investigation indicators, not proof of malware or an IDS replacement. Historical events retain their timestamps and resolve only when fresh flow records are present. Thresholds belong to each device. Source-IP rankings identify top talkers.
 

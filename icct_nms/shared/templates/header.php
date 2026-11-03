@@ -4,6 +4,7 @@
  */
 
 require_once __DIR__ . '/../services/server_status.php';
+require_once __DIR__ . '/../services/presentation.php';
 $serverStatus = icct_nms_server_status($config['base_path']);
 
 $user = db_fetch_row_prepared('SELECT username,full_name FROM user_auth WHERE id=?', [
@@ -20,7 +21,12 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <base href="<?= icct_nms_h($config['url_path'] . 'plugins/icct_nms/') ?>">
+        <style>:root {<?php foreach (icct_nms_severity_colors() as $severity => $color): ?>
+            --icct-severity-<?= strtolower($severity) ?>: <?= $color ?>;
+        <?php endforeach; ?>}</style>
+        <script>const icctSeverityColors = Object.freeze(<?= json_encode(icct_nms_severity_colors(), JSON_THROW_ON_ERROR) ?>);</script>
         <script src="shared/js/navigation.js"></script>
+        <script src="shared/js/browser-utils.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../js/browser-utils.js'), 0, 12) ?>"></script>
         <title><?= icct_nms_h($title) ?> · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
         <link rel="stylesheet" href="shared/css/inventory.css?v=<?= substr(hash_file('sha256', __DIR__ . '/../css/inventory.css'), 0, 12) ?>" />

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Syslog ingestion, normalization and event-console services.
  *
@@ -8,10 +9,16 @@
  * for device identity and access control; this table only stores the Syslog-specific binding.
  */
 
-class IcctSyslogStorageException extends RuntimeException {}
+class IcctSyslogStorageException extends RuntimeException
+{
+}
 function icct_backend_syslog_execute($sql, $parameters)
 {
-    if (db_execute_prepared($sql, $parameters) === false) throw new IcctSyslogStorageException('Syslog database write failed; the spool cursor was retained.');
+    if (db_execute_prepared($sql, $parameters) === false) {
+        throw new IcctSyslogStorageException(
+            'Syslog database write failed; the spool cursor was retained.',
+        );
+    }
 }
 
 function icct_backend_syslog_severity_labels()
@@ -39,40 +46,106 @@ function icct_backend_syslog_event_origin_labels()
 function icct_backend_syslog_nms_severity($severity)
 {
     $severity = (int) $severity;
-    if ($severity <= 2) return 'critical';
-    if ($severity === 3) return 'major';
-    if ($severity === 4) return 'warning';
-    if ($severity <= 6) return 'info';
+    if ($severity <= 2) {
+        return 'critical';
+    }
+    if ($severity === 3) {
+        return 'major';
+    }
+    if ($severity === 4) {
+        return 'warning';
+    }
+    if ($severity <= 6) {
+        return 'info';
+    }
     return 'debug';
 }
 
 function icct_backend_syslog_facility_labels()
 {
-    return ['Kernel','User','Mail','System daemon','Security/authentication','Syslog','Line printer','Network news','UUCP','Clock daemon','Security/authentication','FTP','NTP','Log audit','Log alert','Clock daemon','Local 0','Local 1','Local 2','Local 3','Local 4','Local 5','Local 6','Local 7'];
+    return [
+        'Kernel',
+        'User',
+        'Mail',
+        'System daemon',
+        'Security/authentication',
+        'Syslog',
+        'Line printer',
+        'Network news',
+        'UUCP',
+        'Clock daemon',
+        'Security/authentication',
+        'FTP',
+        'NTP',
+        'Log audit',
+        'Log alert',
+        'Clock daemon',
+        'Local 0',
+        'Local 1',
+        'Local 2',
+        'Local 3',
+        'Local 4',
+        'Local 5',
+        'Local 6',
+        'Local 7',
+    ];
 }
 
 /** Shared validation for presets and device overrides. Empty selections accept no messages. */
 function icct_backend_syslog_filters(array $input)
 {
-    $out=[];
-    foreach (['severity_codes'=>7,'facility_codes'=>23,'match_strings'=>null] as $field=>$maximum) {
-        $default=$field==='severity_codes' ? range(0,(int)($input['max_severity'] ?? 6)) : ($field==='facility_codes' ? range(0,23) : []);
-        $raw=$input[$field] ?? null;
-        $values=$raw===null || $raw==='' ? $default : (is_array($raw) ? $raw : json_decode((string)$raw,true,8,JSON_THROW_ON_ERROR));
-        if (!is_array($values) || $values!==array_values($values) || count($values)>32) throw new InvalidArgumentException('Invalid Syslog filter selection.');
-        if ($maximum!==null) {
-            foreach ($values as &$value) {
-                $valid=filter_var($value,FILTER_VALIDATE_INT,['options'=>['min_range'=>0,'max_range'=>$maximum]]);
-                if($valid===false)throw new InvalidArgumentException('Invalid Syslog code.');
-                $value=$valid;
-            }
-            unset($value); $values=array_values(array_unique($values)); sort($values);
-        } else {
-            foreach($values as &$value){if(!is_string($value))throw new InvalidArgumentException('Invalid Syslog match string.');$value=trim($value);if($value===''||preg_match('/[\x00-\x1F]/',$value))throw new InvalidArgumentException('Enter valid match strings.');}
-            unset($value);$values=array_values(array_unique($values));
-            if(mb_strlen(implode(', ',$values))>148)throw new InvalidArgumentException('Match strings must total no more than 148 characters.');
+    $out = [];
+    foreach (
+        ['severity_codes' => 7, 'facility_codes' => 23, 'match_strings' => null] as $field => $maximum
+    ) {
+        $default =
+            $field === 'severity_codes'
+                ? range(0, (int) ($input['max_severity'] ?? 6))
+                : ($field === 'facility_codes'
+                    ? range(0, 23)
+                    : []);
+        $raw = $input[$field] ?? null;
+        $values =
+            $raw === null || $raw === ''
+                ? $default
+                : (is_array($raw)
+                    ? $raw
+                    : json_decode((string) $raw, true, 8, JSON_THROW_ON_ERROR));
+        if (!is_array($values) || $values !== array_values($values) || count($values) > 32) {
+            throw new InvalidArgumentException('Invalid Syslog filter selection.');
         }
-        $out[$field]=$values;
+        if ($maximum !== null) {
+            foreach ($values as &$value) {
+                $valid = filter_var($value, FILTER_VALIDATE_INT, [
+                    'options' => ['min_range' => 0, 'max_range' => $maximum],
+                ]);
+                if ($valid === false) {
+                    throw new InvalidArgumentException('Invalid Syslog code.');
+                }
+                $value = $valid;
+            }
+            unset($value);
+            $values = array_values(array_unique($values));
+            sort($values);
+        } else {
+            foreach ($values as &$value) {
+                if (!is_string($value)) {
+                    throw new InvalidArgumentException('Invalid Syslog match string.');
+                }
+                $value = trim($value);
+                if ($value === '' || preg_match('/[\x00-\x1F]/', $value)) {
+                    throw new InvalidArgumentException('Enter valid match strings.');
+                }
+            }
+            unset($value);
+            $values = array_values(array_unique($values));
+            if (mb_strlen(implode(', ', $values)) > 148) {
+                throw new InvalidArgumentException(
+                    'Match strings must total no more than 148 characters.',
+                );
+            }
+        }
+        $out[$field] = $values;
     }
     return $out;
 }
@@ -81,7 +154,7 @@ function icct_backend_syslog_assignment($host_id)
 {
     return db_fetch_row_prepared(
         'SELECT d.*,h.description,h.hostname FROM plugin_icct_nms_syslog_devices d INNER JOIN host h ON h.id=d.host_id WHERE d.host_id=? AND h.deleted=\'\'',
-        [(int) $host_id]
+        [(int) $host_id],
     );
 }
 
@@ -89,7 +162,9 @@ function icct_backend_syslog_match_device($source_ip, $source_host)
 {
     $source_ip = trim((string) $source_ip);
     $source_host = trim((string) $source_host);
-    if ($source_ip === '' && $source_host === '') return [];
+    if ($source_ip === '' && $source_host === '') {
+        return [];
+    }
 
     $rows = db_fetch_assoc_prepared(
         "SELECT d.*,h.description,h.hostname,h.poller_id
@@ -101,20 +176,34 @@ function icct_backend_syslog_match_device($source_ip, $source_host)
          )
          ORDER BY CASE WHEN d.source_address=? THEN 0 WHEN d.source_address<>'' THEN 1 ELSE 2 END,h.id
          LIMIT 10",
-        [$source_ip, $source_host, $source_ip, $source_host, $source_ip]
+        [$source_ip, $source_host, $source_ip, $source_host, $source_ip],
     );
-    if ($rows === false) throw new IcctSyslogStorageException('Syslog binding lookup failed; the spool cursor was retained.');
+    if ($rows === false) {
+        throw new IcctSyslogStorageException(
+            'Syslog binding lookup failed; the spool cursor was retained.',
+        );
+    }
     foreach ((array) $rows as $row) {
-        if (!icct_backend_protocol_enabled((int)$row['host_id'], 'syslog')) continue;
+        if (!icct_backend_protocol_enabled((int) $row['host_id'], 'syslog')) {
+            continue;
+        }
         $expected = trim((string) $row['source_address']);
-        if ($expected === '') $expected = trim((string) $row['hostname']);
-        if ($expected === '') continue;
+        if ($expected === '') {
+            $expected = trim((string) $row['hostname']);
+        }
+        if ($expected === '') {
+            continue;
+        }
         if (filter_var($expected, FILTER_VALIDATE_IP) !== false) {
-            if (strcasecmp($expected, $source_ip) === 0) return $row;
+            if (strcasecmp($expected, $source_ip) === 0) {
+                return $row;
+            }
             continue;
         }
         // Hostname matching uses the hostname parsed by rsyslog from the message header.
-        if ($source_host !== '' && strcasecmp($expected, $source_host) === 0) return $row;
+        if ($source_host !== '' && strcasecmp($expected, $source_host) === 0) {
+            return $row;
+        }
     }
     return [];
 }
@@ -123,7 +212,9 @@ function icct_backend_syslog_timestamp($value)
 {
     try {
         $date = new DateTimeImmutable((string) $value);
-        return $date->setTimezone(new DateTimeZone(date_default_timezone_get()))->format('Y-m-d H:i:s');
+        return $date
+            ->setTimezone(new DateTimeZone(date_default_timezone_get()))
+            ->format('Y-m-d H:i:s');
     } catch (Throwable $error) {
         return date('Y-m-d H:i:s');
     }
@@ -132,8 +223,12 @@ function icct_backend_syslog_timestamp($value)
 function icct_backend_syslog_transport($input_name)
 {
     $input_name = strtolower((string) $input_name);
-    if (strpos($input_name, 'tcp') !== false) return 'tcp';
-    if (strpos($input_name, 'udp') !== false) return 'udp';
+    if (strpos($input_name, 'tcp') !== false) {
+        return 'tcp';
+    }
+    if (strpos($input_name, 'udp') !== false) {
+        return 'udp';
+    }
     return 'unknown';
 }
 
@@ -159,10 +254,21 @@ function icct_backend_syslog_ingest(array $record, &$reason = null)
     }
 
     $severity_code = isset($record['severity_code']) ? (int) $record['severity_code'] : 6;
-    if ($severity_code < 0 || $severity_code > 7) $severity_code = 6;
+    if ($severity_code < 0 || $severity_code > 7) {
+        $severity_code = 6;
+    }
     // Legacy bindings inherit newly introduced parameters until explicitly saved.
-    if (!isset($assignment['severity_codes'], $assignment['facility_codes'], $assignment['match_strings'])) {
-        $presetJson = db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?', ['protocol_defaults']);
+    if (
+        !isset(
+            $assignment['severity_codes'],
+            $assignment['facility_codes'],
+            $assignment['match_strings'],
+        )
+    ) {
+        $presetJson = db_fetch_cell_prepared(
+            'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
+            ['protocol_defaults'],
+        );
         $presetValues = $presetJson ? json_decode($presetJson, true, 32, JSON_THROW_ON_ERROR) : [];
         foreach (['severity_codes', 'facility_codes', 'match_strings'] as $field) {
             if (!isset($assignment[$field]) && isset($presetValues['syslog'][$field])) {
@@ -170,8 +276,8 @@ function icct_backend_syslog_ingest(array $record, &$reason = null)
             }
         }
     }
-    $filters=icct_backend_syslog_filters($assignment);
-    if (!in_array($severity_code,$filters['severity_codes'],true)) {
+    $filters = icct_backend_syslog_filters($assignment);
+    if (!in_array($severity_code, $filters['severity_codes'], true)) {
         $reason = 'severity-filtered';
         return 'dropped';
     }
@@ -184,8 +290,13 @@ function icct_backend_syslog_ingest(array $record, &$reason = null)
     }
 
     $facility_code = isset($record['facility_code']) ? (int) $record['facility_code'] : 0;
-    if ($facility_code < 0 || $facility_code > 23) $facility_code = 0;
-    if(!in_array($facility_code,$filters['facility_codes'],true)){$reason='facility-filtered';return 'dropped';}
+    if ($facility_code < 0 || $facility_code > 23) {
+        $facility_code = 0;
+    }
+    if (!in_array($facility_code, $filters['facility_codes'], true)) {
+        $reason = 'facility-filtered';
+        return 'dropped';
+    }
     $facility = substr(trim((string) ($record['facility'] ?? '')), 0, 32);
     $severity = substr(trim((string) ($record['severity'] ?? '')), 0, 16);
     $program = substr(trim((string) ($record['program'] ?? '')), 0, 128);
@@ -194,39 +305,55 @@ function icct_backend_syslog_ingest(array $record, &$reason = null)
         $reason = 'empty-message';
         return 'dropped';
     }
-    if (strlen($message) > 16384) $message = substr($message, 0, 16384);
-    if($filters['match_strings']){
-        $matched=false;foreach($filters['match_strings'] as $keyword)if(mb_stripos($message,$keyword)!==false){$matched=true;break;}
-        if(!$matched){$reason='keyword-filtered';return 'dropped';}
+    if (strlen($message) > 16384) {
+        $message = substr($message, 0, 16384);
+    }
+    if ($filters['match_strings']) {
+        $matched = false;
+        foreach ($filters['match_strings'] as $keyword) {
+            if (mb_stripos($message, $keyword) !== false) {
+                $matched = true;
+                break;
+            }
+        }
+        if (!$matched) {
+            $reason = 'keyword-filtered';
+            return 'dropped';
+        }
     }
     $event_time = icct_backend_syslog_timestamp($record['timestamp'] ?? 'now');
     $now = date('Y-m-d H:i:s');
     $nms_severity = icct_backend_syslog_nms_severity($severity_code);
-    $fingerprint = hash('sha256', implode('|', [
-        (int) $assignment['host_id'],
-        $facility_code,
-        $severity_code,
-        strtolower($program),
-        preg_replace('/\s+/', ' ', $message),
-    ]));
+    $fingerprint = hash(
+        'sha256',
+        implode('|', [
+            (int) $assignment['host_id'],
+            $facility_code,
+            $severity_code,
+            strtolower($program),
+            preg_replace('/\s+/', ' ', $message),
+        ]),
+    );
 
     $window = 60;
     $saved = db_fetch_cell_prepared(
         'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
-        ['syslog_dedupe_seconds']
+        ['syslog_dedupe_seconds'],
     );
-    if (is_numeric($saved)) $window = max(0, min(3600, (int) $saved));
+    if (is_numeric($saved)) {
+        $window = max(0, min(3600, (int) $saved));
+    }
     $threshold = date('Y-m-d H:i:s', time() - $window);
 
     if ($window > 0) {
         $existing = db_fetch_row_prepared(
             'SELECT id FROM plugin_icct_nms_syslog_events WHERE host_id=? AND fingerprint=? AND last_seen>=? ORDER BY id DESC LIMIT 1',
-            [(int) $assignment['host_id'], $fingerprint, $threshold]
+            [(int) $assignment['host_id'], $fingerprint, $threshold],
         );
         if ($existing) {
             icct_backend_syslog_execute(
                 'UPDATE plugin_icct_nms_syslog_events SET repeat_count=repeat_count+1,last_seen=?,received_at=? WHERE id=?',
-                [$now, $now, (int) $existing['id']]
+                [$now, $now, (int) $existing['id']],
             );
             $reason = 'deduplicated';
             return 'repeated';
@@ -254,7 +381,7 @@ function icct_backend_syslog_ingest(array $record, &$reason = null)
             $program,
             $message,
             $fingerprint,
-        ]
+        ],
     );
     $reason = 'stored';
     return 'inserted';
@@ -264,31 +391,47 @@ function icct_backend_syslog_ingest(array $record, &$reason = null)
 function icct_backend_syslog_bindings()
 {
     return db_fetch_assoc(
-        "SELECT d.host_id,d.enabled,d.source_address,d.transport,d.max_severity,h.description,h.hostname " .
-        "FROM plugin_icct_nms_syslog_devices d INNER JOIN host h ON h.id=d.host_id " .
-        "WHERE h.deleted='' ORDER BY h.description,h.id"
+        'SELECT d.host_id,d.enabled,d.source_address,d.transport,d.max_severity,h.description,h.hostname ' .
+            'FROM plugin_icct_nms_syslog_devices d INNER JOIN host h ON h.id=d.host_id ' .
+            "WHERE h.deleted='' ORDER BY h.description,h.id",
     );
 }
 
 /** Return the normalized availability state for transition comparison. */
 function icct_backend_syslog_availability_state_name($status, $disabled)
 {
-    if ((int)$disabled === 1) return 'Disabled';
-    return icct_backend_host_status_name((int)$status);
+    if ((int) $disabled === 1) {
+        return 'Disabled';
+    }
+    return icct_backend_host_status_name((int) $status);
 }
 
 /** Pure transition policy; returns null when no operator-relevant availability change occurred. */
-function icct_backend_syslog_availability_transition($oldStatus, $oldDisabled, $newStatus, $newDisabled)
-{
+function icct_backend_syslog_availability_transition(
+    $oldStatus,
+    $oldDisabled,
+    $newStatus,
+    $newDisabled,
+) {
     $oldName = icct_backend_syslog_availability_state_name($oldStatus, $oldDisabled);
     $newName = icct_backend_syslog_availability_state_name($newStatus, $newDisabled);
-    if ($oldName === $newName) return null;
+    if ($oldName === $newName) {
+        return null;
+    }
 
     $severity = 6; // informational
-    if ($newName === 'Down' || $newName === 'Error') $severity = 3;
-    elseif ($newName === 'Recovering' || $newName === 'Unknown') $severity = 4;
-    elseif ($newName === 'Disabled') $severity = 5;
-    elseif ($newName === 'Up' && in_array($oldName, ['Down','Error','Recovering','Unknown'], true)) $severity = 5;
+    if ($newName === 'Down' || $newName === 'Error') {
+        $severity = 3;
+    } elseif ($newName === 'Recovering' || $newName === 'Unknown') {
+        $severity = 4;
+    } elseif ($newName === 'Disabled') {
+        $severity = 5;
+    } elseif (
+        $newName === 'Up' &&
+        in_array($oldName, ['Down', 'Error', 'Recovering', 'Unknown'], true)
+    ) {
+        $severity = 5;
+    }
 
     return [
         'old' => $oldName,
@@ -300,9 +443,13 @@ function icct_backend_syslog_availability_transition($oldStatus, $oldDisabled, $
 
 function icct_backend_syslog_generated_source(array $row)
 {
-    foreach ([(string)($row['source_address'] ?? ''), (string)($row['hostname'] ?? '')] as $candidate) {
+    foreach (
+        [(string) ($row['source_address'] ?? ''), (string) ($row['hostname'] ?? '')] as $candidate
+    ) {
         $candidate = trim($candidate);
-        if ($candidate !== '' && filter_var($candidate, FILTER_VALIDATE_IP) !== false) return $candidate;
+        if ($candidate !== '' && filter_var($candidate, FILTER_VALIDATE_IP) !== false) {
+            return $candidate;
+        }
     }
     return '0.0.0.0';
 }
@@ -310,21 +457,41 @@ function icct_backend_syslog_generated_source(array $row)
 /** Store a system-generated availability event in the same searchable event console without pretending it was wire Syslog. */
 function icct_backend_syslog_store_availability_event(array $row, array $transition)
 {
-    $hostId = (int)$row['host_id'];
-    $severityCode = (int)$transition['severity_code'];
+    $hostId = (int) $row['host_id'];
+    $severityCode = (int) $transition['severity_code'];
     $labels = icct_backend_syslog_severity_labels();
-    $severity = strtolower((string)($labels[$severityCode] ?? 'Informational'));
+    $severity = strtolower((string) ($labels[$severityCode] ?? 'Informational'));
     $nmsSeverity = icct_backend_syslog_nms_severity($severityCode);
     $now = date('Y-m-d H:i:s');
     $sourceIp = icct_backend_syslog_generated_source($row);
-    $sourceHost = substr(trim((string)($row['hostname'] ?? '')), 0, 255);
-    $message = (string)$transition['message'];
-    $fingerprint = hash('sha256', implode('|', [$hostId, 'availability', $transition['old'], $transition['new']]));
+    $sourceHost = substr(trim((string) ($row['hostname'] ?? '')), 0, 255);
+    $message = (string) $transition['message'];
+    $fingerprint = hash(
+        'sha256',
+        implode('|', [$hostId, 'availability', $transition['old'], $transition['new']]),
+    );
     icct_backend_syslog_execute(
         'INSERT INTO plugin_icct_nms_syslog_events
         (host_id,event_origin,event_time,received_at,last_seen,source_ip,source_host,transport,facility_code,facility,severity_code,severity,nms_severity,program,message,fingerprint)
         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-        [$hostId,'availability',$now,$now,$now,$sourceIp,$sourceHost,'internal',3,'System daemon',$severityCode,$severity,$nmsSeverity,'ICCT_AVAILABILITY',$message,$fingerprint]
+        [
+            $hostId,
+            'availability',
+            $now,
+            $now,
+            $now,
+            $sourceIp,
+            $sourceHost,
+            'internal',
+            3,
+            'System daemon',
+            $severityCode,
+            $severity,
+            $nmsSeverity,
+            'ICCT_AVAILABILITY',
+            $message,
+            $fingerprint,
+        ],
     );
 }
 
@@ -335,9 +502,17 @@ function icct_backend_syslog_store_availability_event(array $row, array $transit
  */
 function icct_backend_syslog_collect_availability_events()
 {
-    $summary = ['checked'=>0,'initialized'=>0,'events'=>0,'unchanged'=>0,'skipped'=>0];
-    $lock = 'icct_syslog_availability_' . substr(hash('sha256', (string)db_fetch_cell('SELECT DATABASE()')), 0, 32);
-    if ((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,0)', [$lock]) !== 1) {
+    $summary = [
+        'checked' => 0,
+        'initialized' => 0,
+        'events' => 0,
+        'unchanged' => 0,
+        'skipped' => 0,
+    ];
+    $lock =
+        'icct_syslog_availability_' .
+        substr(hash('sha256', (string) db_fetch_cell('SELECT DATABASE()')), 0, 32);
+    if ((int) db_fetch_cell_prepared('SELECT GET_LOCK(?,0)', [$lock]) !== 1) {
         $summary['skipped'] = 1;
         return $summary;
     }
@@ -346,32 +521,49 @@ function icct_backend_syslog_collect_availability_events()
         $rows = db_fetch_assoc(
             "SELECT h.id AS host_id,d.source_address,h.description,h.hostname,h.status,h.disabled,h.status_event_count,h.status_fail_date,h.status_rec_date
              FROM host h INNER JOIN plugin_icct_nms_syslog_devices d ON d.host_id=h.id AND d.enabled=1
-             WHERE h.deleted='' ORDER BY h.id"
+             WHERE h.deleted='' ORDER BY h.id",
         );
-        if ($rows === false) throw new IcctSyslogStorageException('Availability device lookup failed.');
-        foreach ((array)$rows as $row) {
-            $hostId = (int)$row['host_id'];
-            if ($hostId < 1 || !icct_backend_protocol_enabled($hostId, 'syslog')) continue;
+        if ($rows === false) {
+            throw new IcctSyslogStorageException('Availability device lookup failed.');
+        }
+        foreach ((array) $rows as $row) {
+            $hostId = (int) $row['host_id'];
+            if ($hostId < 1 || !icct_backend_protocol_enabled($hostId, 'syslog')) {
+                continue;
+            }
             $summary['checked']++;
-            $newStatus = (int)$row['status'];
-            $newDisabled = trim((string)($row['disabled'] ?? '')) !== '' ? 1 : 0;
-            $state = db_fetch_row_prepared('SELECT * FROM plugin_icct_nms_syslog_availability_state WHERE host_id=? FOR UPDATE', [$hostId]);
-            if ($state === false) throw new IcctSyslogStorageException('Availability state lookup failed.');
+            $newStatus = (int) $row['status'];
+            $newDisabled = trim((string) ($row['disabled'] ?? '')) !== '' ? 1 : 0;
+            $state = db_fetch_row_prepared(
+                'SELECT * FROM plugin_icct_nms_syslog_availability_state WHERE host_id=? FOR UPDATE',
+                [$hostId],
+            );
+            if ($state === false) {
+                throw new IcctSyslogStorageException('Availability state lookup failed.');
+            }
             if (!$state) {
                 icct_backend_syslog_execute(
                     'INSERT INTO plugin_icct_nms_syslog_availability_state(host_id,last_status,last_disabled,initialized_at,last_changed_at,updated_at) VALUES(?,?,?,NOW(),NULL,NOW())',
-                    [$hostId,$newStatus,$newDisabled]
+                    [$hostId, $newStatus, $newDisabled],
                 );
                 $summary['initialized']++;
                 // Start with a baseline; installing this feature must not fabricate historical events.
                 continue;
             }
-            $transition = icct_backend_syslog_availability_transition((int)$state['last_status'], (int)$state['last_disabled'], $newStatus, $newDisabled);
-            if (!$transition) { $summary['unchanged']++; continue; }
+            $transition = icct_backend_syslog_availability_transition(
+                (int) $state['last_status'],
+                (int) $state['last_disabled'],
+                $newStatus,
+                $newDisabled,
+            );
+            if (!$transition) {
+                $summary['unchanged']++;
+                continue;
+            }
             icct_backend_syslog_store_availability_event($row, $transition);
             icct_backend_syslog_execute(
                 'UPDATE plugin_icct_nms_syslog_availability_state SET last_status=?,last_disabled=?,last_changed_at=NOW(),updated_at=NOW() WHERE host_id=?',
-                [$newStatus,$newDisabled,$hostId]
+                [$newStatus, $newDisabled, $hostId],
             );
             $summary['events']++;
         }
@@ -390,7 +582,7 @@ function icct_backend_syslog_worker_state($source_path)
     $key = hash('sha256', (string) $source_path);
     $row = db_fetch_row_prepared(
         'SELECT * FROM plugin_icct_nms_syslog_ingest_state WHERE source_key=?',
-        [$key]
+        [$key],
     );
     return [$key, is_array($row) ? $row : []];
 }
@@ -401,20 +593,37 @@ function icct_backend_syslog_worker_state_reset($source_path)
     $key = hash('sha256', (string) $source_path);
     icct_backend_syslog_execute(
         'DELETE FROM plugin_icct_nms_syslog_ingest_state WHERE source_key=?',
-        [$key]
+        [$key],
     );
     return true;
 }
 
-function icct_backend_syslog_worker_state_save($key, $path, $inode, $offset, $last_record, $ingested, $dropped, $errors)
-{
+function icct_backend_syslog_worker_state_save(
+    $key,
+    $path,
+    $inode,
+    $offset,
+    $last_record,
+    $ingested,
+    $dropped,
+    $errors,
+) {
     icct_backend_syslog_execute(
         'INSERT INTO plugin_icct_nms_syslog_ingest_state
         (source_key,source_path,source_inode,source_offset,last_record_at,records_ingested,records_dropped,errors,updated_at)
         VALUES(?,?,?,?,?,?,?,?,NOW())
         ON DUPLICATE KEY UPDATE source_path=VALUES(source_path),source_inode=VALUES(source_inode),source_offset=VALUES(source_offset),
         last_record_at=VALUES(last_record_at),records_ingested=VALUES(records_ingested),records_dropped=VALUES(records_dropped),errors=VALUES(errors),updated_at=NOW()',
-        [$key, $path, (string) $inode, (int) $offset, $last_record ?: null, (int) $ingested, (int) $dropped, (int) $errors]
+        [
+            $key,
+            $path,
+            (string) $inode,
+            (int) $offset,
+            $last_record ?: null,
+            (int) $ingested,
+            (int) $dropped,
+            (int) $errors,
+        ],
     );
 }
 
@@ -444,7 +653,9 @@ function icct_backend_syslog_import_spool_once($file, $max_records = 5000)
     if (!$stat) {
         throw new RuntimeException('Unable to stat Syslog test spool.');
     }
-    $inode = isset($stat['ino']) ? (string) $stat['ino'] : (string) ($stat['dev'] ?? '') . ':' . (string) ($stat['mtime'] ?? '');
+    $inode = isset($stat['ino'])
+        ? (string) $stat['ino']
+        : (string) ($stat['dev'] ?? '') . ':' . (string) ($stat['mtime'] ?? '');
     $size = (int) ($stat['size'] ?? 0);
     if ($saved_inode !== '' && ($saved_inode !== $inode || $size < $offset)) {
         $offset = 0;
@@ -470,19 +681,25 @@ function icct_backend_syslog_import_spool_once($file, $max_records = 5000)
         while (!feof($handle) && $processed < $max_records) {
             $line_start = ftell($handle);
             $line = fgets($handle);
-            if ($line === false) break;
+            if ($line === false) {
+                break;
+            }
             if (substr($line, -1) !== "\n" && feof($handle)) {
                 fseek($handle, $line_start, SEEK_SET);
                 break;
             }
             $offset = ftell($handle);
             $line = trim($line);
-            if ($line === '') continue;
+            if ($line === '') {
+                continue;
+            }
             // Windows PowerShell 5 may write a UTF-8 BOM at the start of the file.
             $line = preg_replace('/^\xEF\xBB\xBF/', '', $line);
             try {
                 $record = json_decode($line, true, 32, JSON_THROW_ON_ERROR);
-                if (!is_array($record)) throw new RuntimeException('Spool record is not a JSON object.');
+                if (!is_array($record)) {
+                    throw new RuntimeException('Spool record is not a JSON object.');
+                }
                 $drop_reason = '';
                 $result = icct_backend_syslog_ingest($record, $drop_reason);
                 if ($result === 'inserted') {
@@ -522,7 +739,7 @@ function icct_backend_syslog_import_spool_once($file, $max_records = 5000)
         $last_record,
         $ingested_total,
         $dropped_total,
-        $errors_total
+        $errors_total,
     );
     icct_backend_syslog_heartbeat([
         'pid' => getmypid(),
@@ -551,7 +768,10 @@ function icct_backend_syslog_heartbeat($payload)
 {
     icct_backend_syslog_execute(
         'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
-        ['syslog_worker_status', json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE)]
+        [
+            'syslog_worker_status',
+            json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE),
+        ],
     );
 }
 
@@ -559,17 +779,21 @@ function icct_backend_syslog_runtime_status()
 {
     $row = db_fetch_row_prepared(
         'SELECT meta_value,updated_at FROM plugin_icct_nms_meta WHERE meta_key=?',
-        ['syslog_worker_status']
+        ['syslog_worker_status'],
     );
     $payload = [];
     if ($row && $row['meta_value'] !== '') {
         $decoded = json_decode((string) $row['meta_value'], true);
-        if (is_array($decoded)) $payload = $decoded;
+        if (is_array($decoded)) {
+            $payload = $decoded;
+        }
     }
     $age = PHP_INT_MAX;
     if ($row && !empty($row['updated_at'])) {
         $stamp = strtotime((string) $row['updated_at']);
-        if ($stamp !== false) $age = max(0, time() - $stamp);
+        if ($stamp !== false) {
+            $age = max(0, time() - $stamp);
+        }
     }
     return [
         'online' => $age <= 90,
@@ -583,43 +807,66 @@ function icct_backend_syslog_event_ack($event_id, $ack, $comment = '')
 {
     $event = db_fetch_row_prepared(
         'SELECT id,host_id FROM plugin_icct_nms_syslog_events WHERE id=?',
-        [(int) $event_id]
+        [(int) $event_id],
     );
-    if (!$event) throw new InvalidArgumentException('Syslog event was not found.');
+    if (!$event) {
+        throw new InvalidArgumentException('Syslog event was not found.');
+    }
     icct_backend_require_device_access((int) $event['host_id']);
     if ($ack) {
         $comment = substr(trim((string) $comment), 0, 255);
         icct_backend_syslog_execute(
             'UPDATE plugin_icct_nms_syslog_events SET acknowledged=1,acknowledged_by=?,acknowledged_at=NOW(),ack_comment=? WHERE id=?',
-            [icct_backend_current_user_id(), $comment, (int) $event_id]
+            [icct_backend_current_user_id(), $comment, (int) $event_id],
         );
-        cacti_log('ICCT NMS Syslog event ' . (int) $event_id . ' acknowledged by user ' . icct_backend_current_user_id(), false, 'ICCT NMS');
+        cacti_log(
+            'ICCT NMS Syslog event ' .
+                (int) $event_id .
+                ' acknowledged by user ' .
+                icct_backend_current_user_id(),
+            false,
+            'ICCT NMS',
+        );
     } else {
         icct_backend_syslog_execute(
             "UPDATE plugin_icct_nms_syslog_events SET acknowledged=0,acknowledged_by=0,acknowledged_at=NULL,ack_comment='' WHERE id=?",
-            [(int) $event_id]
+            [(int) $event_id],
         );
-        cacti_log('ICCT NMS Syslog event ' . (int) $event_id . ' acknowledgement cleared by user ' . icct_backend_current_user_id(), false, 'ICCT NMS');
+        cacti_log(
+            'ICCT NMS Syslog event ' .
+                (int) $event_id .
+                ' acknowledgement cleared by user ' .
+                icct_backend_current_user_id(),
+            false,
+            'ICCT NMS',
+        );
     }
 }
 
 function icct_backend_syslog_event($event_id)
 {
     $row = db_fetch_row_prepared(
-        "SELECT e.*,h.description,h.hostname,u.username AS ack_username
+        'SELECT e.*,h.description,h.hostname,u.username AS ack_username
          FROM plugin_icct_nms_syslog_events e
          INNER JOIN host h ON h.id=e.host_id
          LEFT JOIN user_auth u ON u.id=e.acknowledged_by
-         WHERE e.id=?",
-        [(int) $event_id]
+         WHERE e.id=?',
+        [(int) $event_id],
     );
-    if (!$row) return [];
+    if (!$row) {
+        return [];
+    }
     icct_backend_require_device_access((int) $row['host_id']);
     return $row;
 }
 
-function icct_backend_syslog_events(array $allowed_host_ids, array $filters, $limit, $offset, &$total)
-{
+function icct_backend_syslog_events(
+    array $allowed_host_ids,
+    array $filters,
+    $limit,
+    $offset,
+    &$total,
+) {
     $allowed_host_ids = array_values(array_unique(array_map('intval', $allowed_host_ids)));
     if (!$allowed_host_ids) {
         $total = 0;
@@ -646,7 +893,8 @@ function icct_backend_syslog_events(array $allowed_host_ids, array $filters, $li
         $where[] = 'e.acknowledged=0';
     }
     if (!empty($filters['search'])) {
-        $where[] = '(e.message LIKE ? OR e.program LIKE ? OR e.source_ip LIKE ? OR h.description LIKE ? OR h.hostname LIKE ?)';
+        $where[] =
+            '(e.message LIKE ? OR e.program LIKE ? OR e.source_ip LIKE ? OR h.description LIKE ? OR h.hostname LIKE ?)';
         $like = '%' . $filters['search'] . '%';
         array_push($params, $like, $like, $like, $like, $like);
     }
@@ -657,15 +905,20 @@ function icct_backend_syslog_events(array $allowed_host_ids, array $filters, $li
 
     $where_sql = ' WHERE ' . implode(' AND ', $where);
     $total = (int) db_fetch_cell_prepared(
-        'SELECT COUNT(*) FROM plugin_icct_nms_syslog_events e INNER JOIN host h ON h.id=e.host_id' . $where_sql,
-        $params
+        'SELECT COUNT(*) FROM plugin_icct_nms_syslog_events e INNER JOIN host h ON h.id=e.host_id' .
+            $where_sql,
+        $params,
     );
-    $sql = "SELECT e.*,h.description,h.hostname,u.username AS ack_username
+    $sql =
+        "SELECT e.*,h.description,h.hostname,u.username AS ack_username
             FROM plugin_icct_nms_syslog_events e
             INNER JOIN host h ON h.id=e.host_id
             LEFT JOIN user_auth u ON u.id=e.acknowledged_by
             {$where_sql}
             ORDER BY e.event_time DESC,e.id DESC
-            LIMIT " . (int) $offset . ',' . (int) $limit;
+            LIMIT " .
+        (int) $offset .
+        ',' .
+        (int) $limit;
     return db_fetch_assoc_prepared($sql, $params);
 }

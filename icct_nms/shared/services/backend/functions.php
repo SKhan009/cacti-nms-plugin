@@ -1,11 +1,12 @@
 <?php
+
 /** ICCT-owned functions services, derived from the existing ICCT NMS implementation. */
 
 /** Reused Inventory service: current user id. */
-function icct_backend_current_user_id($fallback = 0)
+function icct_backend_current_user_id()
 {
-    $user_id = isset($_SESSION['sess_user_id']) ? (int) $_SESSION['sess_user_id'] : (int) $fallback;
-    return $user_id > 0 ? $user_id : (int) $fallback;
+    $user_id = isset($_SESSION['sess_user_id']) ? (int) $_SESSION['sess_user_id'] : 0;
+    return $user_id > 0 ? $user_id : 0;
 }
 
 /** Reused Inventory service: device status name. */
@@ -36,13 +37,24 @@ function icct_backend_device_status_name($device)
 /** Cacti schedules host checks when that host's poller items are due. */
 function icct_backend_device_is_fresh($device)
 {
-    $seen=strtotime((string)($device['last_updated']??''));$now=time();
-    if($seen===false||$seen>$now)return false;
-    $step=array_key_exists('polling_step',$device)?$device['polling_step']:db_fetch_cell_prepared('SELECT MIN(rrd_step) FROM poller_item WHERE host_id=? AND rrd_step>0',[(int)($device['id']??0)]);
-    $interval=icct_backend_poller_interval();
+    $seen = strtotime((string) ($device['last_updated'] ?? ''));
+    $now = time();
+    if ($seen === false || $seen > $now) {
+        return false;
+    }
+    $step = array_key_exists('polling_step', $device)
+        ? $device['polling_step']
+        : db_fetch_cell_prepared(
+            'SELECT MIN(rrd_step) FROM poller_item WHERE host_id=? AND rrd_step>0',
+            [(int) ($device['id'] ?? 0)],
+        );
+    $interval = icct_backend_poller_interval();
     // Hosts without scheduled items use Cacti's configured scheduler cadence.
-    $cadence=is_numeric($step)&&(int)$step>0?(int)$step:max($interval,(int)read_config_option('cron_interval'));
-    return $now-$seen<=max(120,max($interval,$cadence)*2);
+    $cadence =
+        is_numeric($step) && (int) $step > 0
+            ? (int) $step
+            : max($interval, (int) read_config_option('cron_interval'));
+    return $now - $seen <= max(120, max($interval, $cadence) * 2);
 }
 
 /** Reused Inventory service: host status name. */
@@ -53,7 +65,7 @@ function icct_backend_host_status_name($status)
         HOST_DOWN => 'Down',
         HOST_RECOVERING => 'Recovering',
         HOST_UP => 'Up',
-        HOST_ERROR => 'Error'
+        HOST_ERROR => 'Error',
     ];
     return isset($map[$status]) ? $map[$status] : 'Invalid state ' . $status;
 }
@@ -81,9 +93,9 @@ function icct_backend_managed_object_record($type, $object_id, $user_id = null)
                 'host_template',
                 'data_input',
                 'graph',
-                'data_source'
+                'data_source',
             ],
-            true
+            true,
         ) ||
         $object_id < 1
     ) {
@@ -95,7 +107,7 @@ function icct_backend_managed_object_record($type, $object_id, $user_id = null)
     db_execute_prepared(
         'INSERT IGNORE INTO plugin_icct_nms_managed_objects
 		(object_type, object_id, created_by, created_at) VALUES (?, ?, ?, NOW())',
-        [$type, $object_id, (int) $user_id]
+        [$type, $object_id, (int) $user_id],
     );
 }
 
@@ -120,7 +132,7 @@ function icct_backend_poller_interval()
     $interval = (int) read_config_option('poller_interval');
     if ($interval < 1) {
         throw new RuntimeException(
-            'Cacti poller_interval is not configured as a positive interval.'
+            'Cacti poller_interval is not configured as a positive interval.',
         );
     }
     return $interval;
@@ -148,7 +160,7 @@ function icct_backend_require_device_access($host_id)
             $where = get_policy_where(
                 read_config_option('graph_auth_method'),
                 get_policies($user),
-                $where
+                $where,
             );
         }
         $allowed = db_fetch_cell("SELECT COUNT(DISTINCT h.id) FROM host h
@@ -167,7 +179,7 @@ function icct_backend_require_management($realm = 3)
 {
     if (!function_exists('is_realm_allowed') || !is_realm_allowed((int) $realm)) {
         throw new RuntimeException(
-            'Your Cacti account does not have permission to change this configuration.'
+            'Your Cacti account does not have permission to change this configuration.',
         );
     }
 }

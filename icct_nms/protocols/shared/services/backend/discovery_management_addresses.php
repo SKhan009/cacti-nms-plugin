@@ -1,4 +1,5 @@
 <?php
+
 /** ICCT-owned discovery management addresses services, derived from the existing ICCT NMS implementation. */
 
 /** Reused Inventory service: nd cdp management addresses. */
@@ -23,10 +24,10 @@ function icct_backend_nd_management_address($bytes, $family, $source)
         'source' => $source,
         'requires_scope' => $scoped,
         'eligible_target' => $unicast && !$scoped,
-        'verified' => false
+        'verified' => false,
     ];
 }
 
-require_once __DIR__.'/../../../cdp/services/discovery_management_addresses.php';
+require_once __DIR__ . '/../../../cdp/services/discovery_management_addresses.php';
 
-require_once __DIR__.'/../../../lldp/services/discovery_management_addresses.php';
+require_once __DIR__ . '/../../../lldp/services/discovery_management_addresses.php';

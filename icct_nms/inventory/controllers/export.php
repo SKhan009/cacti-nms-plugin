@@ -1,4 +1,5 @@
 <?php
+
 /**
  * CSV controller: export permitted saved inventory with spreadsheet formula protection.
  */
@@ -33,11 +34,11 @@ fputcsv(
         'Height',
         'Uptime',
         'Polling Interval (sec)',
-        'Availability (%)'
+        'Availability (%)',
     ],
     ',',
     '"',
-    ''
+    '',
 );
 foreach ($devices as $d) {
     $values = [
@@ -55,7 +56,7 @@ foreach ($devices as $d) {
         $d['unit_height'],
         icct_nms_uptime($d['snmp_sysUpTimeInstance']),
         $d['polling_interval'],
-        $d['availability']
+        $d['availability'],
     ];
     $values = array_map(static function ($v) {
         $v = (string) $v;

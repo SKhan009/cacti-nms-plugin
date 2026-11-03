@@ -22,17 +22,37 @@
         <p id="shared-diagnostic-status" role="status" aria-live="polite"></p><pre id="shared-diagnostic-output" hidden></pre>
         <div class="message-actions"><button class="button" type="button" data-shared-diagnostic-close>Close</button></div>
     </dialog>
-    <script src="shared/js/diagnostic-popup.js?v=<?= substr(hash_file('sha256',ICCT_NMS_ROOT.'/shared/js/diagnostic-popup.js'),0,12) ?>" defer></script>
-    <script src="protocols/syslog/js/syslog-settings.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../protocols/syslog/js/syslog-settings.js'),0,12) ?>" defer></script>
-    <script src="shared/js/inventory.js?v=<?= substr(
-        hash_file("sha256", __DIR__ . "/../js/inventory.js"),
+    <script src="shared/js/diagnostic-popup.js?v=<?= substr(
+        hash_file('sha256', ICCT_NMS_ROOT . '/shared/js/diagnostic-popup.js'),
         0,
         12,
     ) ?>" defer></script>
-<script src="protocols/netflow/js/netflow-presets.js?v=<?= substr(hash_file('sha256',__DIR__.'/../../protocols/netflow/js/netflow-presets.js'),0,12) ?>" defer></script>
+    <script src="protocols/syslog/js/syslog-settings.js?v=<?= substr(
+        hash_file('sha256', __DIR__ . '/../../protocols/syslog/js/syslog-settings.js'),
+        0,
+        12,
+    ) ?>" defer></script>
+    <script src="shared/js/inventory.js?v=<?= substr(
+        hash_file('sha256', __DIR__ . '/../js/inventory.js'),
+        0,
+        12,
+    ) ?>" defer></script>
+<script src="protocols/netflow/js/netflow-presets.js?v=<?= substr(
+    hash_file('sha256', __DIR__ . '/../../protocols/netflow/js/netflow-presets.js'),
+    0,
+    12,
+) ?>" defer></script>
 <?php if (!empty($deviceViewPage)): ?>
-<script src="protocols/netflow/js/netflow-view.js?v=<?= substr(hash_file('sha256',__DIR__.'/../../protocols/netflow/js/netflow-view.js'),0,12) ?>" defer></script>
-<script src="ports/js/device-view-ports.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../ports/js/device-view-ports.js'),0,12) ?>" defer></script>
+<script src="protocols/netflow/js/netflow-view.js?v=<?= substr(
+    hash_file('sha256', __DIR__ . '/../../protocols/netflow/js/netflow-view.js'),
+    0,
+    12,
+) ?>" defer></script>
+<script src="ports/js/device-view-ports.js?v=<?= substr(
+    hash_file('sha256', __DIR__ . '/../../ports/js/device-view-ports.js'),
+    0,
+    12,
+) ?>" defer></script>
 <?php endif; ?>
 <?php if (!empty($wizard)): ?>
     <dialog id="unsaved-dialog" aria-labelledby="unsaved-title">
@@ -40,32 +60,106 @@
         <p>Save your changes before leaving this device?</p>
         <div class="message-actions"><button type="button" class="button" data-draft-choice="cancel">Keep editing</button><button type="button" class="button" data-draft-choice="discard">Discard</button><button type="button" class="button primary" data-draft-choice="save">Save</button></div>
     </dialog>
-    <script src="ports/js/ports.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../../ports/js/ports.js'),0,12) ?>" defer></script>
-    <script src="fcaps/js/fcaps.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../../fcaps/js/fcaps.js'),0,12) ?>" defer></script>
-    <script src="inventory/js/wizard.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../../inventory/js/wizard.js'),0,12) ?>" defer></script>
+    <script src="ports/js/ports.js?v=<?= substr(
+        hash_file('sha256', __DIR__ . '/../../ports/js/ports.js'),
+        0,
+        12,
+    ) ?>" defer></script>
+    <script src="fcaps/js/fcaps.js?v=<?= substr(
+        hash_file('sha256', __DIR__ . '/../../fcaps/js/fcaps.js'),
+        0,
+        12,
+    ) ?>" defer></script>
+    <script src="inventory/js/wizard.js?v=<?= substr(
+        hash_file('sha256', __DIR__ . '/../../inventory/js/wizard.js'),
+        0,
+        12,
+    ) ?>" defer></script>
 <?php endif; ?>
 <?php if (!empty($presetsPage)): ?>
-    <script src="protocols/shared/js/protocol-presets.js?v=<?= substr(hash_file('sha256',__DIR__.'/../../protocols/shared/js/protocol-presets.js'),0,12) ?>" defer></script>
-    <script src="presets/js/presets.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../presets/js/presets.js'),0,12) ?>" defer></script>
+    <script src="protocols/shared/js/protocol-presets.js?v=<?= substr(
+        hash_file('sha256', __DIR__ . '/../../protocols/shared/js/protocol-presets.js'),
+        0,
+        12,
+    ) ?>" defer></script>
+    <script src="presets/js/presets.js?v=<?= substr(
+        hash_file('sha256', __DIR__ . '/../../presets/js/presets.js'),
+        0,
+        12,
+    ) ?>" defer></script>
 <?php endif; ?>
 <?php if (!empty($mapPage)): ?>
-    <script src="dashboard/widgets/js/dashboard.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../dashboard/widgets/js/dashboard.js'),0,12) ?>" defer></script>
+    <script src="dashboard/widgets/js/dashboard.js?v=<?= substr(
+        hash_file('sha256', __DIR__ . '/../../dashboard/widgets/js/dashboard.js'),
+        0,
+        12,
+    ) ?>" defer></script>
     <script src="shared/assets/vendor/leaflet/leaflet.js" defer></script>
-    <script src="dashboard/rack-view/js/rack-view.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../dashboard/rack-view/js/rack-view.js'),0,12) ?>" defer></script>
-    <script src="dashboard/topology/js/topology-view.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../dashboard/topology/js/topology-view.js'),0,12) ?>" defer></script>
-    <script src="dashboard/map/js/map.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../dashboard/map/js/map.js'),0,12) ?>" defer></script>
+    <script src="dashboard/rack-view/js/rack-view.js?v=<?= substr(
+        hash_file('sha256', __DIR__ . '/../../dashboard/rack-view/js/rack-view.js'),
+        0,
+        12,
+    ) ?>" defer></script>
+    <script src="dashboard/topology/js/topology-view.js?v=<?= substr(
+        hash_file('sha256', __DIR__ . '/../../dashboard/topology/js/topology-view.js'),
+        0,
+        12,
+    ) ?>" defer></script>
+    <script src="dashboard/map/js/map.js?v=<?= substr(
+        hash_file('sha256', __DIR__ . '/../../dashboard/map/js/map.js'),
+        0,
+        12,
+    ) ?>" defer></script>
 <?php endif; ?>
 <?php if (!empty($topologyConfigurationPage)): ?>
-<script src="dashboard/topology/js/topology-configuration.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../dashboard/topology/js/topology-configuration.js'),0,12) ?>" defer></script>
+<script src="dashboard/topology/js/topology-configuration.js?v=<?= substr(
+    hash_file('sha256', __DIR__ . '/../../dashboard/topology/js/topology-configuration.js'),
+    0,
+    12,
+) ?>" defer></script>
 <?php endif; ?>
 <?php if (!empty($mibRepositoryPage)): ?>
-<script src="protocols/snmp/mibs/js/mib-upload.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../protocols/snmp/mibs/js/mib-upload.js'),0,12) ?>" defer></script>
-<?php if(($mode??'')==='selection'): ?><script src="protocols/snmp/mibs/js/mib-tree.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../protocols/snmp/mibs/js/mib-tree.js'),0,12) ?>" defer></script><?php endif; ?>
-<?php if(($mode??'')==='list'): ?><script src="protocols/snmp/mibs/js/mib-list.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../protocols/snmp/mibs/js/mib-list.js'),0,12) ?>" defer></script><?php endif; ?>
-<script src="protocols/snmp/mibs/js/mib-repository.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../protocols/snmp/mibs/js/mib-repository.js'),0,12) ?>" defer></script>
-<script src="protocols/snmp/mibs/js/mib-wizard.js?v=<?= substr(hash_file('sha256',__DIR__ . '/../../protocols/snmp/mibs/js/mib-wizard.js'),0,12) ?>" defer></script>
+<script src="protocols/snmp/mibs/js/mib-upload.js?v=<?= substr(
+    hash_file('sha256', __DIR__ . '/../../protocols/snmp/mibs/js/mib-upload.js'),
+    0,
+    12,
+) ?>" defer></script>
+<?php if (
+    ($mode ?? '') ===
+    'selection'
+): ?><script src="protocols/snmp/mibs/js/mib-tree.js?v=<?= substr(
+    hash_file('sha256', __DIR__ . '/../../protocols/snmp/mibs/js/mib-tree.js'),
+    0,
+    12,
+) ?>" defer></script><?php endif; ?>
+<?php if (($mode ?? '') === 'list'): ?><script src="protocols/snmp/mibs/js/mib-list.js?v=<?= substr(
+    hash_file('sha256', __DIR__ . '/../../protocols/snmp/mibs/js/mib-list.js'),
+    0,
+    12,
+) ?>" defer></script><?php endif; ?>
+<script src="protocols/snmp/mibs/js/mib-repository.js?v=<?= substr(
+    hash_file('sha256', __DIR__ . '/../../protocols/snmp/mibs/js/mib-repository.js'),
+    0,
+    12,
+) ?>" defer></script>
+<script src="protocols/snmp/mibs/js/mib-wizard.js?v=<?= substr(
+    hash_file('sha256', __DIR__ . '/../../protocols/snmp/mibs/js/mib-wizard.js'),
+    0,
+    12,
+) ?>" defer></script>
 <?php endif; ?>
-<?php if(!empty($alarmDetail)): ?><script src="alarms/js/alarm-detail.js?v=<?= substr(hash_file('sha256',ICCT_NMS_ROOT.'/alarms/js/alarm-detail.js'),0,12) ?>" defer></script><?php endif; ?>
-<?php if(!empty($alarmsPage)&&!isset($alarmDetail)): ?><script src="alarms/js/alarms.js?v=<?= substr(hash_file('sha256',ICCT_NMS_ROOT.'/alarms/js/alarms.js'),0,12) ?>" defer></script><?php endif; ?>
+<?php if (!empty($alarmDetail)): ?><script src="alarms/js/alarm-detail.js?v=<?= substr(
+    hash_file('sha256', ICCT_NMS_ROOT . '/alarms/js/alarm-detail.js'),
+    0,
+    12,
+) ?>" defer></script><?php endif; ?>
+<?php if (
+    !empty($alarmsPage) &&
+    !isset($alarmDetail)
+): ?><script src="alarms/js/alarms.js?v=<?= substr(
+    hash_file('sha256', ICCT_NMS_ROOT . '/alarms/js/alarms.js'),
+    0,
+    12,
+) ?>" defer></script><?php endif; ?>
 </body>
 </html>

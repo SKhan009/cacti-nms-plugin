@@ -1,5 +1,6 @@
 #!/usr/bin/env php
 <?php
+
 /**
  * Import structured newline-delimited JSON written by rsyslog into ICCT Syslog tables.
  *
@@ -23,12 +24,16 @@ if ($file === '') {
 $follow = isset($options['follow']);
 $once = isset($options['once']) || !$follow;
 $sleep = isset($options['sleep']) ? (float) $options['sleep'] : 0.5;
-if ($sleep < 0.1 || $sleep > 10) $sleep = 0.5;
+if ($sleep < 0.1 || $sleep > 10) {
+    $sleep = 0.5;
+}
 
 try {
     icct_nms_backend();
-    $lock = 'icct_syslog_'.substr(hash('sha256', $file), 0, 40);
-    if ((int)db_fetch_cell_prepared('SELECT GET_LOCK(?,0)', [$lock]) !== 1) throw new RuntimeException('A Syslog importer is already reading this spool.');
+    $lock = 'icct_syslog_' . substr(hash('sha256', $file), 0, 40);
+    if ((int) db_fetch_cell_prepared('SELECT GET_LOCK(?,0)', [$lock]) !== 1) {
+        throw new RuntimeException('A Syslog importer is already reading this spool.');
+    }
     [$key, $state] = icct_backend_syslog_worker_state($file);
     $savedInode = (string) ($state['source_inode'] ?? '');
     $offset = (int) ($state['source_offset'] ?? 0);
@@ -41,7 +46,11 @@ try {
     $lastError = '';
 
     while (true) {
-        if ((int) db_fetch_cell_prepared('SELECT status FROM plugin_config WHERE directory=?', ['icct_nms']) !== 1) {
+        if (
+            (int) db_fetch_cell_prepared('SELECT status FROM plugin_config WHERE directory=?', [
+                'icct_nms',
+            ]) !== 1
+        ) {
             break;
         }
 
@@ -60,7 +69,9 @@ try {
                 ]);
                 $lastHeartbeat = time();
             }
-            if ($once) break;
+            if ($once) {
+                break;
+            }
             usleep((int) ($sleep * 1000000));
             continue;
         }
@@ -68,11 +79,15 @@ try {
         $stat = @stat($file);
         if (!$stat) {
             $errors++;
-            if ($once) break;
+            if ($once) {
+                break;
+            }
             usleep((int) ($sleep * 1000000));
             continue;
         }
-        $inode = isset($stat['ino']) ? (string) $stat['ino'] : (string) ($stat['dev'] ?? '') . ':' . (string) ($stat['mtime'] ?? '');
+        $inode = isset($stat['ino'])
+            ? (string) $stat['ino']
+            : (string) ($stat['dev'] ?? '') . ':' . (string) ($stat['mtime'] ?? '');
         $size = (int) ($stat['size'] ?? 0);
         if ($savedInode !== '' && ($inode !== $savedInode || $size < $offset)) {
             $offset = 0;
@@ -82,7 +97,9 @@ try {
         $handle = @fopen($file, 'rb');
         if (!$handle) {
             $errors++;
-            if ($once) break;
+            if ($once) {
+                break;
+            }
             usleep((int) ($sleep * 1000000));
             continue;
         }
@@ -95,7 +112,9 @@ try {
         while (!feof($handle)) {
             $lineStart = ftell($handle);
             $line = fgets($handle);
-            if ($line === false) break;
+            if ($line === false) {
+                break;
+            }
             // Do not advance past an incomplete line; rsyslog may still be writing it.
             if (substr($line, -1) !== "\n" && feof($handle)) {
                 fseek($handle, $lineStart, SEEK_SET);
@@ -103,12 +122,16 @@ try {
             }
             $offset = ftell($handle);
             $line = trim($line);
-            if ($line === '') continue;
+            if ($line === '') {
+                continue;
+            }
             // PowerShell-generated UTF-8 files may begin with a BOM.
             $line = preg_replace('/^\xEF\xBB\xBF/', '', $line);
             try {
                 $record = json_decode($line, true, 32, JSON_THROW_ON_ERROR);
-                if (!is_array($record)) throw new RuntimeException('Syslog spool record is not a JSON object.');
+                if (!is_array($record)) {
+                    throw new RuntimeException('Syslog spool record is not a JSON object.');
+                }
                 $dropReason = '';
                 $result = icct_backend_syslog_ingest($record, $dropReason);
                 if ($result === 'inserted' || $result === 'repeated') {
@@ -126,7 +149,9 @@ try {
                 $lastError = substr($recordError->getMessage(), 0, 180);
             }
             $processed++;
-            if ($processed >= 2000) break;
+            if ($processed >= 2000) {
+                break;
+            }
         }
         fclose($handle);
 
@@ -138,7 +163,7 @@ try {
             $lastRecord,
             $ingested,
             $dropped,
-            $errors
+            $errors,
         );
         if (time() - $lastHeartbeat >= 5 || $processed > 0) {
             icct_backend_syslog_heartbeat([
@@ -156,7 +181,9 @@ try {
             $lastHeartbeat = time();
         }
 
-        if ($once) break;
+        if ($once) {
+            break;
+        }
         usleep((int) ($sleep * 1000000));
     }
 } catch (Throwable $error) {

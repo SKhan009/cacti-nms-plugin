@@ -1,6 +1,10 @@
 #!/usr/bin/env php
 <?php
-if (PHP_SAPI !== 'cli') { http_response_code(404); exit(1); }
+
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit(1);
+}
 require __DIR__ . '/../../../../../include/cli_check.php';
 require_once __DIR__ . '/../../../shared/services/bootstrap.php';
 try {

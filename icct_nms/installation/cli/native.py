@@ -215,6 +215,7 @@ def install_verified(directory, data, web_group):
 
 
 def main():
+    setup.check_python_runtime()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=['build','install','verify'])
     parser.add_argument('--component',choices=list(PROFILES))

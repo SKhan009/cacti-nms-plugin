@@ -56,12 +56,22 @@ def validate_root(value):
     return root
 
 
+def check_python_runtime(version=None):
+    current = tuple(sys.version_info[:3] if version is None else version)
+    required = tuple(int(part) for part in MANIFEST['python_min'].split('.'))
+    if current < required:
+        raise ValueError('Python '+MANIFEST['python_min']+' or newer is required for setup and collectors; use a supported Python runtime.')
+
+
 def component_packages(target, component=None):
-    if component is None:
-        return MANIFEST['packages'][target['family']]
-    packages = MANIFEST['optional_components'][component]['packages'][target['family']]
+    packages = list(MANIFEST['packages'][target['family']] if component is None else MANIFEST['optional_components'][component]['packages'][target['family']])
     if not packages:
         raise ValueError('No supported repository package for this component on this OS; use the approved native build guide.')
+    version = tuple(int(part) for part in re.findall(r'\d+', target.get('version', '0')))
+    for rule in MANIFEST.get('package_overrides', []):
+        minimum = tuple(int(part) for part in rule.get('min_version','0').split('.'))
+        if rule['id'] == target.get('id') and version >= minimum:
+            packages = [rule['replacements'].get(package, package) for package in packages]
     return packages
 
 
@@ -209,6 +219,31 @@ def preflight(root):
     return php
 
 
+def configure_selinux_writable(paths):
+    getenforce = shutil.which('getenforce')
+    if not getenforce:
+        return
+    state = subprocess.check_output([getenforce],text=True).strip()
+    if state not in ('Enforcing','Permissive'):
+        return
+    semanage = shutil.which('semanage')
+    restorecon = shutil.which('restorecon')
+    if not semanage or not restorecon:
+        raise ValueError('SELinux tools are required: install policycoreutils-python-utils before service setup.')
+    rules = subprocess.check_output([semanage,'fcontext','-l','-C'],text=True)
+    for path in paths:
+        matchpathcon = shutil.which('matchpathcon')
+        if matchpathcon:
+            expected = subprocess.check_output([matchpathcon,'-n',str(path)],text=True).strip()
+            if ':httpd_sys_rw_content_t:' in expected:
+                run([restorecon,'-RF',path])
+                continue
+        pattern = re.escape(str(path))+'(/.*)?'
+        existing = any(line.split() and line.split()[0] == pattern for line in rules.splitlines())
+        run([semanage,'fcontext','-m' if existing else '-a','-t','httpd_sys_rw_content_t',pattern])
+        run([restorecon,'-RF',path])
+
+
 def services(root, user, group):
     php = shutil.which("php")
     if not php or not shutil.which("systemctl"):
@@ -217,13 +252,14 @@ def services(root, user, group):
     group_id = grp.getgrnam(group).gr_gid
     if account.pw_uid == 0:
         raise ValueError("Worker account must not be root.")
-    for relative in ["protocols/snmp/mibs/storage", "shared/assets/images/device-types/uploads"]:
-        path = PLUGIN / relative
-        if path.is_symlink():
-            raise ValueError("Refusing writable directory symlink.")
+    writable = [PLUGIN / 'protocols/snmp/mibs/storage', PLUGIN / 'shared/assets/images/device-types/uploads', root / 'resource/snmp_queries/icct_nms']
+    for path in writable:
+        if any(parent.is_symlink() for parent in [path,*path.parents]):
+            raise ValueError('Refusing writable directory symlink.')
         path.mkdir(parents=True, exist_ok=True)
         os.chown(path, account.pw_uid, group_id)
         path.chmod(0o750)
+    configure_selinux_writable(writable)
     log = (root / "log").resolve()
     state = Path("/var/lib/icct-nms/netflow")
     state.mkdir(parents=True, exist_ok=True)
@@ -276,6 +312,7 @@ def services(root, user, group):
 
 
 def main():
+    check_python_runtime()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=["plan", "install", "bundle"])
     parser.add_argument("--cacti-root", default=str(PLUGIN.parents[1]))

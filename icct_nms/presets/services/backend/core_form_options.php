@@ -1,4 +1,5 @@
 <?php
+
 /** ICCT-owned core form options services, derived from the existing ICCT NMS implementation. */
 
 /** Reused Inventory service: core field choices. */

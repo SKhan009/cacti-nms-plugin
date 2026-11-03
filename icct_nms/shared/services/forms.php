@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Escaped form controls built from saved values and installed Cacti field metadata.
  */
@@ -57,7 +58,12 @@ function icct_nms_core_select($label, $name, $value)
     if (!isset($fields_host_edit[$name])) {
         throw new RuntimeException('Cacti form field is unavailable: ' . $name);
     }
-    icct_nms_select($label, $name, icct_backend_core_field_choices($fields_host_edit[$name]), $value);
+    icct_nms_select(
+        $label,
+        $name,
+        icct_backend_core_field_choices($fields_host_edit[$name]),
+        $value,
+    );
 }
 
 /**

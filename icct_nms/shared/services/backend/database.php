@@ -1,11 +1,12 @@
 <?php
+
 /** ICCT-owned database services, derived from the existing ICCT NMS implementation. */
 
 /** Reused Inventory service: database ready. */
 function icct_backend_database_ready()
 {
     return db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?', [
-        'icct_nms_schema_version'
+        'icct_nms_schema_version',
     ]) === '1.2.10';
 }
 

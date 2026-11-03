@@ -40,7 +40,8 @@
       "libjpeg-turbo",
       "libuuid",
       "libstdc++",
-      "libcap"
+      "libcap",
+      "policycoreutils-python-utils"
     ],
     "debian": [
       "php-cli",
@@ -251,13 +252,15 @@
           "chrony"
         ],
         "debian": [
-          "chrony"
+          "ntpsec-ntpdig"
         ]
       },
       "binaries": [
-        "chronyc"
+        "chronyc",
+        "ntpdig",
+        "ntpq"
       ],
-      "note": "Clock tools installed separately from NTP node monitoring. Existing time sources are preserved."
+      "note": "NTP client tools. Node monitoring remains pending; the existing clock service is preserved."
     },
     "tacacs": {
       "label": "TACACS+ tools",
@@ -313,5 +316,28 @@
       ],
       "note": "Protocol clients only. Device workflows and server configuration are separate."
     }
-  }
+  },
+  "python_min": "3.9.0",
+  "package_overrides": [
+    {
+      "id": "ubuntu",
+      "replacements": {
+        "libjpeg62-turbo": "libjpeg-turbo8"
+      }
+    },
+    {
+      "id": "ubuntu",
+      "min_version": "24.04",
+      "replacements": {
+        "libssh2-1": "libssh2-1t64"
+      }
+    },
+    {
+      "id": "debian",
+      "min_version": "13",
+      "replacements": {
+        "libssh2-1": "libssh2-1t64"
+      }
+    }
+  ]
 }

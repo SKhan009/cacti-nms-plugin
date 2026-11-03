@@ -1,4 +1,5 @@
 <?php
+
 /** CDP discovery parsing. */
 
 function icct_backend_nd_cdp_management_addresses($values, $root, $index)
@@ -6,21 +7,20 @@ function icct_backend_nd_cdp_management_addresses($values, $root, $index)
     $addresses = [];
     $errors = [];
     foreach (
-        [[19, 20, 'CDP primary management address'], [3, 4, 'CDP advertised network address']]
-        as [$typeColumn, $addressColumn, $source]
+        [[19, 20, 'CDP primary management address'], [3, 4, 'CDP advertised network address']] as [$typeColumn, $addressColumn, $source]
     ) {
         try {
             $type = icct_backend_nd_value(
                 $values,
                 $root . '.' . $typeColumn . '.' . $index,
                 2,
-                false
+                false,
             );
             $bytes = icct_backend_nd_value(
                 $values,
                 $root . '.' . $addressColumn . '.' . $index,
                 4,
-                false
+                false,
             );
             if ($type === null || $bytes === null) {
                 continue;
@@ -39,7 +39,7 @@ function icct_backend_nd_cdp_management_addresses($values, $root, $index)
     }
     return [
         'addresses' => array_values($addresses),
-        'errors' => array_values(array_unique($errors))
+        'errors' => array_values(array_unique($errors)),
     ];
 }
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Shared request helpers and strict integration boundary to the plugin-owned services and Cacti core.
  */
@@ -14,7 +15,9 @@ function icct_nms_backend($lifecycle = false)
     }
     require_once __DIR__ . '/backend.php';
     if (!icct_backend_database_ready()) {
-        throw new RuntimeException('Upgrade ICCT NMS through Cacti Plugin Management. Its own schema is not ready.');
+        throw new RuntimeException(
+            'Upgrade ICCT NMS through Cacti Plugin Management. Its own schema is not ready.',
+        );
     }
 }
 
@@ -75,13 +78,24 @@ function icct_nms_redirect($url)
 function icct_nms_failure(Throwable $error)
 {
     http_response_code(503);
-    print '<!doctype html><html lang="en"><meta charset="utf-8"><title>Inventory unavailable</title><link rel="stylesheet" href="' . icct_nms_h($GLOBALS['config']['url_path'] . 'plugins/icct_nms/shared/css/inventory.css') . '"><body class="icct-inventory"><h1>Inventory unavailable</h1><p>' .
+    print '<!doctype html><html lang="en"><meta charset="utf-8"><title>Inventory unavailable</title><link rel="stylesheet" href="' .
+        icct_nms_h($GLOBALS['config']['url_path'] . 'plugins/icct_nms/shared/css/inventory.css') .
+        '"><body class="icct-inventory"><h1>Inventory unavailable</h1><p>' .
         icct_nms_h($error->getMessage()) .
-        '</p><p><a href="' . icct_nms_h($GLOBALS['config']['url_path'] . 'plugins.php') . '">Open Cacti Plugin Management</a></p></body></html>';
+        '</p><p><a href="' .
+        icct_nms_h($GLOBALS['config']['url_path'] . 'plugins.php') .
+        '">Open Cacti Plugin Management</a></p></body></html>';
     exit();
 }
 
 /** Shared device status palette; text remains available alongside colour. */
-function icct_nms_status_class($status) {
-    return $status === 'Up' ? 'online' : ($status === 'Down' ? 'offline' : ($status === 'Disabled' ? 'disabled' : 'other'));
+function icct_nms_status_class($status)
+{
+    return $status === 'Up'
+        ? 'online'
+        : ($status === 'Down'
+            ? 'offline'
+            : ($status === 'Disabled'
+                ? 'disabled'
+                : 'other'));
 }

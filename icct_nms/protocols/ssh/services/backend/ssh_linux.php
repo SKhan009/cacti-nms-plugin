@@ -1,4 +1,5 @@
 <?php
+
 /** ICCT-owned ssh linux services, derived from the existing ICCT NMS implementation. */
 
 /** Reused Inventory service: ssh key envelope. */
@@ -11,7 +12,7 @@ function icct_backend_ssh_key_envelope($key)
     if (
         preg_match(
             '/\A-----BEGIN (OPENSSH PRIVATE KEY|RSA PRIVATE KEY|EC PRIVATE KEY|DSA PRIVATE KEY|PRIVATE KEY|ENCRYPTED PRIVATE KEY)-----\r?\n[\s\S]+\r?\n-----END \1-----\z/',
-            $text
+            $text,
         )
     ) {
         return;
@@ -24,7 +25,7 @@ function icct_backend_ssh_key_envelope($key)
         return;
     }
     throw new InvalidArgumentException(
-        'Choose a PEM, OpenSSH or PuTTY private key. Public keys, certificates, logs and other files are not accepted.'
+        'Choose a PEM, OpenSSH or PuTTY private key. Public keys, certificates, logs and other files are not accepted.',
     );
 }
 
@@ -52,9 +53,8 @@ function icct_backend_ssh_preset_values($input)
             'connect_timeout' => [1, 120],
             'command_timeout' => [1, 300],
             'retries' => [0, 2],
-            'keepalive' => [0, 300]
-        ]
-        as $field => $range
+            'keepalive' => [0, 300],
+        ] as $field => $range
     ) {
         $value = $input[$field] ?? null;
         if (

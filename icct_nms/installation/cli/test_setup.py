@@ -120,6 +120,43 @@ class BundleSafety(unittest.TestCase):
                 setup.main()
             run.assert_not_called()
 
+    def test_distribution_package_names_are_resolved_without_changing_debian(self):
+        original=list(setup.MANIFEST['packages']['debian'])
+        ubuntu=dict(family='debian',id='ubuntu',version='24.04',arch='aarch64')
+        packages=setup.component_packages(ubuntu)
+        self.assertIn('libjpeg-turbo8',packages)
+        self.assertIn('libssh2-1t64',packages)
+        self.assertNotIn('libjpeg62-turbo',packages)
+        self.assertNotIn('libssh2-1',packages)
+        self.assertIn('libssh2-1',setup.component_packages(dict(ubuntu,version='22.04')))
+        self.assertEqual(setup.component_packages(dict(ubuntu,id='debian',version='12')),original)
+        self.assertIn('libssh2-1t64',setup.component_packages(dict(ubuntu,id='debian',version='13')))
+        self.assertEqual(setup.MANIFEST['packages']['debian'],original)
+
+    def test_apt_ntp_profile_does_not_install_a_competing_clock_daemon(self):
+        for distro in ['debian','ubuntu']:
+            self.assertEqual(setup.component_packages(dict(family='debian',id=distro,version='24.04'),'ntp'),['ntpsec-ntpdig'])
+        self.assertEqual(setup.component_packages(dict(family='rhel',id='rhel',version='9.8'),'ntp'),['chrony'])
+
+    def test_selinux_write_labels_are_scoped_and_enforcement_is_preserved(self):
+        path=Path('/cacti/resource/snmp_queries/icct_nms')
+        def which(name): return '/usr/sbin/'+name
+        def output(command,**kwargs):
+            if command[0].endswith('getenforce'): return 'Enforcing\n'
+            if command[0].endswith('matchpathcon'): return 'system_u:object_r:httpd_sys_content_t:s0\n'
+            return ''
+        with patch.object(setup.shutil,'which',side_effect=which),patch.object(setup.subprocess,'check_output',side_effect=output),patch.object(setup,'run') as run:
+            setup.configure_selinux_writable([path])
+            self.assertEqual(run.call_args_list[0].args[0],['/usr/sbin/semanage','fcontext','-a','-t','httpd_sys_rw_content_t','/cacti/resource/snmp_queries/icct_nms(/.*)?'])
+            self.assertEqual(run.call_args_list[1].args[0],['/usr/sbin/restorecon','-RF',path])
+            self.assertFalse(any('setenforce' in str(call) for call in run.call_args_list))
+
+    def test_old_python_is_rejected_before_setup(self):
+        with self.assertRaisesRegex(ValueError,'Python 3.9.0'):
+            setup.check_python_runtime((3,8,20))
+        setup.check_python_runtime((3,9,0))
+        setup.check_python_runtime((3,12,3))
+
     def test_online_requires_explicit_selection(self):
         with patch.object(setup, 'run') as run:
             setup.install_packages(dict(family='rhel'), None, online=True)
