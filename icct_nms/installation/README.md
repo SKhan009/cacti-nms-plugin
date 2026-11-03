@@ -82,3 +82,20 @@ Guacamole custom builds under `/opt/nms-guacamole/1.6.0` are recognized without 
 BLR §5.2.2.3 requires Telnet, SSH, FTP, TFTP, NTP, TACACS+, NetFlow/IPFIX and SNMP/discovery protocols. §5.3.3.3 requires NTP node statistics (sync, source, offset, jitter, delay), which remain distinct from chrony being installed. Redis and WebSocket are supporting implementation dependencies requested for this project, not named BLR requirements.
 
 Permission checks cover required writable upload directories and critical source files. Keep application source owned by an administrator and not writable by the HTTP/collector account; keep only the documented storage directories writable. Existing service accounts, SELinux enforcement and pchar raw-socket capability are preserved.
+
+### Native dependencies in complete offline releases
+
+Pinned Guacamole Server 1.6.0 and pchar 1.5 source archives are shipped under `installation/native-source`. Guacamole's Apache signature was verified using signing-key fingerprint `F467E54ACC52F1D2778826865B2977AEE5E4518F`; source and patch SHA-256 pins are enforced by `cli/native.py`. pchar includes a two-line modern C++ correction for ambiguous unsigned `abs()` calls. Upstream license/NOTICE/README files are retained in native bundles.
+
+Build without root on a matching OS release/CPU:
+
+```sh
+python3 installation/cli/native.py build --component guacamole-strict --bundle /tmp/guacamole-native
+python3 installation/cli/native.py build --component pathchar --bundle /tmp/pathchar-native
+```
+
+Guacamole build dependencies: C/C++ compiler, make, patch, pkg-config, cairo/png/jpeg/pango/OpenSSL/libssh2/libuuid development headers. Pathchar needs a C++ compiler and make. No build downloads are performed; missing build tools stop the build. Sources are extracted with traversal/link checks. Bundles contain regular files only and are pinned to OS release and architecture.
+
+Install finished bundles with `sudo python3 installation/cli/native.py install --bundle /tmp/guacamole-native --web-group apache`. Substitute the real collector group. Native files go under `/opt/icct-nms/native`; conflicting existing builds are rejected. Pathchar receives only `cap_net_raw` and group execution access, never setuid-root. Existing `/usr/local/sbin/pchar` and running Guacamole services are retained.
+
+Add either/both `--native-bundle` options when building a complete release with `package.py --bundle /path/to/os-packages`. The release bootstrap verifies native artifacts before mutation and forwards them to setup automatically. Runtime libraries must be present in the matching OS package bundle. Direct setup also accepts repeated `--native-bundle` arguments. Build/install operations preserve application credentials and HTTPS configuration; SSH broker activation still requires a real HTTPS origin.

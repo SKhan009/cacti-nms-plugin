@@ -11,8 +11,8 @@
 <?php foreach (icct_nms_installation_manifest()['optional_components'] as $id => $component): ?>
 <div data-install-help="component-<?= icct_nms_h($id) ?>" hidden><p><?= icct_nms_h($component['note']) ?></p><p>Online</p><pre><?= icct_nms_h($command.' --component '.$id.' --online') ?></pre><p>Offline component bundle</p><pre><?= icct_nms_h($command.' --component '.$id.' --bundle /path/to/component-bundle') ?></pre></div>
 <?php endforeach; ?>
-<div data-install-help="ssh" hidden><p>The SSH terminal requires the strict-auth backend and an HTTPS address. Install the approved backend and configure its dedicated service using the bundled SSH guide.</p><a href="installation/controllers/installation.php?guide=ssh">SSH installation guide</a></div>
-<div data-install-help="pathchar" hidden><p>Install an approved pchar/pathchar package matching this server's operating system and CPU architecture, then refresh checks. No portable Pathchar binary is bundled yet.</p></div>
+<div data-install-help="ssh" hidden><p>The SSH terminal requires the strict-auth backend and an HTTPS address. Install the verified native bundle and configure its dedicated service using the bundled SSH guide.</p><a href="installation/controllers/installation.php?guide=ssh">SSH installation guide</a></div>
+<div data-install-help="pathchar" hidden><p>Build on a matching Linux system as a regular user, or use a verified native bundle.</p><pre><?= icct_nms_h($nativeCommand.' build --component pathchar --bundle /tmp/pathchar-native') ?></pre><p>Install as administrator, then refresh checks.</p><pre><?= icct_nms_h('sudo '.$nativeCommand.' install --bundle /tmp/pathchar-native') ?></pre></div>
 <div data-install-help="plugin" hidden><p>Restore the complete plugin package, then install or upgrade ICCT NMS through Cacti Plugin Management.</p><a href="<?= icct_nms_h($config['url_path'].'plugins.php') ?>">Open Plugin Management</a></div>
 <div class="message-actions"><button type="button" class="button" data-install-close>Close</button><a class="button primary" href="installation/controllers/installation.php">Refresh checks</a></div>
 </dialog>

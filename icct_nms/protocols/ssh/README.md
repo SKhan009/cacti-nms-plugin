@@ -14,4 +14,11 @@ Use the real web group (often `www-data` on Debian/Ubuntu). The adapter creates 
 
 4. Review the generated service and `guacamole/nms-guacd.service` for the approved binary location and matching local port. Start them after settings match; verify Installation Checks and a real SSH device session.
 
-The patched native build and HTTPS setup are not automatically installed by the common package installer yet. The Install action displays this guide without claiming installation has completed.
+The pinned native source and strict-auth patch are now bundled. Build on the matching Linux OS/CPU as a regular user:
+
+```sh
+python3 installation/cli/native.py build --component guacamole-strict --bundle /tmp/guacamole-native
+sudo python3 installation/cli/native.py install --bundle /tmp/guacamole-native --web-group apache
+```
+
+The verified native binary is installed at `/opt/icct-nms/native/guacamole-1.6.0/sbin/guacd`. It can also be included in a complete offline release through `package.py --native-bundle /tmp/guacamole-native`; the release installer installs it automatically. Build prerequisites are listed in `installation/README.md`. Native dependency installation does not replace a running custom service. Point the dedicated Guacamole service to the verified binary when configuring the actual HTTPS origin, then test a real SSH session.

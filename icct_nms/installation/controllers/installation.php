@@ -15,6 +15,7 @@ try {
         readfile(dirname(__DIR__,2).'/protocols/ssh/README.md');
         exit();
     }
+    $nativeCommand = 'python3 '.escapeshellarg(dirname(__DIR__).'/cli/native.py');
     $checks = icct_nms_installation_checks();
     $title = 'Installation Checks';
     $command =

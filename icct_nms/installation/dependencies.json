@@ -35,7 +35,12 @@
       "hping3",
       "iperf3",
       "netperf",
-      "acl"
+      "acl",
+      "libssh2",
+      "libjpeg-turbo",
+      "libuuid",
+      "libstdc++",
+      "libcap"
     ],
     "debian": [
       "php-cli",
@@ -58,7 +63,12 @@
       "hping3",
       "iperf3",
       "netperf",
-      "acl"
+      "acl",
+      "libssh2-1",
+      "libjpeg62-turbo",
+      "libuuid1",
+      "libstdc++6",
+      "libcap2-bin"
     ]
   },
   "features": {
@@ -137,6 +147,7 @@
     "SSH": {
       "binaries": {
         "SSH terminal backend": [
+          "/opt/icct-nms/native/guacamole-1.6.0/sbin/guacd",
           "guacd",
           "/opt/nms-guacamole/1.6.0/sbin/guacd"
         ]
@@ -182,7 +193,8 @@
         ],
         "Pathchar": [
           "pchar",
-          "pathchar"
+          "pathchar",
+          "/opt/icct-nms/native/pchar-1.5/sbin/pchar"
         ]
       },
       "services": [
@@ -274,6 +286,7 @@
         "debian": []
       },
       "binaries": [
+        "/opt/icct-nms/native/guacamole-1.6.0/sbin/guacd",
         "guacd",
         "/opt/nms-guacamole/1.6.0/sbin/guacd"
       ],

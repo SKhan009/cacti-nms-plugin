@@ -38,7 +38,7 @@ def source_files(root):
     return files
 
 
-def build_archive(root, output, bundle=None):
+def build_archive(root, output, bundle=None, native_bundles=None):
     root, output = Path(root).resolve(), Path(output).resolve()
     if root in output.parents:
         raise ValueError('Release archives must be written outside the plugin directory.')
@@ -52,7 +52,24 @@ def build_archive(root, output, bundle=None):
         bundle = Path(bundle).resolve()
         target = json.loads((bundle / 'bundle.json').read_text())['target']
         packages = setup.verify_bundle(bundle, target)
-    manifest = {'format': 1, 'target': target, 'files': {}}
+    native_files, native_components = [], []
+    if native_bundles:
+        native_spec = importlib.util.spec_from_file_location('icct_package_native', root / 'installation/cli/native.py')
+        native = importlib.util.module_from_spec(native_spec)
+        native_spec.loader.exec_module(native)
+        for directory in native_bundles:
+            directory = Path(directory).resolve()
+            native_target = json.loads((directory / 'native.json').read_text())['target']
+            if target and native_target != target:
+                raise ValueError('Native and OS package bundles target different systems.')
+            data = native.verify_bundle(directory, native_target)
+            component = data['component']
+            if component in native_components:
+                raise ValueError('Duplicate native component.')
+            native_components.append(component)
+            for name in ['native.json'] + ['payload/' + name for name in data['files']]:
+                native_files.append((directory / name, 'native/' + component + '/' + name))
+    manifest = {'format': 1, 'target': target, 'native_components': native_components, 'files': {}}
     output.parent.mkdir(parents=True, exist_ok=True)
     try:
         with zipfile.ZipFile(output, 'x', compression=zipfile.ZIP_DEFLATED) as archive:
@@ -67,6 +84,9 @@ def build_archive(root, output, bundle=None):
                 name = 'packages/' + path.name
                 archive.write(path, name)
                 manifest['files'][name] = hashlib.sha256(path.read_bytes()).hexdigest()
+            for path, name in native_files:
+                archive.write(path, name)
+                manifest['files'][name] = hashlib.sha256(path.read_bytes()).hexdigest()
             archive.writestr('release.json', json.dumps(manifest, indent=2) + '\n')
             archive.writestr('INSTALL.txt', 'Extract outside the web root.\nRead-only verification: python3 install.py --cacti-root /path/to/cacti --plan\nInstall: sudo python3 install.py --cacti-root /path/to/cacti\nSource-only archives require --online or --no-packages.\nPackages stay outside the web root. Existing local configuration and uploads are retained.\nSHA-256 hashes detect transport changes; obtain this archive from your trusted build system.\n')
     except BaseException:
@@ -79,8 +99,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', required=True)
     parser.add_argument('--bundle')
+    parser.add_argument('--native-bundle', action='append', default=[])
     args = parser.parse_args()
-    result = build_archive(ROOT, args.output, args.bundle)
+    result = build_archive(ROOT, args.output, args.bundle, args.native_bundle)
     print(json.dumps({'archive': str(Path(args.output).resolve()), 'files': len(result['files']), 'target': result['target']}, indent=2))
 
 

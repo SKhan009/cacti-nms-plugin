@@ -22,7 +22,7 @@ def verify_release(directory):
         raise ValueError('Invalid release manifest.')
     for name, digest in manifest['files'].items():
         parts = PurePosixPath(name).parts
-        if not parts or name.startswith('/') or '..' in parts or '\\' in name or parts[0] not in ('icct_nms', 'packages', 'install.py'):
+        if not parts or name.startswith('/') or '..' in parts or '\\' in name or parts[0] not in ('icct_nms', 'packages', 'native', 'install.py'):
             raise ValueError('Invalid release path: ' + name)
         path = directory / name
         if any(parent.is_symlink() for parent in [path, *path.parents] if parent != directory.parent):
@@ -116,6 +116,17 @@ def main():
         setup.verify_bundle(directory / 'packages', target)
     elif args.online == args.no_packages:
         raise ValueError('Source-only release requires either --online or --no-packages.')
+    components = manifest.get('native_components', [])
+    if components and not args.application_only:
+        native_spec = importlib.util.spec_from_file_location('icct_release_native', directory / 'icct_nms/installation/cli/native.py')
+        native = importlib.util.module_from_spec(native_spec)
+        native_spec.loader.exec_module(native)
+        for component in components:
+            if component not in native.PROFILES or 'native/'+component+'/native.json' not in manifest['files']:
+                raise ValueError('Invalid release native component.')
+            data = native.verify_bundle(directory / 'native' / component, target)
+            if data['component'] != component:
+                raise ValueError('Native component does not match release directory.')
     plan = {'destination': str(destination), 'target': target, 'offline': bool(manifest['target']), 'source_files': sum(name.startswith('icct_nms/') for name in manifest['files'])}
     if args.plan:
         print(json.dumps(plan, indent=2))
@@ -132,6 +143,11 @@ def main():
         command += ['--application-only']
     else:
         command += ['--bundle', str(directory / 'packages')] if manifest['target'] else (['--online'] if args.online else ['--no-packages'])
+    if not args.application_only:
+        for component in manifest.get('native_components', []):
+            if component not in ('guacamole-strict','pathchar'):
+                raise ValueError('Unsupported native component.')
+            command += ['--native-bundle',str(directory / 'native' / component)]
     for name in ['web_user','web_group']:
         if getattr(args,name):
             command.extend(['--'+name.replace('_','-'),getattr(args,name)])

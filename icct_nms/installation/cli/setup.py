@@ -4,6 +4,7 @@ import argparse
 import datetime
 import grp
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -279,6 +280,7 @@ def main():
         help="Existing PHP/collector account; defaults apache on RHEL, www-data on Debian",
     )
     parser.add_argument("--web-group")
+    parser.add_argument("--native-bundle", action="append", default=[], help="Verified native dependency bundle; may be repeated")
     parser.add_argument("--component", choices=list(MANIFEST["optional_components"]), help="Install or bundle one optional dependency only; no plugin or service configuration")
     parser.add_argument('--application-only', action='store_true', help='Install application pages/schema only; leave OS packages and services managed externally')
     parser.add_argument(
@@ -292,7 +294,9 @@ def main():
         help="Use packages already provisioned by the administrator",
     )
     args = parser.parse_args()
-    if args.application_only and (args.bundle or args.online or args.no_packages):
+    if args.component and args.native_bundle:
+        parser.error('--component cannot be combined with native bundles.')
+    if args.application_only and (args.bundle or args.online or args.no_packages or args.native_bundle):
         parser.error('--application-only cannot be combined with package options.')
     if args.online and (args.bundle or args.no_packages):
         parser.error("--online cannot be combined with --bundle or --no-packages.")
@@ -318,6 +322,7 @@ def main():
         group=group,
         packages=component_packages(target, args.component),
         component=args.component,
+        native_bundles=args.native_bundle,
         offline=not args.online,
         pending=MANIFEST["pending_features"],
         additional=[
@@ -328,6 +333,8 @@ def main():
         ],
     )
     if args.action == "plan":
+        for directory in args.native_bundle:
+            subprocess.run([sys.executable, str(PLUGIN / 'installation/cli/native.py'), 'verify', '--bundle', directory], check=True, stdout=subprocess.DEVNULL)
         if args.bundle:
             verify_bundle(args.bundle, target, args.component)
         print(json.dumps(plan, indent=2))
@@ -340,6 +347,8 @@ def main():
         install_packages(target, args.bundle, args.online, args.component)
         print('Dependency installed. Application integration and service configuration are separate.')
         return
+    for directory in args.native_bundle:
+        run([sys.executable, PLUGIN / 'installation/cli/native.py', 'verify', '--bundle', directory])
     php = preflight(root)
     if not args.application_only and not args.no_packages:
         install_packages(target, args.bundle, args.online)
@@ -356,6 +365,8 @@ def main():
     if args.application_only:
         print('Application pages/schema installed through native Cacti. OS packages and services were not changed.')
         return
+    for directory in args.native_bundle:
+        run([sys.executable, PLUGIN / 'installation/cli/native.py', 'install', '--bundle', directory, '--web-group', group])
     services(root, user, group)
     run([php, PLUGIN / "installation/cli/check.php", "--save"])
     print(
