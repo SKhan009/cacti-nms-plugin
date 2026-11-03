@@ -38,7 +38,7 @@ def source_files(root):
     return files
 
 
-def build_archive(root, output, bundle=None, native_bundles=None):
+def build_archive(root, output, bundle=None, native_bundles=None, component_bundles=None):
     root, output = Path(root).resolve(), Path(output).resolve()
     if root in output.parents:
         raise ValueError('Release archives must be written outside the plugin directory.')
@@ -52,6 +52,18 @@ def build_archive(root, output, bundle=None, native_bundles=None):
         bundle = Path(bundle).resolve()
         target = json.loads((bundle / 'bundle.json').read_text())['target']
         packages = setup.verify_bundle(bundle, target)
+    component_files, package_components = [], []
+    for directory in component_bundles or []:
+        directory = Path(directory).resolve()
+        component_target = json.loads((directory / 'bundle.json').read_text())['target']
+        if target is None or component_target != target:
+            raise ValueError('Component bundles require a base bundle for the same OS and CPU.')
+        component = setup.verify_component_bundle(directory, target)
+        if component in package_components:
+            raise ValueError('Duplicate package component.')
+        package_components.append(component)
+        for path in setup.verify_bundle(directory, target, component) + [directory / 'bundle.json']:
+            component_files.append((path, 'components/' + component + '/' + path.name))
     native_files, native_components = [], []
     if native_bundles:
         native_spec = importlib.util.spec_from_file_location('icct_package_native', root / 'installation/cli/native.py')
@@ -69,7 +81,7 @@ def build_archive(root, output, bundle=None, native_bundles=None):
             native_components.append(component)
             for name in ['native.json'] + ['payload/' + name for name in data['files']]:
                 native_files.append((directory / name, 'native/' + component + '/' + name))
-    manifest = {'format': 1, 'target': target, 'native_components': native_components, 'files': {}}
+    manifest = {'format': 1, 'target': target, 'native_components': native_components, 'package_components': package_components, 'files': {}}
     output.parent.mkdir(parents=True, exist_ok=True)
     try:
         with zipfile.ZipFile(output, 'x', compression=zipfile.ZIP_DEFLATED) as archive:
@@ -84,7 +96,7 @@ def build_archive(root, output, bundle=None, native_bundles=None):
                 name = 'packages/' + path.name
                 archive.write(path, name)
                 manifest['files'][name] = hashlib.sha256(path.read_bytes()).hexdigest()
-            for path, name in native_files:
+            for path, name in native_files + component_files:
                 archive.write(path, name)
                 manifest['files'][name] = hashlib.sha256(path.read_bytes()).hexdigest()
             archive.writestr('release.json', json.dumps(manifest, indent=2) + '\n')
@@ -99,9 +111,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', required=True)
     parser.add_argument('--bundle')
+    parser.add_argument('--component-bundle', action='append', default=[])
     parser.add_argument('--native-bundle', action='append', default=[])
     args = parser.parse_args()
-    result = build_archive(ROOT, args.output, args.bundle, args.native_bundle)
+    result = build_archive(ROOT, args.output, args.bundle, args.native_bundle, args.component_bundle)
     print(json.dumps({'archive': str(Path(args.output).resolve()), 'files': len(result['files']), 'target': result['target']}, indent=2))
 
 

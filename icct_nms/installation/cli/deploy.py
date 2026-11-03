@@ -22,7 +22,7 @@ def verify_release(directory):
         raise ValueError('Invalid release manifest.')
     for name, digest in manifest['files'].items():
         parts = PurePosixPath(name).parts
-        if not parts or name.startswith('/') or '..' in parts or '\\' in name or parts[0] not in ('icct_nms', 'packages', 'native', 'install.py'):
+        if not parts or name.startswith('/') or '..' in parts or '\\' in name or parts[0] not in ('icct_nms', 'packages', 'native', 'components', 'install.py'):
             raise ValueError('Invalid release path: ' + name)
         path = directory / name
         if any(parent.is_symlink() for parent in [path, *path.parents] if parent != directory.parent):
@@ -116,6 +116,14 @@ def main():
         setup.verify_bundle(directory / 'packages', target)
     elif args.online == args.no_packages:
         raise ValueError('Source-only release requires either --online or --no-packages.')
+    package_components = manifest.get('package_components', [])
+    if not args.application_only:
+        for component in package_components:
+            if component not in setup.MANIFEST['optional_components'] or 'components/'+component+'/bundle.json' not in manifest['files']:
+                raise ValueError('Invalid package component in release.')
+            observed = setup.verify_component_bundle(directory / 'components' / component, target)
+            if observed != component:
+                raise ValueError('Package component does not match release directory.')
     components = manifest.get('native_components', [])
     if components and not args.application_only:
         native_spec = importlib.util.spec_from_file_location('icct_release_native', directory / 'icct_nms/installation/cli/native.py')
@@ -127,7 +135,7 @@ def main():
             data = native.verify_bundle(directory / 'native' / component, target)
             if data['component'] != component:
                 raise ValueError('Native component does not match release directory.')
-    plan = {'destination': str(destination), 'target': target, 'offline': bool(manifest['target']), 'source_files': sum(name.startswith('icct_nms/') for name in manifest['files'])}
+    plan = {'destination': str(destination), 'target': target, 'offline': bool(manifest['target']), 'package_components':package_components, 'source_files': sum(name.startswith('icct_nms/') for name in manifest['files'])}
     if args.plan:
         print(json.dumps(plan, indent=2))
         return
@@ -144,6 +152,8 @@ def main():
     else:
         command += ['--bundle', str(directory / 'packages')] if manifest['target'] else (['--online'] if args.online else ['--no-packages'])
     if not args.application_only:
+        for component in package_components:
+            command += ['--component-bundle',str(directory / 'components' / component)]
         for component in manifest.get('native_components', []):
             if component not in ('guacamole-strict','pathchar'):
                 raise ValueError('Unsupported native component.')

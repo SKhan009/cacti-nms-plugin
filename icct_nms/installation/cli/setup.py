@@ -4,7 +4,6 @@ import argparse
 import datetime
 import grp
 import hashlib
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -88,6 +87,14 @@ def verify_bundle(directory, target, component=None):
     if not files:
         raise ValueError("Offline bundle has no packages.")
     return sorted(files)
+
+
+def verify_component_bundle(directory, target):
+    component = json.loads((Path(directory) / 'bundle.json').read_text()).get('component')
+    if component not in MANIFEST['optional_components']:
+        raise ValueError('Unknown component bundle.')
+    verify_bundle(directory, target, component)
+    return component
 
 
 def download_bundle(directory, target, component=None):
@@ -280,6 +287,8 @@ def main():
         help="Existing PHP/collector account; defaults apache on RHEL, www-data on Debian",
     )
     parser.add_argument("--web-group")
+    parser.add_argument("--all-components", action="store_true", help="Install all available protocol dependency profiles")
+    parser.add_argument("--component-bundle", action="append", default=[], help="Offline optional dependency bundle; may be repeated")
     parser.add_argument("--native-bundle", action="append", default=[], help="Verified native dependency bundle; may be repeated")
     parser.add_argument("--component", choices=list(MANIFEST["optional_components"]), help="Install or bundle one optional dependency only; no plugin or service configuration")
     parser.add_argument('--application-only', action='store_true', help='Install application pages/schema only; leave OS packages and services managed externally')
@@ -294,12 +303,16 @@ def main():
         help="Use packages already provisioned by the administrator",
     )
     args = parser.parse_args()
-    if args.component and args.native_bundle:
-        parser.error('--component cannot be combined with native bundles.')
-    if args.application_only and (args.bundle or args.online or args.no_packages or args.native_bundle):
+    if args.component and (args.native_bundle or args.component_bundle):
+        parser.error('--component cannot be combined with additional bundles.')
+    if args.application_only and (args.bundle or args.online or args.no_packages or args.native_bundle or args.component_bundle or args.all_components):
         parser.error('--application-only cannot be combined with package options.')
     if args.online and (args.bundle or args.no_packages):
         parser.error("--online cannot be combined with --bundle or --no-packages.")
+    if args.all_components and (args.no_packages or args.component):
+        parser.error('--all-components cannot be combined with --component or --no-packages.')
+    if args.no_packages and args.component_bundle:
+        parser.error('--no-packages cannot install component packages.')
     target = os_info()
     if args.action == 'bundle':
         if os.geteuid() != 0:
@@ -315,6 +328,17 @@ def main():
         r"[a-z_][a-z0-9_-]*", group
     ):
         raise ValueError("Invalid service user/group.")
+    component_bundles = {}
+    for directory in args.component_bundle:
+        component = verify_component_bundle(directory, target)
+        if component in component_bundles:
+            raise ValueError('Duplicate component bundle.')
+        component_bundles[component] = directory
+    selected_components = list(component_bundles)
+    if args.all_components:
+        selected_components = [name for name, spec in MANIFEST['optional_components'].items() if spec['packages'][target['family']]]
+        if not args.online and set(selected_components) - set(component_bundles):
+            raise ValueError('Offline --all-components requires bundles for: '+', '.join(sorted(set(selected_components)-set(component_bundles))))
     plan = dict(
         target=target,
         cacti=str(root),
@@ -323,6 +347,8 @@ def main():
         packages=component_packages(target, args.component),
         component=args.component,
         native_bundles=args.native_bundle,
+        component_bundles=component_bundles,
+        selected_components=selected_components,
         offline=not args.online,
         pending=MANIFEST["pending_features"],
         additional=[
@@ -354,6 +380,9 @@ def main():
         install_packages(target, args.bundle, args.online)
     elif args.bundle:
         raise ValueError("--no-packages cannot be combined with --bundle.")
+    for component in selected_components:
+        directory = component_bundles.get(component)
+        install_packages(target, directory, online=directory is None and args.online, component=component)
     # Use native Cacti lifecycle APIs; never grant all user realms or create core devices.
     php = shutil.which("php")
     if not php:
@@ -370,7 +399,7 @@ def main():
     services(root, user, group)
     run([php, PLUGIN / "installation/cli/check.php", "--save"])
     print(
-        "Common services installed and checked. Open ICCT NMS > Installation Checks for remaining requirements. SSH, Pathchar and unimplemented backends are not claimed ready."
+        "Selected packages and common services installed and checked. Open Settings > Installation Checks for feature readiness and remaining configuration."
     )
 
 

@@ -100,6 +100,26 @@ class BundleSafety(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'package list'):
                 setup.verify_bundle(directory, target, 'redis')
 
+    def test_component_bundle_is_bound_to_profile_and_checked_before_mutation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target,data = self.fixture(directory)
+            data['component'] = 'redis'
+            data['packages'] = setup.component_packages(target,'redis')
+            (Path(directory)/'bundle.json').write_text(json.dumps(data))
+            self.assertEqual(setup.verify_component_bundle(directory,target),'redis')
+            (Path(directory)/'test.rpm').write_bytes(b'changed')
+            with patch.object(setup.sys,'argv',['setup.py','install','--online','--component-bundle',directory]), patch.object(setup,'os_info',return_value=target), patch.object(setup,'validate_root',return_value=Path('/cacti')), patch.object(setup,'run') as run:
+                with self.assertRaisesRegex(ValueError,'changed'):
+                    setup.main()
+                run.assert_not_called()
+
+    def test_complete_offline_setup_rejects_missing_profiles_before_packages(self):
+        target=dict(family='rhel',id='rhel',version='9.8',arch='aarch64')
+        with patch.object(setup.sys,'argv',['setup.py','install','--all-components','--bundle','/base']), patch.object(setup,'os_info',return_value=target), patch.object(setup,'validate_root',return_value=Path('/cacti')), patch.object(setup,'run') as run:
+            with self.assertRaisesRegex(ValueError,'requires bundles'):
+                setup.main()
+            run.assert_not_called()
+
     def test_online_requires_explicit_selection(self):
         with patch.object(setup, 'run') as run:
             setup.install_packages(dict(family='rhel'), None, online=True)

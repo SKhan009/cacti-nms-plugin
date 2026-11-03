@@ -1,4 +1,5 @@
 import importlib.util
+import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -45,6 +46,28 @@ class ReleasePackaging(unittest.TestCase):
             (target / 'icct_nms/setup.php').write_text('changed after transport')
             with self.assertRaisesRegex(ValueError, 'changed'):
                 deploy.verify_release(target)
+
+    def test_optional_packages_travel_with_release_and_reject_another_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base=Path(directory);root=base/'source';self.fixture(root)
+            target=dict(family='rhel',id='rhel',version='9.8',arch='aarch64')
+            bundles=[]
+            for component in [None,'redis']:
+                folder=base/(component or 'base');folder.mkdir();bundles.append(folder)
+                payload=folder/'fixture.rpm';payload.write_bytes(b'package fixture, not executed')
+                manifest=dict(format=1,target=target,component=component,packages=package.setup.component_packages(target,component),files={'fixture.rpm':hashlib.sha256(payload.read_bytes()).hexdigest()})
+                (folder/'bundle.json').write_text(json.dumps(manifest))
+            archive=base/'release.zip'
+            result=package.build_archive(root,archive,bundles[0],component_bundles=[bundles[1]])
+            self.assertEqual(result['package_components'],['redis'])
+            with zipfile.ZipFile(archive) as stream:
+                self.assertIn('components/redis/bundle.json',stream.namelist())
+                stream.extractall(base/'unpacked')
+            deploy.verify_release(base/'unpacked')
+            manifest['target']=dict(target,arch='x86_64')
+            (bundles[1]/'bundle.json').write_text(json.dumps(manifest))
+            with self.assertRaisesRegex(ValueError,'same OS and CPU'):
+                package.build_archive(root,base/'wrong.zip',bundles[0],component_bundles=[bundles[1]])
 
     def test_source_and_destination_symlinks_are_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
