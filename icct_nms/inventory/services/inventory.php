@@ -3,6 +3,8 @@
  * Read saved inventory and enforce native device access before exposing records.
  */
 
+require_once __DIR__ . '/backend/identity.php';
+
 /**
  * Return nondeleted devices allowed by Cacti, including authorized disabled devices.
  */
@@ -40,7 +42,7 @@ function icct_nms_inventory()
         $row['polling_interval'] = (int) read_config_option('poller_interval');
         $allowed[] = $row;
     }
-    return $allowed;
+    return icct_backend_identity_inventory_rows($allowed);
 }
 
 /**

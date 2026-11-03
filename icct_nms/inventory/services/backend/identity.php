@@ -10,13 +10,13 @@ function icct_backend_identity_mac($value)
 
 function icct_backend_identity_signature($host)
 {
-    return hash('sha256', json_encode([$host['hostname'], $host['snmp_version'], $host['snmp_port'], $host['snmp_context'], $host['host_template_id'], $host['poller_id'], $host['snmp_username'], hash('sha256', $host['snmp_community'] . "\0" . $host['snmp_password'] . "\0" . $host['snmp_priv_passphrase'])]));
+    return hash('sha256', json_encode(['identity-v2', $host['hostname'], $host['snmp_version'], $host['snmp_port'], $host['snmp_context'], $host['host_template_id'], $host['poller_id'], $host['snmp_username'], hash('sha256', $host['snmp_community'] . "\0" . $host['snmp_password'] . "\0" . $host['snmp_priv_passphrase'])]));
 }
 
 /** Loopback devices describe the assigned collector itself. */
-function icct_backend_identity_local_endpoint($hostname)
+function icct_backend_identity_local_endpoint($hostname, $port = 161)
 {
-    return in_array(strtolower(trim((string)$hostname)), ['localhost', 'localhost.', '127.0.0.1', '::1'], true);
+    return (int)$port === 161 && in_array(strtolower(trim((string)$hostname)), ['localhost', 'localhost.', '127.0.0.1', '::1'], true);
 }
 
 /** Pick the interface on the lowest-metric active default route, not an arbitrary NIC. */
@@ -49,9 +49,34 @@ function icct_backend_identity_local_mac()
 function icct_backend_identity_observed($host)
 {
     $row = db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?', ['identity_snapshot_' . (int) $host['id']]);
+    return icct_backend_identity_snapshot_values($host, $row);
+}
+
+function icct_backend_identity_snapshot_values($host, $row)
+{
     $snapshot = json_decode((string) $row, true);
     if (!is_array($snapshot) || ($snapshot['signature'] ?? '') !== icct_backend_identity_signature($host) || (int) ($snapshot['time'] ?? 0) > time() || time() - (int) ($snapshot['time'] ?? 0) > 2 * (int) read_config_option('poller_interval')) return [];
     return $snapshot['values'] ?? [];
+}
+
+/** Enrich only authorized list rows; credentials never enter the returned UI data. */
+function icct_backend_identity_inventory_rows($rows)
+{
+    if (!$rows) return $rows;
+    $ids = array_map('intval', array_column($rows, 'id'));
+    $marks = implode(',', array_fill(0, count($ids), '?'));
+    $hosts = array_column(db_fetch_assoc_prepared("SELECT * FROM host WHERE deleted='' AND id IN ($marks)", $ids), null, 'id');
+    $keys = array_map(function($id){return 'identity_snapshot_'.$id;}, $ids);
+    $snapshots = array_column(db_fetch_assoc_prepared("SELECT meta_key,meta_value FROM plugin_icct_nms_meta WHERE meta_key IN ($marks)", $keys), 'meta_value', 'meta_key');
+    foreach ($rows as &$row) {
+        $values = isset($hosts[$row['id']]) ? icct_backend_identity_snapshot_values($hosts[$row['id']], $snapshots['identity_snapshot_'.$row['id']] ?? '') : [];
+        $row['serial_number'] = trim((string)($row['manual_serial_number'] ?? '')) ?: ($values['serial_number'] ?? '');
+        foreach (['mac_address','chassis_id'] as $field) {
+            if (trim((string)($row[$field] ?? '')) === '') $row[$field] = $values[$field] ?? '';
+        }
+    }
+    unset($row);
+    return $rows;
 }
 
 /** Use Cacti SNMP with saved host credentials on the assigned collector only. */
@@ -67,20 +92,20 @@ function icct_backend_collect_identity($only_host_id = 0)
             return cacti_snmp_get($host['hostname'], $host['snmp_community'], $oid, $host['snmp_version'], $host['snmp_username'], $host['snmp_password'], $host['snmp_auth_protocol'], $host['snmp_priv_passphrase'], $host['snmp_priv_protocol'], $host['snmp_context'], $host['snmp_port'], $host['snmp_timeout'], (int) read_config_option('snmp_retries'), 'ICCT Identity', $host['snmp_engine_id'], $format);
         };
         $values = [];
-        if (icct_backend_identity_local_endpoint($host['hostname'])) {
+        if (icct_backend_identity_local_endpoint($host['hostname'], $host['snmp_port'])) {
             $mac = icct_backend_identity_local_mac();
             if ($mac !== '') $values['mac_address'] = $mac;
         }
         // Test the configured endpoint first; an IP alone is not protocol configuration.
         if ((int)$host['snmp_version'] > 0 && !icct_backend_inventory_snmp_failed($get('.1.3.6.1.2.1.1.3.0'))) {
-            $mapped = db_fetch_assoc_prepared("SELECT inventory_key,observed_value FROM plugin_icct_nms_device_inventory WHERE host_id=? AND inventory_key IN ('mac_address','serial_number','chassis_id') AND status IN ('ok','changed') AND last_success>=DATE_SUB(NOW(), INTERVAL 2 MINUTE)", [$host['id']]);
+            $mapped = db_fetch_assoc_prepared("SELECT inventory_key,observed_value FROM plugin_icct_nms_device_inventory WHERE host_id=? AND inventory_key IN ('mac_address','serial_number','chassis_id') AND status IN ('ok','changed') AND last_success>=DATE_SUB(NOW(), INTERVAL ? SECOND)", [$host['id'], max(120, 2 * (int)read_config_option('poller_interval'))]);
             foreach ($mapped as $row) {
                 $value = trim((string) $row['observed_value']);
                 if ($row['inventory_key'] === 'mac_address') $value = icct_backend_identity_mac($value);
                 if ($value !== '') $values[$row['inventory_key']] = $value;
             }
             // Resolve the interface owning the configured IPv4 address, rather than guessing an interface.
-            if (empty($values['mac_address']) && !icct_backend_identity_local_endpoint($host['hostname'])) {
+            if (empty($values['mac_address']) && !icct_backend_identity_local_endpoint($host['hostname'], $host['snmp_port'])) {
                 $addresses = filter_var($host['hostname'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) ? [$host['hostname']] : (filter_var($host['hostname'], FILTER_VALIDATE_IP) ? [] : (gethostbynamel($host['hostname']) ?: []));
                 $macs = [];
                 foreach (array_unique($addresses) as $ip) {

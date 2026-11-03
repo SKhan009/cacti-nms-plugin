@@ -129,7 +129,7 @@
                 </td>
                 <td><span class="device-status <?= icct_nms_status_class($d["status_label"]) ?>"><?= icct_nms_h($d["status_label"]) ?></span></td>
                 <td>
-                    <?= icct_nms_h($d["manual_serial_number"]) ?>
+                    <?= icct_nms_h($d["serial_number"]) ?>
                     <small><?= icct_nms_h($d["mac_address"]) ?></small>
                 </td>
                 <td><?= icct_nms_h($d["hostname"]) ?></td>

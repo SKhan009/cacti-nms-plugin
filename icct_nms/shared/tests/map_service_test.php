@@ -24,6 +24,10 @@ function db_fetch_row_prepared($sql,$args){
  throw new Exception('Unexpected row query');
 }
 function db_fetch_cell_prepared($sql,$args){return '';}
+function db_fetch_assoc_prepared($sql,$args){
+ if(str_contains($sql,'FROM host') || str_contains($sql,'identity_snapshot') || str_contains($sql,'SELECT meta_key,meta_value'))return [];
+ throw new Exception('Unexpected list identity query');
+}
 foreach([[0,0],[91,1],[0,181],[null,null],['bad',20],[INF,2]] as $point)if(icct_nms_map_coordinates(...$point)!==null)throw new Exception('Invalid coordinate accepted');
 if(icct_nms_map_coordinates(0,10)!==[0.0,10.0])throw new Exception('Equator rejected');
 $data=icct_nms_map_data();

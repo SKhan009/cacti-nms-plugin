@@ -106,7 +106,7 @@ function icct_nms_scan_rows($allowedHosts) {
         if($host&&!isset($allowedHosts[$host]))continue;
         $methods=[];if(!empty($e['icmp']))$methods[]='ICMP';if(!empty($e['snmp']))$methods[]='SNMP';
         if(!empty($e['ports']['open']))$methods[]='TCP';
-        $r['ambiguous']=count($matched)>1;$r['host_id']=$host;$r['name']=$e['sysName']??($e['hostname']??$r['address']);
+        $r['ambiguous']=count($matched)>1;$r['host_id']=$host;$r['name']=$host ? $allowedHosts[$host]['description'] : (trim((string)($e['sysName']??'')) ?: (trim((string)($e['hostname']??'')) ?: $r['address']));
         $r['method']=$methods?implode(' / ',$methods):'IP scan';$r['reachable']=!empty($e['reachable']);
         $r['detail']='Device observation; physical link unconfirmed';
         if(!empty($e['ports']['open']))$r['detail'].=' · Open TCP: '.implode(', ',$e['ports']['open']);
