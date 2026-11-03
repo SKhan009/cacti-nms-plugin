@@ -2,6 +2,10 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Inventory designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
+## Version 1.4.1
+
+Installation Checks lists required PHP extensions, local binaries, bundled assets and worker states behind Cacti Installation/Upgrades permission. The explicit Linux administrator installer provides a read-only plan, native plugin installation, package provisioning, dynamic service paths/accounts, and checksummed offline package bundles tied to the target OS/release/architecture. See [installation instructions](installation/README.md). SSH/HTTPS, Pathchar and currently unimplemented NTP/TACACS+ backends remain explicit requirements; package installation alone does not imply all protocols are ready.
+
 ## Version 1.3.5
 
 NetFlow tooltips use concise purpose and input-range guidance, with short examples where useful.
@@ -78,7 +82,7 @@ Upgrade through Cacti Plugin Management after copying the plugin so the additive
 3. Grant the **View ICCT NMS Inventory** realm. Cacti's existing device-management permission and device ACLs remain authoritative.
 4. Open **ICCT NMS → Inventory**. On the configured VM: `http://127.0.0.1:8080/cacti/plugins/icct_nms/inventory/controllers/inventory.php`.
 
-Lifecycle setup creates the 40 owned tables from `shared/database/schema.sql`. Normal requests never create, repair or populate tables. Uninstall retains ICCT settings and all Cacti devices for a later reinstall. New installations contain no sample equipment. Native numeric SNMP polling, devices, sites, collectors, templates, graphs and RRD data stay under Cacti's ownership.
+Lifecycle setup creates the 49 owned tables from `shared/database/schema.sql`. Normal requests never create, repair or populate tables. Uninstall retains ICCT settings and all Cacti devices for a later reinstall. New installations contain no sample equipment. Native numeric SNMP polling, devices, sites, collectors, templates, graphs and RRD data stay under Cacti's ownership.
 
 ## Files
 

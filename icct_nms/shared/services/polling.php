@@ -35,6 +35,11 @@ function icct_nms_poller_bottom()
     } catch (Throwable $error) {cacti_log('ICCT discovery dispatcher: '.$error->getMessage(),false,'ICCT NMS');}
 
     try {
+        require_once __DIR__.'/../../installation/services/checks.php';
+        icct_nms_installation_save_services();
+    } catch (Throwable $error) {cacti_log('ICCT installation checks: '.$error->getMessage(),false,'ICCT NMS');}
+
+    try {
         require_once __DIR__.'/../../inventory/discovery/services/inventory_events.php';
         icct_nms_inventory_observe((int)$config['poller_id']);
     } catch (Throwable $error) {cacti_log('ICCT inventory events: '.$error->getMessage(),false,'ICCT NMS');}

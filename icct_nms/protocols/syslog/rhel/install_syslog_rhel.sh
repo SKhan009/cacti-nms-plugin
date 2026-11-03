@@ -22,14 +22,14 @@ fi
 for cmd in rsyslogd systemctl php ss awk grep sed stat install logger; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "Missing required command: $cmd" >&2; exit 1; }
 done
-if ! rpm -q rsyslog >/dev/null 2>&1; then
+if ! command -v rsyslogd >/dev/null 2>&1; then
   echo "rsyslog package is not installed. Install it from your approved offline RHEL 9.4 BaseOS/AppStream media first." >&2
   exit 1
 fi
 
-WEB_USER="$(ps -eo user=,comm= | awk '$2 ~ /^httpd$/ && $1 != "root" {print $1; exit}')"
+WEB_USER="${WEB_USER:-$(ps -eo user=,comm= | awk '$2 ~ /^httpd$/ && $1 != "root" {print $1; exit}')}"
 WEB_USER="${WEB_USER:-apache}"
-WEB_GROUP="$(id -gn "$WEB_USER" 2>/dev/null || echo apache)"
+WEB_GROUP="${WEB_GROUP:-$(id -gn "$WEB_USER" 2>/dev/null || echo apache)}"
 
 echo "Cacti root : $CACTI_ROOT"
 echo "Web account: $WEB_USER:$WEB_GROUP"
@@ -38,7 +38,7 @@ install -d -o root -g "$WEB_GROUP" -m 0750 "$SPOOL_DIR"
 touch "$SPOOL_FILE"
 chown root:"$WEB_GROUP" "$SPOOL_FILE"
 chmod 0640 "$SPOOL_FILE"
-restorecon -RF "$SPOOL_DIR" >/dev/null 2>&1 || true
+if command -v restorecon >/dev/null 2>&1; then restorecon -RF "$SPOOL_DIR"; fi
 
 STAMP="$(date +%Y%m%d%H%M%S)"
 CONF_BACKUP=""
@@ -156,16 +156,19 @@ fi
 sed -e "s|@CACTI_ROOT@|$CACTI_ROOT|g" \
     -e "s|@WEB_USER@|$WEB_USER|g" \
     -e "s|@WEB_GROUP@|$WEB_GROUP|g" \
+    -e "s|/usr/bin/php|${PHP_BINARY:-/usr/bin/php}|g" \
     "$PLUGIN/protocols/syslog/rhel/icct-nms-syslog-worker.service.in" \
     > /etc/systemd/system/icct-nms-syslog-worker.service
 
 sed -e "s|@CACTI_ROOT@|$CACTI_ROOT|g" \
     -e "s|@WEB_USER@|$WEB_USER|g" \
     -e "s|@WEB_GROUP@|$WEB_GROUP|g" \
+    -e "s|/usr/bin/php|${PHP_BINARY:-/usr/bin/php}|g" \
     "$PLUGIN/protocols/syslog/rhel/icct-nms-syslog-retention.service.in" \
     > /etc/systemd/system/icct-nms-syslog-retention.service
 cp "$PLUGIN/protocols/syslog/rhel/icct-nms-syslog-retention.timer" /etc/systemd/system/
 sed -e "s|@WEB_GROUP@|$WEB_GROUP|g" \
+    -e "s|/usr/bin/php|${PHP_BINARY:-/usr/bin/php}|g" \
     "$PLUGIN/protocols/syslog/rhel/icct-nms-syslog.logrotate.in" \
     > /etc/logrotate.d/icct-nms-syslog
 

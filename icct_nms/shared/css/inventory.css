@@ -3255,3 +3255,6 @@ h1, h2, h3, h4, h5, h6 { line-height: 1.25; }
 .netflow-bar{display:block;height:3px;background:#155cff;margin-top:5px;min-width:1px}
 
 #netflow-chart{height:240px;min-height:200px}
+
+.installation-settings-menu>summary{padding:12px 16px;cursor:pointer}.installation-settings-menu>a{padding-left:32px}
+#installation-dialog{max-width:min(800px,calc(100vw - 48px))}#installation-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere}

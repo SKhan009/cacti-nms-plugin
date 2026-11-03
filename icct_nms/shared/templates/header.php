@@ -43,6 +43,7 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
                     <a href="dashboard/topology/controllers/topology_configuration.php">Topology Configuration</a>
                     <a href="protocols/snmp/mibs/controllers/mib_repository.php">MIB Repository</a>
                     <a href="presets/controllers/presets.php#segment">Presets</a>
+                    <?php if(is_realm_allowed(26)): ?><details class="installation-settings-menu"><summary>Settings</summary><a href="installation/controllers/installation.php">Installation Checks</a></details><?php endif; ?>
                 </nav>
             </div>
             <div class="brand">

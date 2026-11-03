@@ -21,5 +21,7 @@ function icct_nms_navigation()
     $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/dashboard/topology/controllers/topology_configuration.php'] = 'Topology Configuration';
     $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/protocols/snmp/mibs/controllers/mib_repository.php'] = 'MIB Repository';
     $menu['ICCT NMS']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/alarms/controllers/alarms.php'] = 'Alarms';
+    if (is_realm_allowed(26)) $menu['Settings']['EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/installation/controllers/installation.php'] = 'Installation Checks';
+    $menu_glyphs['Settings'] = 'fas fa-cog';
     $menu_glyphs['ICCT NMS'] = 'fas fa-network-wired';
 }
