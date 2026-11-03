@@ -17,7 +17,7 @@ Provision dependencies from approved offline media first, or supply a verified b
 
 Supported package-manager adapters: RHEL/Rocky/AlmaLinux with DNF; Debian/Ubuntu with APT; both require systemd for automatic worker setup. Extra repositories may be needed for nfdump, hping3 or netperf. The installer does not silently enable third-party repositories, skip unavailable packages or claim success when a service fails. Provision approved repositories first. Use `--web-user` and `--web-group` for a custom PHP service account. Use `--no-packages` when packages are already supplied by the administrator.
 
-Open **ICCT NMS → Installation Checks** with native Installation/Upgrades permission. It shows real binaries, bundled assets, current web PHP extensions and worker state. Run `php plugins/icct_nms/installation/cli/check.php` for the CLI PHP environment; web and CLI can have different extensions. Repeat setup on every remote collector using that collector's own Cacti configuration/poller ID.
+Open **Settings → Installation Checks** with native Installation/Upgrades permission. It shows real binaries, bundled assets, current web PHP extensions and worker state. Run `php plugins/icct_nms/installation/cli/check.php` for the CLI PHP environment; web and CLI can have different extensions. Repeat setup on every remote collector using that collector's own Cacti configuration/poller ID.
 
 ## Offline bundle
 
@@ -36,7 +36,7 @@ python3 plugins/icct_nms/installation/cli/setup.py plan --bundle /media/icct-pac
 sudo python3 plugins/icct_nms/installation/cli/setup.py install --bundle /media/icct-packages
 ```
 
-Installation refuses a mismatched target, missing/changed packages or an empty bundle. Offline package commands disable repositories/downloads rather than contacting the Internet. Hashes detect transport changes; they are not a substitute for obtaining the bundle from your trusted build system. Never reuse an ARM VM package bundle on an x86 physical RHEL server.
+Installation refuses a mismatched target, missing/changed packages or an empty bundle. Offline DNF disables repositories. Offline APT uses empty repository sources/lists and only the verified local DEBs; no remote package repository can be used. Hashes detect transport changes; they are not a substitute for obtaining the bundle from your trusted build system. Never reuse an ARM VM package bundle on an x86 physical RHEL server.
 
 ## Requirements which packages cannot finish
 
@@ -46,4 +46,26 @@ Installation refuses a mismatched target, missing/changed packages or an empty b
 - Devices still need valid credentials and protocol assignments; exporters must point to the reachable collector IP/port. Listening sockets or installed packages alone do not prove actual device data collection.
 - Serial/USB access, raw-socket diagnostic permissions and externally managed firewall rules depend on local policy; verify them on the target. Runtime checks report missing components instead of simulating success.
 
-Installation Checks is under **Settings**. Install actions appear only for missing components; installed/inactive components and unimplemented backends do not show Install. Actions display the applicable administrator command or bundled guide on demand; they never claim an OS package was installed by opening a dialog.
+
+## One archive with plugin and dependencies
+
+Build a release outside the plugin directory:
+
+```sh
+python3 installation/cli/package.py --bundle /path/to/verified-packages --output /tmp/icct-nms-offline.zip
+```
+
+Extract the archive outside the web root, then run its single bootstrap:
+
+```sh
+python3 install.py --cacti-root /path/to/cacti --plan
+sudo python3 install.py --cacti-root /path/to/cacti
+```
+
+The bootstrap verifies the plugin files and every bundled package, rejects mismatched OS/release/CPU bundles, backs up an existing plugin to a private archive, copies application code atomically and runs the native plugin/package/service installer. Package files remain in the extracted release outside the web root. Existing local configuration, MIB sessions and uploaded device images are excluded from release builds and retained during deployment. Developer tests and caches are not shipped. Source-only archives require explicit `--online` or `--no-packages`.
+
+Debian 12's Netperf package requires the official `non-free` repository component. Have the administrator configure approved repositories before building/installing. The installer does not silently enable components or omit requested tools. Debian package-adapter tests are distinct from systemd service validation on a full Debian host.
+
+For application-only deployment into an existing externally managed Cacti installation, use `python3 install.py --cacti-root /path/to/cacti --application-only`. This installs pages/schema through native Cacti APIs without touching OS packages or worker services. The full installer archive is verified first.
+
+Chrony is not a required plugin package: automatically installing a time daemon could replace the host’s existing time-sync service. Existing OS synchronization is retained; the unimplemented NTP monitoring backend remains clearly unavailable.

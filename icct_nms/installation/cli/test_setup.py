@@ -46,7 +46,7 @@ class BundleSafety(unittest.TestCase):
     def test_offline_package_commands_cannot_download(self):
         for family, executable, flag in [
             ("rhel", "dnf", "--disablerepo=*"),
-            ("debian", "apt-get", "--no-download"),
+            ("debian", "apt-get", "--no-remove"),
         ]:
             with (
                 patch.object(setup, "verify_bundle", return_value=[Path("/bundle/test.rpm")]),
@@ -56,6 +56,10 @@ class BundleSafety(unittest.TestCase):
                 command = run.call_args[0][0]
                 self.assertEqual(command[0], executable)
                 self.assertIn(flag, command)
+                if family == "debian":
+                    self.assertTrue(any(str(arg).startswith("Dir::Etc::sourceparts=/tmp/icct-offline-apt-") or "icct-offline-apt-" in str(arg) for arg in command if str(arg).startswith("Dir::Etc::sourceparts=")))
+                    self.assertTrue(any(str(arg).startswith("Dir::State::lists=") for arg in command))
+                    self.assertIn("--no-remove", command)
 
     def test_install_never_implicitly_uses_network(self):
         with patch.object(setup, "run") as run:
@@ -78,6 +82,12 @@ class BundleSafety(unittest.TestCase):
             self.assertEqual(len(setup.verify_bundle(directory, target)), 1)
             with self.assertRaisesRegex(ValueError, "empty"):
                 setup.download_bundle(directory, target)
+
+    def test_bundle_build_does_not_require_cacti_installation(self):
+        target = dict(family='rhel', id='rhel', version='9.8', arch='aarch64')
+        with patch.object(setup.sys, 'argv', ['setup.py','bundle','--bundle','/tmp/test-bundle']), patch.object(setup.os, 'geteuid', return_value=0), patch.object(setup, 'os_info', return_value=target), patch.object(setup, 'validate_root', side_effect=AssertionError('Cacti not required for bundle build')), patch.object(setup, 'download_bundle') as download:
+            setup.main()
+            download.assert_called_once_with('/tmp/test-bundle', target)
 
     def test_online_requires_explicit_selection(self):
         with patch.object(setup, 'run') as run:

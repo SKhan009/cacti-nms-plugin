@@ -13,6 +13,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 
 PLUGIN = Path(__file__).resolve().parents[2]
 MANIFEST = json.loads((PLUGIN / "installation/dependencies.json").read_text())
@@ -132,15 +133,27 @@ def install_packages(target, bundle, online=False):
         if target["family"] == "rhel":
             run(["dnf", "-y", "--disablerepo=*", "install", *files])
         else:
-            # --no-download forbids falling back to the Internet when the bundle is incomplete.
-            run(["apt-get", "-y", "--no-download", "install", *files])
+            # APT 2.6's --no-download breaks local-DEB dependency installation.
+            # Empty sources AND lists leave only installed packages and verified local DEBs.
+            with tempfile.TemporaryDirectory(prefix='icct-offline-apt-') as temporary:
+                location = Path(temporary)
+                os.chmod(location, 0o755)
+                (location / 'sources.list').touch()
+                (location / 'sources.list.d').mkdir()
+                (location / 'lists').mkdir()
+                run(['apt-get', '-y', '--no-remove',
+                     '-o', 'Dir::Etc::sourcelist=' + str(location / 'sources.list'),
+                     '-o', 'Dir::Etc::sourceparts=' + str(location / 'sources.list.d'),
+                     '-o', 'Dir::State::lists=' + str(location / 'lists'),
+                     '-o', 'Dir::Cache::pkgcache=', '-o', 'Dir::Cache::srcpkgcache=',
+                     'install', *files], env=dict(os.environ, DEBIAN_FRONTEND='noninteractive'))
     elif online:
         if target["family"] == "rhel":
             run(["dnf", "-y", "install", *MANIFEST["packages"]["rhel"]])
         else:
             run(["apt-get", "update"])
             run(
-                ["apt-get", "-y", "install", *MANIFEST["packages"]["debian"]],
+                ["apt-get", "-y", "--no-remove", "install", *MANIFEST["packages"]["debian"]],
                 env=dict(os.environ, DEBIAN_FRONTEND="noninteractive"),
             )
     else:
@@ -257,6 +270,7 @@ def main():
         help="Existing PHP/collector account; defaults apache on RHEL, www-data on Debian",
     )
     parser.add_argument("--web-group")
+    parser.add_argument('--application-only', action='store_true', help='Install application pages/schema only; leave OS packages and services managed externally')
     parser.add_argument(
         "--online",
         action="store_true",
@@ -268,9 +282,18 @@ def main():
         help="Use packages already provisioned by the administrator",
     )
     args = parser.parse_args()
+    if args.application_only and (args.bundle or args.online or args.no_packages):
+        parser.error('--application-only cannot be combined with package options.')
     if args.online and (args.bundle or args.no_packages):
         parser.error("--online cannot be combined with --bundle or --no-packages.")
     target = os_info()
+    if args.action == 'bundle':
+        if os.geteuid() != 0:
+            raise ValueError('Run bundle as root on the matching build system.')
+        if not args.bundle:
+            raise ValueError('bundle requires --bundle OUTPUT_DIRECTORY')
+        download_bundle(args.bundle, target)
+        return
     root = validate_root(args.cacti_root)
     user = args.web_user or ("apache" if target["family"] == "rhel" else "www-data")
     group = args.web_group or user
@@ -300,13 +323,8 @@ def main():
         return
     if os.geteuid() != 0:
         raise ValueError("Run install/bundle as root; plan is read-only and needs no privileges.")
-    if args.action == "bundle":
-        if not args.bundle:
-            raise ValueError("bundle requires --bundle OUTPUT_DIRECTORY")
-        download_bundle(args.bundle, target)
-        return
     php = preflight(root)
-    if not args.no_packages:
+    if not args.application_only and not args.no_packages:
         install_packages(target, args.bundle, args.online)
     elif args.bundle:
         raise ValueError("--no-packages cannot be combined with --bundle.")
@@ -318,6 +336,9 @@ def main():
     run([php, root / "cli/plugin_manage.php", "--plugin=icct_nms", "--enable"])
     code = 'try {require $argv[1]."/include/cli_check.php"; if ((int)db_fetch_cell("SELECT status FROM plugin_config WHERE directory=\'icct_nms\'") !== 1) throw new RuntimeException("Install/enable ICCT NMS in Cacti Plugin Management first.");} catch(Throwable $e){fwrite(STDERR,$e->getMessage().PHP_EOL);exit(1);}'
     run([php, "-r", code, root])
+    if args.application_only:
+        print('Application pages/schema installed through native Cacti. OS packages and services were not changed.')
+        return
     services(root, user, group)
     run([php, PLUGIN / "installation/cli/check.php", "--save"])
     print(

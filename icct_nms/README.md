@@ -2,6 +2,10 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Inventory designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
+## Version 1.4.2
+
+A release can include the complete plugin and a verified OS/CPU-specific offline package bundle in one installer archive. The bootstrap verifies checksums, backs up existing source, preserves local configuration and uploaded data, copies source atomically and invokes native Cacti setup. Release builds exclude credentials, runtime data and developer tests. Debian offline APT installation uses empty repository sources/lists so local package installation cannot fall back to network repositories.
+
 ## Version 1.4.1
 
 Installation Checks lists required PHP extensions, local binaries, bundled assets and worker states behind Cacti Installation/Upgrades permission. The explicit Linux administrator installer provides a read-only plan, native plugin installation, package provisioning, dynamic service paths/accounts, and checksummed offline package bundles tied to the target OS/release/architecture. See [installation instructions](installation/README.md). SSH/HTTPS, Pathchar and currently unimplemented NTP/TACACS+ backends remain explicit requirements; package installation alone does not imply all protocols are ready.
