@@ -236,8 +236,10 @@ def main():
         return
     if os.geteuid() != 0:
         raise ValueError("Run deployment as administrator; --plan is read-only.")
-    # Reject incompatible Cacti/PHP before replacing files or invoking a package manager.
-    setup.preflight(root)
+    setup.check_cacti_lifecycle(root)
+    # A verified bundle may supply PHP itself. The target installer checks its runtime after DNF/APT.
+    if args.application_only or args.no_packages:
+        setup.preflight(root)
     destination, backup = copy_source(directory, root, manifest)
     if shutil.which("restorecon"):
         subprocess.run(["restorecon", "-R", str(destination)], check=True)

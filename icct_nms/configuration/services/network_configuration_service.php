@@ -370,12 +370,11 @@ function icct_nms_network_run($id)
         ]);
     }
     if ((int) $config['poller_id'] === (int) $network['poller_id']) {
-        exec_background(read_config_option('path_php_binary'), [
-            '-q',
-            read_config_option('path_webroot') . '/poller_automation.php',
-            '--network=' . (int) $network['id'],
-            '--force',
-        ]);
+        $script = read_config_option('path_webroot') . '/poller_automation.php';
+        exec_background(
+            read_config_option('path_php_binary'),
+            '-q ' . escapeshellarg($script) . ' --network=' . (int) $network['id'] . ' --force',
+        );
     } else {
         call_remote_data_collector(
             $network['poller_id'],

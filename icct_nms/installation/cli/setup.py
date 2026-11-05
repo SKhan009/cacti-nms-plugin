@@ -255,16 +255,36 @@ def write_unit(name, content):
     return changed
 
 
+def check_cacti_lifecycle(root):
+    if not (root / "cli/plugin_manage.php").is_file():
+        raise ValueError(
+            "Cacti CLI plugin_manage.php is missing. Use Cacti Plugin Management for installation."
+        )
+
+
 def preflight(root):
     php = shutil.which("php")
     if not php:
-        raise ValueError("Install Cacti and its PHP runtime before running plugin setup.")
-    code = 'try {require $argv[1]."/include/cli_check.php"; $v=(string)db_fetch_cell("SELECT cacti FROM version LIMIT 1"); if(version_compare(PHP_VERSION,"8.0.0","<") || version_compare($v,"1.2.31","<")) throw new RuntimeException("Complete Cacti 1.2.31+ installation with PHP 8.0+ before plugin setup.");} catch(Throwable $e){fwrite(STDERR,$e->getMessage().PHP_EOL);exit(1);}'
-    run([php, "-r", code, root])
-    if not (root / "cli/plugin_manage.php").is_file():
         raise ValueError(
-            "Native Cacti plugin_manage.php is missing; automatic lifecycle is unsupported."
+            "PHP CLI is missing. Install it from the matching offline bundle."
         )
+    code = """
+try {
+    require $argv[2];
+    $issues = icct_nms_php_requirement_issues();
+    if (!$issues) {
+        require $argv[1] . '/include/cli_check.php';
+        $issues = icct_nms_cacti_requirement_issues();
+    }
+    if ($issues) {
+        throw new RuntimeException(implode(' ', $issues));
+    }
+} catch (Throwable $error) {
+    fwrite(STDERR, $error->getMessage() . PHP_EOL);
+    exit(1);
+}
+"""
+    run([php, "-r", code, root, PLUGIN / "installation/services/runtime.php"])
     return php
 
 
@@ -615,7 +635,7 @@ def main():
                 directory,
             ]
         )
-    php = preflight(root)
+    check_cacti_lifecycle(root)
     if not args.application_only and not args.no_packages:
         install_packages(target, args.bundle, args.online)
     elif args.bundle:
@@ -629,9 +649,7 @@ def main():
             component=component,
         )
     # Use native Cacti lifecycle APIs; never grant all user realms or create core devices.
-    php = shutil.which("php")
-    if not php:
-        raise ValueError("PHP CLI is missing.")
+    php = preflight(root)
     run([php, root / "cli/plugin_manage.php", "--plugin=icct_nms", "--install"])
     run([php, root / "cli/plugin_manage.php", "--plugin=icct_nms", "--enable"])
     code = 'try {require $argv[1]."/include/cli_check.php"; if ((int)db_fetch_cell("SELECT status FROM plugin_config WHERE directory=\'icct_nms\'") !== 1) throw new RuntimeException("Install/enable ICCT NMS in Cacti Plugin Management first.");} catch(Throwable $e){fwrite(STDERR,$e->getMessage().PHP_EOL);exit(1);}'

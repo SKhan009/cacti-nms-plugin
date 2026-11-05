@@ -1,9 +1,8 @@
 {
     "format": 1,
     "php_min": "8.0.0",
-    "cacti_min": "1.2.31",
     "cacti_tested": "1.2.31",
-    "php_extensions": ["json", "session", "mbstring", "openssl", "pdo_mysql", "xml", "sockets"],
+    "php_extensions": ["json", "session", "mbstring", "openssl", "pdo_mysql", "xml"],
     "packages": {
         "rhel": [
             "php-cli",

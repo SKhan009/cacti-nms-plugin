@@ -1,30 +1,28 @@
 <?php
 
+require_once __DIR__ . '/installation/services/runtime.php';
+
 /** Independent Inventory plugin lifecycle. Device ownership remains with Cacti core. */
 function plugin_icct_nms_version()
 {
     return [
         'name' => 'icct_nms',
-        'version' => '1.4.15',
+        'version' => '1.4.16',
         'longname' => 'ICCT NMS Inventory',
         'author' => 'NMS Project',
         'homepage' => 'https://www.cacti.net/',
         'email' => 'admin@localhost',
-        'compat' => '1.2.31',
+        'compat' => '1.2.0',
     ];
 }
 function icct_nms_check_dependencies()
 {
-    if (version_compare(PHP_VERSION, '8.0.0', '<')) {
-        return false;
-    }
-    $version = (string) db_fetch_cell('SELECT cacti FROM version LIMIT 1');
-    foreach (['json', 'session', 'mbstring', 'openssl', 'pdo_mysql', 'xml'] as $extension) {
-        if (!extension_loaded($extension)) {
-            return false;
-        }
-    }
-    return version_compare($version, '1.2.31', '>=');
+    return !icct_nms_dependency_issues();
+}
+function icct_nms_dependency_issues()
+{
+    $issues = icct_nms_php_requirement_issues();
+    return $issues ?: icct_nms_cacti_requirement_issues();
 }
 function plugin_icct_nms_install()
 {
@@ -36,11 +34,12 @@ function plugin_icct_nms_upgrade()
 }
 function plugin_icct_nms_check_config()
 {
-    if (!icct_nms_check_dependencies()) {
+    $issues = icct_nms_dependency_issues();
+    if ($issues) {
         $message =
-            'ICCT NMS requires Cacti 1.2.31+, PHP 8.0+ and PHP ' .
-            'json/session/mbstring/openssl/pdo_mysql/xml. Run installation/cli/setup.py plan to ' .
-            'review OS requirements.';
+            'ICCT NMS installation stopped. ' .
+            implode(' ', $issues) .
+            ' See installation/README.md for offline package setup.';
         cacti_log($message, false, 'ICCT NMS');
         if (PHP_SAPI === 'cli') {
             fwrite(STDERR, $message . PHP_EOL);

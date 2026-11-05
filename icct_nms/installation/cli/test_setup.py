@@ -76,6 +76,32 @@ class BundleSafety(unittest.TestCase):
                 setup.install_packages(dict(family="rhel"), None)
             run.assert_not_called()
 
+    def test_bundle_provisions_php_before_runtime_preflight(self):
+        events = []
+
+        def preflight(root):
+            events.append("runtime")
+            raise ValueError("stop before plugin lifecycle")
+
+        with (
+            patch.object(
+                setup.sys, "argv", ["setup.py", "install", "--bundle", "/offline"]
+            ),
+            patch.object(setup.os, "geteuid", return_value=0),
+            patch.object(setup, "os_info", return_value={"family": "rhel"}),
+            patch.object(setup, "validate_root", return_value=Path("/cacti")),
+            patch.object(setup, "check_cacti_lifecycle"),
+            patch.object(
+                setup,
+                "install_packages",
+                side_effect=lambda *args: events.append("packages"),
+            ),
+            patch.object(setup, "preflight", side_effect=preflight),
+        ):
+            with self.assertRaisesRegex(ValueError, "stop before plugin lifecycle"):
+                setup.main()
+        self.assertEqual(events, ["packages", "runtime"])
+
     def test_bundle_collects_already_installed_dependencies(self):
         with tempfile.TemporaryDirectory() as parent:
             directory = Path(parent) / "out"

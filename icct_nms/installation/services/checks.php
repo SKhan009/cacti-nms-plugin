@@ -1,15 +1,7 @@
 <?php
 
 /** Read-only installation inventory. Never invokes a package manager from HTTP. */
-function icct_nms_installation_manifest()
-{
-    return json_decode(
-        file_get_contents(__DIR__ . '/../dependencies.json'),
-        true,
-        512,
-        JSON_THROW_ON_ERROR,
-    );
-}
+require_once __DIR__ . '/runtime.php';
 function icct_nms_installation_binary($names, $executable = true)
 {
     foreach ((array) $names as $name) {
@@ -116,12 +108,8 @@ function icct_nms_installation_checks()
     $add(
         'Core',
         'Cacti version',
-        version_compare($version, $manifest['cacti_min'], '>=') ? 'Ready' : 'Missing',
-        $version .
-            ' · minimum ' .
-            $manifest['cacti_min'] .
-            '; tested on ' .
-            $manifest['cacti_tested'],
+        $version !== '' ? 'Ready' : 'Missing',
+        $version . ' · tested on ' . $manifest['cacti_tested'],
     );
     $add(
         'Core',
@@ -146,7 +134,7 @@ function icct_nms_installation_checks()
         );
     }
     if (PHP_SAPI === 'cli') {
-        foreach (['pcntl', 'posix'] as $ext) {
+        foreach (['pcntl', 'posix', 'sockets'] as $ext) {
             $add('Workers', 'PHP ' . $ext, extension_loaded($ext) ? 'Ready' : 'Missing', 'Required in PHP CLI for background collectors.');
         }
     }

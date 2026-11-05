@@ -247,11 +247,9 @@ function icct_nms_scan_dispatch()
         return;
     }
     require_once $config['base_path'] . '/lib/poller.php';
-    exec_background(read_config_option('path_php_binary'), [
-        '-q',
-        ICCT_NMS_ROOT . '/inventory/discovery/cli/discovery_worker.php',
-        '--once',
-    ]);
+    // Older Cacti releases accept only a shell argument string here.
+    $script = ICCT_NMS_ROOT . '/inventory/discovery/cli/discovery_worker.php';
+    exec_background(read_config_option('path_php_binary'), '-q ' . escapeshellarg($script) . ' --once');
 }
 function icct_nms_scan_existing($address, $evidence = [])
 {

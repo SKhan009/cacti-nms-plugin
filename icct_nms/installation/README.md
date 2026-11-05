@@ -2,7 +2,7 @@
 
 Install Cacti itself first, then copy the complete `icct_nms` directory into its `plugins` directory. All application pages, PHP vendor libraries, browser scripts, fonts and standard MIB files are shipped locally. No npm/composer/CDN download runs during page use.
 
-Cacti 1.2.31 and PHP 8.0 are the tested baseline. Older Cacti/PHP versions are rejected before schema installation. Newer releases must pass checks and their own compatibility testing; this does not claim compatibility with every Cacti version, Windows service manager or arbitrary Unix distribution.
+Cacti 1.2.31 is the tested release. Other Cacti 1.2 releases can install when their native database and plugin APIs are available. PHP 8.0 or newer and the required PHP extensions are needed by the application. Installation errors identify the detected PHP runtime and missing extensions or Cacti APIs.
 
 ## Provisioned Linux setup
 
@@ -37,6 +37,8 @@ sudo python3 plugins/icct_nms/installation/cli/setup.py install --bundle /media/
 ```
 
 Installation refuses a mismatched target, missing/changed packages or an empty bundle. Offline DNF disables repositories. Offline APT uses empty repository sources/lists and only the verified local DEBs; no remote package repository can be used. Hashes detect transport changes; they are not a substitute for obtaining the bundle from your trusted build system. Never reuse an ARM VM package bundle on an x86 physical RHEL server.
+
+The installer provisions the verified packages before checking PHP CLI. On RHEL, `php-mbstring`, `php-mysqlnd` and `php-xml` supply the corresponding PHP extensions. If Plugin Management reports an extension missing after provisioning, check the web PHP service separately from CLI and reload the web PHP runtime that serves Cacti so it loads the installed modules.
 
 ## Requirements which packages cannot finish
 
