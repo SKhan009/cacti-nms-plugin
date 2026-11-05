@@ -43,6 +43,9 @@ if (icct_backend_serial_assignment($id) && icct_backend_protocol_enabled($id, 's
 if (icct_nms_netflow_assignment($id) && icct_backend_protocol_enabled($id, 'netflow')) {
     $protocols[] = 'NetFlow / IPFIX';
 }
+if (icct_nms_ntp_assignment($id) && icct_backend_protocol_enabled($id, 'ntp')) {
+    $protocols[] = 'NTP';
+}
 $diagnostics = is_realm_allowed(3) ? icct_backend_diag_selected_labels($id) : [];
 $paths = [
     'ping' => 'M3 12h4l3-7 4 14 3-7h4',
@@ -80,6 +83,7 @@ $display = static function ($value) {
                 <span
                     class="device-status-dot <?= $status === 'Up' ? 'online' : ($status === 'Down' ? 'offline' : 'other') ?>"
                     aria-label="<?= icct_nms_h($status) ?>"></span><?= icct_nms_h($values['description']) ?>
+
             </h1>
             <span><?= icct_nms_h($values['hostname']) ?></span>
         </div>
@@ -222,6 +226,7 @@ $display = static function ($value) {
             [
                 'details' => 'Device Details',
                 'graphs' => 'Graphs',
+                'diagnostics' => 'Diagnostic readings',
                 'ports' =>
                             (int) $old['snmp_version'] === 0 && in_array('Serial', $protocols, true)
                                 ? 'Serial Connection'
@@ -229,6 +234,7 @@ $display = static function ($value) {
                 'fcaps' => 'FCAPS',
                 'syslog' => 'Syslog',
                 'netflow' => 'NetFlow / IPFIX',
+                'ntp' => 'NTP',
                 'records' => 'Logs',
             ] as $key => $label
         ): ?>
@@ -404,13 +410,19 @@ if (!$viewGraphs): ?>
             </button>
         </div>
     </section>
+    <?php require __DIR__ . '/device_diagnostics.php'; ?>
     <?php require __DIR__ . '/../../ports/templates/device_view_ports.php'; ?>
     <section
         id="view-fcaps"
         data-device-view-panel="fcaps"
         hidden>
-        <h2>FCAPS</h2>
-        <p>Saved fault rules and current device observations.</p>
+        <h2>FCAPS <span
+                class="field-info section-help"
+                tabindex="0"
+                role="img"
+                aria-label="Saved fault rules and current device observations."
+                data-tooltip="Saved fault rules and current device observations.">ⓘ</span>
+        </h2>
         <div class="site-table-wrap">
             <table class="site-table">
                 <thead>
@@ -430,7 +442,11 @@ if (!$viewGraphs): ?>
 foreach ($viewRules as $rule): ?>
                         <tr>
                             <td><?= $display($rule['name']) ?></td>
-                            <td><?= $display($rule['severity']) ?></td>
+                            <td>
+                                <span
+                                    class="device-status"
+                                    data-log-status="<?= icct_nms_h($rule['severity']) ?>"><?= $display($rule['severity']) ?></span>
+                            </td>
                             <td><?= $display($rule['minimum']) ?></td>
                             <td><?= $display($rule['maximum']) ?></td>
                             <td><?= $display($rule['description'] ?? '') ?></td>
@@ -469,7 +485,11 @@ if (
                             <tr>
                                 <td><?= $display($fault['graph']) ?></td>
                                 <td><?= $display($fault['value']) ?></td>
-                                <td><?= $display($fault['state']) ?></td>
+                                <td>
+                                    <span
+                                        class="device-status"
+                                        data-log-status="<?= icct_nms_h($fault['state']) ?>"><?= $display($fault['state']) ?></span>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -479,6 +499,7 @@ if (
 ?>
     </section>
     <?php require __DIR__ . '/../../protocols/syslog/templates/device_view_syslog.php';
-require __DIR__ . '/../../protocols/netflow/templates/device_view_netflow.php'; ?>
+require __DIR__ . '/../../protocols/netflow/templates/device_view_netflow.php';
+require __DIR__ . '/../../protocols/ntp/templates/device_view_ntp.php'; ?>
     <?php require __DIR__ . '/device_records.php'; ?>
 </div>

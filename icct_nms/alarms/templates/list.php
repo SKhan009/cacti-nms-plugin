@@ -27,13 +27,18 @@
         class="alarm-filters">
         <label class="field">
             <span>Device</span>
-            <select name="device">
+            <select
+                name="device"
+                aria-label="Device sources">
                 <option value="">All</option>
             </select>
         </label>
         <label class="field">
             <span>Severity</span>
-            <select name="severity">
+            <select
+                name="severity"
+                data-severity-control
+                aria-label="Severity levels">
                 <option value="">All</option>
                 <?php foreach (
                     ['Critical', 'Major', 'Minor', 'Warning', 'Information'] as $v
@@ -69,6 +74,32 @@
                 placeholder="Search With Device Name or IP Address or Alarm Name"
                 type="search">
         </label>
+        <details class="alarm-extra-filters">
+            <summary>More filters</summary>
+            <div class="alarm-extra-filter-fields">
+                <label class="field">
+                    <span>Event source</span>
+                    <select name="source">
+                        <option value="">All</option>
+                        <?php foreach (['Syslog', 'SNMP', 'NTP', 'NetFlow', 'Cacti', 'Port', 'Availability'] as $source): ?>
+                            <option><?= $source ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <label class="field">
+                    <span>From</span>
+                    <input
+                        type="datetime-local"
+                        name="since">
+                </label>
+                <label class="field">
+                    <span>Until</span>
+                    <input
+                        type="datetime-local"
+                        name="until">
+                </label>
+            </div>
+        </details>
     </form>
     <p
         id="alarm-status"

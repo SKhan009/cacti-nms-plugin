@@ -1334,22 +1334,6 @@
     padding: 3px 10px;
     background: #eee;
 }
-.mib-fault-severity[data-severity='Critical'] {
-    background: #ff4048;
-}
-.mib-fault-severity[data-severity='Major'] {
-    background: #ff7325;
-}
-.mib-fault-severity[data-severity='Minor'] {
-    background: #ff9c00;
-}
-.mib-fault-severity[data-severity='Warning'] {
-    background: #40ad91;
-}
-.mib-fault-severity[data-severity='Information'] {
-    background: #2585a0;
-    color: white;
-}
 .mib-fault-fields {
     padding: 12px;
     border-top: 1px solid #ddd;
@@ -3115,26 +3099,6 @@
     line-height: 16px;
     white-space: nowrap;
     opacity: 1;
-}
-.mib-fault-summary .mib-fault-severity[data-severity='Critical'] {
-    background-color: #ff4048;
-    color: #111;
-}
-.mib-fault-summary .mib-fault-severity[data-severity='Major'] {
-    background-color: #ff7325;
-    color: #111;
-}
-.mib-fault-summary .mib-fault-severity[data-severity='Minor'] {
-    background-color: #ff9c00;
-    color: #111;
-}
-.mib-fault-summary .mib-fault-severity[data-severity='Information'] {
-    background-color: #2585a0;
-    color: #fff;
-}
-.mib-fault-summary .mib-fault-severity[data-severity='Warning'] {
-    background-color: #40ad91;
-    color: #111;
 }
 
 .mib-generation .mib-tree-checkbox input[type='checkbox']:indeterminate::after {

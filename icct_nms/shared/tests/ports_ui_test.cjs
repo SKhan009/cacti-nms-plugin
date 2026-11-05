@@ -22,6 +22,9 @@ class Element {
         this.children = [];
     }
     setAttribute() {}
+    get options() {
+        return this.children;
+    }
     add(option) {
         this.children.push(option);
     }
@@ -87,6 +90,7 @@ vm.runInNewContext(fs.readFileSync(__dirname + '/../../ports/js/ports.js', 'utf8
     location: { hash: '#basic' },
     setInterval() {},
     Option: function (text, value) {
+        this.dataset = {};
         this.text = text;
         this.value = value;
     },
@@ -130,6 +134,7 @@ vm.runInNewContext(fs.readFileSync(__dirname + '/../../ports/js/ports.js', 'utf8
     location: { hash: '#basic' },
     setInterval() {},
     Option: function (text, value) {
+        this.dataset = {};
         this.text = text;
         this.value = value;
     },

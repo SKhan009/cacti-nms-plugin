@@ -152,8 +152,12 @@ icct_nms_input('RRD Maximum (U=Unknown)', $prefix . '[max]', $settings['max']); 
     <?php if (
         $faultSuggestions
     ): ?>
-        <p class="mib-fault-origin">Auto-filled from the MIB definition. Review thresholds and severity
-            before enabling; rules are disabled.</p>
+        <span
+            class="field-info section-help mib-fault-origin"
+            tabindex="0"
+            role="img"
+            aria-label="Auto-filled from the MIB definition. Review thresholds and severity before enabling; rules are disabled."
+            data-tooltip="Auto-filled from the MIB definition. Review thresholds and severity before enabling; rules are disabled.">ⓘ</span>
     <?php endif; ?>
     <div data-prepared-fault-list></div>
     <template data-prepared-fault-template>
@@ -286,7 +290,9 @@ icct_nms_input('RRD Maximum (U=Unknown)', $prefix . '[max]', $settings['max']); 
                 </label>
                 <label class="field">
                     <span class="field-label">Severity</span>
-                    <select data-rule="severity">
+                    <select
+                        data-severity-control
+                        data-rule="severity">
                         <?php foreach (
                             ['Information', 'Minor', 'Warning', 'Major', 'Critical'] as $severity
                         ): ?>

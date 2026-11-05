@@ -392,6 +392,11 @@ CREATE TABLE IF NOT EXISTS `plugin_icct_nms_syslog_events` (
     `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
     `host_id` mediumint(8) unsigned NOT NULL,
     `event_origin` varchar(16) NOT NULL DEFAULT 'syslog',
+    `alarm_key` char(64) DEFAULT NULL,
+    `synced_count` int unsigned NOT NULL DEFAULT 0,
+    `timestamp_kind` varchar(24) NOT NULL DEFAULT 'legacy-reported',
+    `receiver_time` datetime DEFAULT NULL,
+    `raw_message` mediumtext DEFAULT NULL,
     `event_time` datetime NOT NULL,
     `received_at` datetime NOT NULL,
     `last_seen` datetime NOT NULL,
@@ -412,6 +417,7 @@ CREATE TABLE IF NOT EXISTS `plugin_icct_nms_syslog_events` (
     `acknowledged_at` datetime DEFAULT NULL,
     `ack_comment` varchar(255) NOT NULL DEFAULT '',
     PRIMARY KEY (`id`),
+    UNIQUE KEY `fault_key` (`alarm_key`),
     KEY `host_time` (`host_id`,`event_time`),
     KEY `severity_time` (`nms_severity`,`event_time`),
     KEY `ack_time` (`acknowledged`,`event_time`),
@@ -447,7 +453,12 @@ CREATE TABLE IF NOT EXISTS `plugin_icct_nms_port_alarm_events` (
     `oper_status` tinyint unsigned DEFAULT NULL,
     `collected_at` datetime DEFAULT NULL,
     `created_at` datetime NOT NULL,
+    `incident_key` char(32) DEFAULT NULL,
+    `details_json` mediumtext DEFAULT NULL,
+    `alarm_key` char(64) DEFAULT NULL,
+    `alarm_occurrence` int unsigned DEFAULT NULL,
     PRIMARY KEY (`id`),
+    KEY `incident_history` (`host_id`,`incident_key`,`id`),
     KEY `device_history` (`host_id`,`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -616,6 +627,7 @@ CREATE TABLE IF NOT EXISTS `plugin_icct_nms_netflow_events` (
 -- Durable device-linked alarm lifecycle and operator history.
 CREATE TABLE IF NOT EXISTS `plugin_icct_nms_alarms` (
  `alarm_key` char(64) NOT NULL,
+ `source_address` varchar(45) DEFAULT NULL,
  `host_id` mediumint(8) unsigned NOT NULL,
  `source` varchar(16) NOT NULL,
  `graph_id` int unsigned NOT NULL DEFAULT 0,
@@ -712,4 +724,41 @@ CREATE TABLE IF NOT EXISTS plugin_icct_nms_gnss_readings (
  poller_id INT UNSIGNED NOT NULL, latitude DECIMAL(10,7) DEFAULT NULL, longitude DECIMAL(11,7) DEFAULT NULL,
  status VARCHAR(20) NOT NULL, last_attempt DATETIME NOT NULL, last_fix DATETIME DEFAULT NULL,
  source_time DATETIME DEFAULT NULL, last_error VARCHAR(255) NOT NULL DEFAULT '', PRIMARY KEY(poller_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Read-only NTP assignments and observations; clocks are managed outside this plugin.
+CREATE TABLE IF NOT EXISTS `plugin_icct_nms_ntp_monitors` (
+    `host_id` mediumint(8) unsigned NOT NULL,
+    `method` varchar(16) NOT NULL,
+    `expected_source` varchar(45) NOT NULL DEFAULT '',
+    `timeout` int unsigned NOT NULL,
+    `interval_seconds` int unsigned NOT NULL,
+    `stale_seconds` int unsigned NOT NULL,
+    `maximum_offset` double DEFAULT NULL,
+    `revision` int unsigned NOT NULL DEFAULT 1,
+    `updated_by` int unsigned NOT NULL,
+    `updated_at` datetime NOT NULL,
+    PRIMARY KEY (`host_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `plugin_icct_nms_ntp_monitor_state` (
+    `host_id` mediumint(8) unsigned NOT NULL,
+    `status` varchar(32) NOT NULL,
+    `last_error` varchar(512) NOT NULL DEFAULT '',
+    `sample_json` text DEFAULT NULL,
+    `config_hash` char(64) NOT NULL,
+    `last_attempt` datetime DEFAULT NULL,
+    `last_success` datetime DEFAULT NULL,
+    PRIMARY KEY (`host_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `plugin_icct_nms_ntp_monitor_history` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+    `host_id` mediumint(8) unsigned NOT NULL,
+    `status` varchar(32) NOT NULL,
+    `sample_json` text DEFAULT NULL,
+    `error` varchar(512) NOT NULL DEFAULT '',
+    `observed_at` datetime NOT NULL,
+    PRIMARY KEY (`id`),
+    KEY `host_time` (`host_id`, `observed_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

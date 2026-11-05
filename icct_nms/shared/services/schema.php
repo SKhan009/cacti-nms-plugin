@@ -12,6 +12,38 @@ function icct_nms_schema_install()
             );
         }
     }
+    // Older records remain unchanged: absent evidence is displayed as not recorded.
+    foreach (
+        [
+            'incident_key' => 'CHAR(32) NULL',
+            'details_json' => 'MEDIUMTEXT NULL',
+            'alarm_key' => 'CHAR(64) NULL',
+            'alarm_occurrence' => 'INT UNSIGNED NULL',
+        ]
+        as $column => $definition
+    ) {
+        if (
+            !db_fetch_cell(
+                "SHOW COLUMNS FROM plugin_icct_nms_port_alarm_events LIKE '" . $column . "'",
+            )
+        ) {
+            icct_nms_schema_execute(
+                'ALTER TABLE plugin_icct_nms_port_alarm_events ADD `' .
+                    $column .
+                    '` ' .
+                    $definition,
+            );
+        }
+    }
+    if (
+        !db_fetch_cell(
+            "SHOW INDEX FROM plugin_icct_nms_port_alarm_events WHERE Key_name='incident_history'",
+        )
+    ) {
+        icct_nms_schema_execute(
+            'ALTER TABLE plugin_icct_nms_port_alarm_events ADD KEY incident_history(host_id,incident_key,id)',
+        );
+    }
     foreach (['severity_codes', 'facility_codes', 'match_strings'] as $column) {
         if (
             !db_fetch_cell(
@@ -28,6 +60,40 @@ function icct_nms_schema_install()
                 throw new RuntimeException('Syslog filter upgrade failed.');
             }
         }
+    }
+    if (!db_fetch_cell("SHOW COLUMNS FROM plugin_icct_nms_alarms LIKE 'source_address'")) {
+        icct_nms_schema_execute(
+            'ALTER TABLE plugin_icct_nms_alarms ADD source_address VARCHAR(45) NULL',
+        );
+    }
+    icct_nms_schema_execute(
+        "INSERT IGNORE INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES('syslog_dedupe_seconds','60',NOW())",
+    );
+    // Preserve received history; the CLI worker normalizes existing rows into the common journal.
+    foreach (
+        [
+            'alarm_key' => 'CHAR(64) NULL',
+            'synced_count' => 'INT UNSIGNED NOT NULL DEFAULT 0',
+            'timestamp_kind' => "VARCHAR(24) NOT NULL DEFAULT 'legacy-reported'",
+            'receiver_time' => 'DATETIME NULL',
+            'raw_message' => 'MEDIUMTEXT NULL',
+        ]
+        as $column => $definition
+    ) {
+        if (
+            !db_fetch_cell("SHOW COLUMNS FROM plugin_icct_nms_syslog_events LIKE '" . $column . "'")
+        ) {
+            icct_nms_schema_execute(
+                'ALTER TABLE plugin_icct_nms_syslog_events ADD `' . $column . '` ' . $definition,
+            );
+        }
+    }
+    if (
+        !db_fetch_cell("SHOW INDEX FROM plugin_icct_nms_syslog_events WHERE Key_name='fault_key'")
+    ) {
+        icct_nms_schema_execute(
+            'ALTER TABLE plugin_icct_nms_syslog_events ADD UNIQUE KEY fault_key(alarm_key)',
+        );
     }
     if (!db_fetch_cell("SHOW COLUMNS FROM plugin_icct_nms_alarms LIKE 'graph_id'")) {
         if (
@@ -53,7 +119,8 @@ function icct_nms_schema_install()
             'SELECT a.* FROM plugin_icct_nms_alarms a WHERE NOT EXISTS(SELECT 1 FROM ' .
                 'plugin_icct_nms_alarm_history h WHERE h.alarm_key=a.alarm_key AND h.snapshot_json IS ' .
                 'NOT NULL)',
-        ) as $alarm
+        )
+        as $alarm
     ) {
         $snapshot = array_intersect_key(
             $alarm,
@@ -88,7 +155,8 @@ function icct_nms_schema_install()
     foreach (
         db_fetch_assoc(
             "SELECT meta_key,meta_value FROM plugin_icct_nms_meta WHERE meta_key REGEXP '^fault_rules_[0-9]+$'",
-        ) as $row
+        )
+        as $row
     ) {
         $rules = json_decode($row['meta_value'], true);
         if (!is_array($rules)) {
@@ -119,7 +187,20 @@ function icct_nms_schema_install()
     icct_nms_schema_missing_preset_racks();
     icct_nms_schema_syslog_availability_migration();
     require_once __DIR__ . '/../../protocols/shared/services/protocol_seed.php';
+    require_once __DIR__ . '/ntp_fault_migration.php';
+    icct_nms_schema_ntp_faults();
     icct_nms_seed_protocol_presets();
+    if (
+        !db_fetch_cell("SHOW COLUMNS FROM plugin_icct_nms_ntp_monitors LIKE 'method'") ||
+        !db_fetch_cell("SHOW COLUMNS FROM plugin_icct_nms_ntp_monitor_state LIKE 'sample_json'")
+    ) {
+        throw new RuntimeException(
+            'NTP monitor schema is incompatible; review the existing monitor tables before upgrading.',
+        );
+    }
+    icct_nms_schema_execute(
+        "REPLACE INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES('icct_nms_ntp_monitor_schema_version','1',NOW())",
+    );
     if (
         !db_execute_prepared(
             'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
@@ -159,7 +240,8 @@ function icct_nms_schema_sites_migration()
     foreach (
         db_fetch_assoc(
             "SELECT meta_key,meta_value FROM plugin_icct_nms_meta WHERE meta_key LIKE 'dashboard_user_%'",
-        ) as $row
+        )
+        as $row
     ) {
         $value = json_decode($row['meta_value'], true);
         if (!is_array($value)) {
@@ -310,7 +392,7 @@ function icct_nms_schema_rack_catalogue_migration()
         foreach ($racks as $rack) {
             $groups[$rack['profile_id']][] = $rack;
         }
-        $names = array_map(static fn ($p) => strtolower($p['name']), $profiles);
+        $names = array_map(static fn($p) => strtolower($p['name']), $profiles);
         foreach ($groups as $key => $copies) {
             $occupied = [];
             foreach ($copies as $rack) {
@@ -419,7 +501,8 @@ function icct_nms_schema_mtr_background_migration()
             ['diagnostic_profiles', 'mtr_background', 'TINYINT UNSIGNED NOT NULL DEFAULT 0'],
             ['diagnostic_profiles', 'mtr_interval', 'SMALLINT UNSIGNED NOT NULL DEFAULT 300'],
             ['diagnostic_jobs', 'is_background', 'TINYINT UNSIGNED NOT NULL DEFAULT 0'],
-        ] as [$table, $column, $definition]
+        ]
+        as [$table, $column, $definition]
     ) {
         if (
             !db_fetch_cell(

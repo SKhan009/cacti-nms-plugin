@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../ports/services/port_monitoring_service.php';
+require_once __DIR__ . '/ntp_fault_service.php';
 /** Device thresholds include template presets and explicit device overrides. */
 function icct_nms_fault_catalogue()
 {
@@ -155,29 +156,38 @@ function icct_nms_fault_parameters($id)
     }
     return $out;
 }
-function icct_nms_fault_rules($id)
+/** Native MIB fault presets are scoped to graph associations on this device. */
+function icct_nms_fault_presets($id)
 {
-    $rules = json_decode(
-        (string) db_fetch_cell_prepared(
-            'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
-            ['fault_rules_' . $id],
-        ),
-        true,
-    );
-    $rules = is_array($rules) ? $rules : [];
-    $overrides = array_fill_keys(array_filter(array_column($rules, 'preset_key')), true);
-    $presets = db_fetch_assoc_prepared(
+    $rows = db_fetch_assoc_prepared(
         'SELECT DISTINCT m.meta_value FROM graph_templates gt JOIN plugin_icct_nms_meta m ON ' .
             'm.meta_key=CONCAT(\'graph_fault_presets_\',gt.id) WHERE EXISTS(SELECT 1 FROM host_graph ' .
             'hg WHERE hg.graph_template_id=gt.id AND hg.host_id=?) OR EXISTS(SELECT 1 FROM ' .
             'graph_local gl WHERE gl.graph_template_id=gt.id AND gl.host_id=?)',
         [$id, $id],
     );
-    foreach ($presets ?: [] as $preset) {
-        foreach (json_decode($preset['meta_value'], true) ?: [] as $rule) {
-            if (!isset($overrides[$rule['preset_key'] ?? ''])) {
-                $rules[] = $rule;
-            }
+    $unique = [];
+    foreach ($rows as $row) {
+        foreach (json_decode($row['meta_value'], true, 64, JSON_THROW_ON_ERROR) as $rule) {
+            $key = $rule['preset_key'] ?? hash('sha256', json_encode($rule, JSON_THROW_ON_ERROR));
+            $rule['preset_key'] = $key;
+            $unique[$key] = $rule;
+        }
+    }
+    return array_values($unique);
+}
+function icct_nms_fault_rules($id)
+{
+    $stored = db_fetch_cell_prepared(
+        'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
+        ['fault_rules_' . $id],
+    );
+    $rules = $stored ? json_decode($stored, true, 64, JSON_THROW_ON_ERROR) : [];
+    $overrides = array_fill_keys(array_filter(array_column($rules, 'preset_key')), true);
+    foreach (icct_nms_fault_presets($id) as $preset) {
+        if (!isset($overrides[$preset['preset_key']])) {
+            $rules[] = $preset;
+            $overrides[$preset['preset_key']] = true;
         }
     }
     return $rules;
@@ -188,12 +198,14 @@ function icct_nms_fault_validate($rules, $catalogue, $associated)
         throw new InvalidArgumentException('Use no more than 100 fault rules.');
     }
     $out = [];
+    $identities = [];
+    $presetKeys = [];
     foreach ($rules as $rule) {
         if (!is_array($rule)) {
             throw new InvalidArgumentException('Invalid fault rule.');
         }
         $source = $rule['source'] ?? 'rrd';
-        if (!in_array($source, ['rrd', 'snmp'], true)) {
+        if (!in_array($source, ['rrd', 'snmp', 'ntp'], true)) {
             throw new InvalidArgumentException('Choose a supported measurement source.');
         }
         $template = $source === 'rrd' ? icct_nms_id($rule['template_id'] ?? 0) : 0;
@@ -224,6 +236,25 @@ function icct_nms_fault_validate($rules, $catalogue, $associated)
             ) {
                 throw new InvalidArgumentException('Invalid ' . $label . '.');
             }
+        }
+        $extra = [];
+        if ($source === 'ntp') {
+            $ntpParameters = icct_nms_ntp_fault_parameters();
+            if (!isset($ntpParameters[$parameter])) {
+                throw new InvalidArgumentException('Choose a supported NTP parameter.');
+            }
+            $units = $ntpParameters[$parameter]['units'];
+            $expected = $rule['expected_source'] ?? '';
+            if (!is_string($expected)) {
+                throw new InvalidArgumentException('Expected NTP source must be an IP address.');
+            }
+            $expected = trim($expected);
+            if ($parameter === 'source_matches' && !filter_var($expected, FILTER_VALIDATE_IP)) {
+                throw new InvalidArgumentException(
+                    'Enter an expected source IP for the NTP source-match rule.',
+                );
+            }
+            $extra['expected_source'] = $parameter === 'source_matches' ? $expected : '';
         }
         $oid = $source === 'snmp' ? icct_nms_fault_oid($rule['oid'] ?? '') : '';
         if ($source === 'snmp' && trim($parameter) === '') {
@@ -302,7 +333,8 @@ function icct_nms_fault_validate($rules, $catalogue, $associated)
                 'description' => 1000,
                 'corrective_action' => 1000,
                 'email_recipients' => 1000,
-            ] as $key => $limit
+            ]
+            as $key => $limit
         ) {
             $value = $rule[$key] ?? '';
             if (!is_string($value) || strlen($value) > $limit || strpos($value, "\0") !== false) {
@@ -334,17 +366,46 @@ function icct_nms_fault_validate($rules, $catalogue, $associated)
         ) {
             throw new InvalidArgumentException('Invalid fault preset reference.');
         }
-        $out[] = [
-            'preset_key' => $presetKey,
-            'template_id' => $template,
-            'metric_id' => $metric,
-            'source' => $source,
-            'parameter' => trim($parameter),
-            'units' => trim($units),
-            'oid' => $oid,
-            'scale' => (float) $scale,
-            'condition' => $condition,
-        ] +
+        $identity = hash(
+            'sha256',
+            json_encode(
+                [
+                    $source,
+                    $template,
+                    $metric,
+                    $oid,
+                    $source === 'ntp' ? $parameter : '',
+                    $condition,
+                    $bounds,
+                    (float) $scale,
+                    $extra,
+                ],
+                JSON_THROW_ON_ERROR,
+            ),
+        );
+        if (
+            isset($identities[$identity]) ||
+            ($presetKey !== '' && isset($presetKeys[$presetKey]))
+        ) {
+            throw new InvalidArgumentException(
+                'The same measurement threshold or MIB preset is selected more than once.',
+            );
+        }
+        $identities[$identity] = true;
+        if ($presetKey !== '') {
+            $presetKeys[$presetKey] = true;
+        }
+        $out[] = $extra + [
+                'preset_key' => $presetKey,
+                'template_id' => $template,
+                'metric_id' => $metric,
+                'source' => $source,
+                'parameter' => trim($parameter),
+                'units' => trim($units),
+                'oid' => $oid,
+                'scale' => (float) $scale,
+                'condition' => $condition,
+            ] +
             $bounds +
             $text + [
                 'severity' => $severity,
@@ -371,6 +432,15 @@ function icct_nms_save_faults($id, $input)
         ),
     );
     $rules = icct_nms_fault_validate($rules, icct_nms_fault_catalogue(), $associated);
+    if (
+        array_filter($rules, fn($rule) => $rule['source'] === 'ntp' && $rule['enabled']) &&
+        !icct_nms_ntp_assignment($id)
+    ) {
+        throw new InvalidArgumentException(
+            'Configure NTP collection in Protocol Config before enabling NTP fault rules.',
+        );
+    }
+
     icct_backend_category_execute(
         'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
             'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
@@ -438,6 +508,10 @@ function icct_backend_collect_faults()
         $snmpCache = [];
         $snmpDeadline = microtime(true) + min(60, max(10, $interval / 3));
         foreach ($rules as $number => $rule) {
+            // NTP uses its fresh saved observation directly, after the local NTP collector runs.
+            if (($rule['source'] ?? 'rrd') === 'ntp') {
+                continue;
+            }
             if (($rule['source'] ?? 'rrd') === 'snmp') {
                 $value = null;
                 if (
@@ -568,6 +642,7 @@ function icct_nms_fault_observations($host, $collector = false)
         ),
         true,
     );
+    $ntp = icct_nms_ntp_fault_observations($host, $rules);
     $age = time() - (int) ($data['time'] ?? 0);
     if (
         $host['disabled'] !== '' ||
@@ -575,7 +650,7 @@ function icct_nms_fault_observations($host, $collector = false)
         $age > 2 * max(60, (int) read_config_option('poller_interval')) ||
         ($data['rules_hash'] ?? '') !== hash('sha256', json_encode($rules, JSON_THROW_ON_ERROR))
     ) {
-        return icct_nms_port_faults($host);
+        return array_merge(icct_nms_port_faults($host), $ntp);
     }
     $allowed = $collector
         ? array_map(
@@ -590,11 +665,12 @@ function icct_nms_fault_observations($host, $collector = false)
         array_values(
             array_filter(
                 $data['results'] ?? [],
-                static fn ($row) => !(int) $row['graph_id'] ||
+                static fn($row) => !(int) $row['graph_id'] ||
                     in_array((int) $row['graph_id'], $allowed, true),
             ),
         ),
         icct_nms_port_faults($host),
+        $ntp,
     );
 }
 

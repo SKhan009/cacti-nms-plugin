@@ -486,11 +486,15 @@ h1 {
     transform: rotate(45deg);
     pointer-events: none;
 }
+/* Unwrapped selects retain their native arrow; wrapped selects already draw one. */
 .field select {
-    appearance: none;
+    appearance: auto;
     padding-right: 42px;
     text-overflow: ellipsis;
     cursor: pointer;
+}
+.select-wrap select {
+    appearance: none;
 }
 .notes {
     margin-top: 18px;
@@ -4669,14 +4673,14 @@ body.icct-inventory:has(.protocol-form) {
 }
 
 /* Device history keeps saved readings contained within the shared lists. */
-#view-records h3 {
+:is(#view-records, #view-diagnostics) h3 {
     margin: 28px 0 12px;
 }
-#view-records details summary {
+:is(#view-records, #view-diagnostics) details summary {
     cursor: pointer;
     color: #0f62fe;
 }
-#view-records td {
+:is(#view-records, #view-diagnostics) td {
     vertical-align: top;
     overflow-wrap: anywhere;
 }
@@ -4689,7 +4693,7 @@ body.icct-inventory:has(.protocol-form) {
     padding: 16px;
     max-width: 640px;
 }
-#view-records .site-table-wrap {
+:is(#view-records, #view-diagnostics) .site-table-wrap {
     overflow-x: auto;
 }
 
@@ -4794,7 +4798,7 @@ body.icct-inventory:has(.protocol-form) {
 .device-record-item + .device-record-item {
     border-top: 1px solid #ddd;
 }
-#view-records .device-record-item > summary {
+:is(#view-records, #view-diagnostics) .device-record-item > summary {
     display: grid;
     grid-template-columns: 1.4fr 0.8fr 1.4fr 1fr;
     gap: 20px;
@@ -4826,7 +4830,7 @@ body.icct-inventory:has(.protocol-form) {
 .device-record-item[open] > summary:after {
     transform: rotate(180deg);
 }
-#view-records .device-record-item[open] > summary {
+:is(#view-records, #view-diagnostics) .device-record-item[open] > summary {
     background: #e8f0ff;
     border-bottom: 1px solid #ddd;
 }
@@ -4866,7 +4870,7 @@ body.icct-inventory:has(.protocol-form) {
     margin: 0;
 }
 @media (max-width: 650px) {
-    #view-records .device-record-item > summary {
+    :is(#view-records, #view-diagnostics) .device-record-item > summary {
         grid-template-columns: 1fr 1fr;
         gap: 12px;
     }
@@ -4876,28 +4880,28 @@ body.icct-inventory:has(.protocol-form) {
 }
 
 /* Snapshot content always occupies the complete expanded record. */
-#view-records .device-record-body,
-#view-records .device-record-snapshot,
-#view-records .device-record-snapshot > .site-table-wrap {
+:is(#view-records, #view-diagnostics) .device-record-body,
+:is(#view-records, #view-diagnostics) .device-record-snapshot,
+:is(#view-records, #view-diagnostics) .device-record-snapshot > .site-table-wrap {
     display: block;
     width: 100%;
     max-width: none;
     min-width: 0;
     box-sizing: border-box;
 }
-#view-records .device-record-snapshot .site-table {
+:is(#view-records, #view-diagnostics) .device-record-snapshot .site-table {
     width: 100%;
     max-width: none;
 }
-#view-records .device-record-snapshot .site-table th:first-child {
+:is(#view-records, #view-diagnostics) .device-record-snapshot .site-table th:first-child {
     width: 38%;
 }
-#view-records .device-record-body .device-record-output {
+:is(#view-records, #view-diagnostics) .device-record-body .device-record-output {
     width: 100%;
     box-sizing: border-box;
 }
 
-#view-records .device-record-item .device-status {
+:is(#view-records, #view-diagnostics) .device-record-item .device-status {
     display: inline-block;
     padding: 4px 10px;
     border-radius: 12px;
@@ -5527,12 +5531,24 @@ h6 {
     align-items: center;
     gap: 8px;
     cursor: pointer;
+    padding: 12px 16px;
+    border-bottom: 3px solid transparent;
+    position: relative;
 }
+.fault-source-options label:has(input:checked) {
+    color: #0f62fe;
+    border-bottom-color: #0f62fe;
+}
+.fault-source-options label:has(input:focus-visible) {
+    outline: 2px solid #0f62fe;
+    outline-offset: 2px;
+}
+/* Keep native keyboard radio navigation while displaying the sources as tabs. */
 .fault-source-options input {
-    width: 18px;
-    height: 18px;
-    margin: 0;
-    accent-color: #0f62fe;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
 }
 .fault-workspace {
     display: grid;
@@ -7172,7 +7188,7 @@ h6 {
 }
 .alarm-filters {
     display: grid;
-    grid-template-columns: repeat(4, minmax(100px, 1fr)) auto minmax(240px, 2.5fr);
+    grid-template-columns: repeat(4, minmax(100px, 1fr)) auto minmax(260px, 2.4fr);
     gap: 16px;
     align-items: end;
     padding: 20px 22px 14px;
@@ -8196,4 +8212,213 @@ h6 {
 #installation-dialog pre {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+}
+
+.device-syslog-search {
+    flex-wrap: wrap;
+    align-items: end;
+}
+.device-syslog-search label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Preserve readable audit field lines while using the normal interface font. */
+.configuration-history-value {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    vertical-align: top;
+}
+
+/* History badges share colours; labels always retain the recorded status text. */
+.device-status[data-log-status] {
+    background: #e8e8e8;
+    color: #525252;
+}
+.device-status:is(
+    [data-log-status='complete' i],
+    [data-log-status='normal' i],
+    [data-log-status='cleared' i],
+    [data-log-status='up' i],
+    [data-log-status='synchronized' i]
+) {
+    background: #d5f2df;
+    color: #176b35;
+}
+.device-status:is(
+    [data-log-status='failed' i],
+    [data-log-status='error' i],
+    [data-log-status='down' i],
+    [data-log-status='unsynchronized' i],
+    [data-log-status='unavailable' i]
+) {
+    background: #ffe1e1;
+    color: #a2191f;
+}
+.device-status:is(
+    [data-log-status='queued' i],
+    [data-log-status='expired' i],
+    [data-log-status='stale' i],
+    [data-log-status='local reference' i]
+) {
+    background: #fff0c2;
+    color: #775500;
+}
+.device-status[data-log-status='running' i] {
+    background: #dceaff;
+    color: #0043a8;
+}
+.section-help {
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+/* Keep the Figma filter row compact; source and time filters remain available on demand. */
+.alarm-filters .field {
+    min-width: 0;
+}
+.alarm-extra-filters {
+    grid-column: 1 / -1;
+    font-size: 13px;
+    color: #666;
+}
+.alarm-extra-filters > summary {
+    cursor: pointer;
+    width: fit-content;
+}
+.alarm-extra-filter-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    padding-top: 12px;
+}
+@media (max-width: 650px) {
+    .alarm-extra-filter-fields {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Compact event rows keep the full collected evidence in an independent accordion. */
+.port-alarm-history td small {
+    display: block;
+    margin-top: 4px;
+    color: #666;
+}
+.port-history-detail-row > td {
+    padding: 0 14px 10px;
+}
+.port-history-details > summary {
+    width: fit-content;
+    cursor: pointer;
+    color: #155cff;
+    padding: 6px 0;
+}
+.port-history-evidence {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 24px;
+    margin: 12px 0;
+}
+.port-history-evidence dt {
+    color: #666;
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+.port-history-evidence dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+@media (max-width: 650px) {
+    .port-history-evidence {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* All severity labels and controls use the shared palette emitted by the shell.
+   Operational statuses (Normal, Unknown, Stale) keep their separate status colours. */
+.severity-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 16px;
+    padding: 2px 9px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+:is(
+    .severity-badge,
+    .alarm-severity,
+    .frequent-severity,
+    .rack-alarm-count,
+    .device-status,
+    .mib-fault-severity,
+    .mib-fault-summary .mib-fault-severity,
+    select[data-severity-control],
+    option
+)[data-severity='Critical'],
+.device-status[data-log-status='Critical' i] {
+    background: var(--icct-severity-critical);
+    color: #161616;
+}
+:is(
+    .severity-badge,
+    .alarm-severity,
+    .frequent-severity,
+    .rack-alarm-count,
+    .device-status,
+    .mib-fault-severity,
+    .mib-fault-summary .mib-fault-severity,
+    select[data-severity-control],
+    option
+)[data-severity='Major'],
+.device-status[data-log-status='Major' i] {
+    background: var(--icct-severity-major);
+    color: #161616;
+}
+:is(
+    .severity-badge,
+    .alarm-severity,
+    .frequent-severity,
+    .rack-alarm-count,
+    .device-status,
+    .mib-fault-severity,
+    .mib-fault-summary .mib-fault-severity,
+    select[data-severity-control],
+    option
+)[data-severity='Minor'],
+.device-status[data-log-status='Minor' i] {
+    background: var(--icct-severity-minor);
+    color: #161616;
+}
+:is(
+    .severity-badge,
+    .alarm-severity,
+    .frequent-severity,
+    .rack-alarm-count,
+    .device-status,
+    .mib-fault-severity,
+    .mib-fault-summary .mib-fault-severity,
+    select[data-severity-control],
+    option
+)[data-severity='Warning'],
+.device-status[data-log-status='Warning' i] {
+    background: var(--icct-severity-warning);
+    color: #161616;
+}
+:is(
+    .severity-badge,
+    .alarm-severity,
+    .frequent-severity,
+    .rack-alarm-count,
+    .device-status,
+    .mib-fault-severity,
+    .mib-fault-summary .mib-fault-severity,
+    select[data-severity-control],
+    option
+)[data-severity='Information'],
+.device-status[data-log-status='Information' i] {
+    background: var(--icct-severity-information);
+    color: #fff;
 }

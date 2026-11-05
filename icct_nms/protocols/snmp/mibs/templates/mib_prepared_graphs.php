@@ -88,12 +88,16 @@ $cfTypes = array_intersect_key($consolidation_functions, array_flip([1, 2, 3, 4]
                 class="button"
                 data-graph-add>Add Graph Template</button>
         </div>
-        <p
-            class="mib-prepared-help"
+        <span
+            class="field-info section-help mib-prepared-help"
             data-graph-edit-only
-            hidden><?= !empty($readyDraft['saved_edit'])
-                ? 'Existing source groups are retained. Create a new template to split or combine sources.'
-                : 'Choose the data sources for each graph. Combined indexed sources must share a table entry and polling profile.' ?></p>
+            hidden
+            tabindex="0"
+            role="img"
+            aria-label="Graph selection information"
+            data-tooltip="<?= icct_nms_h(!empty($readyDraft['saved_edit'])
+                    ? 'Existing source groups are retained. Create a new template to split or combine sources.'
+                    : 'Choose the data sources for each graph. Combined indexed sources must share a table entry and polling profile.') ?>">ⓘ</span>
         <div data-graph-editor></div>
     </div>
     <div

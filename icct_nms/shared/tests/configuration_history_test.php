@@ -42,9 +42,7 @@ function icct_nms_device($id)
     }
     return $fixtureHost;
 }
-function icct_backend_require_management($realm)
-{
-}
+function icct_backend_require_management($realm) {}
 function icct_nms_metadata($id)
 {
     return [];
@@ -59,6 +57,10 @@ function db_fetch_assoc_prepared($sql, $args)
 }
 function db_fetch_cell_prepared($sql, $args)
 {
+    if (str_starts_with($args[0] ?? '', 'fault_rules_')) {
+        return '[]';
+    }
+
     return str_contains($sql, 'GET_LOCK') || str_contains($sql, 'RELEASE_LOCK') ? 1 : 'tester';
 }
 function icct_nms_discovery_assignment($id)

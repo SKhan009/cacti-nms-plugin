@@ -16,7 +16,7 @@ function icct_nms_h($s)
 {
     return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
 }
-$display = static fn ($v) => icct_nms_h($v ?: '—');
+$display = static fn($v) => icct_nms_h($v ?: '—');
 function icct_backend_diag_authorize_job($job)
 {
     global $diagnosticAccess;
@@ -82,11 +82,11 @@ function db_fetch_assoc_prepared($sql, $args)
     ];
 }
 // Includes use caller scope for device and display variables.
-function captureRecords()
+function captureRecords($section = 'records')
 {
     global $id, $display;
     ob_start();
-    include __DIR__ . '/../../inventory/templates/device_records.php';
+    include __DIR__ . '/../../inventory/templates/device_' . $section . '.php';
     return ob_get_clean();
 }
 $html = captureRecords();
@@ -99,8 +99,14 @@ foreach ($queries as [$sql, $args]) {
     }
 }
 assert(str_contains($html, '&lt;script&gt;'));
-assert(str_contains($html, '&lt;img'));
+assert(!str_contains($html, 'Diagnostic readings'));
 assert(str_contains($html, 'Page 3 of 3'));
+$html = captureRecords('diagnostics');
+assert(str_contains($html, '&lt;img'));
+assert(str_contains($html, 'data-log-status="complete"'));
+assert(str_contains($html, '#view-diagnostics'));
+assert(!str_contains($html, '<p>Your saved diagnostic'));
+assert(str_contains($html, 'Page 2 of 3'));
 foreach ($queries as [$sql, $args]) {
     if (str_contains($sql, 'diagnostic_jobs')) {
         assert($args === [2, 7]);
@@ -114,7 +120,7 @@ foreach ($queries as [$sql, $args]) {
 }
 $diagnosticAccess = false;
 $queries = [];
-$html = captureRecords();
+$html = captureRecords('diagnostics');
 assert(!str_contains($html, 'View result'));
 foreach ($queries as [$sql, $args]) {
     assert(!str_contains($sql, 'diagnostic_jobs'));
@@ -124,4 +130,4 @@ $queries = [];
 $html = captureRecords();
 assert(str_contains($html, 'permission'));
 assert(!$queries);
-echo "PASS: Records permissions, owner/device scope, escaped output, change-only history and independent pagination\n";
+echo "PASS: Diagnostic tab, status colours, tooltips, records permissions, owner/device scope, escaped output, change-only history and independent pagination\n";

@@ -5,7 +5,7 @@ function plugin_icct_nms_version()
 {
     return [
         'name' => 'icct_nms',
-        'version' => '1.4.6',
+        'version' => '1.4.15',
         'longname' => 'ICCT NMS Inventory',
         'author' => 'NMS Project',
         'homepage' => 'https://www.cacti.net/',
@@ -94,6 +94,4 @@ function icct_nms_setup_registration()
     return true;
 }
 /** Keep ICCT configuration and core devices for a later reinstall. */
-function plugin_icct_nms_uninstall()
-{
-}
+function plugin_icct_nms_uninstall() {}

@@ -56,7 +56,7 @@ function check($ok, $message)
 icct_nms_seed_protocol_presets();
 $defaults = icct_nms_protocol_presets();
 $profiles = icct_nms_netflow_profiles();
-check(count($defaults) === 7 && count($profiles) === 4, 'Fresh install missing presets.');
+check(count($defaults) === 8 && count($profiles) === 4, 'Fresh install missing presets.');
 foreach ([5, 7, 9, 10] as $v) {
     $checked = icct_nms_netflow_validate($profiles[$v]);
     check((int) $checked['version'] === $v, 'Wrong profile version.');

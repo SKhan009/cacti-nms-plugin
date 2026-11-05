@@ -2,8 +2,8 @@
 # The installer generates the active file after detecting existing UDP/TCP listeners.
 # This example intentionally does not stop normal rsyslog processing.
 
-template(name="ICCTNMSJson" type="string"
-  string="{\"timestamp\":\"%timereported:::date-rfc3339,json%\",\"source_ip\":\"%fromhost-ip:::json%\",\"hostname\":\"%hostname:::json%\",\"input_name\":\"%inputname:::json%\",\"program\":\"%programname:::json%\",\"facility\":\"%syslogfacility-text:::json%\",\"facility_code\":\"%syslogfacility%\",\"severity\":\"%syslogseverity-text:::json%\",\"severity_code\":\"%syslogseverity%\",\"message\":\"%msg:::json%\"}\n")
+# Adjust the Cacti path for a manual install. The installer writes this include automatically.
+include(file="/path/to/cacti/plugins/icct_nms/protocols/syslog/rhel/rsyslog-template.conf")
 
 if (($inputname == 'icct-udp') or ($inputname == 'icct-tcp') or ($inputname == 'imudp') or ($inputname == 'imtcp')) then {
   action(type="omfile"

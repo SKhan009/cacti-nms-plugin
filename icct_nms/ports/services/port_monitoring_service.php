@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/port_evidence.php';
+
 /** Device-owned alarm settings bound to a real interface index and name. */
 function icct_nms_port_monitoring($id)
 {
@@ -142,6 +144,7 @@ function icct_nms_port_faults($host)
             'value' => $fresh ? $port['oper'] : null,
             'sample_time' => $fresh ? $view['collected'] : 0,
             'state' => $state,
+            'port_context' => $previous['details'] ?? [],
         ];
     }
     return $out;
@@ -227,7 +230,8 @@ function icct_nms_record_port_alarms($host, $view, $settings)
         foreach (
             array_unique(
                 array_merge(array_keys($settings['ports']), array_keys($saved['ports'] ?? [])),
-            ) as $index
+            )
+            as $index
         ) {
             $rule = $settings['ports'][$index] ?? null;
             $previous = $saved['ports'][$index] ?? [];
@@ -254,6 +258,37 @@ function icct_nms_record_port_alarms($host, $view, $settings)
                 $transition['changed'] = true;
                 $transition['event'] = 'Interface state changed';
             }
+            if (
+                $fresh &&
+                isset($previous['details']['last_sample']) &&
+                (int) $view['collected'] < (int) $previous['details']['last_sample']
+            ) {
+                $next['ports'][$index] = $previous;
+                continue;
+            }
+            if (!$transition['changed'] && $fresh && !isset($previous['details'])) {
+                $transition['changed'] = true;
+                $transition['event'] = 'Observation details recorded';
+            }
+            $transition['details'] = icct_nms_port_evidence(
+                $previous,
+                $port,
+                $view,
+                $transition,
+                $changedContext,
+            );
+            if (!$transition['changed'] && $fresh) {
+                foreach (['source', 'kind', 'if_type', 'connector_present'] as $field) {
+                    if (
+                        ($previous['details'][$field] ?? null) !==
+                        ($transition['details'][$field] ?? null)
+                    ) {
+                        $transition['changed'] = true;
+                        $transition['event'] = 'Interface metadata changed';
+                        break;
+                    }
+                }
+            }
             $transition['admin'] = $admin;
             $transition['oper'] = $oper;
             if ($transition['changed']) {
@@ -261,8 +296,8 @@ function icct_nms_record_port_alarms($host, $view, $settings)
                     'INSERT INTO ' .
                         ('plugin_icct_nms_port_alarm_events(host_id,if_index,port_name,event,state_before,' .
                             'state_after,severity_before,severity_after,admin_status,oper_status,collected_at,' .
-                            'created_at) ') .
-                        'VALUES(?,?,?,?,?,?,?,?,?,?,?,NOW())',
+                            'created_at,incident_key,details_json) ') .
+                        'VALUES(?,?,?,?,?,?,?,?,?,?,?,NOW(),?,?)',
                     [
                         $id,
                         (int) $index,
@@ -275,6 +310,8 @@ function icct_nms_record_port_alarms($host, $view, $settings)
                         $admin,
                         $oper,
                         $fresh ? date('Y-m-d H:i:s', (int) $view['collected']) : null,
+                        $transition['details']['incident_key'],
+                        json_encode($transition['details'], JSON_THROW_ON_ERROR),
                     ],
                 );
             }

@@ -63,6 +63,12 @@ function icct_nms_protocol_starters()
             'facility_codes' => json_encode(range(0, 23)),
             'match_strings' => '[]',
         ],
+        'ntp' => [
+            'method' => 'local',
+            'timeout' => 5,
+            'interval_seconds' => $cadence,
+            'stale_seconds' => 3 * $cadence,
+        ],
         'netflow' => array_replace(icct_nms_netflow_defaults(), ['collector' => $hostname]),
     ];
 }
@@ -137,7 +143,8 @@ function icct_nms_seed_protocol_presets()
                     'protocol_defaults' => [$before, $presets],
                     'protocol_netflow_versions' => [$oldProfiles, $profiles],
                     'protocol_versions' => [$oldVersions, $versions],
-                ] as $key => [$old, $new]
+                ]
+                as $key => [$old, $new]
             ) {
                 if ($old === $new) {
                     continue;

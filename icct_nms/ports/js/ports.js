@@ -75,6 +75,7 @@
         severities.forEach(([value, label]) => select.add(new Option(label, value)));
         select.value = row[key] || '';
         select.dataset.portSeverity = key;
+        icctBindSeveritySelect(select);
         select.addEventListener('change', () => {
             row[key] = select.value;
             sync();

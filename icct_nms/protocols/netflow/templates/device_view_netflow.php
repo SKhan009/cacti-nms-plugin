@@ -133,10 +133,13 @@
     <div
         class="netflow-rankings"
         id="netflow-rankings"></div>
-    <h3>Traffic Records</h3>
-    <p>Applications are shown only when reported by the exporter. Missing readings are shown as
-        unavailable. Readings update every 30 seconds; new exports can take up to one capture
-        interval to appear.</p>
+    <h3>Traffic Records <span
+            class="field-info section-help"
+            tabindex="0"
+            role="img"
+            aria-label="Applications are shown only when reported by the exporter. Missing readings are shown as unavailable. Readings update every 30 seconds; new exports can take up to one capture interval to appear."
+            data-tooltip="Applications are shown only when reported by the exporter. Missing readings are shown as unavailable. Readings update every 30 seconds; new exports can take up to one capture interval to appear.">ⓘ</span>
+    </h3>
     <div class="site-table-wrap">
         <table class="site-table netflow-table">
             <thead>
@@ -194,10 +197,13 @@
             </button>
         </div>
     </footer>
-    <h3>Traffic Anomalies</h3>
-    <p>Rule-based indicators of possible scanning, SYN floods, worm-like SMB/RPC traffic, and
-        over-utilization. These indicators require investigation and do not establish that an
-        endpoint is infected.</p>
+    <h3>Traffic Anomalies <span
+            class="field-info section-help"
+            tabindex="0"
+            role="img"
+            aria-label="Rule-based indicators of possible scanning, SYN floods, worm-like SMB/RPC traffic, and over-utilization. These indicators require investigation and do not establish that an endpoint is infected."
+            data-tooltip="Rule-based indicators of possible scanning, SYN floods, worm-like SMB/RPC traffic, and over-utilization. These indicators require investigation and do not establish that an endpoint is infected.">ⓘ</span>
+    </h3>
     <div class="site-table-wrap">
         <table class="site-table">
             <thead>

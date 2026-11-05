@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build an offline source ZIP with verified file hashes and no installation secrets/state."""
 import argparse
+import configparser
 import hashlib
 import json
 from pathlib import Path
@@ -57,9 +58,11 @@ def build(destination):
         raise ValueError("Write release archives outside the plugin source tree.")
     files = list(source_files())
     contents = {name: path.read_bytes() for path, name in files}
+    metadata = configparser.ConfigParser()
+    metadata.read(PLUGIN / "INFO")
     manifest = {
         "format": 1,
-        "version": "1.4.1",
+        "version": metadata["info"]["version"],
         "files": {name: hashlib.sha256(data).hexdigest() for name, data in contents.items()},
         "retired": RETIRED,
     }

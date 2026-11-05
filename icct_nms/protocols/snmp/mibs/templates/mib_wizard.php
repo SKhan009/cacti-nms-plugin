@@ -30,6 +30,7 @@ $stages = [1 => 'Data Sources', 2 => 'Graph Templates', 3 => 'Device Template'];
             <?php foreach ($stages as $number => $label): ?>
                 <div
                     <?= $step === $number ? 'aria-current="step"' : '' ?>
+
                     class="<?= $step > $number ? 'complete' : '' ?>">
                     <span><?= $step > $number ? '✓' : $number ?></span>
                     <strong><?= $label ?></strong>
@@ -156,6 +157,7 @@ foreach ($objects as $i => $object) {
                                         value="1"
                                         aria-label="Select <?= icct_nms_h($object['symbol']) ?>"
                                         <?= $selected ? 'checked' : '' ?>
+
                                         <?= $step > 1 || !$object['numeric'] ? 'disabled' : '' ?>>
                                     <button
                                         type="button"
@@ -174,9 +176,13 @@ foreach ($objects as $i => $object) {
                 <div class="mib-oid-editor">
                     <?php if ($step === 3): ?>
                         <section class="mib-device-summary">
-                            <h2>Device Template</h2>
-                            <p>The device template will contain the saved graph templates listed below.
-                                Review the name and device type above, then save.</p>
+                            <h2>Device Template <span
+                                    class="field-info section-help"
+                                    tabindex="0"
+                                    role="img"
+                                    aria-label="The device template will contain the saved graph templates listed below. Review the name and device type above, then save."
+                                    data-tooltip="The device template will contain the saved graph templates listed below. Review the name and device type above, then save.">ⓘ</span>
+                            </h2>
                             <ul>
                                 <?php foreach ($bundle['rows'] as $row): ?>
                                     <li><?= icct_nms_h($row['settings']['graph_name'] ?? $row['name']) ?> · <a

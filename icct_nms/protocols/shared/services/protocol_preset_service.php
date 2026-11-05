@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../ntp/services/ntp_service.php';
+
 /** Preset values populate drafts; explicit overrides belong to one device. */
 function icct_nms_protocol_preset_fields($protocol)
 {
@@ -34,6 +36,8 @@ function icct_nms_protocol_preset_fields($protocol)
                 'keepalive',
                 'monitoring',
             ];
+        case 'ntp':
+            return icct_nms_ntp_fields();
         case 'netflow':
             return icct_nms_netflow_fields();
         case 'syslog':
@@ -192,6 +196,8 @@ function icct_nms_protocol_preset_validate($protocol, $input)
             }
         }
         $out['monitoring'] = !empty($input['monitoring']) ? '1' : '0';
+    } elseif ($protocol === 'ntp') {
+        $out = icct_nms_ntp_validate($out);
     } elseif ($protocol === 'netflow') {
         $out = icct_nms_netflow_validate($out);
     } elseif ($protocol === 'syslog') {
@@ -272,7 +278,7 @@ function icct_nms_save_protocol_preset($input)
 function icct_nms_protocol_device_overrides($id)
 {
     $out = [];
-    foreach (['snmp', 'cdp', 'lldp', 'ssh', 'serial', 'syslog', 'netflow'] as $protocol) {
+    foreach (['snmp', 'cdp', 'lldp', 'ssh', 'serial', 'syslog', 'netflow', 'ntp'] as $protocol) {
         $json = $id
             ? db_fetch_cell_prepared(
                 'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
@@ -297,7 +303,7 @@ function icct_nms_protocol_record_overrides($id, $action, $input)
         $action === 'remove_protocol' &&
         in_array(
             $input['protocol'] ?? '',
-            ['snmp', 'cdp', 'lldp', 'ssh', 'serial', 'syslog', 'netflow'],
+            ['snmp', 'cdp', 'lldp', 'ssh', 'serial', 'syslog', 'netflow', 'ntp'],
             true,
         )
     ) {
@@ -309,7 +315,11 @@ function icct_nms_protocol_record_overrides($id, $action, $input)
     $protocol = $action === 'discovery' ? $input['discovery_protocol'] ?? '' : $action;
     if (
         !is_string($protocol) ||
-        !in_array($protocol, ['snmp', 'cdp', 'lldp', 'ssh', 'serial', 'syslog', 'netflow'], true)
+        !in_array(
+            $protocol,
+            ['snmp', 'cdp', 'lldp', 'ssh', 'serial', 'syslog', 'netflow', 'ntp'],
+            true,
+        )
     ) {
         return;
     }

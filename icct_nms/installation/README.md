@@ -13,7 +13,7 @@ python3 plugins/icct_nms/installation/cli/setup.py plan --cacti-root /path/to/ca
 sudo python3 plugins/icct_nms/installation/cli/setup.py install --no-packages --cacti-root /path/to/cacti
 ```
 
-Provision dependencies from approved offline media first, or supply a verified bundle as shown below. An install without `--bundle`, `--no-packages` or explicit `--online` is rejected and never contacts a repository. For an online target, use `sudo python3 plugins/icct_nms/installation/cli/setup.py install --online --cacti-root /path/to/cacti`; this installs from the configured trusted repositories. The explicit install command installs/enables the plugin through Cacti's native lifecycle, makes the two upload/work directories writable, installs worker units with this installation's paths and account, and configures/capture-tests Syslog. Source code, database credentials and device credentials are not copied into a second configuration. Existing service units are backed up before replacement. Existing devices, presets, timezone, NTP peers, SSH keys and host firewall policy are preserved. No global sudoers rule or privileged web agent is added.
+Provision dependencies from approved offline media first, or supply a verified bundle as shown below. An install without `--bundle`, `--no-packages` or explicit `--online` is rejected and never contacts a repository. For an online target, use `sudo python3 plugins/icct_nms/installation/cli/setup.py install --online --cacti-root /path/to/cacti`; this installs from the configured trusted repositories. The explicit install command installs/enables the plugin through Cacti's native lifecycle, makes the two upload/work directories writable, installs worker units with this installation's paths and account, and configures and validates the Syslog receiver without injecting test messages into production history. Source code, database credentials and device credentials are not copied into a second configuration. Existing service units are backed up before replacement. Existing devices, presets, timezone, NTP peers, SSH keys and host firewall policy are preserved. NTP monitoring grants the collector account only the fixed chrony tracking, source-statistics and peer-data reads through `/run/chrony/chronyd.sock` as the chrony user; no wildcard sudo commands or privileged web agent are added.
 
 Supported package-manager adapters: RHEL/Rocky/AlmaLinux with DNF; Debian/Ubuntu with APT; both require systemd for automatic worker setup. Extra repositories may be needed for nfdump, hping3 or netperf. The installer does not silently enable third-party repositories, skip unavailable packages or claim success when a service fails. Provision approved repositories first. Use `--web-user` and `--web-group` for a custom PHP service account. Use `--no-packages` when packages are already supplied by the administrator.
 
@@ -125,3 +125,18 @@ Setup provisions only the required writable application paths: MIB storage, uplo
 ## Offline SSH service setup
 
 Include a verified `guacamole-strict` native bundle and matching OS package bundle in the release, then add `--ssh-origin https://nms.example.org` to `install.py`. The installer forwards the exact origin, verifies the strict build and starts the dedicated broker and loopback Guacamole services. RHEL bundles include SELinux policy build tools; enforcement stays enabled. See `protocols/ssh/README.md` for explicit existing-store and account options. Without an explicit origin, setup leaves SSH configuration unchanged and Installation Checks reports its measured state. NTP and TACACS+ backends remain unavailable.
+
+## Read-only NTP statistics on offline RHEL
+
+The standard installer provisions chrony, sudo and an exact read-only permission for the collector account. It never edits chrony sources, enables/restarts chronyd or adjusts a clock. Existing offline bundles must be rebuilt for this release's dependency manifest.
+
+For a remote RHEL device, copy the bundled `installation/cli/ntp_access.py` to that device and run it for the **saved SSH monitoring account**, after provisioning chrony and sudo from approved offline media:
+
+```sh
+python3 ntp_access.py plan --user monitoring_account
+sudo python3 ntp_access.py install --user monitoring_account
+```
+
+The fixed policy permits only tracking, source-statistics and peer-data reads as `chrony`, through the explicit `/run/chrony/chronyd.sock` Unix socket. There are no wildcard arguments or UDP/transport fallbacks. Existing SSH host-key approval remains required. NTP collection does not enable SSH health monitoring. Missing permission, insufficient samples or a source change produces an explicit collection error without substitute measurements.
+
+Jitter is chrony's selected-source residual offset standard deviation (`sourcestats`, in milliseconds), with its sample count and span stored alongside it. Peer delay is the measured round-trip delay to that same selected NTP peer (`ntpdata`), distinct from root delay to the ultimate reference. Tracking brackets both reads; a source/reference update invalidates the collection. All measurements and errors are stored per inventory device. Older history retains missing jitter/delay as unknown and is never backfilled with zero or RMS offset.

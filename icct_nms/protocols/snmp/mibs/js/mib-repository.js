@@ -627,7 +627,10 @@
                               : rule.threshold
                           : rule[key] || '—';
                 if (key === 'severity') {
-                    cell.dataset.severity = rule.severity;
+                    icctSetSeverity(cell, rule.severity);
+                    const severitySelect = card.querySelector('[data-rule="severity"]');
+                    icctBindSeveritySelect(severitySelect);
+                    icctSetSeverity(severitySelect, rule.severity);
                     cell.textContent =
                         { Information: 'Info', Warning: 'Warn' }[rule.severity] || rule.severity;
                 }

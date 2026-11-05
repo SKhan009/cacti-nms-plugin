@@ -10,7 +10,6 @@ $actorLabel =
 if (!empty($ack['actor_email'])) {
     $actorLabel .= ' (' . $ack['actor_email'] . ')';
 }
-$severityNames = ['Warning' => 'Warn', 'Information' => 'Info'];
 $severityColors = icct_nms_severity_colors(); ?>
 <section
     class="alarm-detail-page"
@@ -89,6 +88,12 @@ $severityColors = icct_nms_severity_colors(); ?>
                 data-detail="escalation_status"
                 class="<?= !empty($alarm['escalated']) ? 'alarm-status-checked' : '' ?>"><?= !empty($alarm['escalated']) ? 'Esc' : 'Not_Esc' ?></dd>
         </div>
+        <?php foreach (['source' => 'Event source', 'model_number' => 'Model number', 'serial_number' => 'Serial number'] as $field => $label): ?>
+            <div>
+                <dt><?= $label ?></dt>
+                <dd data-detail="<?= $field ?>"><?= $detailValue($alarm[$field] ?? '') ?></dd>
+            </div>
+        <?php endforeach; ?>
     </dl>
     <section class="alarm-acknowledgement">
         <h2>Acknowledgement &amp; Remarks</h2>
@@ -153,11 +158,9 @@ $severityColors = icct_nms_severity_colors(); ?>
                             <td>
                                 <?php if (
                                     isset($severityColors[$severity])
-                                ): ?>
-                                    <span
-                                        class="alarm-severity"
-                                        style="background:<?= $severityColors[$severity] ?>;color:<?= $severity === 'Information' ? '#fff' : '#161616' ?>"><?= $severityNames[$severity] ?? $severity ?></span>
-                                <?php endif; ?>
+                                ): ?> <?= icct_nms_severity_badge($severity) ?>
+ <?php endif; ?>
+
                             </td>
                             <td>
                                 <span><?= $tableValue($snapshot['description'] ?? '') ?></span>
@@ -228,6 +231,7 @@ $severityColors = icct_nms_severity_colors(); ?>
                 id="alarm-history-next"
                 aria-label="Next alarm history page"
                 <?= count($alarmDetail['history']) <= 100 ? 'disabled' : '' ?>
+
                 class="pagination-control">
                 <svg
                     class="pagination-arrow"

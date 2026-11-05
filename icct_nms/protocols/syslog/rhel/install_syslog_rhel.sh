@@ -19,7 +19,7 @@ if [[ ! -f "$PLUGIN/setup.php" || ! -f "$CACTI_ROOT/include/global.php" ]]; then
     echo "Cacti/ICCT plugin not found under $CACTI_ROOT" >&2
     exit 1
 fi
-for cmd in rsyslogd systemctl php ss awk grep sed stat install logger; do
+for cmd in rsyslogd systemctl php ss awk grep sed stat install; do
     command -v "$cmd" > /dev/null 2>&1 || {
         echo "Missing required command: $cmd" >&2
         exit 1
@@ -94,12 +94,11 @@ fi
 cat > "$CONF" << RSYSLOG
 # Managed by ICCT NMS.
 # Existing system logging is preserved. This file adds an early structured copy
-# of network Syslog into the ICCT NDJSON spool and never uses `stop`.
+# of network Syslog into the ICCT NDJSON spool and never discards other system logging.
 $load_udp
 $load_tcp
 
-template(name="ICCTNMSJson" type="string"
-  string="{\"timestamp\":\"%timereported:::date-rfc3339,json%\",\"source_ip\":\"%fromhost-ip:::json%\",\"hostname\":\"%hostname:::json%\",\"input_name\":\"%inputname:::json%\",\"program\":\"%programname:::json%\",\"facility\":\"%syslogfacility-text:::json%\",\"facility_code\":\"%syslogfacility%\",\"severity\":\"%syslogseverity-text:::json%\",\"severity_code\":\"%syslogseverity%\",\"message\":\"%msg:::json%\"}\n")
+include(file="$PLUGIN/protocols/syslog/rhel/rsyslog-template.conf")
 
 ruleset(name="icct-nms-network") {
   action(type="omfile"
@@ -154,8 +153,7 @@ if ! systemctl restart rsyslog; then
     exit 1
 fi
 
-# Install the importer service before the capture self-test so any record
-# written during testing follows the same production path used after reboot.
+# Start the importer only after the receiver configuration has been validated.
 sed -e "s|@CACTI_ROOT@|$CACTI_ROOT|g" \
     -e "s|@WEB_USER@|$WEB_USER|g" \
     -e "s|@WEB_GROUP@|$WEB_GROUP|g" \
@@ -185,29 +183,11 @@ if [[ "$OPEN_FIREWALL" == "1" ]] && systemctl is-active --quiet firewalld; then
     firewall-cmd --reload
 fi
 
-# Production capture self-test. A listener merely being open is not enough;
-# prove that a network message actually reaches the NDJSON spool.
-SELFTEST="ICCTNMS_RSYSLOG_SELFTEST_${STAMP}_$$"
-logger --udp -n 127.0.0.1 -P 514 -p local7.notice -t ICCT_INSTALL_TEST "$SELFTEST" || true
-captured=0
-for _ in $(seq 1 20); do
-    if grep -Fq "$SELFTEST" "$SPOOL_FILE" 2> /dev/null; then
-        captured=1
-        break
-    fi
-    sleep 0.1
-done
-if [[ $captured -ne 1 ]]; then
-    echo >&2
-    echo "ERROR: UDP/TCP 514 are configured, but the ICCT spool did not receive the local network self-test." >&2
-    echo "This usually means an existing port-514 input is bound to a custom rsyslog ruleset that bypasses the default ruleset." >&2
-    echo "Review: grep -RniE 'imudp|imtcp|UDPServerRun|InputTCPServerRun|ruleset' /etc/rsyslog.conf /etc/rsyslog.d" >&2
-    echo "The installer will not claim production readiness until /var/log/icct-nms/remote.ndjson receives network messages." >&2
-    rollback_rsyslog
-    exit 2
-fi
+# Validate configuration without injecting test messages into production history.
+# Wire capture/ingestion acceptance tests run in an isolated network and database.
+echo "Receiver configured. Readiness is confirmed by actual device traffic and worker status."
 
-# Re-apply expected file ownership/context after the self-test.
+# Preserve restricted spool ownership and its SELinux context.
 chown root:"$WEB_GROUP" "$SPOOL_FILE"
 chmod 0640 "$SPOOL_FILE"
 restorecon -F "$SPOOL_FILE" > /dev/null 2>&1 || true
@@ -217,12 +197,10 @@ printf 'UDP 514: '
 ss -lun | awk '{print $4}' | grep -Eq '(^|:)514$' && echo LISTENING || echo NOT-LISTENING
 printf 'TCP 514: '
 ss -ltn | awk '{print $4}' | grep -Eq '(^|:)514$' && echo LISTENING || echo NOT-LISTENING
-printf 'ICCT spool capture self-test: '
-[[ $captured -eq 1 ]] && echo PASSED || echo FAILED
 systemctl --no-pager --full status icct-nms-syslog-worker.service | sed -n '1,12p' || true
 
 echo
-echo "ICCT Syslog production integration installed and capture-tested."
+echo "ICCT Syslog production integration installed."
 echo "Spool : $SPOOL_FILE"
 echo "Events: Inventory > device > Syslog"
 echo "If firewalld is managed centrally, open UDP/TCP 514 there instead of setting OPEN_FIREWALL=1."

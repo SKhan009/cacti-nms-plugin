@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../fcaps/services/fcaps_service.php';
+require_once __DIR__ . '/../../protocols/ntp/services/ntp_service.php';
 /** Device-owned, credential-free NMS configuration snapshots. Not running-config backups. */
 function icct_nms_configuration_pick($row, $fields, $prefix, &$out)
 {
@@ -130,7 +131,8 @@ function icct_nms_configuration_snapshot($id)
         'netflow',
         $out,
     );
-    foreach (['snmp', 'ssh', 'serial', 'cdp', 'lldp', 'syslog', 'netflow'] as $protocol) {
+    icct_nms_configuration_pick(icct_nms_ntp_assignment($id), icct_nms_ntp_fields(), 'ntp', $out);
+    foreach (['snmp', 'ssh', 'serial', 'cdp', 'lldp', 'syslog', 'netflow', 'ntp'] as $protocol) {
         $out['protocol_enabled.' . $protocol] = icct_backend_protocol_enabled($id, $protocol)
             ? '1'
             : '0';

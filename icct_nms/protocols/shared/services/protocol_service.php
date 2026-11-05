@@ -235,6 +235,11 @@ function icct_nms_remove_protocol($id, $host, $input)
             ]);
         case 'discovery':
             return icct_nms_save_discovery($id, ['methods' => []]);
+        case 'ntp':
+            return icct_backend_category_execute(
+                'DELETE FROM plugin_icct_nms_ntp_devices WHERE host_id=?',
+                [(int) $id],
+            );
         case 'netflow':
             return icct_nms_netflow_remove($id);
         case 'syslog':
@@ -261,7 +266,11 @@ function icct_nms_toggle_protocol($id, $host, $input)
     icct_backend_require_device_access($id);
     $protocol = $input['protocol'] ?? '';
     if (
-        !in_array($protocol, ['cdp', 'lldp', 'snmp', 'ssh', 'serial', 'syslog', 'netflow'], true) ||
+        !in_array(
+            $protocol,
+            ['cdp', 'lldp', 'snmp', 'ssh', 'serial', 'syslog', 'netflow', 'ntp'],
+            true,
+        ) ||
         !in_array($input['enabled'] ?? '', ['0', '1'], true)
     ) {
         throw new InvalidArgumentException('Invalid protocol state.');

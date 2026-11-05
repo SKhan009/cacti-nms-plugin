@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error) {
     $key = $_POST['preset_protocol'] ?? '';
     if (
         is_string($key) &&
-        in_array($key, ['cdp', 'lldp', 'snmp', 'ssh', 'serial', 'syslog', 'netflow'], true)
+        in_array($key, ['cdp', 'lldp', 'snmp', 'ssh', 'serial', 'syslog', 'netflow', 'ntp'], true)
     ) {
         $protocolPresets[$key] = array_intersect_key(
             array_filter($_POST, 'is_scalar'),
@@ -38,7 +38,7 @@ $connections = []; ?>
             'profiles' => icct_nms_protocol_profiles(),
             'variants' => icct_nms_protocol_variants(),
             'fields' => array_combine(
-                ['snmp', 'ssh', 'serial', 'syslog', 'cdp', 'lldp'],
+                ['snmp', 'ssh', 'serial', 'syslog', 'cdp', 'lldp', 'ntp'],
                 array_map('icct_nms_protocol_preset_fields', [
                     'snmp',
                     'ssh',
@@ -46,6 +46,7 @@ $connections = []; ?>
                     'syslog',
                     'cdp',
                     'lldp',
+                    'ntp',
                 ]),
             ),
         ],

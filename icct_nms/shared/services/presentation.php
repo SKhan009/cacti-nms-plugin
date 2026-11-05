@@ -14,3 +14,16 @@ function icct_nms_severity_colors()
     }
     return $colors;
 }
+
+/** Escape the saved label and retain its full name for colour-independent reading. */
+function icct_nms_severity_badge($severity)
+{
+    $label = htmlspecialchars((string) $severity, ENT_QUOTES, 'UTF-8');
+    return '<span class="severity-badge device-status" data-severity="' .
+        $label .
+        '" data-log-status="' .
+        $label .
+        '">' .
+        $label .
+        '</span>';
+}

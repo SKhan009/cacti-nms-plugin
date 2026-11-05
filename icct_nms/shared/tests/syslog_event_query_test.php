@@ -54,7 +54,7 @@ cq_check(
     $total === 1 && count($rows) === 1 && $rows[0]['id'] === 42,
     'Device event event retrieval failed.',
 );
-$assoc = array_values(array_filter($GLOBALS['calls'], fn ($c) => $c['type'] === 'assoc'))[0];
+$assoc = array_values(array_filter($GLOBALS['calls'], fn($c) => $c['type'] === 'assoc'))[0];
 $sql = $assoc['sql'];
 foreach (
     [
@@ -62,12 +62,13 @@ foreach (
         'e.host_id=?',
         'e.nms_severity=?',
         'e.event_origin=?',
-        'e.acknowledged=0',
+        'COALESCE(a.acknowledged,e.acknowledged)=0',
         'e.message LIKE ?',
         'e.event_time>=?',
         'ORDER BY e.event_time DESC,e.id DESC',
         'LIMIT 0,50',
-    ] as $needle
+    ]
+    as $needle
 ) {
     cq_check(str_contains($sql, $needle), 'Device event query missing: ' . $needle);
 }

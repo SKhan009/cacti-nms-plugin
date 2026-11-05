@@ -2,5 +2,13 @@
     "tabWidth": 4,
     "printWidth": 100,
     "singleQuote": true,
-    "bracketSameLine": true
+    "bracketSameLine": true,
+    "overrides": [
+        {
+            "files": "*.php",
+            "options": {
+                "phpVersion": "8.0"
+            }
+        }
+    ]
 }

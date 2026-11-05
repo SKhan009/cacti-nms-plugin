@@ -20,7 +20,7 @@ try {
     }
     icct_nms_seed_protocol_presets();
     $presets = icct_nms_protocol_presets();
-    if (count($presets) !== 7 || count(icct_nms_netflow_profiles()) !== 4) {
+    if (count($presets) !== 8 || count(icct_nms_netflow_profiles()) !== 4) {
         throw new RuntimeException('Fresh install incomplete.');
     }
     foreach ($presets as $protocol => $values) {
@@ -79,7 +79,7 @@ try {
     if (str_contains(json_encode(icct_nms_protocol_profiles()), 'do-not-save')) {
         throw new RuntimeException('Saved a secret.');
     }
-    echo 'PASS: native database install, native validation of seven protocols, four NetFlow formats,' .
+    echo 'PASS: native database install, native validation of eight protocols, four NetFlow formats,' .
         ' SNMP v1/v2/v3, SSH password/key, Serial RTU/ASCII and upgrade preservation; live presets ' .
         "unchanged.\n";
 } catch (Throwable $e) {

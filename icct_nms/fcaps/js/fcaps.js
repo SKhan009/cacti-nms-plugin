@@ -12,6 +12,19 @@
     const oidSection = document.querySelector('#fault-oid-section'),
         oidNavigation = document.querySelector('#fault-oid-navigation');
     const sourceRadios = [...document.querySelectorAll('.fault-source-options input')];
+    const ntpSection = document.querySelector('#fault-ntp-section'),
+        ntpNavigation = document.querySelector('#fault-ntp-navigation'),
+        mibPicker = document.querySelector('#fault-mib-presets');
+    const ntpParameters = JSON.parse(
+            document.querySelector('#fault-ntp-parameters')?.textContent || '{}',
+        ),
+        ntpReadings = JSON.parse(
+            document.querySelector('#fault-ntp-readings')?.textContent || '{}',
+        ),
+        mibPresets = JSON.parse(
+            document.querySelector('#fault-mib-preset-values')?.textContent || '[]',
+        );
+
     let selectedSource = saved[0]?.source || 'rrd',
         selectedRow = null;
     const graphSection = document.querySelector('#fault-graph-section');
@@ -22,6 +35,11 @@
         )
             return false;
         const source = target.querySelector('[data-source]').value;
+        if (source === 'ntp')
+            return (
+                row.querySelector('[data-parameter]').value ===
+                target.querySelector('[data-parameter]').value
+            );
         if (source === 'snmp') {
             const oid = target.querySelector('[data-oid]').value;
             return oid ? row.querySelector('[data-oid]').value === oid : row === target;
@@ -122,15 +140,107 @@
             });
         }
         renderOids();
+        renderNtp();
+        renderMibPresets();
+    }
+    function renderNtp() {
+        if (!ntpSection) return;
+        ntpSection.hidden = selectedSource !== 'ntp';
+        ntpNavigation.replaceChildren();
+        if (selectedSource !== 'ntp') return;
+        for (const [parameter, item] of Object.entries(ntpParameters)) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'fault-data-source-link';
+            button.textContent = item.label;
+            button.setAttribute(
+                'aria-pressed',
+                selectedRow?.querySelector('[data-parameter]').value === parameter
+                    ? 'true'
+                    : 'false',
+            );
+            button.addEventListener('click', () =>
+                selectMeasurement({
+                    source: 'ntp',
+                    parameter,
+                    units: item.units,
+                    label: item.label,
+                }),
+            );
+            ntpNavigation.append(button);
+        }
+    }
+    function renderMibPresets() {
+        if (!mibPicker) return;
+        mibPicker.replaceChildren();
+        if (!mibPresets.length) {
+            const empty = document.createElement('p');
+            empty.className = 'fault-oid-empty';
+            empty.textContent = 'No saved MIB fault presets associated with this device.';
+            mibPicker.append(empty);
+            return;
+        }
+        for (const preset of mibPresets) {
+            const row = [...list.children].find(
+                (item) => item.dataset.presetKey === preset.preset_key,
+            );
+            const label = document.createElement('label');
+            label.className = 'check-row';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = row ? row.querySelector('[data-enabled]').checked : !!preset.enabled;
+            checkbox.setAttribute('aria-label', preset.name);
+            const title = document.createElement('span');
+            title.textContent = preset.name + ' · ';
+            const badge = document.createElement('span');
+            badge.className = 'severity-badge';
+            badge.textContent = preset.severity;
+            icctSetSeverity(badge, preset.severity);
+            title.append(badge);
+            label.append(checkbox, title);
+            checkbox.addEventListener('change', () => {
+                const current = [...list.children].find(
+                    (item) => item.dataset.presetKey === preset.preset_key,
+                );
+                if (current) current.querySelector('[data-enabled]').checked = checkbox.checked;
+                else if (list.children.length < 100)
+                    addRule({ ...preset, enabled: checkbox.checked });
+                else {
+                    checkbox.checked = false;
+                    return;
+                }
+                sync();
+            });
+            const edit = document.createElement('button');
+            edit.type = 'button';
+            edit.className = 'button';
+            edit.textContent = 'Edit thresholds';
+            edit.addEventListener('click', () => {
+                let target = [...list.children].find(
+                    (item) => item.dataset.presetKey === preset.preset_key,
+                );
+                if (!target && list.children.length < 100) {
+                    addRule(preset);
+                    target = list.children[list.children.length - 1];
+                }
+                if (target) {
+                    selectedSource = target.querySelector('[data-source]').value;
+                    renderMeasurements(target);
+                }
+            });
+            mibPicker.append(label, edit);
+        }
     }
     function selectMeasurement(item) {
         const row = [...list.children].find(
             (row) =>
                 row.querySelector('[data-source]').value === item.source &&
-                (item.source === 'snmp'
-                    ? row.querySelector('[data-oid]').value === item.oid
-                    : row.querySelector('[data-template]').value === String(item.template_id) &&
-                      row.querySelector('[data-metric]').value === String(item.metric_id)),
+                (item.source === 'ntp'
+                    ? row.querySelector('[data-parameter]').value === item.parameter
+                    : item.source === 'snmp'
+                      ? row.querySelector('[data-oid]').value === item.oid
+                      : row.querySelector('[data-template]').value === String(item.template_id) &&
+                        row.querySelector('[data-metric]').value === String(item.metric_id)),
         );
         if (row) {
             renderMeasurements(row);
@@ -139,7 +249,7 @@
         if (list.children.length >= 100) return;
         addRule({
             source: item.source,
-            name: item.parameter || item.data_source_name || '',
+            name: item.label || item.parameter || item.data_source_name || '',
             parameter: item.parameter || '',
             oid: item.oid || '',
             units: item.units || '',
@@ -239,6 +349,7 @@
                 source: row.querySelector('[data-source]').value,
                 parameter: row.querySelector('[data-parameter]').value,
                 oid: row.querySelector('[data-oid]').value,
+                expected_source: row.querySelector('[data-expected-source]')?.value || '',
                 units: row.querySelector('[data-units]').value,
                 scale: row.querySelector('[data-scale]').value,
                 condition: row.querySelector('[data-condition]').value,
@@ -264,7 +375,9 @@
     }
     const fieldHelp = {
         name: 'A short name for this alarm, e.g. UPS battery low.',
-        source: 'Use a collected Cacti data source, or read a numeric OID with the saved device SNMP settings.',
+        source: 'Use collected Cacti, SNMP or NTP measurements.',
+        'expected-source':
+            'Expected NTP source IP for this rule. The comparison uses the selected source reported by chrony; it never changes the time server.',
         'parameter-choice':
             'Select a known SNMP parameter to fill its OID and available details. Choose Manual OID for another parameter.',
         parameter: 'Name of the measurement, e.g. Battery charge or Temperature.',
@@ -334,6 +447,7 @@
         const source = field(row, 'Measurement Source', 'select', 'source');
         option(source, 'rrd', 'Cacti Data Source');
         option(source, 'snmp', 'SNMP OID');
+        option(source, 'ntp', 'NTP');
         source.value = rule.source || 'rrd';
         wrapper(source).hidden = true;
         const picker = field(row, 'SNMP Parameter', 'select', 'parameter-choice');
@@ -341,6 +455,10 @@
         parameter.maxLength = 120;
         parameter.placeholder = 'e.g. Battery charge';
         parameter.value = rule.parameter || '';
+        const expectedSource = field(row, 'Expected NTP source IP', 'text', 'expected-source');
+        expectedSource.maxLength = 45;
+        expectedSource.value = rule.expected_source || '';
+
         const template = field(row, 'Graph Template', 'select', 'template'),
             metric = field(row, 'Data Source', 'select', 'metric');
         const oid = field(row, 'Full Instance OID', 'text', 'oid');
@@ -350,13 +468,16 @@
         const units = field(row, 'Stored Units', 'hidden', 'units');
         units.value = rule.units || '';
         wrapper(units).hidden = true;
-        const initialParameter = parameters.find((item) =>
-            source.value === 'snmp'
-                ? item.oid === String(rule.oid || '').replace(/^\./, '')
-                : Number(item.metric_id) === Number(rule.metric_id) &&
-                  Number(item.template_id) === Number(rule.template_id),
-        );
-        if (initialParameter?.units) units.value = initialParameter.units;
+        const initialParameter =
+            source.value === 'ntp'
+                ? ntpParameters[rule.parameter]
+                : parameters.find((item) =>
+                      source.value === 'snmp'
+                          ? item.oid === String(rule.oid || '').replace(/^\./, '')
+                          : Number(item.metric_id) === Number(rule.metric_id) &&
+                            Number(item.template_id) === Number(rule.template_id),
+                  );
+        if (initialParameter) units.value = initialParameter.units;
         const scale = field(row, 'Scale Multiplier', 'hidden', 'scale');
         scale.value = rule.scale ?? 1;
         wrapper(scale).hidden = true;
@@ -398,6 +519,7 @@
             option(severity, value, value),
         );
         severity.value = rule.severity || '';
+        icctBindSeveritySelect(severity);
         minimum.value = rule.minimum ?? '';
         maximum.value = rule.maximum ?? '';
         option(template, '', 'Select associated template');
@@ -419,7 +541,54 @@
                 .forEach((item) => option(metric, item.metric_id, item.data_source_name));
             if (!reset) metric.value = String(rule.metric_id || '');
         }
+        function ntpReading() {
+            const age =
+                ntpReadings.attempted_epoch == null
+                    ? null
+                    : Date.now() / 1000 - ntpReadings.attempted_epoch;
+            const value =
+                parameter.value === 'age_seconds' && age != null
+                    ? Math.floor(age)
+                    : ntpReadings.values?.[parameter.value];
+            reading.value =
+                age == null ||
+                age < 0 ||
+                (age > Number(ntpReadings.stale_seconds) &&
+                    !['age_seconds', 'collection_available'].includes(parameter.value)) ||
+                value == null
+                    ? 'Unknown'
+                    : String(value) + (units.value ? ' ' + units.value : '');
+            if (
+                parameter.value === 'collection_available' &&
+                age > Number(ntpReadings.stale_seconds) &&
+                value != null
+            )
+                reading.value = '0';
+            if (parameter.value === 'source_matches')
+                reading.value = 'Save rule to evaluate expected source';
+        }
+        function chooseNtp() {
+            parameter.value = picker.value;
+            const item = ntpParameters[parameter.value];
+            units.value = item?.units || '';
+            scale.value = 1;
+            oid.value = '';
+            if (!name.value && item) name.value = item.label;
+            wrapper(expectedSource).hidden = parameter.value !== 'source_matches';
+            expectedSource.required = parameter.value === 'source_matches';
+            if (!expectedSource.required) expectedSource.value = '';
+            ntpReading();
+            sync();
+        }
         function choices() {
+            if (source.value === 'ntp') {
+                picker.replaceChildren();
+                option(picker, '', 'Select NTP parameter');
+                for (const [key, item] of Object.entries(ntpParameters))
+                    option(picker, key, item.label);
+                picker.value = parameter.value;
+                return;
+            }
             const previous = picker.value,
                 type = document.querySelector('#device-form [name=device_type]')?.value || '';
             picker.replaceChildren();
@@ -497,6 +666,10 @@
         )
             picker.value = String(savedParameter);
         picker.addEventListener('change', () => {
+            if (source.value === 'ntp') {
+                chooseNtp();
+                return;
+            }
             ++readGeneration;
             reading.value = 'Awaiting collection';
             fillParameter(picker.value !== '' ? parameters[Number(picker.value)] : null);
@@ -514,16 +687,36 @@
         function sourceFields() {
             row.dataset.measurement = source.value;
             ++readGeneration;
-            const direct = source.value === 'snmp';
+            const direct = source.value === 'snmp',
+                ntp = source.value === 'ntp';
+            choices();
+            wrapper(picker).querySelector('.field-title').textContent = ntp
+                ? 'NTP Parameter'
+                : 'SNMP Parameter';
+            picker.setAttribute('aria-label', ntp ? 'NTP Parameter' : 'SNMP Parameter');
+            wrapper(picker)
+                .querySelector('.field-info')
+                .setAttribute(
+                    'aria-label',
+                    ntp ? 'Information about NTP Parameter' : 'Information about SNMP Parameter',
+                );
+            wrapper(picker).querySelector('.field-info').dataset.tooltip = ntp
+                ? 'Choose an actual chrony measurement or collection status. Offsets and delay use milliseconds; age uses seconds; synchronization and source-match flags use 1=yes and 0=no.'
+                : fieldHelp['parameter-choice'];
             wrapper(source).hidden = true;
-            wrapper(reading).querySelector('.field-info').dataset.tooltip = direct
-                ? 'Read-only SNMP value after automatic unit conversion. Selecting a parameter fetches a reading using saved SNMP settings.'
-                : 'Read-only latest completed AVERAGE sample from this data source, before graph transformations. Enter thresholds in its stored units.';
+            wrapper(reading).querySelector('.field-info').dataset.tooltip = ntp
+                ? 'Actual tracking observation from Protocol Config collection. Missing clock measurements remain Unknown; status flags use 1=yes and 0=no. Age is seconds since the last attempt.'
+                : direct
+                  ? 'Read-only SNMP value after automatic unit conversion. Selecting a parameter fetches a reading using saved SNMP settings.'
+                  : 'Read-only latest completed AVERAGE sample from this data source, before graph transformations. Enter thresholds in its stored units.';
             for (const field of [template, metric]) {
-                wrapper(field).hidden = direct;
-                field.required = !direct;
+                wrapper(field).hidden = direct || ntp;
+                field.required = !direct && !ntp;
             }
-            wrapper(picker).hidden = !direct;
+            wrapper(picker).hidden = !(direct || ntp);
+            picker.required = ntp;
+            wrapper(expectedSource).hidden = !(ntp && parameter.value === 'source_matches');
+            expectedSource.required = ntp && parameter.value === 'source_matches';
             for (const field of [oid, parameter]) wrapper(field).hidden = !direct;
             wrapper(units).hidden = true;
             wrapper(scale).hidden = true;
@@ -559,6 +752,10 @@
                   )
                   .join(' / ')
             : 'Awaiting collection';
+        if (source.value === 'ntp' && !values.length) ntpReading();
+        expectedSource.addEventListener('change', () => {
+            if (source.value === 'ntp') reading.value = 'Save rule to evaluate expected source';
+        });
         template.addEventListener('change', () => {
             metrics(true);
             reading.value = 'Awaiting collection';
@@ -730,7 +927,6 @@
         'sampling_rate',
         'timeout',
         'poll_interval',
-        'maximum_offset',
         'authentication',
     ]);
     function valueText(control) {

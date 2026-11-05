@@ -24,8 +24,12 @@
             hidden>
             <strong>Repository warning</strong>
             <ul id="mibUploadRepositoryMatches"></ul>
-            <p>Saving keeps a separate entry. Existing files and Cacti templates will not be
-                replaced.</p>
+            <span
+                class="field-info section-help"
+                tabindex="0"
+                role="img"
+                aria-label="Saving keeps a separate entry. Existing files and Cacti templates will not be replaced."
+                data-tooltip="Saving keeps a separate entry. Existing files and Cacti templates will not be replaced.">ⓘ</span>
         </section>
         <div
             class="mib-upload-notice"
@@ -39,8 +43,12 @@
                     r="8" />
                 <path d="M10 9v5M10 5.5v.5" />
             </svg>
-            <p>The application scans the MIB to identify OIDs, check Data Source eligibility, and
-                flag existing Cacti configurations.</p>
+            <span
+                class="field-info section-help"
+                tabindex="0"
+                role="img"
+                aria-label="The application scans the MIB to identify OIDs, check Data Source eligibility, and flag existing Cacti configurations."
+                data-tooltip="The application scans the MIB to identify OIDs, check Data Source eligibility, and flag existing Cacti configurations.">ⓘ</span>
         </div>
         <?php if (!empty($uploadChooser)): ?>
             <form
@@ -66,9 +74,13 @@
                         aria-describedby="mibUploadFileHelp"
                         required>
                 </label>
-                <p
-                    class="mib-upload-file-help"
-                    id="mibUploadFileHelp">.mib, .my or .txt · Maximum 1 MiB</p>
+                <span
+                    class="field-info section-help mib-upload-file-help"
+                    id="mibUploadFileHelp"
+                    tabindex="0"
+                    role="img"
+                    aria-label=".mib, .my or .txt · Maximum 1 MiB"
+                    data-tooltip=".mib, .my or .txt · Maximum 1 MiB">ⓘ</span>
                 <div class="mib-upload-actions">
                     <button
                         class="button"
@@ -153,8 +165,12 @@
                                 r="8" />
                             <path d="M10 9v5M10 5.5v.5" />
                         </svg>
-                        <p>Existing Data Sources will not be duplicated. You can modify their
-                            settings after adding them to a device.</p>
+                        <span
+                            class="field-info section-help"
+                            tabindex="0"
+                            role="img"
+                            aria-label="Existing Data Sources will not be duplicated. You can modify their settings after adding them to a device."
+                            data-tooltip="Existing Data Sources will not be duplicated. You can modify their settings after adding them to a device.">ⓘ</span>
                     </div>
                 </label>
                 <label class="mib-upload-choice">

@@ -51,7 +51,12 @@
                     value="<?= icct_nms_h(is_scalar($rackValues['unit_count'] ?? '') ? $rackValues['unit_count'] ?? '' : '') ?>">
             </label>
         </div>
-        <p>Rack names and unit counts are shared with Add/Edit Device and Dashboard Rack View.</p>
+        <span
+            class="field-info section-help"
+            tabindex="0"
+            role="img"
+            aria-label="Rack names and unit counts are shared with Add/Edit Device and Dashboard Rack View."
+            data-tooltip="Rack names and unit counts are shared with Add/Edit Device and Dashboard Rack View.">ⓘ</span>
     </form>
 <?php endif; ?>
 <section aria-label="Rack configurations">

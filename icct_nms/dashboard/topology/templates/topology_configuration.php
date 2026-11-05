@@ -667,8 +667,11 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                 </button>
             </div>
         </nav>
-        <p>Current LLDP/CDP neighbours that uniquely match an accessible Cacti device appear as
-            dashboard connections. ARP/FDB entries remain observations. Add unknown devices to Cacti
-            before including them in the device topology.</p>
+        <span
+            class="field-info section-help"
+            tabindex="0"
+            role="img"
+            aria-label="Current LLDP/CDP neighbours that uniquely match an accessible Cacti device appear as dashboard connections. ARP/FDB entries remain observations. Add unknown devices to Cacti before including them in the device topology."
+            data-tooltip="Current LLDP/CDP neighbours that uniquely match an accessible Cacti device appear as dashboard connections. ARP/FDB entries remain observations. Add unknown devices to Cacti before including them in the device topology.">ⓘ</span>
     <?php endif; ?>
 </section>

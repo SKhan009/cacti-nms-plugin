@@ -1,5 +1,8 @@
 const vm = require('node:vm');
 const colors = require('../../assets/severity.json');
+const severityHelpers = require('node:fs')
+    .readFileSync(require('node:path').join(__dirname, '../../js/severity.js'), 'utf8')
+    .split("document.addEventListener('DOMContentLoaded'")[0];
 
 function sourceIndex(source, marker, start = 0) {
     const tokens = marker.match(/[A-Za-z_$][\w$]*|[^\s]/g) || [];
@@ -11,16 +14,26 @@ function sourceIndex(source, marker, start = 0) {
     return start + match.index;
 }
 
-// Production receives this shell-owned constant from the shared PHP header.
+const initializedContexts = new WeakSet();
+
+function prepareContext(context, options) {
+    if (!initializedContexts.has(context)) {
+        // Load the shared browser helpers once, as the PHP shell does on each page.
+        context.icctSeverityColors = colors;
+        vm.createContext(context, options);
+        vm.runInContext(severityHelpers, context);
+        initializedContexts.add(context);
+    }
+    return context;
+}
+
 module.exports = {
     ...vm,
     sourceIndex,
     runInNewContext(code, context = {}, options) {
-        context.icctSeverityColors = colors;
-        return vm.runInNewContext(code, context, options);
+        return vm.runInContext(code, prepareContext(context, options), options);
     },
     createContext(context = {}, options) {
-        context.icctSeverityColors = colors;
-        return vm.createContext(context, options);
+        return prepareContext(context, options);
     },
 };

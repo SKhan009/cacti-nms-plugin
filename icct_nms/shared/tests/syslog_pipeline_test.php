@@ -1,4 +1,8 @@
 <?php
+function icct_backend_inventory_collector_id()
+{
+    return 1;
+}
 
 if (!function_exists('mb_strlen')) {
     function mb_strlen($s)
@@ -43,10 +47,13 @@ function db_fetch_assoc_prepared($sql, $args)
 }
 function db_fetch_cell_prepared($sql, $args)
 {
-    if (str_contains($sql, 'syslog_dedupe_seconds')) {
+    if (str_contains($sql, 'GET_LOCK')) {
+        return 1;
+    }
+    if (($args[0] ?? '') === 'syslog_dedupe_seconds') {
         return 60;
     }
-    if (str_contains($sql, 'protocol_defaults')) {
+    if (($args[0] ?? '') === 'protocol_defaults') {
         return null;
     }
     return null;

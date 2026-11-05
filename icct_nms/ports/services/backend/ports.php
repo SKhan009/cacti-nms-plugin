@@ -1,7 +1,9 @@
 <?php
 
 /** Read-only IF-MIB/IF-X-MIB observations; preset capacity never creates observed ports. */
-require_once __DIR__ . '/../../../protocols/shared/services/backend/discovery_management_addresses.php';
+require_once __DIR__ . '/../port_evidence.php';
+require_once __DIR__ .
+    '/../../../protocols/shared/services/backend/discovery_management_addresses.php';
 
 function icct_backend_ports_signature($host)
 {
@@ -115,7 +117,7 @@ function icct_backend_ports_parse($columns)
         }
         $ports[] = $port;
     }
-    usort($ports, static fn ($a, $b) => $a['index'] <=> $b['index']);
+    usort($ports, static fn($a, $b) => $a['index'] <=> $b['index']);
     return $ports;
 }
 /** Parse Linux iproute2 observations from an authenticated SSH session. */
@@ -152,13 +154,13 @@ function icct_backend_ports_linux_parse($json)
             'oper' => $loopbackActive
                 ? 1
                 : [
-                    'UP' => 1,
-                    'DOWN' => 2,
-                    'TESTING' => 3,
-                    'NOTPRESENT' => 6,
-                    'DORMANT' => 5,
-                    'LOWERLAYERDOWN' => 7,
-                ][$state] ?? 4,
+                        'UP' => 1,
+                        'DOWN' => 2,
+                        'TESTING' => 3,
+                        'NOTPRESENT' => 6,
+                        'DORMANT' => 5,
+                        'LOWERLAYERDOWN' => 7,
+                    ][$state] ?? 4,
             'oper_note' => $loopbackActive ? 'Up (loopback)' : '',
             'reported_operstate' => $state,
             'connector' => ($row['link_type'] ?? '') === 'loopback' ? 2 : null,
@@ -208,7 +210,7 @@ function icct_backend_ports_local()
         $port['connector'] = is_dir($path . '/device') ? 1 : ($port['type'] === 24 ? 2 : null);
         $ports[] = $port;
     }
-    usort($ports, static fn ($a, $b) => $a['index'] <=> $b['index']);
+    usort($ports, static fn($a, $b) => $a['index'] <=> $b['index']);
     return $ports;
 }
 function icct_backend_ports_store($host, $ports, $source, $key = 'ports_snapshot_', $extra = [])
@@ -274,7 +276,8 @@ function icct_backend_collect_ports()
                     'uptime' => '1.3.6.1.2.1.1.3',
                     'bridge_ifindex' => '1.3.6.1.2.1.17.1.4.1.2',
                     'pvid' => '1.3.6.1.2.1.17.7.1.4.5.1.1',
-                ] as $field => $oid
+                ]
+                as $field => $oid
             ) {
                 $rows = cacti_snmp_walk(
                     $host['hostname'],
@@ -346,12 +349,7 @@ function icct_backend_ports_status($port, $fresh)
 function icct_nms_port_slots($ports, $count)
 {
     $physical = array_values(
-        array_filter(
-            $ports,
-            static fn ($p) => ($p['type'] ?? null) !== 24 &&
-                ($p['connector'] ?? null) !== 2 &&
-                (($p['connector'] ?? null) === 1 || ($p['type'] ?? null) === 6),
-        ),
+        array_filter($ports, static fn($p) => icct_nms_port_kind($p) === 'Physical'),
     );
     $candidates = [];
     $mapped = [];
@@ -536,7 +534,8 @@ function icct_nms_port_connections($id, $ports)
             'SELECT protocol,status,succeeded_at,config_hash,data_json FROM ' .
                 'plugin_icct_nms_discovery_snapshots WHERE host_id=? AND protocol IN (\'lldp\',\'cdp\')',
             [$id],
-        ) as $snapshot
+        )
+        as $snapshot
     ) {
         if (!icct_nms_discovery_current($snapshot, $host)) {
             continue;
@@ -557,7 +556,8 @@ function icct_nms_port_connections($id, $ports)
                 $connections[$port['index']]['names'][] =
                     $peer['remote_name'] ?? ($peer['peer_label'] ?? '');
                 foreach (
-                    icct_nms_management_addresses($peer['management_addresses'] ?? []) as $address
+                    icct_nms_management_addresses($peer['management_addresses'] ?? [])
+                    as $address
                 ) {
                     $connections[$port['index']]['addresses'][] = $address;
                 }

@@ -138,7 +138,9 @@ $renderFaultCard = function ($preset = []) use ($object) {
                 <span class="field-label">Severity <span
                         title="Alarm severity when the condition matches">ⓘ</span>
                 </span>
-                <select data-fault-field="severity">
+                <select
+                    data-severity-control
+                    data-fault-field="severity">
                     <?php foreach (
                         ['Information', 'Minor', 'Warning', 'Major', 'Critical'] as $severity
                     ): ?>

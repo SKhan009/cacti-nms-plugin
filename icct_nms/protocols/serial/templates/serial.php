@@ -41,13 +41,17 @@ if (!empty($presetMode)) {
                     name="serial_interface"
                     value="<?= $value ?>"
                     <?= ($serialValues['interface'] ?? '') === $value ? 'checked' : '' ?> /><?= $label ?>
+
             </label>
         <?php endforeach; ?>
     </fieldset>
-    <p
-        class="serial-physical-note"
-        hidden>RS-232/RS-485 and serial line settings are managed by the selected gateway. Select a direct
-        serial port to configure them here.</p>
+    <span
+        class="field-info section-help"
+        hidden
+        tabindex="0"
+        role="img"
+        aria-label="RS-232/RS-485 and serial line settings are managed by the selected gateway. Select a direct serial port to configure them here."
+        data-tooltip="RS-232/RS-485 and serial line settings are managed by the selected gateway. Select a direct serial port to configure them here.">ⓘ</span>
     <h3>2. Connection Settings</h3>
     <div class="protocol-grid cols-4">
         <?php $ports = ['' => 'None'];
@@ -146,6 +150,7 @@ icct_nms_input(
                 name="serial_protocol"
                 value="modbus_rtu"
                 <?= ($serialValues['protocol'] ?? 'modbus_rtu') === 'modbus_rtu' ? 'checked' : '' ?>
+
                 required />Modbus RTU
         </label>
         <label>

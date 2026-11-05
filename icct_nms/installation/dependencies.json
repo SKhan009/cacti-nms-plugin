@@ -1,355 +1,262 @@
 {
-  "format": 1,
-  "php_min": "8.0.0",
-  "cacti_min": "1.2.31",
-  "cacti_tested": "1.2.31",
-  "php_extensions": [
-    "json",
-    "session",
-    "mbstring",
-    "openssl",
-    "pdo_mysql",
-    "xml",
-    "sockets"
-  ],
-  "packages": {
-    "rhel": [
-      "php-cli",
-      "php-mysqlnd",
-      "php-mbstring",
-      "php-xml",
-      "php-snmp",
-      "php-process",
-      "net-snmp-utils",
-      "rrdtool",
-      "python3",
-      "rsyslog",
-      "logrotate",
-      "nfdump",
-      "iputils",
-      "iproute",
-      "net-tools",
-      "traceroute",
-      "mtr",
-      "nmap",
-      "hping3",
-      "iperf3",
-      "netperf",
-      "acl",
-      "libssh2",
-      "libjpeg-turbo",
-      "libuuid",
-      "libstdc++",
-      "libcap",
-      "policycoreutils-python-utils",
-      "selinux-policy-devel",
-      "make",
-      "cairo",
-      "pango",
-      "libpng",
-      "fontconfig",
-      "dejavu-sans-mono-fonts"
-    ],
-    "debian": [
-      "php-cli",
-      "php-mysql",
-      "php-mbstring",
-      "php-xml",
-      "php-snmp",
-      "snmp",
-      "rrdtool",
-      "python3",
-      "rsyslog",
-      "logrotate",
-      "nfdump",
-      "iputils-ping",
-      "iproute2",
-      "net-tools",
-      "traceroute",
-      "mtr-tiny",
-      "nmap",
-      "hping3",
-      "iperf3",
-      "netperf",
-      "acl",
-      "libssh2-1",
-      "libjpeg62-turbo",
-      "libuuid1",
-      "libstdc++6",
-      "libcap2-bin"
+    "format": 1,
+    "php_min": "8.0.0",
+    "cacti_min": "1.2.31",
+    "cacti_tested": "1.2.31",
+    "php_extensions": ["json", "session", "mbstring", "openssl", "pdo_mysql", "xml", "sockets"],
+    "packages": {
+        "rhel": [
+            "php-cli",
+            "php-mysqlnd",
+            "php-mbstring",
+            "php-xml",
+            "php-snmp",
+            "php-process",
+            "net-snmp-utils",
+            "rrdtool",
+            "python3",
+            "rsyslog",
+            "logrotate",
+            "nfdump",
+            "iputils",
+            "iproute",
+            "net-tools",
+            "traceroute",
+            "mtr",
+            "nmap",
+            "hping3",
+            "iperf3",
+            "netperf",
+            "acl",
+            "libssh2",
+            "libjpeg-turbo",
+            "libuuid",
+            "libstdc++",
+            "libcap",
+            "policycoreutils-python-utils",
+            "selinux-policy-devel",
+            "make",
+            "cairo",
+            "pango",
+            "libpng",
+            "fontconfig",
+            "dejavu-sans-mono-fonts",
+            "chrony",
+            "sudo"
+        ],
+        "debian": [
+            "php-cli",
+            "php-mysql",
+            "php-mbstring",
+            "php-xml",
+            "php-snmp",
+            "snmp",
+            "rrdtool",
+            "python3",
+            "rsyslog",
+            "logrotate",
+            "nfdump",
+            "iputils-ping",
+            "iproute2",
+            "net-tools",
+            "traceroute",
+            "mtr-tiny",
+            "nmap",
+            "hping3",
+            "iperf3",
+            "netperf",
+            "acl",
+            "libssh2-1",
+            "libjpeg62-turbo",
+            "libuuid1",
+            "libstdc++6",
+            "libcap2-bin"
+        ]
+    },
+    "features": {
+        "SNMP / MIB / LLDP / CDP": {
+            "binaries": {
+                "SNMP tools": ["snmpget"],
+                "SNMP walk": ["snmpwalk"],
+                "RRDTool": ["rrdtool"]
+            },
+            "services": [],
+            "files": ["shared/assets/mibs/SNMPv2-SMI.txt", "protocols/snmp/mibs/js/mib-upload.js"]
+        },
+        "Discovery": {
+            "binaries": {
+                "Python": ["python3"]
+            },
+            "services": ["icct-nms-discovery.service"],
+            "files": []
+        },
+        "Syslog": {
+            "binaries": {
+                "Receiver": ["rsyslogd"]
+            },
+            "services": [
+                "rsyslog.service",
+                "icct-nms-syslog-worker.service",
+                "icct-nms-syslog-retention.timer"
+            ],
+            "files": [],
+            "root_binaries": ["Receiver"]
+        },
+        "NetFlow / IPFIX": {
+            "binaries": {
+                "Decoder": ["nfdump"],
+                "Receiver": ["nfcapd"]
+            },
+            "services": ["icct-nms-netflow.service"],
+            "files": []
+        },
+        "Serial / GNSS": {
+            "binaries": {
+                "Python": ["python3"]
+            },
+            "services": ["icct-nms-location.service"],
+            "files": ["protocols/serial/collector/serial_transport.py"]
+        },
+        "SSH": {
+            "binaries": {
+                "SSH terminal backend": [
+                    "/opt/icct-nms/native/guacamole-1.6.0/sbin/guacd",
+                    "guacd",
+                    "/opt/nms-guacamole/1.6.0/sbin/guacd"
+                ]
+            },
+            "services": ["icct-nms-ssh.service", "icct-nms-guacd.service"],
+            "files": [
+                "protocols/ssh/vendor/autoload.php",
+                "protocols/ssh/assets/guacamole-1.6.0.js",
+                "protocols/ssh/controllers/ssh_terminal.php",
+                "protocols/ssh/controllers/ssh_console.php",
+                "protocols/ssh/js/terminal.js",
+                "protocols/ssh/css/terminal.css"
+            ],
+            "note": "Requires the bundled strict-auth patch, an HTTPS origin and a private service account. A stock guacd package alone is insufficient; see protocols/ssh/README.md.",
+            "root_binaries": ["SSH terminal backend"]
+        },
+        "Diagnostics": {
+            "binaries": {
+                "Ping": ["ping"],
+                "IP / ARP": ["ip"],
+                "Traceroute": ["traceroute"],
+                "MTR": ["mtr"],
+                "Nping": ["nping"],
+                "Hping": ["hping3", "hping"],
+                "iPerf": ["iperf3"],
+                "Netperf": ["netperf"],
+                "Pathchar": ["pchar", "pathchar", "/opt/icct-nms/native/pchar-1.5/sbin/pchar"]
+            },
+            "services": ["icct-nms-diagnostics.service"],
+            "files": []
+        },
+        "Dashboard / Map": {
+            "binaries": {},
+            "services": [],
+            "files": [
+                "shared/assets/vendor/leaflet/leaflet.js",
+                "shared/assets/maps/india-states.json",
+                "shared/assets/fonts/ibm-plex-sans/IBMPlexSans-Regular.woff2"
+            ]
+        },
+        "NTP": {
+            "binaries": {
+                "Read-only chrony monitor": ["/usr/bin/chronyc"],
+                "Read-only peer access": ["/usr/bin/sudo"]
+            },
+            "services": [],
+            "files": ["protocols/ntp/services/ntp_collector.php"],
+            "note": "Read-only tracking, selected-source jitter and peer delay. Run installation/cli/ntp_access.py on each monitored RHEL device for its monitoring account; clock services and sources are never changed."
+        }
+    },
+    "pending_features": {
+        "TACACS+": "Plugin authentication integration is not implemented."
+    },
+    "optional_components": {
+        "redis": {
+            "label": "Redis",
+            "packages": {
+                "rhel": ["redis"],
+                "debian": ["redis-server"]
+            },
+            "binaries": ["redis-server"],
+            "note": "Cache / messaging dependency. Plugin integration pending."
+        },
+        "websocket": {
+            "label": "WebSocket runtime",
+            "packages": {
+                "rhel": ["python3-websockets"],
+                "debian": ["python3-websockets"]
+            },
+            "note": "Python WebSocket library. An application endpoint and HTTPS configuration are separate."
+        },
+        "ntp": {
+            "label": "NTP tools",
+            "packages": {
+                "rhel": ["chrony"],
+                "debian": ["ntpsec-ntpdig"]
+            },
+            "binaries": ["/usr/bin/chronyc"],
+            "note": "RHEL chrony tracking is read-only. Preserve clock configuration and existing service state; the Debian profile remains client-tools only and does not replace its clock daemon."
+        },
+        "tacacs": {
+            "label": "TACACS+ tools",
+            "packages": {
+                "rhel": ["tacacs"],
+                "debian": ["libauthen-tacacsplus-perl"]
+            },
+            "binaries": {
+                "rhel": ["tac_plus"],
+                "debian": []
+            },
+            "note": "RHEL server tools / Debian client library. Plugin authentication integration pending; no PAM changes."
+        },
+        "guacamole": {
+            "label": "Apache Guacamole",
+            "packages": {
+                "rhel": ["guacd"],
+                "debian": []
+            },
+            "binaries": [
+                "/opt/icct-nms/native/guacamole-1.6.0/sbin/guacd",
+                "guacd",
+                "/opt/nms-guacamole/1.6.0/sbin/guacd"
+            ],
+            "note": "Native daemon dependency. Strict-auth patch, SSH broker and HTTPS are required separately. Debian requires an approved native build."
+        },
+        "transfer": {
+            "label": "FTP / TFTP / Telnet tools",
+            "packages": {
+                "rhel": ["lftp", "tftp", "telnet"],
+                "debian": ["lftp", "tftp-hpa", "telnet"]
+            },
+            "binaries": ["lftp", "tftp", "telnet"],
+            "note": "Protocol clients only. Device workflows and server configuration are separate."
+        }
+    },
+    "python_min": "3.9.0",
+    "package_overrides": [
+        {
+            "id": "ubuntu",
+            "replacements": {
+                "libjpeg62-turbo": "libjpeg-turbo8"
+            }
+        },
+        {
+            "id": "ubuntu",
+            "min_version": "24.04",
+            "replacements": {
+                "libssh2-1": "libssh2-1t64"
+            }
+        },
+        {
+            "id": "debian",
+            "min_version": "13",
+            "replacements": {
+                "libssh2-1": "libssh2-1t64"
+            }
+        }
     ]
-  },
-  "features": {
-    "SNMP / MIB / LLDP / CDP": {
-      "binaries": {
-        "SNMP tools": [
-          "snmpget"
-        ],
-        "SNMP walk": [
-          "snmpwalk"
-        ],
-        "RRDTool": [
-          "rrdtool"
-        ]
-      },
-      "services": [],
-      "files": [
-        "shared/assets/mibs/SNMPv2-SMI.txt",
-        "protocols/snmp/mibs/js/mib-upload.js"
-      ]
-    },
-    "Discovery": {
-      "binaries": {
-        "Python": [
-          "python3"
-        ]
-      },
-      "services": [
-        "icct-nms-discovery.service"
-      ],
-      "files": []
-    },
-    "Syslog": {
-      "binaries": {
-        "Receiver": [
-          "rsyslogd"
-        ]
-      },
-      "services": [
-        "rsyslog.service",
-        "icct-nms-syslog-worker.service",
-        "icct-nms-syslog-retention.timer"
-      ],
-      "files": [],
-      "root_binaries": [
-        "Receiver"
-      ]
-    },
-    "NetFlow / IPFIX": {
-      "binaries": {
-        "Decoder": [
-          "nfdump"
-        ],
-        "Receiver": [
-          "nfcapd"
-        ]
-      },
-      "services": [
-        "icct-nms-netflow.service"
-      ],
-      "files": []
-    },
-    "Serial / GNSS": {
-      "binaries": {
-        "Python": [
-          "python3"
-        ]
-      },
-      "services": [
-        "icct-nms-location.service"
-      ],
-      "files": [
-        "protocols/serial/collector/serial_transport.py"
-      ]
-    },
-    "SSH": {
-      "binaries": {
-        "SSH terminal backend": [
-          "/opt/icct-nms/native/guacamole-1.6.0/sbin/guacd",
-          "guacd",
-          "/opt/nms-guacamole/1.6.0/sbin/guacd"
-        ]
-      },
-      "services": [
-        "icct-nms-ssh.service",
-        "icct-nms-guacd.service"
-      ],
-      "files": [
-        "protocols/ssh/vendor/autoload.php",
-        "protocols/ssh/assets/guacamole-1.6.0.js",
-        "protocols/ssh/controllers/ssh_terminal.php",
-        "protocols/ssh/controllers/ssh_console.php",
-        "protocols/ssh/js/terminal.js",
-        "protocols/ssh/css/terminal.css"
-      ],
-      "note": "Requires the bundled strict-auth patch, an HTTPS origin and a private service account. A stock guacd package alone is insufficient; see protocols/ssh/README.md.",
-      "root_binaries": [
-        "SSH terminal backend"
-      ]
-    },
-    "Diagnostics": {
-      "binaries": {
-        "Ping": [
-          "ping"
-        ],
-        "IP / ARP": [
-          "ip"
-        ],
-        "Traceroute": [
-          "traceroute"
-        ],
-        "MTR": [
-          "mtr"
-        ],
-        "Nping": [
-          "nping"
-        ],
-        "Hping": [
-          "hping3",
-          "hping"
-        ],
-        "iPerf": [
-          "iperf3"
-        ],
-        "Netperf": [
-          "netperf"
-        ],
-        "Pathchar": [
-          "pchar",
-          "pathchar",
-          "/opt/icct-nms/native/pchar-1.5/sbin/pchar"
-        ]
-      },
-      "services": [
-        "icct-nms-diagnostics.service"
-      ],
-      "files": []
-    },
-    "Dashboard / Map": {
-      "binaries": {},
-      "services": [],
-      "files": [
-        "shared/assets/vendor/leaflet/leaflet.js",
-        "shared/assets/maps/india-states.json",
-        "shared/assets/fonts/ibm-plex-sans/IBMPlexSans-Regular.woff2"
-      ]
-    }
-  },
-  "pending_features": {
-    "NTP monitoring": "Node sync status, source, offset, jitter and delay collection is not implemented.",
-    "TACACS+": "Plugin authentication integration is not implemented."
-  },
-  "optional_components": {
-    "redis": {
-      "label": "Redis",
-      "packages": {
-        "rhel": [
-          "redis"
-        ],
-        "debian": [
-          "redis-server"
-        ]
-      },
-      "binaries": [
-        "redis-server"
-      ],
-      "note": "Cache / messaging dependency. Plugin integration pending."
-    },
-    "websocket": {
-      "label": "WebSocket runtime",
-      "packages": {
-        "rhel": [
-          "python3-websockets"
-        ],
-        "debian": [
-          "python3-websockets"
-        ]
-      },
-      "note": "Python WebSocket library. An application endpoint and HTTPS configuration are separate."
-    },
-    "ntp": {
-      "label": "NTP tools",
-      "packages": {
-        "rhel": [
-          "chrony"
-        ],
-        "debian": [
-          "ntpsec-ntpdig"
-        ]
-      },
-      "binaries": [
-        "chronyc",
-        "ntpdig",
-        "ntpq"
-      ],
-      "note": "NTP client tools. Node monitoring remains pending; the existing clock service is preserved."
-    },
-    "tacacs": {
-      "label": "TACACS+ tools",
-      "packages": {
-        "rhel": [
-          "tacacs"
-        ],
-        "debian": [
-          "libauthen-tacacsplus-perl"
-        ]
-      },
-      "binaries": {
-        "rhel": [
-          "tac_plus"
-        ],
-        "debian": []
-      },
-      "note": "RHEL server tools / Debian client library. Plugin authentication integration pending; no PAM changes."
-    },
-    "guacamole": {
-      "label": "Apache Guacamole",
-      "packages": {
-        "rhel": [
-          "guacd"
-        ],
-        "debian": []
-      },
-      "binaries": [
-        "/opt/icct-nms/native/guacamole-1.6.0/sbin/guacd",
-        "guacd",
-        "/opt/nms-guacamole/1.6.0/sbin/guacd"
-      ],
-      "note": "Native daemon dependency. Strict-auth patch, SSH broker and HTTPS are required separately. Debian requires an approved native build."
-    },
-    "transfer": {
-      "label": "FTP / TFTP / Telnet tools",
-      "packages": {
-        "rhel": [
-          "lftp",
-          "tftp",
-          "telnet"
-        ],
-        "debian": [
-          "lftp",
-          "tftp-hpa",
-          "telnet"
-        ]
-      },
-      "binaries": [
-        "lftp",
-        "tftp",
-        "telnet"
-      ],
-      "note": "Protocol clients only. Device workflows and server configuration are separate."
-    }
-  },
-  "python_min": "3.9.0",
-  "package_overrides": [
-    {
-      "id": "ubuntu",
-      "replacements": {
-        "libjpeg62-turbo": "libjpeg-turbo8"
-      }
-    },
-    {
-      "id": "ubuntu",
-      "min_version": "24.04",
-      "replacements": {
-        "libssh2-1": "libssh2-1t64"
-      }
-    },
-    {
-      "id": "debian",
-      "min_version": "13",
-      "replacements": {
-        "libssh2-1": "libssh2-1t64"
-      }
-    }
-  ]
 }

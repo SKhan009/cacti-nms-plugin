@@ -189,8 +189,12 @@ foreach ($preparedRecords as $position => $record) {
                             </label>
                         <?php endforeach; ?>
                     </div>
-                    <p class="mib-prepared-help">Changes stay in this session. Choose <?= $generationDone ? 'Regenerate' : 'Generate' ?> to
-                        validate and prepare this step before continuing.</p>
+                    <span
+                        class="field-info section-help mib-prepared-help"
+                        tabindex="0"
+                        role="img"
+                        aria-label="Step preparation information"
+                        data-tooltip="<?= icct_nms_h('Changes stay in this session. Choose ' . ($generationDone ? 'Regenerate' : 'Generate') . ' to validate and prepare this step before continuing.') ?>">ⓘ</span>
                 <?php else: ?>
                     <p>Device template: <?= icct_nms_h($preparedPlan['name']) ?></p>
                 <?php endif; ?>

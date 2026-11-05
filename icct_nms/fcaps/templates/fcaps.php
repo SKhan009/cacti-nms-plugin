@@ -47,7 +47,7 @@
                         tabindex="0"
                         role="img"
                         aria-label="Information about Measurement Source"
-                        data-tooltip="Choose collected Cacti data or direct SNMP readings. Select a graph data source or SNMP OID from the sidebar.">
+                        data-tooltip="Choose collected Cacti, SNMP or NTP measurements. Alarm thresholds are stored per device.">
                         <svg
                             viewBox="0 0 20 20"
                             aria-hidden="true">
@@ -72,6 +72,12 @@
                         name="alarm_source_view"
                         value="snmp"> SNMP OID
                 </label>
+                <label>
+                    <input
+                        type="radio"
+                        name="alarm_source_view"
+                        value="ntp"> NTP
+                </label>
             </fieldset>
             <div class="fault-workspace">
                 <aside
@@ -86,12 +92,24 @@
                         hidden>
                         <h3>OID Details</h3>
                         <div id="fault-oid-navigation"></div>
+                        <h3>MIB Fault Presets <?php $ntpHelpText = 'Select several saved MIB fault presets associated with this device. Each preset retains its native Cacti data source. Clear a selection to disable its rule; use Edit thresholds to change it.';
+                        require __DIR__ . '/../../protocols/ntp/templates/help.php'; ?>
+ </h3>
+                        <div
+                            id="fault-mib-presets"
+                            aria-label="Select MIB fault presets"></div>
+                    </section>
+                    <section
+                        id="fault-ntp-section"
+                        hidden>
+                        <h3>NTP Parameters</h3>
+                        <div id="fault-ntp-navigation"></div>
                     </section>
                 </aside>
                 <div class="fault-alarm-editor">
                     <p
                         id="fault-alarm-empty"
-                        hidden>Select a data source or OID to configure thresholds.</p>
+                        hidden>Select a data source, OID or NTP parameter to configure thresholds.</p>
                     <div id="fault-rule-list"></div>
                 </div>
             </div>
@@ -120,21 +138,33 @@
         role="tabpanel"
         aria-labelledby="fcaps-tab-configuration"
         hidden>
-        <h3>Configuration summary</h3>
-        <p>Read-only summary of the current form values, including unsaved changes. Edit settings in
-            Basic Information and Protocol Config. Changes are saved for this device only.</p>
+        <h3>Configuration summary <span
+                class="field-info section-help"
+                tabindex="0"
+                role="img"
+                aria-label="Read-only summary of the current form values, including unsaved changes. Edit settings in Basic Information and Protocol Config. Changes are saved for this device only."
+                data-tooltip="Read-only summary of the current form values, including unsaved changes. Edit settings in Basic Information and Protocol Config. Changes are saved for this device only.">ⓘ</span>
+        </h3>
         <dl
             id="configuration-device-summary"
             class="configuration-summary"></dl>
         <h3>Selected protocols</h3>
         <div id="configuration-protocol-summary"></div>
-        <h3>NMS settings backups and change history</h3>
-        <p>Backups contain saved device settings, protocol parameters, graph associations and fault
-            rules. Credentials are excluded. These are NMS settings snapshots, not configurations
-            retrieved from the device.</p>
-        <p><?= $id
-            ? 'A snapshot is recorded automatically after settings are saved. You can also create a manual backup of saved settings.'
-            : 'Backup and change history are enabled. Save this device to create its first snapshot.' ?></p>
+        <h3>NMS settings backups and change history <span
+                class="field-info section-help"
+                tabindex="0"
+                role="img"
+                aria-label="Backups contain saved device settings, protocol parameters, graph associations and fault rules. Credentials are excluded. These are NMS settings snapshots, not configurations retrieved from the device."
+                data-tooltip="Backups contain saved device settings, protocol parameters, graph associations and fault rules. Credentials are excluded. These are NMS settings snapshots, not configurations retrieved from the device.">ⓘ</span>
+        </h3>
+        <span
+            class="field-info section-help"
+            tabindex="0"
+            role="img"
+            aria-label="Backup history information"
+            data-tooltip="<?= icct_nms_h($id
+                ? 'A snapshot is recorded automatically after settings are saved. You can also create a manual backup of saved settings.'
+                : 'Backup and change history are enabled. Save this device to create its first snapshot.') ?>">ⓘ</span>
         <button
             type="button"
             class="button primary"
@@ -203,8 +233,12 @@
                 </tbody>
             </table>
         </div>
-        <p>Showing the latest 100 snapshots. Earlier snapshots remain stored. Changes to excluded
-            credentials are not included in this history.</p>
+        <span
+            class="field-info section-help"
+            tabindex="0"
+            role="img"
+            aria-label="Showing the latest 100 snapshots. Earlier snapshots remain stored. Changes to excluded credentials are not included in this history."
+            data-tooltip="Showing the latest 100 snapshots. Earlier snapshots remain stored. Changes to excluded credentials are not included in this history.">ⓘ</span>
         <script
             type="application/json"
             id="configuration-backups"><?= json_encode(
@@ -225,9 +259,13 @@
         role="tabpanel"
         aria-labelledby="fcaps-tab-performance"
         hidden>
-        <h3>Performance</h3>
-        <p>Selected graph templates provide performance measurements. View graph definitions in
-            Graphs and interface status in Port Config.</p>
+        <h3>Performance <span
+                class="field-info section-help"
+                tabindex="0"
+                role="img"
+                aria-label="Selected graph templates provide performance measurements. View graph definitions in Graphs and interface status in Port Config."
+                data-tooltip="Selected graph templates provide performance measurements. View graph definitions in Graphs and interface status in Port Config.">ⓘ</span>
+        </h3>
         <ul>
             <?php foreach (
                 $graphAssociations as $template
@@ -250,6 +288,31 @@
         id="fault-catalogue"><?= json_encode(
             $faultCatalogue,
             JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE,
+        ) ?></script>
+    <?php $ntpFaultCurrent = icct_nms_ntp_current($id);
+    $ntpFaultAssignment = icct_nms_ntp_assignment($id); ?>
+    <script
+        type="application/json"
+        id="fault-ntp-parameters"><?= json_encode(
+            icct_nms_ntp_fault_parameters(),
+            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR,
+        ) ?></script>
+    <script
+        type="application/json"
+        id="fault-ntp-readings"><?= json_encode(
+            [
+                'values' => icct_nms_ntp_fault_values($ntpFaultCurrent),
+                'attempted_epoch' => $ntpFaultCurrent['attempted_epoch'],
+                'stale_seconds' => $ntpFaultAssignment['stale_seconds'] ?? null,
+                'status' => $ntpFaultCurrent['status'],
+            ],
+            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR,
+        ) ?></script>
+    <script
+        type="application/json"
+        id="fault-mib-preset-values"><?= json_encode(
+            icct_nms_fault_presets($id),
+            JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR,
         ) ?></script>
     <script
         type="application/json"

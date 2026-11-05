@@ -1,7 +1,9 @@
 <?php
 /** Syslog filters inherit presets and remain independently editable per device. */
 $syslog = is_array($syslog ?? null) ? $syslog : [];
-$syslogFilters = icct_backend_syslog_filters($syslog);
+$syslogFilters = isset($syslog['host_id'])
+    ? icct_backend_syslog_effective_filters($syslog)
+    : icct_backend_syslog_filters($syslog);
 $syslogHelp = static function ($label, $help) {
     ?>
     <span
@@ -24,17 +26,25 @@ $syslogHelp = static function ($label, $help) {
 };
 ?>
 <?php if (empty($presetMode)): ?>
-    <input
-        type="hidden"
-        name="source_address"
-        value="<?= icct_nms_h(
-            $syslog['source_address'] ??
-                ($host['hostname'] ?? ($values['hostname'] ?? ($old['hostname'] ?? ''))),
-        ) ?>">
-    <input
-        type="hidden"
-        name="transport"
-        value="<?= icct_nms_h($syslog['transport'] ?? 'both') ?>">
+    <div class="protocol-grid cols-2">
+        <label class="field">
+            <span class="field-label">Source IP address <?php $syslogHelp('Source IP address', 'Numeric sender address observed by this collector. This must uniquely identify the device.'); ?></span>
+            <input
+                name="source_address"
+                required
+                value="<?= icct_nms_h($syslog['source_address'] ?? ($host['hostname'] ?? ($values['hostname'] ?? ($old['hostname'] ?? '')))) ?>">
+        </label>
+        <label class="field">
+            <span class="field-label">Transport <?php $syslogHelp('Transport', 'Accept Syslog messages from this device over the selected listener transport.'); ?></span>
+            <select name="transport">
+                <?php foreach (['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP'] as $transport => $label): ?>
+                    <option
+                        value="<?= $transport ?>"
+                        <?= ($syslog['transport'] ?? 'both') === $transport ? 'selected' : '' ?>><?= $label ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+    </div>
 <?php endif; ?>
 <div class="protocol-grid cols-2 syslog-settings">
     <?php foreach (
@@ -82,7 +92,13 @@ $syslogHelp = static function ($label, $help) {
                                 type="checkbox"
                                 value="<?= $code ?>"
                                 <?= in_array($code, $syslogFilters[$field], true) ? 'checked' : '' ?>
-                                aria-label="<?= icct_nms_h($code . ' — ' . $caption) ?>"> <?= icct_nms_h($code . ' — ' . $caption) ?>
+
+                                aria-label="<?= icct_nms_h($code . ' — ' . $caption) ?>">
+                            <?php if ($field === 'severity_codes'): ?>
+                                <span class="device-syslog-severity severity-<?= icct_nms_h(icct_backend_syslog_nms_severity($code)) ?>"><?= icct_nms_h($code . ' — ' . $caption) ?></span>
+                            <?php else: ?> <?= icct_nms_h($code . ' — ' . $caption) ?>
+ <?php endif; ?>
+
                         </label>
                     <?php endforeach; ?>
                 </div>

@@ -60,11 +60,16 @@ try {
         throw new RuntimeException('Invalid SSH worker request.');
     }
     $r = json_decode($line, true, 16, JSON_THROW_ON_ERROR);
-    if (($r['kind'] ?? '') === 'collect') {
+    if (in_array($r['kind'] ?? '', ['collect', 'ntp'], true)) {
         if (getenv('NMS_SSH_COLLECTOR') !== '1') {
             throw new RuntimeException('Collection requires the service scheduler.');
         }
-        icct_backend_ssh_collect((int) $r['host_id']);
+        if ($r['kind'] === 'ntp') {
+            require_once __DIR__ . '/../ntp/services/ntp_collector.php';
+            icct_nms_ntp_collect((int) $r['host_id'], 'ssh');
+        } else {
+            icct_backend_ssh_collect((int) $r['host_id']);
+        }
         exit();
     }
     $session = icct_backend_ssh_consume($r, $r['expected_kind'] ?? null);

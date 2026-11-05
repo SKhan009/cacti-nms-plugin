@@ -128,8 +128,7 @@
             tr.title = event.event;
             if (colors[severity]) {
                 const badge = make('span', names[severity] || severity, 'alarm-severity');
-                badge.style.background = colors[severity];
-                badge.style.color = severity === 'Information' ? '#fff' : '#161616';
+                icctSetSeverity(badge, severity);
                 sev.append(badge);
             } else sev.textContent = '';
             const description = make('td', tableValue(s.description));

@@ -152,6 +152,15 @@ try:
     if result.returncode:
         print(result.stderr)
         raise SystemExit(result.returncode)
+    ntp = subprocess.run(
+        ["php", str(root / "protocols/ntp/tests/ntp_ssh_integration.php")],
+        capture_output=True,
+        text=True,
+        timeout=55,
+    )
+    print(ntp.stdout, end="")
+    if ntp.returncode:
+        raise RuntimeError("Private NTP SSH integration failed: " + ntp.stderr)
 finally:
     import signal
 

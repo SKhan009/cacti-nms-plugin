@@ -2,14 +2,6 @@
 /** Pending observations remain distinct from saved device protocol configuration. */
 // Parameter previews only. No form/action exists until a real backend adapter is implemented.
 $pendingFields = [
-    'ntp' => [
-        ['NTP Server', 'server', 'text', 'Server hostname or IP address'],
-        ['Port', 'port', 'number', '1–65535'],
-        ['Version', 'version', 'select', ['3' => 'NTP v3', '4' => 'NTP v4']],
-        ['Timeout (Sec)', 'timeout', 'number', 'Response timeout'],
-        ['Poll Interval (Sec)', 'poll_interval', 'number', 'Time between checks'],
-        ['Maximum Offset (ms)', 'maximum_offset', 'number', 'Offset threshold'],
-    ],
     'tacacs' => [
         ['Server Address', 'server', 'text', 'Server hostname or IP address'],
         ['Port', 'port', 'number', '1–65535'],
@@ -104,6 +96,7 @@ $pendingHelp = static function (string $text): void {
                                 <input
                                     type="checkbox"
                                     disabled> <?= icct_nms_h($option) ?>
+
                             </label>
                         <?php endforeach; ?>
                     </div>
@@ -149,8 +142,12 @@ $pendingHelp = static function (string $text): void {
     <?php if (
         $key === 'tacacs'
     ): ?>
-        <p class="pending-protocol-status">Shared secret and authentication credentials will be configured
-            per device.</p>
+        <span
+            class="field-info section-help pending-protocol-status"
+            tabindex="0"
+            role="img"
+            aria-label="Shared secret and authentication credentials will be configured per device."
+            data-tooltip="Shared secret and authentication credentials will be configured per device.">ⓘ</span>
     <?php endif; ?>
 <?php endif; ?>
 <div class="protocol-actions">

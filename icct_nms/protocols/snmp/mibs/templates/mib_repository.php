@@ -156,7 +156,9 @@ if (!empty($preview['dependencies'])): ?>
                         <?= empty($preview['parse_error']) && (!$reviewValues || !empty($reviewValues['create_' . $key]))
                             ? 'checked'
                             : '' ?>
+
                         <?= !empty($preview['parse_error']) ? 'disabled' : '' ?>> <?= $label ?>
+
                 </label>
             <?php endforeach; ?>
         </fieldset>
@@ -185,8 +187,12 @@ if (!empty($preview['dependencies'])): ?>
                 data-mib-clear>Clear selection</button>
             <span data-mib-selected-count></span>
         </div>
-        <p>Fields are filled from the MIB with editable graph defaults. Table instance indexes can be
-            set when applying templates.</p>
+        <span
+            class="field-info section-help"
+            tabindex="0"
+            role="img"
+            aria-label="Fields are filled from the MIB with editable graph defaults. Table instance indexes can be set when applying templates."
+            data-tooltip="Fields are filled from the MIB with editable graph defaults. Table instance indexes can be set when applying templates.">ⓘ</span>
         <div
             class="mib-object-list"
             data-mib-list>
@@ -204,6 +210,7 @@ if (!empty($preview['dependencies'])): ?>
                             name="selected[<?= $i ?>]"
                             value="1"
                             <?= $selected ? 'checked' : '' ?>
+
                             <?= !$record['numeric'] ? 'disabled' : '' ?>>
                         <strong><?= icct_nms_h($record['symbol']) ?></strong>
                         <span><?= icct_nms_h($record['syntax'] ?: $record['kind']) ?></span>
@@ -212,6 +219,7 @@ if (!empty($preview['dependencies'])): ?>
                         <p><?= icct_nms_h($record['description']) ?></p>
                         <p>
                             <strong><?= icct_nms_h($record['reason']) ?></strong> · Access: <?= icct_nms_h($record['access'] ?: 'Not applicable') ?> · Base OID: <?= icct_nms_h($record['base_oid'] ?: '—') ?>
+
                         </p>
                         <?php if ($record['numeric']): ?>
                             <div class="protocol-grid cols-3">
@@ -457,6 +465,7 @@ if (!empty($preview['dependencies'])): ?>
                                     ' / ' .
                                     $record['legend'],
                             ) ?><small><?= $record['statistics'] ? 'Current / Average / Maximum' : 'No statistics' ?> · Lower: <?= icct_nms_h($record['threshold_low'] === '' ? 'None' : $record['threshold_low']) ?> · Upper: <?= icct_nms_h($record['threshold_high'] === '' ? 'None' : $record['threshold_high']) ?>
+
                                 </small>
                             </td>
                         </tr>

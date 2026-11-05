@@ -256,7 +256,7 @@
         for (const r of data.events) {
             const tr = make('tr'),
                 sev = make('span', r.severity, 'alarm-severity');
-            sev.style.background = icctSeverityColors[r.severity] || '#ddd';
+            icctSetSeverity(sev, r.severity);
             const td = cell('');
             td.append(sev);
             tr.append(

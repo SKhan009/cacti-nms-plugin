@@ -49,8 +49,8 @@ $protocolPresetHelp = static function (string $key, string $label) use ($presetM
                     ),
         'ntp' =>
                     (
-                        'Planned presets: server, version, timeout, polling and offset limit. Device setup will '
-        . 'confirm its NTP server. Configuration is unavailable until integration is ready.'
+                        'Set read-only chrony collection, an optional expected source IP, intervals and offset limit. '
+        . 'Saved device settings remain independent; the plugin never changes clocks.'
                     ),
         'tacacs' =>
                     (
@@ -125,7 +125,7 @@ $protocolPresetHelp = static function (string $key, string $label) use ($presetM
     </nav>
 <?php endif; ?>
 <?php $protocolStates = [];
-foreach (['cdp', 'lldp', 'snmp', 'ssh', 'serial', 'syslog', 'netflow'] as $key) {
+foreach (['cdp', 'lldp', 'snmp', 'ssh', 'serial', 'syslog', 'netflow', 'ntp'] as $key) {
     $protocolStates[$key] = icct_backend_protocol_enabled($id, $key);
 } ?>
 <?php if (!$presetMode): ?>
@@ -554,7 +554,34 @@ $netflow = array_replace(
                 </form>
             </div>
         </details>
-        <?php foreach (['ntp' => 'NTP', 'tacacs' => 'TACACS+'] as $key => $label): ?>
+        <?php
+$ntpSaved = !$presetMode && (bool) icct_nms_ntp_assignment($id);
+$ntp = $presetMode ? ($protocolPresets['ntp'] ?? []) :
+    array_replace(icct_nms_protocol_presets()['ntp'] ?? [], icct_nms_ntp_assignment($id));
+if ($failedProtocol === 'ntp') {
+    $ntp = array_intersect_key(array_filter($_POST, 'is_scalar'), array_flip(icct_nms_ntp_fields()));
+}
+?>
+        <details class="protocol-item" id="protocol-ntp" data-saved="<?= $ntpSaved ? '1' : '0' ?>"
+            <?= $ntpSaved || in_array('ntp', $protocolDraft, true) ? '' : 'hidden' ?>
+            <?= $failedProtocol === 'ntp' ? 'open' : '' ?>>
+            <summary>
+                <span class="accordion-chevron" aria-hidden="true"></span>
+                <span>NTP <?php $protocolPresetHelp('ntp', 'NTP'); ?></span>
+                <button type="button" class="delete-protocol" aria-label="Remove protocol">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
+                </button>
+            </summary>
+            <div class="protocol-content">
+                <form method="post">
+                    <?php icct_nms_token(); ?>
+                    <input type="hidden" name="action" value="<?= $presetMode ? 'save_protocol_defaults' : 'ntp' ?>">
+                    <?php if ($presetMode): ?><input type="hidden" name="preset_protocol" value="ntp"><?php endif; ?>
+                    <?php require __DIR__ . '/../../ntp/templates/settings.php'; ?>
+                </form>
+            </div>
+        </details>
+        <?php foreach (['tacacs' => 'TACACS+'] as $key => $label): ?>
             <details
                 class="protocol-item"
                 id="protocol-<?= $key ?>"

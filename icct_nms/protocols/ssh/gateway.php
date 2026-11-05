@@ -64,8 +64,7 @@ try {
                 }
             });
             // Do not forward PHP/transport diagnostics, credentials or terminal transcripts to logs.
-            $process->stderr->on('data', function ($data) {
-            });
+            $process->stderr->on('data', function ($data) {});
             $deadline =
                 ($request['expected_kind'] ?? '') === 'console'
                     ? null
@@ -239,17 +238,22 @@ try {
                     'LIMIT 4',
                 [(int) $this->config['poller_id']],
             );
+            require_once __DIR__ . '/../ntp/services/ntp_collector.php';
+            $rows = array_map(fn($row) => $row + ['kind' => 'collect'], $rows);
+            foreach (icct_nms_ntp_due('ssh', (int) $this->config['poller_id']) as $device) {
+                $rows[] = $device + ['kind' => 'ntp'];
+            }
             foreach ($rows as $row) {
-                $id = (int) $row['host_id'];
+                $hostId = (int) $row['host_id'];
+                $id = $row['kind'] . ':' . $hostId;
                 if (isset($this->collecting[$id]) || count($this->collecting) >= 4) {
                     continue;
                 }
                 $this->collecting[$id] = true;
                 try {
                     $this->spawn(
-                        ['kind' => 'collect', 'host_id' => $id],
-                        function ($m) {
-                        },
+                        ['kind' => $row['kind'], 'host_id' => $hostId],
+                        function ($m) {},
                         function () use ($id) {
                             unset($this->collecting[$id]);
                         },

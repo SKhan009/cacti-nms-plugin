@@ -148,8 +148,13 @@ foreach (
             name="device_queries"
             value="<?= icct_nms_h(json_encode($deviceSelectedQueries)) ?>">
         <div data-device-query-list></div>
-        <p data-device-query-empty>Selected graphs use direct SNMP polling; no data query is
-            required.</p>
+        <span
+            class="field-info section-help"
+            data-device-query-empty
+            tabindex="0"
+            role="img"
+            aria-label="Selected graphs use direct SNMP polling; no data query is required."
+            data-tooltip="Selected graphs use direct SNMP polling; no data query is required.">ⓘ</span>
         <div class="mib-device-query-add">
             <label class="field">
                 <span class="field-label">Add Data Query</span>
@@ -169,8 +174,12 @@ foreach (
                 class="button"
                 data-device-query-add>Add</button>
         </div>
-        <p class="mib-prepared-help">Graph selections and data queries are saved as native Cacti
-            device-template associations.</p>
+        <span
+            class="field-info section-help mib-prepared-help"
+            tabindex="0"
+            role="img"
+            aria-label="Graph selections and data queries are saved as native Cacti device-template associations."
+            data-tooltip="Graph selections and data queries are saved as native Cacti device-template associations.">ⓘ</span>
         <div class="mib-device-save-actions">
             <button
                 type="submit"

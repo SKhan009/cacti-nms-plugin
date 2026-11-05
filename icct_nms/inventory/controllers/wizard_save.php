@@ -53,6 +53,12 @@ try {
             case 'serial':
                 icct_nms_save_serial($id, $_POST);
                 break;
+            case 'ntp':
+                if (!icct_backend_protocol_enabled($id, 'ntp')) {
+                    throw new RuntimeException('Enable NTP before editing its settings.');
+                }
+                icct_nms_ntp_save($id, $_POST);
+                break;
             case 'netflow':
                 icct_nms_netflow_save($id, $host, $_POST);
                 break;

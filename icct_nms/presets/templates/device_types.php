@@ -136,8 +136,13 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
             </fieldset>
         </section>
         <section class="type-image-upload">
-            <h3>Device Type Image</h3>
-            <p>Maximum file size: 500 KB. Supported formats: .jpg, .png, .webp.</p>
+            <h3>Device Type Image <span
+                    class="field-info section-help"
+                    tabindex="0"
+                    role="img"
+                    aria-label="Maximum file size: 500 KB. Supported formats: .jpg, .png, .webp."
+                    data-tooltip="Maximum file size: 500 KB. Supported formats: .jpg, .png, .webp.">ⓘ</span>
+            </h3>
             <label class="button primary type-upload-button">Upload <span aria-hidden="true">+</span>
                 <input
                     type="file"
@@ -234,6 +239,7 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
                             <span
                                 class="device-shape-symbol shape-<?= icct_nms_type_shape($type) ?>"
                                 aria-hidden="true"></span><?= icct_nms_type_shapes()[icct_nms_type_shape($type)] ?>
+
                         </span>
                     </td>
                     <td><?= $type['physical_ports'] === null ? 'Not set' : (int) $type['physical_ports'] ?></td>
@@ -339,6 +345,7 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
             href="<?= icct_nms_h($pageUrl(max(1, $page - 1))) ?>"
             aria-label="Previous page"
             <?= $page === 1 ? 'aria-disabled="true" tabindex="-1"' : '' ?>
+
             class="pagination-control">
             <svg
                 class="pagination-arrow"
@@ -352,6 +359,7 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
             href="<?= icct_nms_h($pageUrl(min($pages, $page + 1))) ?>"
             aria-label="Next page"
             <?= $page === $pages ? 'aria-disabled="true" tabindex="-1"' : '' ?>
+
             class="pagination-control">
             <svg
                 class="pagination-arrow"

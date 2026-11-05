@@ -1,4 +1,8 @@
 <?php
+function icct_backend_inventory_collector_id()
+{
+    return 1;
+}
 
 $disabled = false;
 $failWrite = false;
@@ -26,6 +30,9 @@ function db_fetch_assoc_prepared($sql, $args)
 }
 function db_fetch_cell_prepared($sql, $args)
 {
+    if (($args[0] ?? '') === 'syslog_dedupe_seconds') {
+        return '60';
+    }
     return $GLOBALS['presetJson'] ?? null;
 }
 function db_fetch_row_prepared($sql, $args)

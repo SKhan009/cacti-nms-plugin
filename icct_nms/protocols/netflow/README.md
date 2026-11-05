@@ -20,7 +20,7 @@ WAN ifIndex overrides take priority. Otherwise, two endpoints in configured LAN 
 
 Application identity is taken from exporter metadata where present. Without it, application identity is Not reported; destination ports never substitute for exporter evidence.
 
-Anomaly rules evaluate a five-minute window: destination/port fan-out, SYN-only packet rate, SMB/RPC fan-out suggesting worm-like scanning, and bandwidth above a configured limit or three times a usable prior baseline. These are investigation indicators, not proof of malware or an IDS replacement. Historical events retain their timestamps and resolve only when fresh flow records are present. Thresholds belong to each device. Source-IP rankings identify top talkers.
+Anomaly rules evaluate a five-minute window: destination/port fan-out, SYN-only packet rate, SMB/RPC fan-out suggesting worm-like scanning, and bandwidth above a configured limit or three times a usable prior baseline. These are investigation indicators, not proof of malware or an IDS replacement. Historical events retain their timestamps and resolve only when fresh flow records are present. Thresholds belong to each device. Each saved anomaly episode also appears once in the shared Fault console as NetFlow, reusing acknowledgement, escalation and immutable history. The worker and poller repair pending journal updates from durable anomaly rows after failures; collector outages do not clear faults. Source-IP rankings identify top talkers.
 
 ## Verification
 

@@ -26,6 +26,7 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
         <script>const icctSeverityColors = Object.freeze(<?= json_encode(icct_nms_severity_colors(), JSON_THROW_ON_ERROR) ?>);</script>
         <script src="shared/js/navigation.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../js/navigation.js'), 0, 12) ?>"></script>
         <script src="shared/js/browser-utils.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../js/browser-utils.js'), 0, 12) ?>"></script>
+        <script src="shared/js/severity.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../js/severity.js'), 0, 12) ?>"></script>
         <title><?= icct_nms_h($title) ?> · ICCT NMS</title>
         <!-- Content version keeps deployed spacing changes fresh in cached browsers. -->
         <link
@@ -78,9 +79,17 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
                     <a href="presets/controllers/presets.php#segment">Presets</a>
                     <?php if (is_realm_allowed(26)): ?>
                         <div class="installation-settings-menu">
-                            <button type="button" class="settings-menu-trigger" aria-expanded="false" aria-controls="settings-submenu">Settings</button>
-                            <div class="settings-submenu" id="settings-submenu" hidden>
-                                <a href="installation/controllers/installation.php">Installation Checks</a>
+                            <button
+                                type="button"
+                                class="settings-menu-trigger"
+                                aria-expanded="false"
+                                aria-controls="settings-submenu">Settings</button>
+                            <div
+                                class="settings-submenu"
+                                id="settings-submenu"
+                                hidden>
+                                <a href="installation/controllers/installation.php">Installation Checks
+                                </a>
                             </div>
                         </div>
                     <?php endif; ?>
@@ -115,6 +124,7 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
                     <span
                         class="status-dot"
                         aria-hidden="true"></span><?= icct_nms_h($serverStatus['hostname']) ?>
+
                 </strong>
                 <span><?= icct_nms_h($collector) ?> · Poller <?= icct_nms_h(read_config_option('poller_interval')) ?> sec</span>
             </div>

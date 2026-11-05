@@ -4,11 +4,41 @@ $syslogSearch = mb_substr(
     0,
     200,
 );
+$syslogFiltersView = ['host_id' => (int) $id, 'search' => $syslogSearch];
+$syslogSeverityFilter = $_GET['syslog_severity'] ?? [];
+if (!is_array($syslogSeverityFilter)) {
+    throw new InvalidArgumentException('Choose Syslog severity levels.');
+}
+$syslogSeverityFilter = icct_backend_syslog_filters(['severity_codes' => $syslogSeverityFilter])['severity_codes'];
+if ($syslogSeverityFilter) {
+    $syslogFiltersView['severity_codes'] = $syslogSeverityFilter;
+}
+$syslogAck = $_GET['syslog_ack'] ?? '';
+if (!in_array($syslogAck, ['', 'yes', 'no'], true)) {
+    throw new InvalidArgumentException('Choose a Syslog acknowledgement status.');
+}
+$syslogFiltersView['ack'] = $syslogAck;
+foreach (['since', 'until'] as $bound) {
+    $value = $_GET['syslog_' . $bound] ?? '';
+    if (!is_string($value) || ($value !== '' && !preg_match('/^\d{4}-\d\d-\d\dT\d\d:\d\d$/D', $value))) {
+        throw new InvalidArgumentException('Choose a valid Syslog time window.');
+    }
+    if ($value !== '') {
+        $parsed = DateTimeImmutable::createFromFormat('!Y-m-d\\TH:i', $value);
+        if (!$parsed || $parsed->format('Y-m-d\\TH:i') !== $value) {
+            throw new InvalidArgumentException('Choose a valid Syslog time window.');
+        }
+    }
+    $syslogFiltersView[$bound] = $value === '' ? '' : str_replace('T', ' ', $value) . ':00';
+}
+if ($syslogFiltersView['since'] !== '' && $syslogFiltersView['until'] !== '' && $syslogFiltersView['since'] > $syslogFiltersView['until']) {
+    throw new InvalidArgumentException('Syslog From must not be later than Until.');
+}
 $syslogPage = max(1, (int) ($_GET['syslog_page'] ?? 1));
 $syslogTotal = 0;
 $syslogEvents = icct_backend_syslog_events(
     [(int) $id],
-    ['host_id' => (int) $id, 'search' => $syslogSearch],
+    $syslogFiltersView,
     50,
     ($syslogPage - 1) * 50,
     $syslogTotal,
@@ -18,7 +48,7 @@ if ($syslogPage > $syslogPages) {
     $syslogPage = $syslogPages;
     $syslogEvents = icct_backend_syslog_events(
         [(int) $id],
-        ['host_id' => (int) $id, 'search' => $syslogSearch],
+        $syslogFiltersView,
         50,
         ($syslogPage - 1) * 50,
         $syslogTotal,
@@ -30,13 +60,17 @@ $syslogPageUrl = static fn ($page) => 'inventory/controllers/device.php?' .
         'view' => 1,
         'syslog_search' => $syslogSearch,
         'syslog_page' => $page,
+        'syslog_severity' => $syslogSeverityFilter,
+        'syslog_ack' => $syslogAck,
+        'syslog_since' => str_replace(' ', 'T', substr($syslogFiltersView['since'], 0, 16)),
+        'syslog_until' => str_replace(' ', 'T', substr($syslogFiltersView['until'], 0, 16)),
     ]) .
     '#view-syslog';
 $syslogSeverityNames = icct_backend_syslog_severity_labels();
 $syslogFacilityNames = icct_backend_syslog_facility_labels();
 $syslogViewAssignment = icct_backend_syslog_assignment((int) $id);
 $syslogViewSettings = $syslogViewAssignment
-    ? icct_backend_syslog_filters($syslogViewAssignment)
+    ? icct_backend_syslog_effective_filters($syslogViewAssignment)
     : null;
 $syslogLabelList = static function ($codes, $labels) {
     return $codes
@@ -59,7 +93,7 @@ $syslogLabelList = static function ($codes, $labels) {
                                 icct_backend_protocol_enabled((int) $id, 'syslog')
                                     ? 'Enabled'
                                     : 'Disabled',
-                    'Source Address' => $syslogViewAssignment['source_address'] ?: $old['hostname'] ?? '',
+                    'Source Address' => $syslogViewAssignment['source_address'],
                     'Severity' => $syslogLabelList($syslogViewSettings['severity_codes'], $syslogSeverityNames),
                     'Facility' =>
                                 count($syslogViewSettings['facility_codes']) === 24
@@ -98,11 +132,42 @@ $syslogLabelList = static function ($codes, $labels) {
             name="syslog_search"
             value="<?= icct_nms_h($syslogSearch) ?>"
             placeholder="Search message, program or source IP">
+        <label>Severity <select
+                name="syslog_severity[]"
+                multiple
+                size="3">
+                <?php foreach ($syslogSeverityNames as $code => $label): ?>
+                    <option
+                        value="<?= $code ?>"
+                        class="device-syslog-severity severity-<?= icct_nms_h(icct_backend_syslog_nms_severity($code)) ?>"
+                        <?= in_array($code, $syslogSeverityFilter, true) ? 'selected' : '' ?>><?= icct_nms_h($label) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+        <label>Acknowledgement<select name="syslog_ack">
+                <option value="">All</option>
+                <option
+                    value="yes"
+                    <?= $syslogAck === 'yes' ? 'selected' : '' ?>>Acknowledged</option>
+                <option
+                    value="no"
+                    <?= $syslogAck === 'no' ? 'selected' : '' ?>>Not acknowledged</option>
+            </select>
+        </label>
+        <?php foreach (['since' => 'From', 'until' => 'Until'] as $key => $label): ?>
+            <label><?= $label ?>
+
+                <input
+                    type="datetime-local"
+                    name="syslog_<?= $key ?>"
+                    value="<?= icct_nms_h(str_replace(' ', 'T', substr($syslogFiltersView[$key], 0, 16))) ?>">
+            </label>
+        <?php endforeach; ?>
         <button
             class="button"
             type="submit">Search</button>
         <?php if (
-            $syslogSearch !== ''
+            $syslogSearch !== '' || $syslogSeverityFilter || $syslogAck !== '' || $syslogFiltersView['since'] !== '' || $syslogFiltersView['until'] !== ''
         ): ?>
             <a
                 class="button"
@@ -127,15 +192,18 @@ $syslogLabelList = static function ($codes, $labels) {
                     <th>Message</th>
                     <th>Count</th>
                     <th>Last Seen</th>
+                    <th>Acknowledgement / Fault</th>
                 </tr>
             </thead>
             <tbody>
                 <?php
                 foreach ($syslogEvents as $event): ?>
                     <tr>
-                        <td><?= icct_nms_h($event['event_time']) ?></td>
+                        <td><?= icct_nms_h($event['event_time']) ?><small><?= icct_nms_h($event['timestamp_kind'] ?? 'legacy-reported') ?></small>
+                        </td>
                         <td>
                             <span class="device-syslog-severity severity-<?= icct_nms_h(icct_backend_syslog_nms_severity($event['severity_code'])) ?>"><?= icct_nms_h($syslogSeverityNames[(int) $event['severity_code']] ?? 'Unknown') ?>
+
                             </span>
                         </td>
                         <td><?= icct_nms_h(
@@ -147,11 +215,17 @@ $syslogLabelList = static function ($codes, $labels) {
                         <td class="device-syslog-message"><?= icct_nms_h($event['message']) ?></td>
                         <td><?= (int) $event['repeat_count'] ?></td>
                         <td><?= icct_nms_h($event['last_seen']) ?></td>
+                        <td><?= !empty($event['acknowledged']) ? 'Acknowledged' : 'Not acknowledged' ?>
+ <?php if (!empty($event['alarm_key'])): ?>
+ <a
+                                    href="alarms/controllers/alarms.php?view=<?= icct_nms_h($event['alarm_key']) ?>">View fault</a>
+                            <?php endif; ?>
+                        </td>
                     </tr>
                 <?php endforeach;
 if (!$syslogEvents): ?>
                     <tr>
-                        <td colspan="8">No Syslog or availability events<?= $syslogSearch !== '' ? ' match your search' : ' for this device' ?>.</td>
+                        <td colspan="9">No Syslog or availability events<?= $syslogSearch !== '' ? ' match your search' : ' for this device' ?>.</td>
                     </tr>
                 <?php endif;
 ?>

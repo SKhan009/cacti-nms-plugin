@@ -653,6 +653,9 @@ def main():
                 group,
             ]
         )
+    if target["family"] == "rhel":
+        # Only the collector account gets this fixed read command; no daemon or clock edits.
+        run([sys.executable, PLUGIN / "installation/cli/ntp_access.py", "install", "--user", user])
     services(root, user, group)
     if args.ssh_origin:
         configure_ssh(

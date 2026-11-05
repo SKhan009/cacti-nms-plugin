@@ -3,15 +3,15 @@
 /** Imported Syslog assignment changes must preserve exact filters and reject duplicate active mappings. */
 $GLOBALS['duplicate'] = [];
 $GLOBALS['writes'] = [];
-function icct_backend_require_management($realm)
-{
-}
-function icct_backend_require_device_access($id)
-{
-}
+function icct_backend_require_management($realm) {}
+function icct_backend_require_device_access($id) {}
 function icct_backend_protocol_enabled($id, $protocol)
 {
     return true;
+}
+function db_fetch_cell_prepared($sql, $args)
+{
+    return 1;
 }
 function db_fetch_row_prepared($sql, $args)
 {

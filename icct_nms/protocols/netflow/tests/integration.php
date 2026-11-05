@@ -14,10 +14,13 @@ try {
     $_SESSION = ['sess_user_id' => 1];
     require_once __DIR__ . '/../../../shared/services/bootstrap.php';
     require_once __DIR__ . '/../services/netflow_collector.php';
+    require_once __DIR__ . '/../services/netflow_faults.php';
     icct_nms_backend();
     date_default_timezone_set('Asia/Kolkata');
     $tables = [
         'meta',
+        'alarms',
+        'alarm_history',
         'netflow_devices',
         'netflow_state',
         'netflow_buckets',
@@ -48,7 +51,11 @@ try {
             throw new RuntimeException($message);
         }
     }
-    $host = db_fetch_row("SELECT * FROM host WHERE deleted='' ORDER BY id LIMIT 1");
+    $host = db_fetch_row_prepared(
+        "SELECT * FROM host WHERE deleted='' AND disabled='' AND poller_id=? ORDER BY id LIMIT 1",
+        [icct_backend_inventory_collector_id()],
+    );
+    nfAssert(!empty($host), 'An enabled device on this collector is required.');
     $id = (int) $host['id'];
     $nfSettings = icct_nms_netflow_defaults();
     $nfSettings['collector'] = '127.0.0.1';
@@ -208,6 +215,32 @@ try {
         ) === 4,
         'DoS, scanning, worm-like traffic and bandwidth anomalies were not all detected',
     );
+    icct_nms_netflow_sync_faults();
+    nfAssert(
+        (int) db_fetch_cell(
+            "SELECT COUNT(*) FROM plugin_icct_nms_alarms WHERE source='NetFlow' AND state='Active'",
+        ) === 4,
+        'NetFlow anomalies did not reach the shared Fault console',
+    );
+    $alarm = db_fetch_row(
+        "SELECT * FROM plugin_icct_nms_alarms WHERE source='NetFlow' ORDER BY alarm_key LIMIT 1",
+    );
+    icct_nms_alarm_action([
+        'alarm_key' => $alarm['alarm_key'],
+        'alarm_action' => 'ack',
+        'revision' => $alarm['revision'],
+        'note' => 'Isolated NetFlow QA acknowledgement',
+    ]);
+    icct_nms_netflow_sync_faults();
+    nfAssert(
+        (int) db_fetch_cell(
+            "SELECT COUNT(*) FROM plugin_icct_nms_alarms WHERE source='NetFlow'",
+        ) === 4 &&
+            (int) db_fetch_cell(
+                "SELECT SUM(acknowledged) FROM plugin_icct_nms_alarms WHERE source='NetFlow'",
+            ) === 1,
+        'Bridge replay duplicated alarms or reset acknowledgement',
+    );
     db_execute(
         'UPDATE plugin_icct_nms_netflow_flows SET last_seen=DATE_SUB(NOW(),INTERVAL 10 MINUTE),received_at=DATE_SUB(NOW(),INTERVAL 10 MINUTE)',
     );
@@ -218,6 +251,14 @@ try {
         ) === 4,
         'Missing data incorrectly cleared anomalies',
     );
+    icct_nms_netflow_sync_faults();
+    nfAssert(
+        (int) db_fetch_cell(
+            "SELECT COUNT(*) FROM plugin_icct_nms_alarms WHERE source='NetFlow' AND state='Active'",
+        ) === 4,
+        'A capture outage falsely resolved shared NetFlow faults',
+    );
+
     db_execute(
         'UPDATE plugin_icct_nms_netflow_flows SET ' .
             'last_seen=NOW(),received_at=NOW(),packets=1,bytes=10,tcp_flags=\'...A....\',dst_addr=\'10.22.1.1\',dst_port=443',
@@ -228,6 +269,13 @@ try {
             "SELECT COUNT(*) FROM plugin_icct_nms_netflow_events WHERE state='Active'",
         ) === 0,
         'Fresh normal observations failed to resolve anomalies',
+    );
+    icct_nms_netflow_sync_faults();
+    nfAssert(
+        (int) db_fetch_cell(
+            "SELECT COUNT(*) FROM plugin_icct_nms_alarms WHERE source='NetFlow' AND state='Resolved'",
+        ) === 4,
+        'Fresh flow recovery did not resolve the shared NetFlow faults',
     );
     icct_nms_netflow_remove($id);
     nfAssert(

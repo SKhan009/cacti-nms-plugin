@@ -84,8 +84,7 @@
         }
         n.append(el('span', 'rack-device-name', device.name));
         const badge = el('span', 'rack-alarm-count', String(device.fault_count || 0));
-        badge.style.background = severityColors[device.fault_severity] || '#fff';
-        badge.style.color = device.fault_severity === 'Critical' ? '#fff' : '#222';
+        icctSetSeverity(badge, device.fault_severity);
         badge.title = device.fault_count
             ? device.fault_count + ' active alarms · ' + device.fault_severity
             : 'No active alarms';

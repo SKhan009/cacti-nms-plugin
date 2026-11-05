@@ -204,10 +204,12 @@
                 : '';
         document.querySelector('#dashboardNameTitle').textContent =
             mode === 'rename' ? 'Rename dashboard' : 'Save dashboard view';
-        document.querySelector('#dashboardNameHelp').textContent =
+        const nameHelp = document.querySelector('#dashboardNameHelp');
+        nameHelp.dataset.tooltip =
             mode === 'rename'
                 ? 'Update the name of the selected dashboard.'
                 : 'Save the current cards, their order and column layout as a new dashboard.';
+        nameHelp.setAttribute('aria-label', nameHelp.dataset.tooltip);
         document.querySelector('#dashboardNameSubmit').textContent =
             mode === 'rename' ? 'Save Name' : 'Save Dashboard';
         nameDialog.showModal();
@@ -848,7 +850,7 @@
                 ),
                 count = element('td', String(alarm.count));
             badge.className = 'frequent-severity';
-            badge.style.background = colors[alarm.severity] || '#ddd';
+            icctSetSeverity(badge, alarm.severity);
             severity.append(badge);
             row.append(name, severity, count);
             body.append(row);

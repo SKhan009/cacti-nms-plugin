@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../protocols/ntp/services/ntp_service.php';
+
 /** Device-linked alarm journal. Pollers own observations; operators own workflow actions. */
 function icct_nms_alarm_transition($previous, $observation)
 {
@@ -34,6 +36,9 @@ function icct_nms_alarm_transition($previous, $observation)
 }
 function icct_nms_alarm_key($host, $rule, $observation)
 {
+    if (in_array($rule['source'] ?? '', ['syslog', 'netflow'], true)) {
+        return hash('sha256', $rule['source'] . ':' . (int) $observation['event_id']);
+    }
     return hash(
         'sha256',
         json_encode(
@@ -44,7 +49,9 @@ function icct_nms_alarm_key($host, $rule, $observation)
                 $rule['source'] ?? 'rrd',
                 $rule['name'] ?? $observation['graph'],
                 $rule['template_id'] ?? 0,
-                $rule['metric_id'] ?? 0,
+                ($rule['source'] ?? '') === 'ntp'
+                    ? $rule['parameter'] . ':' . ($rule['expected_source'] ?? '')
+                    : $rule['metric_id'] ?? 0,
                 $rule['oid'] ?? '',
                 (string) $observation['graph_id'],
                 $rule['condition'] ?? '',
@@ -62,13 +69,12 @@ function icct_nms_alarm_history_write($key, $event, $actor = 0, $note = '', $tic
         [$key],
     );
     if (!empty($row['acknowledged'])) {
-        $ack =
-            $event === 'Acknowledged'
-                ? ['note' => $note, 'actor_id' => $actor]
-                : db_fetch_row_prepared(
-                    "SELECT note,actor_id FROM plugin_icct_nms_alarm_history WHERE alarm_key=? AND event='Acknowledged' ORDER BY id DESC LIMIT 1",
-                    [$key],
-                );
+        $ack = in_array($event, ['Acknowledged', 'Automatically acknowledged'], true)
+            ? ['note' => $note, 'actor_id' => $actor]
+            : db_fetch_row_prepared(
+                "SELECT note,actor_id FROM plugin_icct_nms_alarm_history WHERE alarm_key=? AND event IN ('Acknowledged','Automatically acknowledged') AND JSON_VALID(snapshot_json) AND CAST(JSON_UNQUOTE(JSON_EXTRACT(snapshot_json,'$.occurrences')) AS UNSIGNED)=? ORDER BY id DESC LIMIT 1",
+                [$key, (int) $row['occurrences']],
+            );
         $row['ack_note'] = $ack['note'] ?? '';
         $row['ack_actor_id'] = (int) ($ack['actor_id'] ?? 0);
     }
@@ -80,15 +86,17 @@ function icct_nms_alarm_history_write($key, $event, $actor = 0, $note = '', $tic
         [$key, $event, $actor, $note, json_encode($row, JSON_THROW_ON_ERROR)],
     );
 }
-function icct_nms_alarm_record($host, $rule, $observation)
+function icct_nms_alarm_record($host, $rule, $observation, $transaction = true)
 {
     $key = icct_nms_alarm_key($host, $rule, $observation);
     $lock = 'icct_alarm_' . substr($key, 0, 40);
     if ((int) db_fetch_cell_prepared('SELECT GET_LOCK(?,0)', [$lock]) !== 1) {
-        return;
+        return false;
     }
     try {
-        icct_backend_category_execute('START TRANSACTION', []);
+        if ($transaction) {
+            icct_backend_category_execute('START TRANSACTION', []);
+        }
         $previous = db_fetch_row_prepared(
             'SELECT * FROM plugin_icct_nms_alarms WHERE alarm_key=? FOR UPDATE',
             [$key],
@@ -102,18 +110,35 @@ function icct_nms_alarm_record($host, $rule, $observation)
             $name = mb_substr(trim($rule['name'] ?? '') ?: $observation['graph'], 0, 160);
             $source = str_starts_with((string) $observation['rule'], 'port:')
                 ? 'Port'
-                : (($rule['source'] ?? 'rrd') === 'snmp'
-                    ? 'SNMP'
-                    : (($rule['source'] ?? '') === 'availability'
-                        ? 'Availability'
-                        : 'Cacti'));
+                : [
+                        'snmp' => 'SNMP',
+                        'availability' => 'Availability',
+                        'ntp' => 'NTP',
+                        'syslog' => 'Syslog',
+                        'netflow' => 'NetFlow',
+                    ][$rule['source'] ?? 'rrd'] ?? 'Cacti';
+            $automaticAck =
+                $source === 'Port' &&
+                $sample > 0 &&
+                !empty($observation['port_context']['auto_acknowledge']) &&
+                icct_nms_port_alarm_severity($observation['state']) &&
+                (!$previous || empty($previous['acknowledged']) || $change['raised']);
+            if ($source === 'Syslog') {
+                if (
+                    $previous &&
+                    (int) $previous['occurrences'] !== (int) $observation['event_count']
+                ) {
+                    $change['event'] = 'Occurrences received';
+                }
+                $change['occurrences'] = (int) $observation['event_count'];
+            }
             $description = $rule['description'] ?? '';
             $fix = $rule['corrective_action'] ?? '';
             if (!$previous) {
                 icct_backend_category_execute(
                     'INSERT INTO ' .
-                        'plugin_icct_nms_alarms(alarm_key,host_id,source,graph_id,name,description,fix,severity,state,first_seen,last_seen,sample_time) ' .
-                        'VALUES(?,?,?,?,?,?,?,?,?,NOW(),NOW(),?)',
+                        'plugin_icct_nms_alarms(alarm_key,host_id,source,graph_id,name,description,fix,severity,state,first_seen,last_seen,sample_time,occurrences,source_address,acknowledged) ' .
+                        'VALUES(?,?,?,?,?,?,?,?,?,COALESCE(?,NOW()),COALESCE(?,NOW()),?,?,?,?)',
                     [
                         $key,
                         (int) $host['id'],
@@ -124,13 +149,18 @@ function icct_nms_alarm_record($host, $rule, $observation)
                         $fix,
                         $change['severity'],
                         $change['state'],
+                        $observation['occurred_at'] ?? null,
+                        $observation['observed_at'] ?? null,
                         (int) ($observation['sample_time'] ?? 0),
+                        $change['occurrences'],
+                        $observation['source_address'] ?? null,
+                        $automaticAck ? 1 : 0,
                     ],
                 );
             } else {
                 icct_backend_category_execute(
                     'UPDATE plugin_icct_nms_alarms SET ' .
-                        ('graph_id=?,name=?,description=?,fix=?,severity=?,state=?,last_seen=NOW(),sample_time=?,' .
+                        ('graph_id=?,name=?,description=?,fix=?,severity=?,state=?,last_seen=COALESCE(?,NOW()),sample_time=?,' .
                             'occurrences=?,acknowledged=?,escalated=?,ticket_state=?,revision=revision+1 ') .
                         'WHERE alarm_key=?',
                     [
@@ -140,9 +170,14 @@ function icct_nms_alarm_record($host, $rule, $observation)
                         $fix,
                         $change['severity'],
                         $change['state'],
+                        $observation['observed_at'] ?? null,
                         (int) ($observation['sample_time'] ?? 0),
                         $change['occurrences'],
-                        $change['raised'] ? 0 : (int) $previous['acknowledged'],
+                        $automaticAck
+                            ? 1
+                            : ($change['raised']
+                                ? 0
+                                : (int) $previous['acknowledged']),
                         $change['raised'] ? 0 : (int) $previous['escalated'],
                         $change['raised'] ? '' : $previous['ticket_state'],
                         $key,
@@ -160,9 +195,22 @@ function icct_nms_alarm_record($host, $rule, $observation)
                 icct_nms_alarm_history_write($key, $change['event'], 0, $change['severity']);
             }
         }
-        icct_backend_category_execute('COMMIT', []);
+        if (!empty($automaticAck)) {
+            icct_nms_alarm_history_write(
+                $key,
+                'Automatically acknowledged',
+                0,
+                'Automatically acknowledged by the port monitor after a fresh down-state observation. This acknowledgement does not indicate a repair.',
+            );
+        }
+        if ($transaction) {
+            icct_backend_category_execute('COMMIT', []);
+        }
+        return true;
     } catch (Throwable $e) {
-        icct_backend_category_execute('ROLLBACK', []);
+        if ($transaction) {
+            icct_backend_category_execute('ROLLBACK', []);
+        }
         throw $e;
     } finally {
         db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)', [$lock]);
@@ -173,7 +221,8 @@ function icct_nms_collect_alarms()
     foreach (
         db_fetch_assoc_prepared("SELECT * FROM host WHERE deleted='' AND poller_id=?", [
             icct_backend_inventory_collector_id(),
-        ]) as $host
+        ])
+        as $host
     ) {
         $rules = icct_nms_fault_rules((int) $host['id']);
         $keys = [];
@@ -207,10 +256,38 @@ function icct_nms_collect_alarms()
         foreach (icct_nms_fault_observations($host, true) as $observation) {
             $rule = $rules[$observation['rule']] ?? [];
             if (str_starts_with((string) $observation['rule'], 'port:')) {
-                $rule = ['name' => $observation['graph'], 'source' => 'port'];
+                $context = $observation['port_context'] ?? [];
+                $rule = [
+                    'name' => $observation['graph'],
+                    'source' => 'port',
+                    'description' => $context['issue'] ?? '',
+                    'corrective_action' => $context['recovery'] ?? '',
+                ];
             }
             $keys[] = icct_nms_alarm_key($host, $rule, $observation);
-            icct_nms_alarm_record($host, $rule, $observation);
+            $recorded = icct_nms_alarm_record($host, $rule, $observation);
+            if (
+                $recorded &&
+                ($rule['source'] ?? '') === 'port' &&
+                !empty($observation['port_context']['incident_key'])
+            ) {
+                $key = icct_nms_alarm_key($host, $rule, $observation);
+                $occurrence = db_fetch_cell_prepared(
+                    'SELECT occurrences FROM plugin_icct_nms_alarms WHERE alarm_key=?',
+                    [$key],
+                );
+                if ($occurrence) {
+                    icct_backend_category_execute(
+                        'UPDATE plugin_icct_nms_port_alarm_events SET alarm_key=?,alarm_occurrence=? WHERE host_id=? AND incident_key=? AND alarm_key IS NULL',
+                        [
+                            $key,
+                            (int) $occurrence,
+                            (int) $host['id'],
+                            $observation['port_context']['incident_key'],
+                        ],
+                    );
+                }
+            }
         }
         $snapshot = json_decode(
             (string) db_fetch_cell_prepared(
@@ -229,9 +306,10 @@ function icct_nms_collect_alarms()
         if ($current || $host['disabled'] !== '') {
             foreach (
                 db_fetch_assoc_prepared(
-                    "SELECT * FROM plugin_icct_nms_alarms WHERE host_id=? AND state IN ('Active','Closed')",
+                    "SELECT * FROM plugin_icct_nms_alarms WHERE host_id=? AND source NOT IN ('Syslog','NetFlow') AND state IN ('Active','Closed')",
                     [(int) $host['id']],
-                ) as $saved
+                )
+                as $saved
             ) {
                 if (in_array($saved['alarm_key'], $keys, true) && $host['disabled'] === '') {
                     continue;
@@ -283,7 +361,7 @@ function icct_nms_alarm_rows()
         $host = $devices[$row['host_id']];
         $row['device_name'] = $host['description'];
         $row['short_name'] = $host['short_name'] ?? '';
-        $row['address'] = $host['hostname'];
+        $row['address'] = $row['source'] === 'Syslog' ? $row['source_address'] : $host['hostname'];
         $row['network_type'] = $host['device_type'] ?? '';
     }
     unset($row);
@@ -445,7 +523,9 @@ function icct_nms_alarm_detail($key)
     $row += [
         'device_name' => $device['description'],
         'short_name' => $device['short_name'] ?? '',
-        'address' => $device['hostname'],
+        'address' => $row['source'] === 'Syslog' ? $row['source_address'] : $device['hostname'],
+        'model_number' => $device['model_number'] ?? '',
+        'serial_number' => $device['serial_number'] ?? '',
         'network_type' => $device['device_type'] ?? '',
         'device_status' => $device['status_label'] ?? 'Unknown',
     ];
@@ -459,10 +539,17 @@ function icct_nms_alarm_detail($key)
     $ack = null;
     $escalations = [];
     foreach ($history as &$event) {
+        if ($event['event'] === 'Automatically acknowledged' && (int) $event['actor_id'] === 0) {
+            $event['actor_name'] = 'Automatic (port monitor)';
+            $event['actor_username'] = 'Automatic';
+        }
         $snapshot = json_decode((string) ($event['snapshot_json'] ?? ''), true);
         $event['snapshot'] = is_array($snapshot) ? $snapshot : [];
         unset($event['snapshot_json']);
-        if ($event['event'] === 'Acknowledged' && $ack === null) {
+        if (
+            in_array($event['event'], ['Acknowledged', 'Automatically acknowledged'], true) &&
+            $ack === null
+        ) {
             $ack = $event;
         }
         if ($event['event'] === 'Escalated') {
@@ -502,7 +589,7 @@ function icct_nms_alarm_history_remarks($history)
         ) {
             $ack = null;
         }
-        if ($event['event'] === 'Acknowledged') {
+        if (in_array($event['event'], ['Acknowledged', 'Automatically acknowledged'], true)) {
             $ack = ['note' => $event['note'], 'actor_id' => (int) $event['actor_id']];
         }
         if (!empty($snapshot['acknowledged']) && !array_key_exists('ack_note', $snapshot) && $ack) {

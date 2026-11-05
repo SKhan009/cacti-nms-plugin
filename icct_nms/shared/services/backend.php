@@ -15,7 +15,8 @@ foreach (
         'template.php',
         'utility.php',
         'snmp.php',
-    ] as $library
+    ]
+    as $library
 ) {
     require_once $config['base_path'] . '/lib/' . $library;
 }
@@ -62,3 +63,4 @@ require_once __DIR__ . '/../../protocols/syslog/services/backend/syslog.php';
 require_once __DIR__ . '/../../alarms/services/alarm_service.php';
 
 require_once __DIR__ . '/../../protocols/netflow/services/netflow_service.php';
+require_once __DIR__ . '/../../protocols/ntp/services/ntp_service.php';

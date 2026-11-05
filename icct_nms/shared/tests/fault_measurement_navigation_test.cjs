@@ -76,6 +76,12 @@ for (const key of [
     '#fault-oid-section',
     '#fault-oid-navigation',
     '#fault-graph-section',
+    '#fault-ntp-section',
+    '#fault-ntp-navigation',
+    '#fault-mib-presets',
+    '#fault-ntp-parameters',
+    '#fault-ntp-readings',
+    '#fault-mib-preset-values',
 ])
     nodes[key] = new E();
 nodes['#fault-form'].elements = { fault_rules: nodes['#fault-rules-value'] };
@@ -111,6 +117,27 @@ nodes['#saved-fault-rules'].textContent = JSON.stringify([
     },
 ]);
 nodes['#fault-current-readings'].textContent = '[]';
+nodes['#fault-ntp-parameters'].textContent = JSON.stringify({
+    absolute_offset_ms: { label: 'Absolute clock offset', units: 'ms' },
+});
+nodes['#fault-ntp-readings'].textContent = JSON.stringify({
+    attempted_epoch: Date.now() / 1000,
+    stale_seconds: 900,
+    values: { absolute_offset_ms: 0 },
+});
+nodes['#fault-mib-preset-values'].textContent = JSON.stringify(
+    [1, 2].map((n) => ({
+        source: 'rrd',
+        preset_key: String(n).repeat(64),
+        name: 'MIB rule ' + n,
+        template_id: 1,
+        metric_id: 2,
+        maximum: 80 + n,
+        severity: 'Major',
+        enabled: true,
+    })),
+);
+
 nodes['#fault-parameters'] = new E();
 nodes['#fault-parameters'].textContent = JSON.stringify([
     {
@@ -133,9 +160,10 @@ nodes['#fault-form'].querySelector = (selector) =>
     selector === 'input[name="__csrf_magic"]' ? token : oldQuery(selector);
 nodes['#fault-form'].elements.__csrf_magic = { value: '', length: 2 };
 let reads = 0;
-const sourceRadios = [new E('input'), new E('input')];
+const sourceRadios = [new E('input'), new E('input'), new E('input')];
 sourceRadios[0].value = 'rrd';
 sourceRadios[1].value = 'snmp';
+sourceRadios[2].value = 'ntp';
 const code = fs.readFileSync(
     require('node:path').join(__dirname, '../../fcaps/js/fcaps.js'),
     'utf8',
@@ -230,5 +258,47 @@ setTimeout(() => {
     );
     console.log(
         'Graph template/data source hierarchy, OID-only navigation and multiple thresholds per measurement passed.',
+    );
+}, 0);
+
+setTimeout(() => {
+    const picker = nodes['#fault-mib-presets'];
+    for (const label of [picker.children[0], picker.children[2]]) {
+        const checkbox = label.children[0];
+        checkbox.checked = true;
+        checkbox.listeners.change();
+    }
+    let saved = JSON.parse(nodes['#fault-rules-value'].value);
+    assert.equal(saved.filter((r) => r.preset_key).length, 2, 'MIB multi-selection lost');
+    const first = nodes['#fault-mib-presets'].children[0].children[0];
+    first.checked = false;
+    first.listeners.change();
+    first.checked = true;
+    first.listeners.change();
+    saved = JSON.parse(nodes['#fault-rules-value'].value);
+    assert.equal(saved.filter((r) => r.preset_key).length, 2, 'Reselect duplicated MIB rule');
+    assert.ok(
+        saved
+            .filter((r) => r.preset_key)
+            .every((r) => r.source === 'rrd' && Number(r.metric_id) === 2),
+        'Native MIB binding changed',
+    );
+    sourceRadios[2].checked = true;
+    sourceRadios[2].listeners.change();
+    assert.equal(nodes['#fault-ntp-section'].hidden, false);
+    const before = nodes['#fault-rule-list'].children.length;
+    nodes['#fault-ntp-navigation'].children[0].listeners.click();
+    const row = nodes['#fault-rule-list'].children[before];
+    assert.equal(row.querySelector('[data-reading]').value, '0 ms', 'Actual NTP zero lost');
+    assert.equal(row.querySelector('[data-template]').required, false);
+    assert.equal(row.querySelector('[data-oid]').required, false);
+    nodes['#fault-ntp-navigation'].children[0].listeners.click();
+    assert.equal(
+        nodes['#fault-rule-list'].children.length,
+        before + 1,
+        'Parameter selection duplicated rule',
+    );
+    console.log(
+        'NTP navigation, actual zero and MIB multi-select with native bindings and no duplicate rules passed.',
     );
 }, 0);

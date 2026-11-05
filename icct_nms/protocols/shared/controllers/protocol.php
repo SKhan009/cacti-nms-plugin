@@ -129,6 +129,12 @@ try {
                     }
                     icct_nms_save_serial($id, $_POST);
                     break;
+                case 'ntp':
+                    if (!icct_backend_protocol_enabled($id, 'ntp')) {
+                        throw new RuntimeException('Enable NTP before editing its settings.');
+                    }
+                    icct_nms_ntp_save($id, $_POST);
+                    break;
                 case 'netflow':
                     if (!icct_backend_protocol_enabled($id, 'netflow')) {
                         throw new RuntimeException('Enable NetFlow before editing its settings.');
@@ -153,6 +159,7 @@ try {
                 'serial' => 'Serial communication',
                 'syslog' => 'Syslog',
                 'netflow' => 'NetFlow',
+                'ntp' => 'NTP',
                 'diagnostics' => 'Device diagnostics',
                 'discovery' => 'Discovery',
             ];

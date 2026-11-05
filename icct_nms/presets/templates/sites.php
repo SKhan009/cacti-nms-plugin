@@ -48,6 +48,7 @@
                                     <?php foreach (DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC) as $zone): ?>
                                         <option
                                             <?= $value === $zone ? 'selected' : '' ?>
+
                                             value="<?= icct_nms_h($zone) ?>"><?= icct_nms_h($zone) ?></option>
                                     <?php endforeach; ?>
                                 </select>
@@ -62,13 +63,15 @@
                                     name="<?= $field ?>"
                                     value="<?= icct_nms_h($value) ?>"
                                     <?= $field === 'name' ? 'required' : '' ?>
+
                                     maxlength="<?= $max ?>"
                                     placeholder="Enter <?= strtolower($label) ?>"
                                     <?php if (in_array($field, ['latitude', 'longitude', 'zoom'], true)): ?>
-                                        type="number"
-                                        min="<?= $field === 'latitude' ? '-90' : ($field === 'longitude' ? '-180' : '0') ?>"
-                                        max="<?= $field === 'latitude' ? '90' : ($field === 'longitude' ? '180' : '23') ?>"
-                                        step="<?= $field === 'zoom' ? '1' : 'any' ?>"
+
+                                    type="number"
+                                    min="<?= $field === 'latitude' ? '-90' : ($field === 'longitude' ? '-180' : '0') ?>"
+                                    max="<?= $field === 'latitude' ? '90' : ($field === 'longitude' ? '180' : '23') ?>"
+                                    step="<?= $field === 'zoom' ? '1' : 'any' ?>"
                                     <?php endif; ?>>
                             <?php endif; ?>
                             <?php if ($field === 'latitude' || $field === 'longitude' || $field === 'zoom'): ?>
@@ -141,9 +144,13 @@
 </section>
 <!-- Collector locations are saved explicitly; GNSS configuration belongs to a selected poller. -->
 <section class="lnms-site-settings">
-    <h2>LNMS / Remote Poller Locations</h2>
-    <p>Assign each Cacti poller to its physical site. Map View and Birds Eye View use these
-        coordinates; IP addresses do not provide physical location.</p>
+    <h2>LNMS / Remote Poller Locations <span
+            class="field-info section-help"
+            tabindex="0"
+            role="img"
+            aria-label="Assign each Cacti poller to its physical site. Map View and Birds Eye View use these coordinates; IP addresses do not provide physical location."
+            data-tooltip="Assign each Cacti poller to its physical site. Map View and Birds Eye View use these coordinates; IP addresses do not provide physical location.">ⓘ</span>
+    </h2>
     <?php $lnmsSites = db_fetch_assoc('SELECT id,name FROM sites ORDER BY name,id');
 $lnmsAssignments = icct_nms_lnms_site_assignments(); ?>
     <form method="post">
@@ -320,10 +327,12 @@ $lnmsAssignments = icct_nms_lnms_site_assignments(); ?>
                     );
                 } ?>
             </div>
-            <p>SNMP uses the selected device credentials. Map vendor coordinate and valid-fix OIDs; divisor
-                1000000 converts microdegrees. NMEA accepts checksum-verified RMC/GGA; gpsd uses valid TPV
-                fixes. Files must be under /var/lib/icct-nms/gnss/. Stale or invalid fixes are marked and
-                never treated as a current position.</p>
+            <span
+                class="field-info section-help"
+                tabindex="0"
+                role="img"
+                aria-label="SNMP uses the selected device credentials. Map vendor coordinate and valid-fix OIDs; divisor 1000000 converts microdegrees. NMEA accepts checksum-verified RMC/GGA; gpsd uses valid TPV fixes. Files must be under /var/lib/icct-nms/gnss/. Stale or invalid fixes are marked and never treated as a current position."
+                data-tooltip="SNMP uses the selected device credentials. Map vendor coordinate and valid-fix OIDs; divisor 1000000 converts microdegrees. NMEA accepts checksum-verified RMC/GGA; gpsd uses valid TPV fixes. Files must be under /var/lib/icct-nms/gnss/. Stale or invalid fixes are marked and never treated as a current position.">ⓘ</span>
             <div class="protocol-actions">
                 <button class="button primary">Save GNSS Source</button>
             </div>

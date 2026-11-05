@@ -81,7 +81,7 @@ ob_start();
 require $template;
 $html = ob_get_clean();
 syslog_view_check(
-    preg_match('~name="source_address"\s+value=""~', $html) === 1,
+    preg_match('~name="source_address"\s+(?:required\s+)?value=""~', $html) === 1,
     'Unsaved device renders without a missing-hostname warning',
 );
 $host = ['hostname' => '192.0.2.85'];
@@ -89,7 +89,7 @@ ob_start();
 require $template;
 $html = ob_get_clean();
 syslog_view_check(
-    preg_match('~name="source_address"\s+value="192\.0\.2\.85"~', $html) === 1,
+    preg_match('~name="source_address"\s+(?:required\s+)?value="192\.0\.2\.85"~', $html) === 1,
     'A new device uses its saved hostname for source matching',
 );
 $syslog = $binding;

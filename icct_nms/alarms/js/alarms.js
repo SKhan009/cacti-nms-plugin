@@ -12,7 +12,6 @@
         descending = true,
         pending = null,
         refreshing = false;
-    const colors = icctSeverityColors;
     const node = (tag, text = '', cls = '') => {
         const e = document.createElement(tag);
         e.textContent = text;
@@ -27,20 +26,33 @@
             : '—';
     }
     function devices() {
-        const value = controls.device.value;
+        const selected = controls.device.value;
         controls.device.replaceChildren(new Option('All', ''));
         const choices = new Map(rows.map((r) => [String(r.host_id), r.device_name]));
-        for (const [id, name] of [...choices].sort((a, b) => a[1].localeCompare(b[1])))
+        for (const [id, name] of [...choices].sort((a, b) => a[1].localeCompare(b[1]))) {
             controls.device.append(new Option(name, id));
-        controls.device.value = choices.has(value) ? value : '';
+        }
+        // Keep an explicit All option when refresh removes the selected device's last alarm.
+        controls.device.value = choices.has(selected) ? selected : '';
     }
     function filtered() {
         const search = controls.search.value.trim().toLowerCase();
+        const device = controls.device.value;
+        const severity = controls.severity.value;
+        const since = controls.since.value ? new Date(controls.since.value).getTime() / 1000 : null;
+        const until = controls.until.value ? new Date(controls.until.value).getTime() / 1000 : null;
+        if (since !== null && until !== null && since > until) {
+            status.textContent = 'From must not be later than Until.';
+            return [];
+        }
         return rows
             .filter(
                 (r) =>
-                    (!controls.device.value || String(r.host_id) === controls.device.value) &&
-                    (!controls.severity.value || r.severity === controls.severity.value) &&
+                    (!device || device === String(r.host_id)) &&
+                    (!severity || severity === r.severity) &&
+                    (!controls.source.value || r.source === controls.source.value) &&
+                    (since === null || Number(r.occurred_epoch) >= since) &&
+                    (until === null || Number(r.occurred_epoch) <= until) &&
                     (controls.ack.value === '' || String(r.acknowledged) === controls.ack.value) &&
                     (controls.esc.value === '' || String(r.escalated) === controls.esc.value) &&
                     (!search ||
@@ -101,6 +113,10 @@
         dialog.showModal();
     }
     function render() {
+        const extraCount = ['source', 'since', 'until'].filter((key) => controls[key].value).length;
+        form.querySelector('.alarm-extra-filters > summary').textContent = extraCount
+            ? 'More filters (' + extraCount + ')'
+            : 'More filters';
         const result = filtered(),
             size = Number(document.querySelector('#alarm-page-size').value),
             pages = Math.max(1, Math.ceil(result.length / size));
@@ -109,6 +125,7 @@
         for (const r of result.slice((page - 1) * size, page * size)) {
             const tr = node('tr');
             tr.append(node('td', time(r.occurred_epoch)));
+            tr.dataset.source = r.source;
             const device = node('td'),
                 link = node('a', r.device_name);
             link.href = 'inventory/controllers/device.php?id=' + r.host_id + '&view=1';
@@ -123,8 +140,7 @@
                     { Warning: 'Warn', Information: 'Info' }[r.severity] || r.severity,
                     'alarm-severity',
                 );
-            badge.style.background = colors[r.severity] || '#ddd';
-            badge.style.color = r.severity === 'Information' ? 'white' : '#161616';
+            icctSetSeverity(badge, r.severity);
             sev.append(
                 badge,
                 node(
@@ -140,7 +156,9 @@
                 Number(r.escalated) ? 'alarm-status-checked' : '',
             );
             esc.append(node('strong', r.state.toUpperCase()));
-            tr.append(esc, node('td', r.name + ' (' + r.occurrences + ')'));
+            const eventName = node('td', r.name + ' (' + r.occurrences + ')');
+            eventName.append(node('small', r.source));
+            tr.append(esc, eventName);
             const text = node('td', r.description || '—');
             text.append(node('small', r.fix || '—'));
             tr.append(text);
@@ -251,13 +269,13 @@
         return data;
     }
     async function refresh() {
-        if (refreshing || dialog.open || root.querySelector('details[open]')) return;
+        if (refreshing || dialog.open || body.querySelector('details[open]')) return;
         refreshing = true;
         try {
             rows = await request('?readings=1');
             devices();
-            render();
             status.textContent = '';
+            render();
         } catch (e) {
             status.textContent = e.message;
         } finally {
@@ -295,6 +313,7 @@
     form.addEventListener('reset', (event) => {
         event.preventDefault();
         for (const input of Array.from(form.elements)) if (input.name) input.value = '';
+        icctSetSeverity(controls.severity, '');
         page = 1;
         render();
     });
@@ -361,5 +380,5 @@
     });
     devices();
     render();
-    setInterval(refresh, 30000);
+    setInterval(refresh, 5000);
 })();

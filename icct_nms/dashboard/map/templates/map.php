@@ -108,8 +108,13 @@
                 maxlength="60"
                 required
                 autocomplete="off">
-            <p id="dashboardNameHelp">Save the selected site, current cards, their order and column
-                layout as a new dashboard.</p>
+            <span
+                class="field-info section-help"
+                id="dashboardNameHelp"
+                tabindex="0"
+                role="img"
+                aria-label="Save the selected site, current cards, their order and column layout as a new dashboard."
+                data-tooltip="Save the selected site, current cards, their order and column layout as a new dashboard.">ⓘ</span>
             <div>
                 <button
                     type="button"
@@ -382,6 +387,7 @@
                                             type="checkbox"
                                             data-problematic-severity="<?= $severity ?>"
                                             <?= in_array($severity, ['Critical', 'Major'], true) ? 'checked' : '' ?>><?= $text ?>
+
                                     </label>
                                 <?php endforeach; ?>
                             </fieldset>

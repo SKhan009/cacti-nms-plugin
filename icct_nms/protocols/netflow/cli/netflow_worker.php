@@ -1,6 +1,5 @@
 #!/usr/bin/env php
 <?php
-
 if (PHP_SAPI !== 'cli') {
     exit(1);
 }
@@ -8,6 +7,7 @@ require __DIR__ . '/../../../../../include/cli_check.php';
 require_once __DIR__ . '/../../../shared/services/bootstrap.php';
 require_once __DIR__ . '/../services/netflow_service.php';
 require_once __DIR__ . '/../services/netflow_collector.php';
+require_once __DIR__ . '/../services/netflow_faults.php';
 $options = getopt('', ['root:', 'once', 'follow']);
 $root = $options['root'] ?? '/var/lib/icct-nms/netflow';
 if (!str_starts_with($root, '/') || str_contains($root, '..')) {
@@ -146,6 +146,11 @@ try {
                 );
             }
         }
+        try {
+            icct_nms_netflow_sync_faults();
+        } catch (Throwable $error) {
+            $errors[] = 'Fault journal: ' . $error->getMessage();
+        }
         $status = [
             'heartbeat' => time(),
             'ports' => array_keys($listeners),
@@ -170,7 +175,8 @@ try {
                     'buckets' => 'bucket_start',
                     'metrics' => 'bucket_start',
                     'events' => 'updated_at',
-                ] as $table => $column
+                ]
+                as $table => $column
             ) {
                 icct_backend_category_execute(
                     'DELETE FROM plugin_icct_nms_netflow_' .
