@@ -1,5 +1,6 @@
 <?php /** Historical records for the already-authorized device; never expose credentials. */
 require_once __DIR__ . '/../../configuration/services/configuration_history_display.php';
+require_once __DIR__ . '/../../protocols/ssh/services/console_service.php';
 require __DIR__ . '/device_record_pager.php'; ?>
 <section
     id="view-records"
@@ -108,5 +109,52 @@ if (
 ?>
         </div>
         <?php $recordPager('changes_page', $changesPage, $totalChanges); ?>
+        <?php
+        $sshPrefix = icct_nms_ssh_audit_prefix($id);
+        $sshArgs = [$sshPrefix . '%'];
+        $sshTotal = (int) db_fetch_cell_prepared(
+            'SELECT COUNT(*) FROM plugin_icct_nms_meta WHERE meta_key LIKE ?', $sshArgs,
+        );
+        $sshPage = min($recordPage('ssh_changes_page'), max(1, (int) ceil($sshTotal / 25)));
+        $sshChanges = db_fetch_assoc_prepared(
+            'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key LIKE ? ' .
+            'ORDER BY updated_at DESC,meta_key DESC LIMIT 25 OFFSET ' . (($sshPage - 1) * 25),
+            $sshArgs,
+        );
+        ?>
+        <h3>SSH configuration changes</h3>
+        <?php if ($sshChanges): ?>
+            <p>Settings reported by operators during authenticated SSH sessions.</p>
+            <div class="site-table-wrap">
+                <table class="site-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Recorded at</th>
+                            <th scope="col">User</th>
+                            <th scope="col">Device ID</th>
+                            <th scope="col">Source IP</th>
+                            <th scope="col">Setting reported</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($sshChanges as $row):
+                            $change = json_decode($row['meta_value'], true);
+                            if (!is_array($change)) continue;
+                            ?>
+                            <tr>
+                                <td><?= $display($change['time'] ?? '') ?></td>
+                                <td><?= $display($change['user'] ?: 'User ' . $change['user_id']) ?></td>
+                                <td><?= $display($change['host_id'] ?? '') ?></td>
+                                <td><?= $display($change['source_ip'] ?? '') ?></td>
+                                <td><?= $display($change['parameter'] ?? '') ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php $recordPager('ssh_changes_page', $sshPage, $sshTotal); ?>
+        <?php else: ?>
+            <p class="device-record-empty">No SSH configuration changes reported for this device.</p>
+        <?php endif; ?>
     <?php endif; ?>
 </section>

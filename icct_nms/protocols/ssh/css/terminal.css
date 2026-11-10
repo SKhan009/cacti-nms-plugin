@@ -1,9 +1,58 @@
-.ssh-terminal-actions {
+#ssh-terminal .titlebar {
+    min-height: 64px;
+    height: auto;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+#ssh-terminal .titlebar > a {
+    margin-inline-start: auto;
+}
+.ssh-terminal-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.ssh-terminal-content {
+    padding: 16px;
+}
+.ssh-terminal-toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.ssh-terminal-details {
+    flex: 1 1 24rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.ssh-terminal-details p {
+    margin: 0;
+}
+.ssh-terminal-details p + p {
+    margin-top: 6px;
+}
+.ssh-terminal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 12px;
-    margin: 16px 0;
+    margin-inline-start: auto;
+}
+.ssh-terminal-actions .button {
+    justify-content: center;
+}
+#ssh-change-audit {
+    margin: 0 0 16px;
+}
+#ssh-change-audit summary {
+    cursor: pointer;
+}
+#ssh-change-form {
+    max-width: 480px;
+    padding-block-start: 12px;
 }
 .ssh-terminal-display {
     height: 60vh;

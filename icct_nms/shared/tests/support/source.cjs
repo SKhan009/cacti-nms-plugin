@@ -1,8 +1,9 @@
 const vm = require('node:vm');
 const colors = require('../../assets/severity.json');
-const severityHelpers = require('node:fs')
-    .readFileSync(require('node:path').join(__dirname, '../../js/severity.js'), 'utf8')
-    .split("document.addEventListener('DOMContentLoaded'")[0];
+const severityHelpers = require('node:fs').readFileSync(
+    require('node:path').join(__dirname, '../../js/severity.js'),
+    'utf8',
+);
 
 function sourceIndex(source, marker, start = 0) {
     const tokens = marker.match(/[A-Za-z_$][\w$]*|[^\s]/g) || [];

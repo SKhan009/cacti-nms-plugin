@@ -17,7 +17,7 @@ function icct_backend_config_job_authorize(array $job)
     $session = $_SESSION ?? [];
     try {
         $_SESSION = ['sess_user_id' => $user];
-        if (!api_user_realm_auth('devices.php')) {
+        if (!api_user_realm_auth('device.php')) {
             throw new RuntimeException('ICCT NMS page access was revoked.');
         }
     } finally {

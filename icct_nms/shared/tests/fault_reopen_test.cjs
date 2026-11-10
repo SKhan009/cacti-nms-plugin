@@ -74,6 +74,7 @@ for (const key of [
     '#fault-alarm-navigation',
     '#fault-alarm-empty',
     '#fault-oid-section',
+    '#snmp-fault-rule-type',
     '#fault-oid-navigation',
     '#fault-graph-section',
 ])
@@ -136,6 +137,10 @@ let reads = 0;
 const sourceRadios = [new E('input'), new E('input')];
 sourceRadios[0].value = 'rrd';
 sourceRadios[1].value = 'snmp';
+const snmpRuleRadios = [new E('input'), new E('input')];
+snmpRuleRadios[0].value = 'snmp';
+snmpRuleRadios[0].checked = true;
+snmpRuleRadios[1].value = 'trap';
 const code = fs.readFileSync(
     require('node:path').join(__dirname, '../../fcaps/js/fcaps.js'),
     'utf8',
@@ -143,8 +148,11 @@ const code = fs.readFileSync(
 vm.runInNewContext(code.slice(0, sourceIndex(code, '  const basic=')) + '})();', {
     document: {
         querySelector: (s) => nodes[s] || null,
-        querySelectorAll: (selector) =>
-            selector === '.fault-source-options input' ? sourceRadios : [{ value: 1 }],
+        querySelectorAll: (selector) => {
+            if (selector === '.fault-source-options input') return sourceRadios;
+            if (selector === '[name="snmp_fault_view"]') return snmpRuleRadios;
+            return [{ value: 1 }];
+        },
         createElement: (tag) => new E(tag),
     },
     MutationObserver: class {

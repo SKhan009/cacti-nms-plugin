@@ -17,6 +17,8 @@
             recent: 'Recent Alarms (25)',
             ports: 'Device Interface (Ports) Overview',
             problematic: 'Problematic Devices by Active Alarms Count',
+            ntp: 'NTP Overview',
+            netflow_talkers: 'NetFlow Top Talkers',
         },
         colors = icctSeverityColors,
         palette = [
@@ -81,15 +83,6 @@
     }
     let savePromise = null;
     function save() {
-        const interval = document.querySelector('#dashboardRefreshInterval');
-        if (interval) {
-            if (!interval.reportValidity()) return Promise.resolve(false);
-            const seconds = Number(interval.value);
-            if (seconds !== preferences.refresh_seconds) {
-                preferences.refresh_seconds = seconds;
-                scheduleRefresh();
-            }
-        }
         if (savePromise) {
             saveAgain = true;
             return savePromise;
@@ -189,6 +182,7 @@
             return;
         }
         layout();
+        if (widgets().includes('netflow_talkers')) refreshReadings();
         save();
     });
     const nameDialog = document.querySelector('#dashboardNameDialog'),
@@ -354,6 +348,7 @@
                     widgets().push(key);
                     layout();
                     save();
+                    if (key === 'ntp' || key === 'netflow_talkers') refreshReadings();
                     closePicker();
                     addWidget.focus();
                 });
@@ -947,7 +942,9 @@
             body.append(
                 element(
                     'p',
-                    alarm.graph +
+                    alarm.alarm_key
+                        ? [alarm.source, alarm.event_description, alarm.severity].filter(Boolean).join(' · ')
+                        : alarm.graph +
                         ' · Reading: ' +
                         (alarm.value === null ? 'Unavailable' : alarm.value) +
                         ' · ' +
@@ -959,8 +956,19 @@
             const links = element('nav'),
                 device = element('a', 'Device Details →');
             device.href =
-                'inventory/controllers/device.php?id=' + alarm.device_id + '&view=1#view-fcaps';
+                'inventory/controllers/device.php?id=' + alarm.device_id + '&view=1#' +
+                ({ 'SNMP Traps': 'view-traps', Syslog: 'view-syslog' }[alarm.source] || 'view-fcaps');
+            if (alarm.source === 'NetFlow' && alarm.alarm_key) {
+                device.textContent = 'NetFlow finding →';
+                device.href = 'inventory/controllers/device.php?id=' + alarm.device_id +
+                    '&view=1&netflow_alarm=' + encodeURIComponent(alarm.alarm_key) + '#view-netflow';
+            }
             links.append(device);
+            if (alarm.alarm_key) {
+                const record = element('a', 'Alarm Details →');
+                record.href = 'alarms/controllers/alarms.php?view=' + encodeURIComponent(alarm.alarm_key);
+                links.append(record);
+            }
             if (alarm.graph_id) {
                 const graph = element('a', 'Graph →');
                 graph.href =
@@ -974,6 +982,60 @@
             root.append(detail);
         }
         if (!root.children.length) root.append(element('p', 'No active alarms.'));
+    }
+    function ntpOverview() {
+        const root = document.querySelector('#ntpOverview');
+        root.replaceChildren();
+        for (const device of readings.ntp || []) {
+            const detail = element('details'),
+                summary = element('summary'),
+                heading = element('span'),
+                body = element('div'),
+                link = element('a', 'NTP Details →');
+            heading.append(
+                element('strong', device.name),
+                element('small', device.status + ' · ' + device.active_alarms +
+                    (device.active_alarms === 1 ? ' active alarm' : ' active alarms')),
+            );
+            summary.append(heading);
+            body.className = 'recent-detail';
+            body.append(
+                element('p', 'Source: ' + (device.source ?? 'Unavailable')),
+                element('p', 'Clock offset: ' +
+                    (device.offset_ms === null ? 'Unavailable' : Number(device.offset_ms).toFixed(3) + ' ms')),
+                element('p', 'Stratum: ' + (device.stratum ?? 'Unavailable')),
+                element('p', 'Last successful read: ' + (device.last_success ?? 'Unavailable')),
+            );
+            link.href = 'inventory/controllers/device.php?id=' + device.id + '&view=1#view-ntp';
+            body.append(link);
+            detail.append(summary, body);
+            root.append(detail);
+        }
+        if (!root.children.length) root.append(element('p', 'No devices configured for NTP in this view.'));
+    }
+    function netflowTalkers() {
+        const root = document.querySelector('#netflowTalkers');
+        root.replaceChildren(element('p', 'Top source IPs by reported bytes per exporter over the last five minutes.'));
+        const rows = readings.netflow_talkers || [];
+        for (const row of rows) {
+            const detail = element('details'),
+                summary = element('summary'),
+                heading = element('span'),
+                body = element('div'),
+                link = element('a', 'View exporter traffic');
+            heading.append(
+                element('strong', row.src_addr),
+                element('small', row.device + ' · ' +
+                    Number(row.bytes).toLocaleString('en-IN') + ' bytes'),
+            );
+            summary.append(heading);
+            body.className = 'recent-detail';
+            link.href = 'inventory/controllers/device.php?id=' + row.host_id + '&view=1#view-netflow';
+            body.append(element('p', Number(row.flows).toLocaleString('en-IN') + ' flow records'), link);
+            detail.append(summary, body);
+            root.append(detail);
+        }
+        if (!rows.length) root.append(element('p', 'No recent flows from enabled exporters in this view.'));
     }
     const recentCard = document.querySelector('[data-widget=recent]'),
         expandRecent = document.querySelector('#recentExpand');
@@ -1278,6 +1340,8 @@
         try {
             const url = siteUrl(data.site_id);
             url.searchParams.set('dashboard_readings', '1');
+            if (widgets().includes('ntp')) url.searchParams.set('ntp_widget', '1');
+            if (widgets().includes('netflow_talkers')) url.searchParams.set('netflow_talkers_widget', '1');
             const response = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
             if (!response.ok) throw Error();
             const next = await response.json();
@@ -1298,6 +1362,8 @@
             workflowCharts();
             frequentAlarms();
             recentAlarms();
+            ntpOverview();
+            netflowTalkers();
             portsOverview();
             problematicDevices();
             inventoryChanges();
@@ -1311,27 +1377,9 @@
         }
     }
     document.querySelector('#birdsRefresh').addEventListener('click', () => refreshReadings(true));
-    let refreshTimer;
-    function scheduleRefresh() {
-        clearInterval(refreshTimer);
-        refreshTimer = setInterval(
-            () => refreshReadings(),
-            Math.max(5, Number(preferences.refresh_seconds) || 30) * 1000,
-        );
-        document.dispatchEvent(
-            new CustomEvent('icct:refresh-interval', {
-                detail: Number(preferences.refresh_seconds) || 30,
-            }),
-        );
-    }
-    const refreshInput = document.querySelector('#dashboardRefreshInterval');
-    refreshInput?.addEventListener('change', async () => {
-        if (!refreshInput.reportValidity()) return;
-        preferences.refresh_seconds = Number(refreshInput.value);
-        scheduleRefresh();
-        await save();
-    });
-    scheduleRefresh();
+    const refreshSeconds = Number(preferences.refresh_seconds) || 30;
+    setInterval(refreshReadings, Math.max(5, refreshSeconds) * 1000);
+    document.dispatchEvent(new CustomEvent('icct:refresh-interval', { detail: refreshSeconds }));
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) refreshReadings();
     });
@@ -1341,6 +1389,8 @@
     workflowCharts();
     frequentAlarms();
     recentAlarms();
+    ntpOverview();
+    netflowTalkers();
     portsOverview();
     problematicDevices();
     inventoryChanges();

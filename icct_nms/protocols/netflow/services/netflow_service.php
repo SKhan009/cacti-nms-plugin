@@ -1,5 +1,12 @@
 <?php
 
+require_once __DIR__ . '/netflow_rules.php';
+
+function icct_nms_netflow_is_loopback($address)
+{
+    return $address === '::1' || str_starts_with($address, '127.');
+}
+
 /** ICCT-owned NetFlow assignments and authorized read models. nfdump owns wire decoding. */
 function icct_nms_netflow_defaults()
 {
@@ -296,6 +303,9 @@ function icct_nms_netflow_filter($id, $input)
             'dst_port',
             'traffic_scope',
             'application',
+            'event_severity',
+            'event_state',
+            'netflow_alarm',
             'page',
             'size',
         ] as $key
@@ -364,6 +374,38 @@ function icct_nms_netflow_filter($id, $input)
     }
     return ['where' => implode(' AND ', $where), 'args' => $args, 'start' => $start, 'end' => $end];
 }
+function icct_nms_netflow_rankings($filter)
+{
+    $where = $filter['where'];
+    $args = $filter['args'];
+    $rankings = [];
+    foreach (
+        [
+            'hosts' => 'src_addr',
+            'destinations' => 'dst_addr',
+            'protocols' => 'protocol',
+            'applications' => "CONCAT(application,' (',application_basis,')')",
+            'conversations' =>
+                "CONCAT(src_addr,':',src_port,' → ',dst_addr,':',dst_port,' / ',protocol)",
+        ] as $name => $expression
+    ) {
+        $rankings[$name] = db_fetch_assoc_prepared(
+            'SELECT ' .
+                $expression .
+                ' AS label,SUM(bytes) AS bytes,SUM(packets) AS packets,COUNT(*) AS flows FROM plugin_icct_nms_netflow_flows WHERE ' .
+                $where .
+                ' GROUP BY ' .
+                $expression .
+                ' ORDER BY bytes DESC LIMIT 10',
+            $args,
+        );
+        if ($rankings[$name] === false) {
+            throw new RuntimeException('Unable to read the NetFlow traffic breakdown.');
+        }
+    }
+    return $rankings;
+}
+
 function icct_nms_netflow_read($id, $input)
 {
     $filter = icct_nms_netflow_filter($id, $input);
@@ -392,28 +434,7 @@ function icct_nms_netflow_read($id, $input)
             $offset,
         $args,
     );
-    $rankings = [];
-    foreach (
-        [
-            'hosts' => 'src_addr',
-            'destinations' => 'dst_addr',
-            'protocols' => 'protocol',
-            'applications' => "CONCAT(application,' (',application_basis,')')",
-            'conversations' =>
-                "CONCAT(src_addr,':',src_port,' → ',dst_addr,':',dst_port,' / ',protocol)",
-        ] as $name => $expression
-    ) {
-        $rankings[$name] = db_fetch_assoc_prepared(
-            'SELECT ' .
-                $expression .
-                ' AS label,SUM(bytes) AS bytes,SUM(packets) AS packets,COUNT(*) AS flows FROM plugin_icct_nms_netflow_flows WHERE ' .
-                $where .
-                ' GROUP BY ' .
-                $expression .
-                ' ORDER BY bytes DESC LIMIT 10',
-            $args,
-        );
-    }
+    $rankings = icct_nms_netflow_rankings($filter);
     $chartInterval = max(300, (int) ceil(($filter['end'] - $filter['start']) / 300 / 300) * 300);
     $chart = db_fetch_assoc_prepared(
         'SELECT FLOOR(UNIX_TIMESTAMP(last_seen)/' .
@@ -427,11 +448,41 @@ function icct_nms_netflow_read($id, $input)
             ' GROUP BY epoch,traffic_scope ORDER BY epoch',
         $args,
     );
+    $eventWhere = ['e.host_id=?'];
+    $eventArgs = [(int) $id];
+    $linkedAlarm = (string) ($input['netflow_alarm'] ?? '');
+    if ($linkedAlarm !== '') {
+        if (!preg_match('/\A[a-f0-9]{64}\z/', $linkedAlarm)) {
+            throw new InvalidArgumentException('Choose a valid NetFlow alarm.');
+        }
+        $eventWhere[] = 'a.alarm_key=?';
+        $eventArgs[] = $linkedAlarm;
+    } else {
+        $eventWhere[] = 'e.updated_at BETWEEN ? AND ?';
+        $eventArgs[] = date('Y-m-d H:i:s', $filter['start']);
+        $eventArgs[] = date('Y-m-d H:i:s', $filter['end']);
+    }
+    foreach ([
+        'severity' => ['Critical', 'Major', 'Minor', 'Warning', 'Information'],
+        'state' => ['Active', 'Resolved'],
+    ] as $column => $choices) {
+        $value = $input['event_' . $column] ?? '';
+        if ($value === '') {
+            continue;
+        }
+        if (!in_array($value, $choices, true)) {
+            throw new InvalidArgumentException('Choose a valid anomaly ' . $column . '.');
+        }
+        $eventWhere[] = 'e.' . $column . '=?';
+        $eventArgs[] = $value;
+    }
     $events = db_fetch_assoc_prepared(
-        'SELECT *,UNIX_TIMESTAMP(opened_at) AS opened_epoch,UNIX_TIMESTAMP(updated_at) AS ' .
-            'updated_epoch FROM plugin_icct_nms_netflow_events WHERE host_id=? AND updated_at ' .
-            'BETWEEN ? AND ? ORDER BY updated_at DESC LIMIT 100',
-        [(int) $id, date('Y-m-d H:i:s', $filter['start']), date('Y-m-d H:i:s', $filter['end'])],
+        'SELECT e.*,a.alarm_key,UNIX_TIMESTAMP(e.opened_at) AS opened_epoch,' .
+            'UNIX_TIMESTAMP(e.updated_at) AS updated_epoch FROM plugin_icct_nms_netflow_events e ' .
+            "LEFT JOIN plugin_icct_nms_alarms a ON a.alarm_key=SHA2(CONCAT('netflow:',e.id),256) " .
+            'AND a.host_id=e.host_id WHERE ' . implode(' AND ', $eventWhere) .
+            ' ORDER BY e.updated_at DESC LIMIT 100',
+        $eventArgs,
     );
     $worker =
         json_decode(
@@ -478,6 +529,7 @@ function icct_nms_netflow_read($id, $input)
                             : 'Waiting for flows')))));
     return [
         'totals' => $totals,
+        'live_readings' => ($input['live'] ?? '') === '1' ? icct_nms_netflow_live_readings($id) : null,
         'rankings' => $rankings,
         'chart' => $chart,
         'chart_interval' => $chartInterval,
@@ -488,6 +540,7 @@ function icct_nms_netflow_read($id, $input)
         'size' => $size,
         'range' => [$filter['start'], $filter['end']],
         'health' => $health,
+        'loopback_exporter' => $assignment && icct_nms_netflow_is_loopback($assignment['exporter_address']),
         'last_data_epoch' => (int) ($state['last_data_epoch'] ?? 0),
         'error' => $state['last_error'] ?? '',
         'assignment' => $assignment

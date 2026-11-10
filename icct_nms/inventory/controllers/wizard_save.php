@@ -44,6 +44,15 @@ try {
             case 'faults':
                 icct_nms_save_faults($id, $_POST);
                 break;
+            case 'passive_faults':
+                icct_nms_save_passive_faults($id, $_POST);
+                break;
+            case 'netflow_faults':
+                $netflowRevision = icct_nms_netflow_save_rules($id, $_POST);
+                break;
+            case 'trap_sender':
+                icct_nms_save_trap_sender($id, $_POST);
+                break;
             case 'snmp':
                 icct_nms_save_snmp($id, $host, $_POST);
                 break;
@@ -108,6 +117,7 @@ try {
             'ok' => true,
             'id' => $id,
             'message' => $message ?? 'Changes saved.',
+            'netflow_revision' => $netflowRevision ?? null,
             'backups' =>
                 $action === 'configuration_backup' ? icct_nms_configuration_history($id) : null,
         ],

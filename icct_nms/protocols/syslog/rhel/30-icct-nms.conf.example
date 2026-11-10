@@ -2,8 +2,9 @@
 # The installer generates the active file after detecting existing UDP/TCP listeners.
 # This example intentionally does not stop normal rsyslog processing.
 
-# Adjust the Cacti path for a manual install. The installer writes this include automatically.
-include(file="/path/to/cacti/plugins/icct_nms/protocols/syslog/rhel/rsyslog-template.conf")
+# For a manual install, copy rsyslog-template.conf to this path and apply its SELinux context.
+# The automatic installer embeds the template in the managed receiver configuration.
+include(file="/etc/rsyslog.d/icct-nms-template.inc")
 
 if (($inputname == 'icct-udp') or ($inputname == 'icct-tcp') or ($inputname == 'imudp') or ($inputname == 'imtcp')) then {
   action(type="omfile"

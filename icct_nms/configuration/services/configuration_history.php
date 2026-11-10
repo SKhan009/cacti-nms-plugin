@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../fcaps/services/fcaps_service.php';
 require_once __DIR__ . '/../../protocols/ntp/services/ntp_service.php';
+require_once __DIR__ . '/../../protocols/netflow/services/netflow_rules.php';
 /** Device-owned, credential-free NMS configuration snapshots. Not running-config backups. */
 function icct_nms_configuration_pick($row, $fields, $prefix, &$out)
 {
@@ -139,7 +140,13 @@ function icct_nms_configuration_snapshot($id)
     }
     $out['graphs.template_ids'] = json_encode(array_column(icct_nms_graph_associations($id), 'id'));
     $out['ports.monitoring'] = json_encode(icct_nms_port_monitoring($id), JSON_THROW_ON_ERROR);
+    $out['snmp_traps.sender'] = icct_nms_trap_sender($id);
+    $out['fault.passive_rules'] = json_encode(icct_nms_passive_fault_rules($id), JSON_THROW_ON_ERROR);
     $out['fault.rules'] = json_encode(icct_nms_fault_rules($id), JSON_THROW_ON_ERROR);
+    $netflowRules = icct_nms_netflow_rules($id);
+    if ($netflowRules) {
+        $out['fault.netflow_rules'] = json_encode($netflowRules, JSON_THROW_ON_ERROR);
+    }
     $out['rack.peripheral_rack_id'] = (string) icct_nms_meta('rack_peripheral_' . $id);
     $out['identity.short_name'] = icct_nms_meta('device_short_name_' . $id);
     ksort($out);

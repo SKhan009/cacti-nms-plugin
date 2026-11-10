@@ -77,16 +77,6 @@
                 id="dashboardUndo"
                 hidden>Undo delete</button>
         </div>
-        <label>Refresh (sec)
-            <input
-                id="dashboardRefreshInterval"
-                required
-                type="number"
-                min="5"
-                max="3600"
-                value="<?= (int) ($dashboardPreferences['refresh_seconds'] ?? 30) ?>"
-                style="width:90px">
-        </label>
         <p
             id="dashboardSaveStatus"
             role="status"
@@ -263,6 +253,8 @@
                     'recent' => 'Recent Alarms (25)',
                     'ports' => 'Device Interface (Ports) Overview',
                     'problematic' => 'Problematic Devices by Active Alarms Count',
+                    'ntp' => 'NTP Overview',
+                    'netflow_talkers' => 'NetFlow Top Talkers',
                 ] as $key => $label
             ): ?>
                 <section
@@ -419,6 +411,10 @@
                         <div
                             class="recent-content"
                             id="recentAlarms"></div>
+                    <?php elseif ($key === 'ntp'): ?>
+                        <div class="recent-content" id="ntpOverview"></div>
+                    <?php elseif ($key === 'netflow_talkers'): ?>
+                        <div class="recent-content" id="netflowTalkers"></div>
                     <?php elseif (
                         $key === 'frequent'
                     ): ?>

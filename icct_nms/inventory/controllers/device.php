@@ -226,6 +226,26 @@ try {
                 JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR,
             ) .
             '</script>';
+        $discoveryMethods = $discovery ? icct_backend_nd_host_methods($discovery, false) : [];
+        $discoveryPreset = $id && $discoveryMethods ? icct_nms_meta('device_discovery_preset_' . $id) : '';
+        if (!$discoveryMethods) {
+            $discoveryPreset = '';
+        } elseif ($discoveryPreset !== 'snmp_discovery' && !in_array($discoveryPreset, $discoveryMethods, true)) {
+            $discoveryPreset = array_intersect(['arp', 'fdb'], $discoveryMethods)
+                ? 'snmp_discovery'
+                : (in_array('lldp', $discoveryMethods, true) ? 'lldp' : 'cdp');
+        }
+        echo '<script type="application/json" id="protocol-inheritance">' .
+            json_encode(
+                [
+                    'baseline' => icct_nms_protocol_inheritance_baseline(),
+                    'variants' => icct_nms_protocol_variants() + ['netflow' => ['field' => 'version']],
+                    'profiles' => icct_nms_protocol_profiles() + ['netflow' => icct_nms_netflow_profiles()],
+                    'discoveryPreset' => $discoveryPreset,
+                ],
+                JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR,
+            ) .
+            '</script>';
         echo '<div id="wizard-panels" hidden>';
         require dirname(__DIR__, 2) . '/protocols/shared/templates/protocol.php';
         require dirname(__DIR__, 2) . '/ports/templates/ports.php';

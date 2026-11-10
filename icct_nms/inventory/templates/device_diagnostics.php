@@ -8,13 +8,11 @@ require __DIR__ . '/device_record_pager.php'; ?>
         <h2>Diagnostic readings</h2>
         <p>Device management permission is required to read diagnostic records.</p>
     <?php else: ?>
-        <h2>Diagnostic readings <span
-                class="field-info section-help"
-                tabindex="0"
-                role="img"
-                aria-label="Your saved diagnostic runs for this device. Historical results describe the configuration at the time of the run."
-                data-tooltip="Your saved diagnostic runs for this device. Historical results describe the configuration at the time of the run.">ⓘ</span>
-        </h2>
+        <h2 class="device-help-heading">Diagnostic readings <?php
+        $headingHelpText = 'Your saved diagnostic runs for this device. Historical results describe the configuration at the time of the run.';
+        require __DIR__ . '/../../shared/templates/heading_help.php';
+        ?>
+ </h2>
         <?php
         $owner = (int) ($_SESSION['sess_user_id'] ?? 0);
 $canReadDiagnostics = true;

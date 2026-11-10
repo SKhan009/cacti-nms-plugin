@@ -95,6 +95,18 @@ $severityColors = icct_nms_severity_colors(); ?>
             </div>
         <?php endforeach; ?>
     </dl>
+    <?php if (($alarm['source'] ?? '') === 'NetFlow' || !empty($alarmDetail['event_origins'])): ?>
+        <div class="fcaps-form-actions">
+            <?php if (($alarm['source'] ?? '') === 'NetFlow'): ?>
+                <a class="button" href="inventory/controllers/device.php?id=<?= (int) $alarm['host_id'] ?>&amp;view=1&amp;netflow_alarm=<?= icct_nms_h($alarm['alarm_key']) ?>#view-netflow">View NetFlow finding</a>
+            <?php endif; ?>
+            <?php foreach (['syslog' => ['syslog', 'View Syslog events'], 'trap' => ['traps', 'View SNMP traps']] as $origin => [$tab, $label]): ?>
+                <?php if (in_array($origin, $alarmDetail['event_origins'] ?? [], true)): ?>
+                    <a class="button" href="inventory/controllers/device.php?id=<?= (int) $alarm['host_id'] ?>&amp;view=1&amp;event_alarm=<?= icct_nms_h($alarm['alarm_key']) ?>#view-<?= $tab ?>"><?= $label ?></a>
+                <?php endif; ?>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
     <section class="alarm-acknowledgement">
         <h2>Acknowledgement &amp; Remarks</h2>
         <dl>

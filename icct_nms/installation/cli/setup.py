@@ -5,6 +5,7 @@ import datetime
 import grp
 import hashlib
 import importlib.util
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -182,6 +183,18 @@ def download_bundle(directory, target, component=None):
 def install_packages(target, bundle, online=False, component=None):
     if bundle and online:
         raise ValueError("--online cannot be combined with --bundle.")
+    native_binary = MANIFEST["optional_components"].get(component, {}).get("native_binary")
+    if native_binary and online:
+        raise ValueError("Use the offline ICCT NMS RPM bundle for this component.")
+    if bundle and target["family"] == "rhel" and native_binary and Path(native_binary).exists():
+        installed = subprocess.run(
+            ["/usr/bin/rpm", "-q", *component_packages(target, component)],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        if installed.returncode:
+            verify_bundle(bundle, target, component)
+            print(f"Existing {component} installation is managed outside RPM. Keeping its files.")
+            return
     if bundle:
         files = (
             verify_bundle(bundle, target, component) if component else verify_bundle(bundle, target)
@@ -395,6 +408,28 @@ def services(root, user, group):
         )
 
 
+def validate_trap_settings(authorization, listener, target):
+    if target["family"] != "rhel" or not authorization or not listener:
+        raise ValueError("RHEL trap setup requires both --trap-auth-file and --trap-listener.")
+    address = re.fullmatch(r"udp:([0-9.]+):([0-9]+)", listener)
+    family = 4
+    if not address:
+        address = re.fullmatch(r"udp6:\[([0-9a-fA-F:]+)\]:([0-9]+)", listener)
+        family = 6
+    if not address or ipaddress.ip_address(address[1]).version != family or not 1 <= int(address[2]) <= 65535:
+        raise ValueError("Use an explicit UDP IP address and port for the trap listener.")
+    path = Path(authorization).resolve(strict=True)
+    if not path.is_file():
+        raise ValueError("Use a local trap authorization file.")
+    content = path.read_text()
+    if not re.search(r"^\s*auth(?:Community|User)[ \t]+\S", content, re.I | re.M) or re.search(
+        r"^\s*(?:disableAuthorization|include|traphandle|forward|agentAddress|logOption|format|outputOption)",
+        content, re.I | re.M,
+    ):
+        raise ValueError("Use explicit authCommunity or authUser entries in a dedicated receiver authorization file.")
+    return path
+
+
 def validate_ssh_settings(origin, service_user, state_directory, guacd_port):
     spec = importlib.util.spec_from_file_location(
         "icct_ssh_configuration", PLUGIN / "protocols/ssh/configure.py"
@@ -475,6 +510,8 @@ def main():
     parser.add_argument("--ssh-service-user", default="icct-nms-ssh")
     parser.add_argument("--ssh-state-directory", default="/var/lib/icct-nms-ssh")
     parser.add_argument("--ssh-guacd-port", type=int, default=4823)
+    parser.add_argument("--trap-auth-file", help="Local Net-SNMP authorization file for RHEL trap setup")
+    parser.add_argument("--trap-listener", help="Explicit RHEL UDP listener, for example udp:127.0.0.1:162")
     parser.add_argument(
         "--all-components",
         action="store_true",
@@ -541,6 +578,11 @@ def main():
     if args.no_packages and args.component_bundle:
         parser.error("--no-packages cannot install component packages.")
     target = os_info()
+    trap_auth = None
+    if args.trap_auth_file or args.trap_listener:
+        if args.action == "bundle" or args.application_only or args.component:
+            parser.error("Trap setup requires full service setup.")
+        trap_auth = validate_trap_settings(args.trap_auth_file, args.trap_listener, target)
     if args.action == "bundle":
         if os.geteuid() != 0:
             raise ValueError("Run bundle as root on the matching build system.")
@@ -570,7 +612,7 @@ def main():
         selected_components = [
             name
             for name, spec in MANIFEST["optional_components"].items()
-            if spec["packages"][target["family"]]
+            if spec["packages"][target["family"]] and not (args.online and spec.get("native_binary"))
         ]
         if not args.online and set(selected_components) - set(component_bundles):
             raise ValueError(
@@ -591,6 +633,7 @@ def main():
         pending=MANIFEST["pending_features"],
         ssh_origin=args.ssh_origin,
         ssh_guacd_port=args.ssh_guacd_port if args.ssh_origin else None,
+        trap_listener=args.trap_listener,
         additional=[
             "Strict SSH/HTTPS setup",
             "Pathchar binary from an approved source",
@@ -675,6 +718,12 @@ def main():
         # Only the collector account gets this fixed read command; no daemon or clock edits.
         run([sys.executable, PLUGIN / "installation/cli/ntp_access.py", "install", "--user", user])
     services(root, user, group)
+    if trap_auth:
+        run(
+            ["bash", PLUGIN / "protocols/snmp/traps/rhel/install_traps_rhel.sh", root,
+             trap_auth, args.trap_listener],
+            env=dict(os.environ, ICCT_WEB_USER=user, ICCT_WEB_GROUP=group),
+        )
     if args.ssh_origin:
         configure_ssh(
             root,

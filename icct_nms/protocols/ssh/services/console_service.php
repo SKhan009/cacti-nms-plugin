@@ -58,7 +58,7 @@ function icct_nms_ssh_console_operation($hostId, $input)
     icct_backend_ssh_https();
     $device = icct_nms_ssh_console_device($hostId);
     $action = $input['action'] ?? '';
-    if (!in_array($action, ['open', 'read', 'write', 'close', 'test'], true)) {
+    if (!in_array($action, ['open', 'read', 'write', 'close', 'test', 'audit'], true)) {
         throw new InvalidArgumentException('Unsupported SSH console action.');
     }
     $identity = ['user_id' => icct_backend_current_user_id(), 'browser_hash' => hash('sha256', session_id())];
@@ -85,6 +85,32 @@ function icct_nms_ssh_console_operation($hostId, $input)
     }
     $id = $input['session_id'] ?? '';
     icct_nms_ssh_console_session($id, $hostId, $device, $action === 'close');
+    if ($action === 'audit') {
+        $parameter = $input['parameter'] ?? '';
+        $requestId = $input['request_id'] ?? '';
+        if (!is_string($parameter) || !preg_match('~^[\p{L}\p{N}][\p{L}\p{N} ._:/()\[\]-]{0,119}$~uD', trim($parameter)) ||
+            !is_string($requestId) || !preg_match('/^[a-f0-9]{32}$/D', $requestId)) {
+            throw new InvalidArgumentException('Enter a setting name of up to 120 characters.');
+        }
+        icct_backend_require_management(3);
+        $actor = $identity['user_id'];
+        $source = filter_var($_SERVER['REMOTE_ADDR'] ?? '', FILTER_VALIDATE_IP);
+        $record = [
+            'host_id' => (int) $hostId,
+            'user_id' => $actor,
+            'user' => (string) db_fetch_cell_prepared('SELECT username FROM user_auth WHERE id=?', [$actor]),
+            'parameter' => trim($parameter),
+            'time' => date(DATE_ATOM),
+            'source_ip' => $source ?: '',
+        ];
+        icct_backend_category_execute(
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ' .
+            'ON DUPLICATE KEY UPDATE meta_key=VALUES(meta_key)',
+            [icct_nms_ssh_audit_prefix($hostId) . substr(hash('sha256', $id . $requestId), 0, 32),
+                json_encode($record, JSON_THROW_ON_ERROR)],
+        );
+        return ['recorded' => true];
+    }
     if ($action === 'close') {
         session_write_close();
         icct_backend_ssh_close_session($id, 'Disconnected by user');
@@ -108,4 +134,9 @@ function icct_nms_ssh_console_operation($hostId, $input)
     // Long polling must not hold PHP's browser-session lock and block keyboard or disconnect requests.
     session_write_close();
     return icct_backend_ssh_rpc($request);
+}
+
+function icct_nms_ssh_audit_prefix($id)
+{
+    return 'ssh-config-audit-' . (int) $id . '-';
 }

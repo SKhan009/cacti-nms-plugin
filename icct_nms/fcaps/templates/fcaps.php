@@ -29,6 +29,67 @@
         id="fcaps-fault"
         role="tabpanel"
         aria-labelledby="fcaps-tab-fault">
+        <fieldset class="fault-source-options">
+            <legend>Fault Source <span
+                    class="field-info"
+                    tabindex="0"
+                    role="img"
+                    aria-label="Information about Fault Source"
+                    data-tooltip="Choose a measurement threshold or an alarm rule for received device events.">
+                    <svg
+                        viewBox="0 0 20 20"
+                        aria-hidden="true">
+                        <circle
+                            cx="10"
+                            cy="10"
+                            r="8" />
+                        <path d="M10 9v5M10 6v.5" />
+                    </svg>
+                </span>
+            </legend>
+            <label>
+                <input
+                    type="radio"
+                    name="alarm_source_view"
+                    value="rrd"
+                    checked> Cacti Data Source
+            </label>
+            <label>
+                <input
+                    type="radio"
+                    name="alarm_source_view"
+                    value="snmp"> SNMP
+            </label>
+            <label>
+                <input
+                    type="radio"
+                    name="alarm_source_view"
+                    value="ntp"> NTP
+            </label>
+            <label>
+                <input type="radio" name="alarm_source_view" value="syslog" data-passive-source> Syslog
+            </label>
+            <label>
+                <input type="radio" name="alarm_source_view" value="netflow"> NetFlow / IPFIX
+            </label>
+        </fieldset>
+        <fieldset id="snmp-fault-rule-type" class="fault-rule-type-options" hidden>
+            <legend>SNMP rule type</legend>
+            <label class="check-row">
+                <input type="radio" name="snmp_fault_view" value="snmp" checked> OID polling thresholds
+            </label>
+            <label class="check-row">
+                <input type="radio" name="snmp_fault_view" value="trap"> Trap and inform rules
+            </label>
+        </fieldset>
+        <div class="fcaps-form-actions">
+            <button type="button" class="button" form="fault-form" id="add-fault-rule">+ Add Threshold</button>
+            <button type="submit" class="button primary" form="fault-form">Save</button>
+            <button type="button" class="button" form="passive-fault-form" data-passive-add>+ Add Rule</button>
+            <button type="submit" class="button primary" form="passive-fault-form">Save</button>
+            <button type="button" class="button" form="netflow-fault-form" data-netflow-action id="add-netflow-fault" hidden>+ Add Rule</button>
+            <button type="submit" class="button primary" form="netflow-fault-form" data-netflow-action hidden>Save</button>
+        </div>
         <form
             id="fault-form"
             method="post">
@@ -41,48 +102,10 @@
                 type="hidden"
                 name="fault_rules"
                 id="fault-rules-value">
-            <fieldset class="fault-source-options">
-                <legend>Measurement Source <span
-                        class="field-info"
-                        tabindex="0"
-                        role="img"
-                        aria-label="Information about Measurement Source"
-                        data-tooltip="Choose collected Cacti, SNMP or NTP measurements. Alarm thresholds are stored per device.">
-                        <svg
-                            viewBox="0 0 20 20"
-                            aria-hidden="true">
-                            <circle
-                                cx="10"
-                                cy="10"
-                                r="8" />
-                            <path d="M10 9v5M10 6v.5" />
-                        </svg>
-                    </span>
-                </legend>
-                <label>
-                    <input
-                        type="radio"
-                        name="alarm_source_view"
-                        value="rrd"
-                        checked> Cacti Data Source
-                </label>
-                <label>
-                    <input
-                        type="radio"
-                        name="alarm_source_view"
-                        value="snmp"> SNMP OID
-                </label>
-                <label>
-                    <input
-                        type="radio"
-                        name="alarm_source_view"
-                        value="ntp"> NTP
-                </label>
-            </fieldset>
             <div class="fault-workspace">
                 <aside
                     class="fault-alarm-sidebar"
-                    aria-label="Measurement list">
+                    aria-label="Measurements">
                     <section id="fault-graph-section">
                         <h3>Graph Templates</h3>
                         <div id="fault-alarm-navigation"></div>
@@ -90,14 +113,14 @@
                     <section
                         id="fault-oid-section"
                         hidden>
-                        <h3>OID Details</h3>
-                        <div id="fault-oid-navigation"></div>
-                        <h3>MIB Fault Presets <?php $ntpHelpText = 'Select several saved MIB fault presets associated with this device. Each preset retains its native Cacti data source. Clear a selection to disable its rule; use Edit thresholds to change it.';
-                        require __DIR__ . '/../../protocols/ntp/templates/help.php'; ?>
- </h3>
-                        <div
-                            id="fault-mib-presets"
-                            aria-label="Select MIB fault presets"></div>
+                        <section class="fault-snmp-list">
+                            <h3>SNMP OIDs</h3>
+                            <div id="fault-oid-navigation" class="fault-snmp-oid-list"></div>
+                        </section>
+                        <section class="fault-snmp-list">
+                            <h3>MIB Repository</h3>
+                            <div id="fault-mib-navigation" class="fault-snmp-oid-list"></div>
+                        </section>
                     </section>
                     <section
                         id="fault-ntp-section"
@@ -107,22 +130,37 @@
                     </section>
                 </aside>
                 <div class="fault-alarm-editor">
+                    <section class="fault-saved-alarms" aria-label="Alarm rules">
+                        <div class="fault-alarm-list-heading">
+                            <h3>Alarm rules</h3>
+                            <a id="fault-mib-repository-edit" class="button" target="_blank" rel="noopener" hidden>Edit in MIB Repository</a>
+                        </div>
+                        <ul id="fault-saved-alarm-list"></ul>
+                    </section>
+                    <section class="fault-saved-alarms" id="fault-mib-preset-section" hidden>
+                        <h3>MIB Fault Presets <?php $ntpHelpText = 'Select saved MIB fault presets associated with this device. Each preset retains its native Cacti data source. Clear a selection to disable its rule or use Edit thresholds to change it.';
+                        require __DIR__ . '/../../protocols/ntp/templates/help.php'; ?></h3>
+                        <div id="fault-mib-presets" aria-label="Select MIB fault presets"></div>
+                    </section>
                     <p
                         id="fault-alarm-empty"
                         hidden>Select a data source, OID or NTP parameter to configure thresholds.</p>
                     <div id="fault-rule-list"></div>
                 </div>
             </div>
-            <div class="fcaps-form-actions">
-                <button
-                    type="button"
-                    class="button"
-                    id="add-fault-rule">+ Add Threshold</button>
-                <button
-                    type="submit"
-                    class="button primary">Save</button>
-            </div>
         </form>
+        <?php require __DIR__ . '/passive_faults.php'; ?>
+        <?php $netflowFaultConfig = icct_nms_netflow_assignment($id); ?>
+        <section id="fault-netflow-summary" hidden aria-label="NetFlow fault rules">
+            <p><?php if (!$netflowFaultConfig): ?>
+                    Add a NetFlow exporter in Protocol Config to evaluate these rules for this device.
+                <?php elseif (!icct_backend_protocol_enabled($id, 'netflow')): ?>
+                    NetFlow collection is disabled for this device. Enable it in Protocol Config to evaluate these rules.
+                <?php else: ?>
+                    The collector evaluates five-minute traffic windows. Matching findings appear in the Alarms console.
+                <?php endif; ?></p>
+            <?php require __DIR__ . '/../../protocols/netflow/templates/fault_rules.php'; ?>
+        </section>
         <?php $faultCatalogue = icct_nms_fault_catalogue();
         $faultRules = icct_nms_fault_rules($id);
         $faultObservations = $id ? icct_nms_fault_observations($old) : []; ?>

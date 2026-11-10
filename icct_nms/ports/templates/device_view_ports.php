@@ -80,7 +80,6 @@ if ($serialView && (int) $old['snmp_version'] === 0):
 <?php return;
 endif;
 $portView = icct_backend_ports_view($old);
-$portConnections = icct_nms_port_connections($id, $portView['ports']);
 $states = [
     1 => 'UP',
     2 => 'DOWN',
@@ -106,6 +105,14 @@ if ($portTab === 'interfaces' || !in_array($portTab, ['physical', 'software', 'u
 }
 $portHistoryActive = $portTab === 'history';
 $portView['ports'] = $portHistoryActive ? [] : $portGroups[$portTab];
+$isPhysicalTab = $portTab === 'physical';
+$portConnections = $portHistoryActive ? [] : icct_nms_port_connections($id, $portView['ports'], $isPhysicalTab);
+// Software interfaces use the same tiles, with one tile per reported interface.
+$portDiagram = match ($portTab) {
+    'physical' => $slots['chassis'],
+    'software' => $portView['ports'],
+    default => [],
+};
 $portTabs = ['physical' => 'Physical ports', 'software' => 'Software interfaces'];
 if ($portGroups['unclassified']) {
     $portTabs['unclassified'] = 'Unclassified interfaces';
@@ -131,13 +138,11 @@ $portTone = static fn ($port) => !empty($port['placeholder']) || !$portView['fre
     id="view-ports"
     data-device-view-panel="ports"
     hidden>
-    <h2>Interfaces/Ports <span
-            class="field-info"
-            tabindex="0"
-            role="img"
-            aria-label="Interface grouping"
-            data-tooltip="Groups use the device-reported connector and interface type. Virtual machines can present Ethernet adapters as physical-facing interfaces. Unknown types remain unclassified.">ⓘ</span>
-    </h2>
+    <h2 class="device-help-heading">Interfaces/Ports <?php
+    $headingHelpText = 'Groups use the device-reported connector and interface type. Virtual machines can present Ethernet adapters as physical-facing interfaces. Unknown types remain unclassified.';
+    require __DIR__ . '/../../shared/templates/heading_help.php';
+    ?>
+ </h2>
     <?php
     $portTabUrl = static fn ($tab) => 'inventory/controllers/device.php?' .
         http_build_query(['id' => (int) $id, 'view' => 1, 'ports_tab' => $tab]) . '#view-ports';
@@ -159,21 +164,19 @@ $portTone = static fn ($port) => !empty($port['placeholder']) || !$portView['fre
             <span class="unknown">● Unknown / unmapped</span>
         </p>
     <?php endif; ?>
-    <?php if (
-        $portTab === 'physical' && $slots['chassis']
-    ): ?>
+    <?php if ($portDiagram): ?>
         <div
             class="device-port-chassis"
             role="group"
-            aria-label="Physical ports and preset slots">
+            aria-label="<?= $isPhysicalTab ? 'Physical ports and preset slots' : 'Software interface tiles' ?>">
             <?php foreach (
-                array_chunk($slots['chassis'], 16) as $bank
+                array_chunk($portDiagram, 16) as $bank
             ): ?>
                 <div class="device-port-bank">
                     <?php foreach (
                         array_chunk($bank, 2) as $pair
                     ): ?>
-                        <div class="device-port-pair <?= count($bank) === 1 ? 'single' : '' ?>">
+                        <div class="device-port-pair <?= count($pair) === 1 && (!$isPhysicalTab || count($bank) === 1) ? 'single' : '' ?>">
                             <?php
                             foreach ($pair as $port):
                                 $label = !empty($port['placeholder'])
@@ -201,7 +204,7 @@ $portTone = static fn ($port) => !empty($port['placeholder']) || !$portView['fre
                             <?php
                             endforeach;
                         if (
-                            count($pair) === 1 &&
+                            $isPhysicalTab && count($pair) === 1 &&
                             count($bank) > 1
                         ): ?>
                                 <button
@@ -234,7 +237,7 @@ $portTone = static fn ($port) => !empty($port['placeholder']) || !$portView['fre
                     id="device-port-search"
                     type="search"
                     aria-label="Search interfaces"
-                    placeholder="Search with port name or IP address"
+                    placeholder="Search by port name, IP or MAC address"
                     aria-controls="device-port-rows">
             </div>
             <button
@@ -273,6 +276,9 @@ $portTone = static fn ($port) => !empty($port['placeholder']) || !$portView['fre
                         ): ?>
                             <th><?= icct_nms_h($heading) ?></th>
                         <?php endforeach; ?>
+                        <?php if ($isPhysicalTab): ?>
+                            <th>Learned endpoints</th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody id="device-port-rows">
@@ -329,7 +335,35 @@ $portTone = static fn ($port) => !empty($port['placeholder']) || !$portView['fre
                                                 : 'unknown'))
                                         : 'unknown' ?>"
                                     <?php endif; ?>><?= icct_nms_h($cell) ?></td>
-                                <?php endforeach; ?>
+                            <?php endforeach; ?>
+                            <?php if ($isPhysicalTab): ?>
+                                <?php $learned = $fresh ? ($portConnections[$port['index']]['endpoints'] ?? []) : []; ?>
+                                <td class="device-port-endpoints">
+                                    <?php if ($learned): ?>
+                                        <details>
+                                            <summary><?= count($learned) ?> learned</summary>
+                                            <ul>
+                                                <?php foreach ($learned as $endpoint): ?>
+                                                    <li>
+                                                        <a href="dashboard/topology/controllers/topology_configuration.php?tab=discovered&amp;mac=<?= rawurlencode($endpoint['mac']) ?>"
+                                                            title="Find this MAC in Discovered Devices"><?= icct_nms_h($endpoint['mac']) ?></a>
+                                                        <?php if ($endpoint['ips']): ?>
+                                                            <div>IP seen on this interface: <?= icct_nms_h(implode(', ', $endpoint['ips'])) ?></div>
+                                                        <?php else: ?>
+                                                            <div>No IP matched on this interface</div>
+                                                        <?php endif; ?>
+                                                        <?php if ($endpoint['vlans']): ?>
+                                                            <div>VLANs reported by the switch: <?= icct_nms_h(implode(', ', $endpoint['vlans'])) ?></div>
+                                                        <?php endif; ?>
+                                                    </li>
+                                                <?php endforeach; ?>
+                                            </ul>
+                                        </details>
+                                    <?php else: ?>
+                                        None reported
+                                    <?php endif; ?>
+                                </td>
+                            <?php endif; ?>
                         </tr>
                     <?php
                     endforeach; ?>

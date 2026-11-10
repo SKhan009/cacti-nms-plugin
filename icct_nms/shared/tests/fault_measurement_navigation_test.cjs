@@ -74,6 +74,7 @@ for (const key of [
     '#fault-alarm-navigation',
     '#fault-alarm-empty',
     '#fault-oid-section',
+    '#snmp-fault-rule-type',
     '#fault-oid-navigation',
     '#fault-graph-section',
     '#fault-ntp-section',
@@ -145,7 +146,7 @@ nodes['#fault-parameters'].textContent = JSON.stringify([
         parameter: 'Battery charge',
         units: '%',
         scale: 1,
-        type_id: '',
+        type_id: 'different-device-type',
         label: 'Battery charge',
         template_id: 1,
         metric_id: 2,
@@ -164,6 +165,10 @@ const sourceRadios = [new E('input'), new E('input'), new E('input')];
 sourceRadios[0].value = 'rrd';
 sourceRadios[1].value = 'snmp';
 sourceRadios[2].value = 'ntp';
+const snmpRuleRadios = [new E('input'), new E('input')];
+snmpRuleRadios[0].value = 'snmp';
+snmpRuleRadios[0].checked = true;
+snmpRuleRadios[1].value = 'trap';
 const code = fs.readFileSync(
     require('node:path').join(__dirname, '../../fcaps/js/fcaps.js'),
     'utf8',
@@ -171,8 +176,11 @@ const code = fs.readFileSync(
 vm.runInNewContext(code.slice(0, sourceIndex(code, '  const basic=')) + '})();', {
     document: {
         querySelector: (s) => nodes[s] || null,
-        querySelectorAll: (selector) =>
-            selector === '.fault-source-options input' ? sourceRadios : [{ value: 1 }],
+        querySelectorAll: (selector) => {
+            if (selector === '.fault-source-options input') return sourceRadios;
+            if (selector === '[name="snmp_fault_view"]') return snmpRuleRadios;
+            return [{ value: 1 }];
+        },
         createElement: (tag) => new E(tag),
     },
     MutationObserver: class {
@@ -248,7 +256,9 @@ setTimeout(() => {
     const snmp = nodes['#fault-rule-list'].children[1];
     snmp.querySelector('[data-name]').value = 'Keep this alarm name';
     snmp.listeners.input();
-    nodes['#fault-oid-navigation'].children[0].listeners.click();
+    const oidLinks = nodes['#fault-oid-navigation'].children;
+    assert.equal(oidLinks.length, 1, 'A saved rule remains reachable when its MIB is scoped elsewhere');
+    oidLinks[0].listeners.click();
     assert.equal(snmp.querySelector('[data-name]').value, 'Keep this alarm name');
     assert.equal(snmp.querySelector('[data-minimum]').value, 20);
     assert.equal(

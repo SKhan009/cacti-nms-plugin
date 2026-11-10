@@ -301,11 +301,15 @@ foreach (
         <?php
 endforeach;
 ?>
+        <?php
+        $showSnmpNotifications = $presetMode || !empty($wizard);
+        $trapSender = !$presetMode && $showSnmpNotifications && $id ? icct_nms_trap_sender($id) : '';
+        ?>
         <details
             class="protocol-item"
             id="protocol-snmp"
             data-saved="<?= (int) $host['snmp_version'] > 0 ? '1' : '0' ?>"
-            <?= (int) $host['snmp_version'] > 0 || in_array('snmp', $protocolDraft, true) ? 'open' : 'hidden' ?>>
+            <?= (int) $host['snmp_version'] > 0 || $trapSender !== '' || in_array('snmp', $protocolDraft, true) ? 'open' : 'hidden' ?>>
             <summary>
                 <span
                     class="accordion-chevron"
@@ -323,6 +327,9 @@ endforeach;
                 </button>
             </summary>
             <div class="protocol-content">
+                <?php if ($showSnmpNotifications): ?>
+                    <h3>SNMP polling</h3>
+                <?php endif; ?>
                 <form method="post">
                     <?php icct_nms_token();
 $values = $host;
@@ -344,61 +351,67 @@ $readonly = false; ?>
                         <button class="button primary">Save</button>
                     </div>
                 </form>
-                <?php if (!$presetMode): ?>
-                    <form
-                        method="post"
-                        id="snmp-discovery-policy">
-                        <?php icct_nms_token(); ?>
-                        <input
-                            type="hidden"
-                            name="action"
-                            value="discovery">
-                        <input
-                            type="hidden"
-                            name="discovery_policy"
-                            value="1">
-                        <h3>Network Discovery</h3>
-                        <div class="protocol-grid cols-3">
-                            <?php foreach (
-                                [
-                                    'interval_seconds' => 'Collection Interval (Sec)',
-                                    'stale_seconds' => 'Stale (Seconds)',
-                                    'refresh_seconds' => 'Display Refresh (Seconds)',
-                                ] as $key => $label
-                            ) {
-                                icct_nms_input(
-                                    $label,
-                                    $key,
-                                    $discovery[$key] ??
-                                        [
-                                            'interval_seconds' => 300,
-                                            'stale_seconds' => 900,
-                                            'refresh_seconds' => 30,
-                                        ][$key],
-                                    'number',
-                                    'required min="' .
-                                        [
-                                            'interval_seconds' => 300,
-                                            'stale_seconds' => 600,
-                                            'refresh_seconds' => 10,
-                                        ][$key] .
-                                        '" max="' .
-                                        [
-                                            'interval_seconds' => 86400,
-                                            'stale_seconds' => 604800,
-                                            'refresh_seconds' => 300,
-                                        ][$key] .
-                                        '"',
-                                );
-                            } ?>
-                        </div>
+                <?php $snmpDiscoveryDefaults = ($presetMode ? $protocolPresets : icct_nms_protocol_presets())['snmp_discovery'] ?? []; ?>
+                <form
+                    method="post"
+                    id="snmp-discovery-policy">
+                    <?php icct_nms_token(); ?>
+                    <input
+                        type="hidden"
+                        name="action"
+                        value="<?= $presetMode ? 'save_protocol_defaults' : 'discovery' ?>">
+                    <?php if ($presetMode): ?>
+                        <input type="hidden" name="preset_protocol" value="snmp_discovery">
+                    <?php else: ?>
+                        <input type="hidden" name="discovery_policy" value="1">
+                    <?php endif; ?>
+                    <h3><?= $presetMode ? 'SNMP discovery timing defaults' : 'Network Discovery' ?></h3>
+                    <div class="protocol-grid cols-3">
+                        <?php foreach (
+                            [
+                                'interval_seconds' => 'Collection Interval (Sec)',
+                                'stale_seconds' => 'Stale (Seconds)',
+                                'refresh_seconds' => 'Display Refresh (Seconds)',
+                            ] as $key => $label
+                        ) {
+                            icct_nms_input(
+                                $label,
+                                $key,
+                                ($presetMode ? null : $discovery[$key] ?? null) ??
+                                    $snmpDiscoveryDefaults[$key] ??
+                                    [
+                                        'interval_seconds' => 300,
+                                        'stale_seconds' => 900,
+                                        'refresh_seconds' => 30,
+                                    ][$key],
+                                'number',
+                                'required min="' .
+                                    [
+                                        'interval_seconds' => 300,
+                                        'stale_seconds' => 600,
+                                        'refresh_seconds' => 10,
+                                    ][$key] .
+                                    '" max="' .
+                                    [
+                                        'interval_seconds' => 86400,
+                                        'stale_seconds' => 604800,
+                                        'refresh_seconds' => 300,
+                                    ][$key] .
+                                    '"',
+                            );
+                        } ?>
+                    </div>
+                    <?php if (!$presetMode): ?>
                         <?php require __DIR__ . '/discovery_observations.php'; ?>
-                        <div class="protocol-actions">
-                            <button class="button primary">Save</button>
-                        </div>
-                    </form>
-                <?php endif; ?>
+                    <?php endif; ?>
+                    <div class="protocol-actions">
+                        <button class="button primary"><?= $presetMode ? 'Save discovery defaults' : 'Save' ?></button>
+                    </div>
+                </form>
             </div>
+            <?php if ($showSnmpNotifications): ?>
+                <?php require __DIR__ . '/../../snmp/traps/templates/settings.php'; ?>
+            <?php endif; ?>
         </details>
         <?php require __DIR__ . '/../../ssh/templates/settings.php'; ?>
         <details
@@ -443,6 +456,9 @@ $readonly = false; ?>
                         name="assignment_revision"
                         value="<?= (int) ($serial['revision'] ?? 0) ?>" />
                     <?php require __DIR__ . '/../../serial/templates/serial.php'; ?>
+                    <?php if (!$presetMode && $id && !empty($serial)): ?>
+                        <?php require __DIR__ . '/../../serial/templates/serial_events.php'; ?>
+                    <?php endif; ?>
                     <div class="protocol-actions">
                         <button class="button primary">Save</button>
                     </div>
@@ -453,7 +469,7 @@ $readonly = false; ?>
 $syslogSaved = !empty($syslog);
 if (!$presetMode) {
     $syslogDefaults = icct_nms_protocol_presets()['syslog'] ?? [];
-    foreach (['severity_codes', 'facility_codes', 'match_strings'] as $syslogField) {
+    foreach (icct_nms_protocol_preset_fields('syslog') as $syslogField) {
         if (!isset($syslog[$syslogField]) && isset($syslogDefaults[$syslogField])) {
             $syslog[$syslogField] = $syslogDefaults[$syslogField];
         }

@@ -6,6 +6,7 @@ require_once __DIR__ . '/protocol_preset_service.php';
 function icct_nms_protocol_starters()
 {
     $cadence = max(60, (int) read_config_option('poller_interval'));
+    $snmpDiscoveryInterval = intdiv(300 + $cadence - 1, $cadence) * $cadence;
     $hostname = gethostname() ?: 'localhost';
     if (!filter_var($hostname, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
         $hostname = 'localhost';
@@ -25,6 +26,15 @@ function icct_nms_protocol_starters()
             'snmp_priv_protocol' => '[None]',
             'snmp_context' => '',
             'snmp_security_level' => 'noAuthNoPriv',
+        ],
+        'snmp_notifications' => [
+            'trap_enabled' => '0',
+            'trap_source_mode' => 'device',
+        ],
+        'snmp_discovery' => [
+            'interval_seconds' => $snmpDiscoveryInterval,
+            'stale_seconds' => 3 * $snmpDiscoveryInterval,
+            'refresh_seconds' => 30,
         ],
         'cdp' => [
             'interval_seconds' => $cadence,
@@ -62,6 +72,7 @@ function icct_nms_protocol_starters()
             'severity_codes' => json_encode(range(0, 7)),
             'facility_codes' => json_encode(range(0, 23)),
             'match_strings' => '[]',
+            'transport' => 'both',
         ],
         'ntp' => [
             'method' => 'local',

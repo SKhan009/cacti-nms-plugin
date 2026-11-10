@@ -518,7 +518,8 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                 <input
                     type="search"
                     id="discoveredSearch"
-                    placeholder="Device, address, reporter or port">
+                    placeholder="Device, IP, MAC, reporter or port"
+                    value="<?= icct_nms_h(is_string($_GET['mac'] ?? null) ? $_GET['mac'] : '') ?>">
             </div>
             <div class="field">
                 <label for="discoveredProtocol">Method</label>
@@ -552,6 +553,7 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                     <tr>
                         <th>Device / Identity</th>
                         <th>Address</th>
+                        <th>MAC Address</th>
                         <th>Network / Reporting Device</th>
                         <th>Method</th>
                         <th>Local / Remote Port</th>
@@ -567,6 +569,7 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                             data-network="<?= (int) $d['network_id'] ?>">
                             <td><?= icct_nms_h($d['name']) ?></td>
                             <td><?= icct_nms_h($d['address']) ?></td>
+                            <td>—</td>
                             <td><?= icct_nms_h($d['scan_name'] . ' / ' . $d['collector']) ?></td>
                             <td><?= icct_nms_h($d['method']) ?></td>
                             <td>—</td>
@@ -587,6 +590,7 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                             data-network="<?= (int) $d['network_id'] ?>">
                             <td><?= icct_nms_h($d['sysName'] ?: ($d['hostname'] ?: 'Not detected')) ?></td>
                             <td><?= icct_nms_h($d['ip']) ?></td>
+                            <td>—</td>
                             <td><?= icct_nms_h($d['network']) ?></td>
                             <td>Cacti Network</td>
                             <td>—</td>
@@ -603,6 +607,7 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                             data-network="">
                             <td><?= icct_nms_h($d['name']) ?></td>
                             <td><?= icct_nms_h($d['address']) ?></td>
+                            <td><?= icct_nms_h(($d['mac'] ?? '') ?: '—') ?></td>
                             <td><?= icct_nms_h($d['reporter']) ?></td>
                             <td><?= icct_nms_h($d['protocol']) ?></td>
                             <td><?= icct_nms_h($d['port'] . ' / ' . $d['remote_port']) ?></td>
@@ -616,7 +621,7 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                     <tr
                         id="discoveredEmpty"
                         hidden>
-                        <td colspan="8">No matching discovery results.</td>
+                        <td colspan="9">No matching discovery results.</td>
                     </tr>
                 </tbody>
             </table>

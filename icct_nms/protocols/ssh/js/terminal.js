@@ -8,6 +8,9 @@
     const connect = document.getElementById('ssh-connect');
     const disconnect = document.getElementById('ssh-disconnect');
     const test = document.getElementById('ssh-test');
+    const audit = document.getElementById('ssh-change-audit');
+    const auditForm = document.getElementById('ssh-change-form');
+    const auditStatus = document.getElementById('ssh-change-status');
     const token = document.querySelector('#ssh-terminal-token input[name="__csrf_magic"]').value;
     const endpoint = new URL(root.dataset.apiUrl, document.baseURI);
     let active = null;
@@ -57,6 +60,7 @@
         closeAuthorization(context);
         if (active === context) {
             active = null;
+            if (audit) audit.hidden = true;
             connect.disabled = false;
             test.disabled = false;
             disconnect.disabled = true;
@@ -192,6 +196,7 @@
             if (context.closed) return;
             if (state === Guacamole.Client.State.CONNECTED) {
                 message('Connected');
+                if (audit) audit.hidden = false;
                 screen.focus();
             }
             if (state === Guacamole.Client.State.DISCONNECTED) stop(context);
@@ -199,6 +204,33 @@
         client.connect();
     }
     connect.addEventListener('click', start);
+    auditForm?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const context = active;
+        if (!context?.id || context.closed) return;
+        const input = auditForm.querySelector('[name="parameter"]');
+        const button = auditForm.querySelector('[type="submit"]');
+        const parameter = input.value.trim();
+        if (context.auditDraft?.parameter !== parameter) {
+            context.auditDraft = {
+                parameter,
+                request_id: Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
+                    byte.toString(16).padStart(2, '0')).join(''),
+            };
+        }
+        button.disabled = true;
+        auditStatus.textContent = 'Recording change…';
+        try {
+            await request('audit', { session_id: context.id, ...context.auditDraft });
+            context.auditDraft = null;
+            auditForm.reset();
+            auditStatus.textContent = 'Change recorded in the device Logs.';
+        } catch (error) {
+            auditStatus.textContent = error.message;
+        } finally {
+            button.disabled = false;
+        }
+    });
     disconnect.addEventListener('click', () => {
         if (active) stop(active);
     });

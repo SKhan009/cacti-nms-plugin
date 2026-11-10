@@ -81,6 +81,9 @@
     src="shared/js/inventory.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../js/inventory.js'), 0, 12) ?>"
     defer></script>
 <script
+    src="shared/js/help-tooltip.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../js/help-tooltip.js'), 0, 12) ?>"
+    defer></script>
+<script
     src="protocols/netflow/js/netflow-presets.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../../protocols/netflow/js/netflow-presets.js'), 0, 12) ?>"
     defer></script>
 <?php if (!empty($deviceViewPage)): ?>

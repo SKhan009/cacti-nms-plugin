@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../../protocols/serial/services/serial_event_service.php';
+
 /** ICCT-owned configuration monitoring services, derived from the existing ICCT NMS implementation. */
 
 /** Reused Inventory service: config connection status. */
@@ -70,9 +72,12 @@ function icct_backend_config_monitor_once($collector)
                     if ((int) $target['host']['poller_id'] !== (int) $collector) {
                         return false;
                     }
+                    $serialRules = $target['serial'] ? icct_nms_serial_event_rules($device['host_id']) : [];
+                    $serialRules = ($serialRules['profile_id'] ?? null) === (int) $target['profile']['id']
+                        ? $serialRules['rules'] : [];
                     foreach ($target['fields'] as $key => $field) {
                         $row = db_fetch_row_prepared(
-                            'SELECT signature,TIMESTAMPDIFF(SECOND,observed_at,NOW()) AS age_seconds FROM ' .
+                            'SELECT signature,status,value_json,TIMESTAMPDIFF(SECOND,observed_at,NOW()) AS age_seconds FROM ' .
                                 'plugin_icct_nms_serial_readings WHERE host_id=? AND field_key=?',
                             [$device['host_id'], $key],
                         );
@@ -96,6 +101,9 @@ function icct_backend_config_monitor_once($collector)
                                 'error' =>
                                     'Collector read failed. Check connection settings and collector logs.',
                             ];
+                        }
+                        if (isset($serialRules[$key])) {
+                            icct_nms_serial_event_record($target, $key, $serialRules[$key], $row, $result);
                         }
                         icct_backend_config_store_reading($target, $key, $result);
                         return true;

@@ -2,15 +2,21 @@
 
 /** Shared pagination keeps each device history section and its selected tab. */
 $recordPage = static fn($key) => max(1, min(1000000, (int) ($_GET[$key] ?? 1)));
-$recordPager = static function ($key, $page, $total, $anchor = 'view-records', $extra = []) use (
-    $id,
-) {
-    $pages = max(1, (int) ceil($total / 25));
+$recordPager = static function (
+    $key,
+    $page,
+    $total,
+    $anchor = 'view-records',
+    $extra = [],
+    $pageSize = 25,
+) use ($id) {
+    $pages = max(1, (int) ceil($total / $pageSize));
     $url = static function ($target) use ($id, $key, $anchor, $extra) {
         $params = [
             'id' => $id,
             'view' => 1,
             'changes_page' => max(1, (int) ($_GET['changes_page'] ?? 1)),
+            'ssh_changes_page' => max(1, (int) ($_GET['ssh_changes_page'] ?? 1)),
             'diagnostics_page' => max(1, (int) ($_GET['diagnostics_page'] ?? 1)),
             'port_events_page' => max(1, (int) ($_GET['port_events_page'] ?? 1)),
         ];
@@ -21,7 +27,7 @@ $recordPager = static function ($key, $page, $total, $anchor = 'view-records', $
             $anchor;
     };
     echo '<div class="type-pagination"><span>' .
-        ($total ? ($page - 1) * 25 + 1 . '–' . min($page * 25, $total) : '0') .
+        ($total ? ($page - 1) * $pageSize + 1 . '–' . min($page * $pageSize, $total) : '0') .
         ' of ' .
         $total .
         ' records</span><span class="type-page-count">Page ' .

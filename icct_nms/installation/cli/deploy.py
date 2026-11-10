@@ -159,9 +159,13 @@ def main():
     parser.add_argument("--ssh-service-user", default="icct-nms-ssh")
     parser.add_argument("--ssh-state-directory", default="/var/lib/icct-nms-ssh")
     parser.add_argument("--ssh-guacd-port", type=int, default=4823)
+    parser.add_argument("--trap-auth-file")
+    parser.add_argument("--trap-listener")
     args = parser.parse_args()
-    if args.application_only and (args.online or args.no_packages or args.ssh_origin):
-        parser.error("--application-only cannot be combined with package options.")
+    if args.application_only and (
+        args.online or args.no_packages or args.ssh_origin or args.trap_auth_file or args.trap_listener
+    ):
+        parser.error("--application-only cannot be combined with package or service options.")
     directory = Path(__file__).resolve().parent
     manifest = verify_release(directory)
     root = Path(args.cacti_root).resolve()
@@ -176,6 +180,9 @@ def main():
     spec.loader.exec_module(setup)
     setup.check_python_runtime()
     target = setup.os_info()
+    trap_auth = None
+    if args.trap_auth_file or args.trap_listener:
+        trap_auth = setup.validate_trap_settings(args.trap_auth_file, args.trap_listener, target)
     if args.application_only:
         pass
     elif manifest["target"]:
@@ -196,6 +203,15 @@ def main():
             if observed != component:
                 raise ValueError("Package component does not match release directory.")
     components = manifest.get("native_components", [])
+    complete_media = manifest.get("complete_media", False)
+    if complete_media and not args.application_only:
+        expected = {
+            name for name in setup.MANIFEST["optional_components"]
+            if setup.component_packages(target, name)
+        }
+        if (not manifest["target"] or set(package_components) != expected
+                or set(components) != {"guacamole-strict", "pathchar"}):
+            raise ValueError("Complete media requires all package profiles and both native bundles.")
     if components and not args.application_only:
         native_spec = importlib.util.spec_from_file_location(
             "icct_release_native", directory / "icct_nms/installation/cli/native.py"
@@ -217,6 +233,9 @@ def main():
         "target": target,
         "offline": not args.online,
         "package_components": package_components,
+        "native_components": components,
+        "offline_packages_runner": complete_media and target["family"] == "rhel" and not args.application_only,
+        "trap_listener": args.trap_listener,
         "source_files": sum(name.startswith("icct_nms/") for name in manifest["files"]),
     }
     if args.ssh_origin:
@@ -276,6 +295,8 @@ def main():
             "--ssh-guacd-port",
             str(args.ssh_guacd_port),
         ]
+    if trap_auth:
+        command += ["--trap-auth-file", str(trap_auth), "--trap-listener", args.trap_listener]
     for name in ["web_user", "web_group"]:
         if getattr(args, name):
             command.extend(["--" + name.replace("_", "-"), getattr(args, name)])
@@ -289,6 +310,12 @@ def main():
         flush=True,
     )
     subprocess.run(command, check=True)
+    if plan["offline_packages_runner"]:
+        runner = [sys.executable, str(destination / "installation/cli/package_runner.py"), "provision",
+                  "--cacti-root", str(root), "--web-user", args.web_user or "apache", "--media", str(directory)]
+        if args.web_group:
+            runner += ["--web-group", args.web_group]
+        subprocess.run(runner, check=True)
 
 
 if __name__ == "__main__":

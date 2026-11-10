@@ -77,3 +77,22 @@ if (
     throw new RuntimeException('Discovery or legacy state failed');
 }
 echo "Field-level preset inheritance, device isolation, reset to defaults and secret exclusion passed.\n";
+
+icct_nms_protocol_record_overrides(11, 'discovery', [
+    'discovery_protocol' => 'cdp',
+    'discovery_timing_source' => '0',
+    'interval_seconds' => '300',
+    'stale_seconds' => '1000',
+    'refresh_seconds' => '30',
+]);
+if ($meta['device_discovery_preset_11'] !== 'lldp' || icct_nms_protocol_device_overrides(11)['cdp'] !== null) {
+    throw new RuntimeException('A mirrored discovery form replaced the timing owner.');
+}
+
+$defaults['ssh']['username'] = '001';
+$meta['protocol_defaults'] = json_encode($defaults);
+icct_nms_protocol_record_overrides(11, 'ssh', ['username' => '1', 'port' => '023', 'monitoring' => '1']);
+if (icct_nms_protocol_device_overrides(11)['ssh'] !== ['username']) {
+    throw new RuntimeException('Text usernames must compare exactly while numeric ports may normalize.');
+}
+echo "Discovery timing ownership and exact comparison of text fields passed.\n";

@@ -88,11 +88,15 @@ function icct_nms_schema_install()
             );
         }
     }
-    if (
-        !db_fetch_cell("SHOW INDEX FROM plugin_icct_nms_syslog_events WHERE Key_name='fault_key'")
-    ) {
+    $eventAlarmIndex = db_fetch_row("SHOW INDEX FROM plugin_icct_nms_syslog_events WHERE Key_name='fault_key'");
+    if (!$eventAlarmIndex || (int) $eventAlarmIndex['Non_unique'] === 0) {
+        // Trap notifications have no Syslog facility or severity. Grouped alarms may link several events.
+        $drop = $eventAlarmIndex ? 'DROP INDEX fault_key, ' : '';
         icct_nms_schema_execute(
-            'ALTER TABLE plugin_icct_nms_syslog_events ADD UNIQUE KEY fault_key(alarm_key)',
+            'ALTER TABLE plugin_icct_nms_syslog_events ' . $drop . 'ADD KEY fault_key(alarm_key), ' .
+                'MODIFY facility_code TINYINT UNSIGNED NULL, MODIFY facility VARCHAR(32) NULL, ' .
+                'MODIFY severity_code TINYINT UNSIGNED NULL, MODIFY severity VARCHAR(16) NULL, ' .
+                'MODIFY nms_severity VARCHAR(16) NULL',
         );
     }
     if (!db_fetch_cell("SHOW COLUMNS FROM plugin_icct_nms_alarms LIKE 'graph_id'")) {

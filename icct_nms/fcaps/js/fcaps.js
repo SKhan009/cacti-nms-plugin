@@ -10,8 +10,14 @@
     const navigation = document.querySelector('#fault-alarm-navigation'),
         empty = document.querySelector('#fault-alarm-empty');
     const oidSection = document.querySelector('#fault-oid-section'),
-        oidNavigation = document.querySelector('#fault-oid-navigation');
+        oidNavigation = document.querySelector('#fault-oid-navigation'),
+        mibNavigation = document.querySelector('#fault-mib-navigation');
     const sourceRadios = [...document.querySelectorAll('.fault-source-options input')];
+    const passiveForm = document.querySelector('#passive-fault-form');
+    const netflowSummary = document.querySelector('#fault-netflow-summary');
+    const netflowActions = [...document.querySelectorAll('[data-netflow-action]')];
+    const snmpRuleType = document.querySelector('#snmp-fault-rule-type');
+    const snmpRuleRadios = [...document.querySelectorAll('[name="snmp_fault_view"]')];
     const ntpSection = document.querySelector('#fault-ntp-section'),
         ntpNavigation = document.querySelector('#fault-ntp-navigation'),
         mibPicker = document.querySelector('#fault-mib-presets');
@@ -27,7 +33,165 @@
 
     let selectedSource = saved[0]?.source || 'rrd',
         selectedRow = null;
+    let discardTrapDraft = () => {};
     const graphSection = document.querySelector('#fault-graph-section');
+    const alarmList = document.querySelector('#fault-saved-alarm-list');
+    const repositoryEdit = document.querySelector('#fault-mib-repository-edit');
+    let selectedRepositoryItem = null;
+    let savedPollingCounts = countRulesByOid(saved, 'snmp');
+    function oidKey(oid) {
+        return (oid || '').trim().replace(/^\.+/, '');
+    }
+    function countRulesByOid(rules, source) {
+        const counts = new Map();
+        for (const rule of rules) {
+            if (rule.source !== source) continue;
+            const oid = oidKey(rule.oid);
+            if (oid) counts.set(oid, (counts.get(oid) || 0) + 1);
+        }
+        return counts;
+    }
+    function showOidRuleCount(badge, counts, oid) {
+        const count = counts.get(oidKey(oid)) || 0;
+        badge.textContent = `${count} saved`;
+        badge.title = `${count} saved ${count === 1 ? 'rule' : 'rules'}`;
+    }
+    function renderAlarmList(container, entries, passive, edit) {
+        if (!container) return;
+        container.replaceChildren();
+        for (const row of entries) {
+            const field = (key) => row.querySelector(passive ? `[data-field="${key}"]` : `[data-${key}]`);
+            const name = field('name').value.trim() || 'Untitled alarm';
+            const entry = document.createElement('li');
+            const text = document.createElement('div');
+            const title = document.createElement('strong');
+            const detail = document.createElement('small');
+            title.textContent = name;
+            detail.textContent = [
+                row.dataset.alarmSaved ? 'Saved' : 'Draft',
+                row.dataset.presetKey ? 'MIB preset' : '',
+                field('severity').value,
+                field('enabled').checked ? 'Enabled' : 'Disabled',
+            ].filter(Boolean).join(' · ');
+            text.append(title, detail);
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'icon-button fault-alarm-edit';
+            button.innerHTML = '<svg class="icct-edit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5L8 21l-5 1 1-5ZM14 5l5 5"/></svg>';
+            button.setAttribute('aria-label', `Edit ${name}`);
+            button.title = `Edit ${name}`;
+            button.addEventListener('click', () => {
+                edit(row);
+                const nameField = field('name');
+                nameField.focus({ preventScroll: true });
+                nameField.scrollIntoView({ block: 'center' });
+            });
+            entry.append(text, button);
+            container.append(entry);
+        }
+        if (!entries.length) {
+            const message = document.createElement('li');
+            message.textContent = 'No alarm rules for this source.';
+            container.append(message);
+        }
+    }
+    const netflowForm = document.querySelector('#netflow-fault-form');
+    if (netflowForm) {
+        const choices = [...netflowForm.querySelectorAll('[data-netflow-metric]')];
+        const labels = new Map(choices.map((choice) => [choice.dataset.netflowMetric, choice.dataset.metricLabel]));
+        const editors = netflowForm.querySelector('[data-netflow-rule-editors]');
+        const template = netflowForm.querySelector('[data-netflow-rule-template]');
+        const list = netflowForm.querySelector('[data-netflow-rule-list]');
+        const empty = netflowForm.querySelector('[data-netflow-rule-empty]');
+        const stored = netflowForm.elements.netflow_rules;
+        const add = document.querySelector('#add-netflow-fault');
+        let metric = choices[0].dataset.netflowMetric;
+        let selected = null;
+        const field = (row, key) => row.querySelector(`[data-field="${key}"]`);
+        const fields = (row) => [...row.querySelectorAll('[data-field]')];
+        function render() {
+            const rows = [...editors.children];
+            choices.forEach((choice) => {
+                const key = choice.dataset.netflowMetric;
+                choice.setAttribute('aria-pressed', String(key === metric));
+                const count = rows.filter((row) => row.dataset.alarmSaved && row.dataset.ruleMetric === key).length;
+                const detail = choice.querySelector('[data-netflow-rule-count]');
+                detail.textContent = `${detail.dataset.unit} · ${count} saved`;
+            });
+            rows.forEach((row) => (row.hidden = row !== selected));
+            empty.hidden = Boolean(selected);
+            list.hidden = rows.length === 0;
+            add.disabled = rows.length >= 20;
+            renderAlarmList(list, rows, true, (row) => {
+                selected = row;
+                metric = row.dataset.ruleMetric;
+                render();
+            });
+        }
+        function sync() {
+            stored.value = JSON.stringify([...editors.children].map((row) => ({
+                id: row.dataset.ruleId,
+                metric: row.dataset.ruleMetric,
+                ...Object.fromEntries(fields(row).map((input) => [
+                    input.dataset.field, input.type === 'checkbox' ? input.checked : input.value,
+                ])),
+            })));
+        }
+        function append(rule, saved) {
+            const row = template.content.firstElementChild.cloneNode(true);
+            row.dataset.ruleId = rule.id;
+            row.dataset.ruleMetric = rule.metric;
+            if (saved) row.dataset.alarmSaved = '1';
+            row.querySelector('[data-netflow-metric-display]').value = labels.get(rule.metric);
+            for (const input of fields(row)) {
+                const value = rule[input.dataset.field];
+                if (input.type === 'checkbox') input.checked = Boolean(value);
+                else input.value = value ?? '';
+            }
+            if (rule.metric === 'distributed_syn_rate') {
+                field(row, 'src_addr').closest('label').hidden = true;
+                field(row, 'dst_addr').setAttribute('aria-required', 'true');
+                row.querySelector('[data-netflow-destination-label]').textContent = 'Destination IP (required)';
+                row.querySelector('[data-netflow-distributed-help]').hidden = false;
+            }
+            editors.append(row);
+            return row;
+        }
+        JSON.parse(stored.value).forEach((rule) => append(rule, true));
+        choices.forEach((choice) => choice.addEventListener('click', () => {
+            metric = choice.dataset.netflowMetric;
+            selected = [...editors.children].find((row) => row.dataset.ruleMetric === metric) || null;
+            render();
+        }));
+        add.addEventListener('click', () => {
+            const id = Array.from(crypto.getRandomValues(new Uint8Array(12)), (byte) =>
+                byte.toString(16).padStart(2, '0')).join('');
+            selected = append({ id, metric, severity: 'Major', enabled: true }, false);
+            sync();
+            render();
+            field(selected, 'name').focus();
+        });
+        editors.addEventListener('input', () => {
+            sync();
+            render();
+        });
+        editors.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-netflow-rule-remove]');
+            if (!button) return;
+            selected.remove();
+            selected = null;
+            sync();
+            render();
+            add.focus();
+        });
+        netflowForm.addEventListener('icct-fault-saved', () => {
+            for (const row of editors.children) {
+                row.dataset.alarmSaved = '1';
+            }
+            render();
+        });
+        render();
+    }
     function sameMeasurement(row, target) {
         if (
             !target ||
@@ -58,9 +222,16 @@
             );
         if (preferred && matching.includes(preferred)) selectedRow = preferred;
         if (!matching.includes(selectedRow)) selectedRow = matching[0] || null;
-        sourceRadios.forEach((radio) => (radio.checked = radio.value === selectedSource));
+        if (!form.hidden) {
+            sourceRadios.forEach((radio) => (radio.checked = radio.value === selectedSource));
+            snmpRuleType.hidden = selectedSource !== 'snmp';
+            if (selectedSource === 'snmp') {
+                snmpRuleRadios.forEach((radio) => (radio.checked = radio.value === 'snmp'));
+            }
+        }
         empty.hidden = !!selectedRow;
         rows.forEach((row) => (row.hidden = !sameMeasurement(row, selectedRow)));
+        renderAlarmList(alarmList, matching, false, (row) => renderMeasurements(row));
         graphSection.hidden = selectedSource !== 'rrd';
         navigation.replaceChildren();
         if (selectedSource === 'rrd') {
@@ -172,6 +343,8 @@
     }
     function renderMibPresets() {
         if (!mibPicker) return;
+        const presetSection = document.querySelector('#fault-mib-preset-section');
+        if (presetSection) presetSection.hidden = selectedSource !== 'snmp' || !mibPresets.length;
         mibPicker.replaceChildren();
         if (!mibPresets.length) {
             const empty = document.createElement('p');
@@ -261,14 +434,180 @@
         renderMeasurements(added);
         sync();
     }
-    sourceRadios.forEach((radio) =>
-        radio.addEventListener('change', () => {
-            if (radio.checked) {
-                selectedSource = radio.value;
-                renderMeasurements();
+    function showFaultSource(source) {
+        const tab = source === 'trap' ? 'snmp' : source;
+        const passive = source === 'syslog' || source === 'trap';
+        const netflow = source === 'netflow';
+        sourceRadios.forEach((radio) => (radio.checked = radio.value === tab));
+        snmpRuleType.hidden = tab !== 'snmp';
+        if (tab === 'snmp') {
+            snmpRuleRadios.forEach((radio) => (radio.checked = radio.value === source));
+        }
+        form.hidden = passive || netflow;
+        if (netflowSummary) netflowSummary.hidden = !netflow;
+        netflowActions.forEach((action) => (action.hidden = !netflow));
+        if (passiveForm) {
+            if (source !== 'trap') discardTrapDraft();
+            passiveForm.hidden = !passive;
+            passiveForm.querySelectorAll('[data-passive-panel]').forEach((pane) => {
+                pane.hidden = pane.dataset.passivePanel !== source;
+            });
+        }
+        if (!passive && !netflow) {
+            selectedSource = source;
+            renderMeasurements();
+        }
+    }
+    sourceRadios.forEach((radio) => radio.addEventListener('change', () => {
+        if (radio.checked) {
+            const snmpView = snmpRuleRadios.find((option) => option.checked)?.value;
+            showFaultSource(radio.value === 'snmp' ? snmpView || 'snmp' : radio.value);
+        }
+    }));
+    snmpRuleRadios.forEach((radio) => radio.addEventListener('change', () => {
+        if (radio.checked) showFaultSource(radio.value);
+    }));
+    if (passiveForm) {
+        passiveForm.addEventListener('click', (event) => {
+            if (event.target.closest('label .field-info')) event.preventDefault();
+        });
+        const panes = [...passiveForm.querySelectorAll('[data-passive-panel]')];
+        const trapPane = panes.find((pane) => pane.dataset.passivePanel === 'trap');
+        const trapChoices = [...trapPane.querySelectorAll('[data-trap-choice]')];
+        function updateTrapRuleCounts(rules) {
+            const counts = countRulesByOid(rules, 'trap');
+            for (const choice of trapChoices) {
+                showOidRuleCount(choice.closest('label').querySelector('[data-trap-rule-count]'), counts, choice.value);
             }
-        }),
-    );
+        }
+        const payloadOids = JSON.parse(document.querySelector('#passive-trap-payload-oids').textContent);
+        const fields = (row) => [...row.querySelectorAll('[data-field]')];
+        const rows = (pane) => [...pane.querySelector('[data-passive-rules]').children];
+        const trapOid = (row) => row.querySelector('[data-field="oid"]').value;
+        const atRuleLimit = () => panes.flatMap(rows).length >= 100;
+        let selectedTrapOid = '';
+        let untouchedTrapDraft = null;
+        function syncPassive() {
+            trapChoices.forEach((choice) => (choice.checked = choice.value === selectedTrapOid));
+            passiveForm.elements.passive_rules.value = JSON.stringify(panes.flatMap((pane) => {
+                const entries = rows(pane);
+                if (pane === trapPane) {
+                    entries.forEach((row) => (row.hidden = trapOid(row) !== selectedTrapOid));
+                }
+                pane.querySelector('[data-passive-empty]').hidden = entries.some((row) => !row.hidden);
+                renderAlarmList(pane.querySelector('[data-passive-alarm-list]'), entries, true, (row) => {
+                    if (pane === trapPane) selectedTrapOid = trapOid(row);
+                    syncPassive();
+                });
+                return entries.map((row) => ({
+                    source: pane.dataset.passivePanel,
+                    ...Object.fromEntries(fields(row).map((field) => [
+                        field.dataset.field,
+                        field.type === 'checkbox' ? field.checked : field.value,
+                    ])),
+                }));
+            }));
+        }
+        function updateTrapPayload(row, selectedOid) {
+            const oid = row.querySelector('[data-field="oid"]')?.value;
+            const varbind = row.querySelector('[data-field="varbind"]');
+            const expected = row.querySelector('[data-field="value"]');
+            varbind.replaceChildren(new Option('Any payload', ''));
+            for (const fieldOid of payloadOids[oid] || []) {
+                varbind.add(new Option(fieldOid, fieldOid));
+            }
+            varbind.value = [...varbind.options].some((option) => option.value === selectedOid) ? selectedOid : '';
+            expected.disabled = varbind.value === '';
+            expected.required = !expected.disabled;
+            if (expected.disabled) expected.value = '';
+        }
+        function addPassive(pane, rule) {
+            const row = pane.querySelector('template').content.firstElementChild.cloneNode(true);
+            for (const field of fields(row)) {
+                if (field.type === 'checkbox') field.checked = !!rule[field.dataset.field];
+                else field.value = rule[field.dataset.field] ?? '';
+            }
+            if (pane.dataset.passivePanel === 'trap') updateTrapPayload(row, rule.varbind ?? '');
+            pane.querySelector('[data-passive-rules]').append(row);
+            row.querySelector('[data-passive-remove]').addEventListener('click', () => {
+                if (row === untouchedTrapDraft) untouchedTrapDraft = null;
+                row.remove();
+                syncPassive();
+            });
+            return row;
+        }
+        const savedPassiveRules = JSON.parse(document.querySelector('#saved-passive-rules').textContent);
+        updateTrapRuleCounts(savedPassiveRules);
+        for (const rule of savedPassiveRules) {
+            const pane = panes.find((item) => item.dataset.passivePanel === rule.source);
+            if (pane) addPassive(pane, rule).dataset.alarmSaved = '1';
+        }
+        if (rows(trapPane).length) selectedTrapOid = trapOid(rows(trapPane)[0]);
+
+        function addTrapDraft(choice) {
+            const symbol = choice.closest('label').querySelector('[data-trap-name]').textContent;
+            return addPassive(trapPane, { oid: choice.value, name: symbol.split('::').pop().slice(0, 160) });
+        }
+        discardTrapDraft = () => {
+            if (!untouchedTrapDraft) return;
+            untouchedTrapDraft.remove();
+            untouchedTrapDraft = null;
+            syncPassive();
+        };
+        trapPane.addEventListener('change', (event) => {
+            const choice = event.target;
+            if (!choice.matches('[data-trap-choice]') || !choice.checked) return;
+            if (untouchedTrapDraft && trapOid(untouchedTrapDraft) !== choice.value) {
+                discardTrapDraft();
+            }
+            selectedTrapOid = choice.value;
+            if (!atRuleLimit() && !rows(trapPane).some((row) => trapOid(row) === selectedTrapOid)) {
+                untouchedTrapDraft = addTrapDraft(choice);
+            }
+            syncPassive();
+        });
+        passiveForm.addEventListener('input', (event) => {
+            const row = event.target.closest('.passive-rule');
+            if (!row) return;
+            if (row === untouchedTrapDraft) untouchedTrapDraft = null;
+            if (event.target.dataset.field === 'varbind') {
+                updateTrapPayload(row, row.querySelector('[data-field="varbind"]').value);
+            }
+            syncPassive();
+        });
+        panel.querySelector('[data-passive-add]').addEventListener('click', () => {
+            const pane = panes.find((item) => !item.hidden);
+            if (!pane || atRuleLimit()) return;
+            const choice = trapChoices.find((item) => item.checked);
+            if (pane === trapPane && !choice) {
+                trapChoices[0]?.focus();
+                return;
+            }
+            const row = pane === trapPane
+                ? (untouchedTrapDraft && trapOid(untouchedTrapDraft) === choice.value
+                    ? untouchedTrapDraft : addTrapDraft(choice))
+                : addPassive(pane, { enabled: true });
+            syncPassive();
+            row.querySelector('[data-field="name"]').focus();
+        });
+        passiveForm.addEventListener('invalid', (event) => {
+            // Keep the first invalid rule visible when the wizard checks multiple source panels.
+            if (event.target !== passiveForm.querySelector(':invalid:not(fieldset)')) return;
+            const source = event.target.closest('[data-passive-panel]')?.dataset.passivePanel;
+            if (source === 'trap') {
+                selectedTrapOid = trapOid(event.target.closest('.passive-rule'));
+                syncPassive();
+            }
+            if (source) showFaultSource(source);
+        }, true);
+        passiveForm.addEventListener('icct-fault-saved', (event) => {
+            updateTrapRuleCounts(JSON.parse(event.detail));
+            if (passiveForm.elements.passive_rules.value !== event.detail) return;
+            panes.flatMap(rows).forEach((row) => (row.dataset.alarmSaved = '1'));
+            syncPassive();
+        });
+        syncPassive();
+    }
     let validationRow = null;
     form.addEventListener(
         'invalid',
@@ -276,7 +615,7 @@
             const row = event.target.closest('.fault-rule');
             if (row && !validationRow) {
                 validationRow = row;
-                selectedSource = row.querySelector('[data-source]').value;
+                showFaultSource(row.querySelector('[data-source]').value);
                 renderMeasurements(row);
                 queueMicrotask(() => (validationRow = null));
             }
@@ -299,43 +638,78 @@
     function renderOids() {
         oidSection.hidden = selectedSource !== 'snmp';
         oidNavigation.replaceChildren();
+        mibNavigation?.replaceChildren();
+        if (repositoryEdit) repositoryEdit.hidden = true;
         if (selectedSource !== 'snmp') return;
-        const type = document.querySelector('#device-form [name=device_type]')?.value || '',
-            seen = new Set();
-        const available = [...parameters];
+        const type = document.querySelector('#device-form [name=device_type]')?.value || '';
+        const repository = parameters.filter((item) => item.repository);
+        if (repositoryEdit) {
+            const selectedOid = selectedRow?.querySelector('[data-oid]').value;
+            const item = selectedRepositoryItem?.oid === selectedOid
+                ? selectedRepositoryItem
+                : repository.find((candidate) => candidate.oid === selectedOid);
+            if (item) {
+                repositoryEdit.href = item.repository_url;
+                repositoryEdit.hidden = false;
+            }
+        }
+        const available = parameters.filter(
+            (item) => !item.repository && (!item.type_id || String(item.type_id) === type),
+        );
         for (const row of list.children)
             if (row.querySelector('[data-source]').value === 'snmp') {
                 const oid = row.querySelector('[data-oid]').value;
-                if (oid && !available.some((item) => item.oid === oid))
-                    available.push({
-                        oid,
-                        parameter: row.querySelector('[data-parameter]').value || oid,
-                        type_id: '',
-                    });
+                if (oid && !available.some((item) => item.oid === oid) && !repository.some((item) => item.oid === oid))
+                    available.push({ oid, parameter: row.querySelector('[data-parameter]').value || oid });
             }
-        available.forEach((item, index) => {
-            if ((item.type_id && String(item.type_id) !== type) || seen.has(item.oid)) return;
-            seen.add(item.oid);
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'fault-oid-link';
-            const title = document.createElement('span');
-            title.textContent = item.parameter;
-            const oid = document.createElement('small');
-            oid.textContent = item.oid;
-            button.append(title, oid);
-            button.setAttribute(
-                'aria-pressed',
-                selectedRow?.querySelector('[data-oid]').value === item.oid ? 'true' : 'false',
-            );
-            button.addEventListener('click', () => selectMeasurement({ ...item, source: 'snmp' }));
-            oidNavigation.append(button);
-        });
-        if (!seen.size) {
-            const message = document.createElement('p');
-            message.className = 'fault-oid-empty';
-            message.textContent = 'No known OIDs for this device.';
-            oidNavigation.append(message);
+        for (const [navigation, items, emptyText] of [
+            [oidNavigation, available, 'No known OIDs for this device.'],
+            [mibNavigation, repository, 'No numeric scalar OIDs in the MIB Repository.'],
+        ]) {
+            if (!navigation) continue;
+            const seen = new Set();
+            for (const item of items) {
+                const key = item.repository ? `${item.repository_url}#${item.oid}` : item.oid;
+                if (seen.has(key)) continue;
+                seen.add(key);
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'fault-oid-link';
+                const heading = document.createElement('span');
+                heading.className = 'fault-oid-heading';
+                const title = document.createElement('span');
+                title.textContent = item.repository ? item.label : item.parameter;
+                const badge = document.createElement('span');
+                badge.className = 'fault-oid-rule-count';
+                showOidRuleCount(badge, savedPollingCounts, item.oid);
+                heading.append(title, badge);
+                const oid = document.createElement('small');
+                oid.textContent = item.oid;
+                button.append(heading, oid);
+                button.setAttribute(
+                    'aria-pressed',
+                    selectedRow?.querySelector('[data-oid]').value === item.oid ? 'true' : 'false',
+                );
+                button.addEventListener('click', () => {
+                    selectedRepositoryItem = item.repository ? item : null;
+                    selectMeasurement({ ...item, source: 'snmp' });
+                });
+                if (!item.repository) {
+                    navigation.append(button);
+                    continue;
+                }
+                const status = document.createElement('small');
+                const presets = item.repository_faults || [];
+                status.textContent = presets.length ? `MIB presets · ${presets.join(', ')}` : 'No MIB preset';
+                button.append(status);
+                navigation.append(button);
+            }
+            if (!seen.size) {
+                const message = document.createElement('p');
+                message.className = 'fault-oid-empty';
+                message.textContent = emptyText;
+                navigation.append(message);
+            }
         }
     }
     document
@@ -439,6 +813,7 @@
         const row = document.createElement('div');
         row.className = 'fault-rule';
         row.dataset.presetKey = rule.preset_key || '';
+        if (index >= 0) row.dataset.alarmSaved = '1';
         row.dataset.presetDescription = rule.description || '';
         const name = field(row, 'Alarm Name', 'text', 'name');
         name.maxLength = 120;
@@ -519,7 +894,6 @@
             option(severity, value, value),
         );
         severity.value = rule.severity || '';
-        icctBindSeveritySelect(severity);
         minimum.value = rule.minimum ?? '';
         maximum.value = rule.maximum ?? '';
         option(template, '', 'Select associated template');
@@ -594,7 +968,9 @@
             picker.replaceChildren();
             option(picker, '', 'Manual OID');
             parameters.forEach((item, i) => {
-                if (!item.type_id || String(item.type_id) === type) option(picker, i, item.label);
+                if (item.repository || !item.type_id || String(item.type_id) === type || item.oid === oid.value) {
+                    option(picker, i, item.label);
+                }
             });
             picker.value = [...picker.options].some((o) => o.value === previous) ? previous : '';
         }
@@ -794,8 +1170,6 @@
             sync();
         });
         condition.addEventListener('change', () => conditionFields(true));
-        const enabled = field(row, 'Enabled', 'checkbox', 'enabled');
-        enabled.checked = rule.enabled ?? true;
         const description = field(row, 'Description', 'textarea', 'description');
         description.rows = 3;
         description.maxLength = 1000;
@@ -826,7 +1200,12 @@
             sync();
             renderMeasurements();
         });
-        row.append(remove);
+        const actions = document.createElement('div');
+        actions.className = 'fault-rule-actions';
+        const enabled = field(actions, 'Enabled', 'checkbox', 'enabled');
+        enabled.checked = rule.enabled ?? true;
+        actions.append(remove);
+        row.append(actions);
         row.addEventListener('input', () => {
             sync();
             renderMeasurements();
@@ -840,6 +1219,15 @@
         if (source.value === 'snmp' && oid.value) readParameter();
     }
     saved.forEach((rule, index) => addRule(rule, index));
+    form.addEventListener('icct-fault-saved', (event) => {
+        savedPollingCounts = countRulesByOid(JSON.parse(event.detail), 'snmp');
+        if (hidden.value !== event.detail) {
+            renderOids();
+            return;
+        }
+        [...list.children].forEach((row) => (row.dataset.alarmSaved = '1'));
+        renderMeasurements();
+    });
     sync();
     renderMeasurements();
     document.querySelector('#add-fault-rule').addEventListener('click', () => {

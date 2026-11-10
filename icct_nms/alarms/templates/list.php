@@ -37,7 +37,6 @@
             <span>Severity</span>
             <select
                 name="severity"
-                data-severity-control
                 aria-label="Severity levels">
                 <option value="">All</option>
                 <?php foreach (
@@ -81,7 +80,7 @@
                     <span>Event source</span>
                     <select name="source">
                         <option value="">All</option>
-                        <?php foreach (['Syslog', 'SNMP', 'NTP', 'NetFlow', 'Cacti', 'Port', 'Availability'] as $source): ?>
+                        <?php foreach (['Syslog', 'SNMP Traps', 'Passive events', 'SNMP', 'NTP', 'NetFlow', 'Cacti', 'Port', 'Availability'] as $source): ?>
                             <option><?= $source ?></option>
                         <?php endforeach; ?>
                     </select>

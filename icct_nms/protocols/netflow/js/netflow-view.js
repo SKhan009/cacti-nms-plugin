@@ -1,13 +1,21 @@
 (() => {
     'use strict';
-    const form = document.querySelector('#netflow-filters');
-    if (!form) return;
-    const section = document.querySelector('#view-netflow'),
-        feedback = document.querySelector('#netflow-feedback');
+    const section = document.querySelector('#view-netflow');
+    if (!section) return;
+    const feedback = section.querySelector('#netflow-feedback'),
+        tabs = [...section.querySelectorAll('[role="tab"]')],
+        forms = [...section.querySelectorAll('[data-netflow-view]')],
+        applied = new Map(forms.map((form) => [form.dataset.netflowView, new URLSearchParams(new FormData(form))]));
+    const linkedFinding = section.querySelector('#netflow-linked-finding');
+    const linkedAlarm = new URLSearchParams(location.search).get('netflow_alarm');
+    if (/^[a-f0-9]{64}$/.test(linkedAlarm || '')) {
+        applied.get('anomalies').set('netflow_alarm', linkedAlarm);
+        linkedFinding.hidden = false;
+    }
     let page = 1,
         busy = false,
         pending = false,
-        applied = new URLSearchParams(new FormData(form));
+        activeView = 'overview';
     const make = (tag, text = '', cls = '') => {
         const n = document.createElement(tag);
         n.textContent = text;
@@ -142,7 +150,7 @@
             'netflow-health ' + (data.health === 'Receiving' ? 'online' : '');
         const a = data.assignment;
         document.querySelector('#netflow-configuration').textContent = a
-            ? 'Exporter ' +
+            ? (data.loopback_exporter ? 'Local loopback exporter ' : 'Exporter ') +
               a.exporter_address +
               ' → ' +
               a.collector +
@@ -152,6 +160,23 @@
               (Number(a.version) === 10 ? 'IPFIX' : 'NetFlow v' + a.version)
             : 'Configure NetFlow under Protocol Config to associate this device with an exporter.';
         feedback.textContent = data.error || '';
+        if (activeView === 'overview') renderOverview(data);
+        if (activeView === 'breakdown') renderBreakdown(data);
+        if (activeView === 'records') renderRecords(data);
+        if (activeView === 'anomalies') renderAnomalies(data);
+    }
+    function renderOverview(data) {
+        const live = data.live_readings;
+        const liveStatus = document.querySelector('#netflow-live-status');
+        const liveMessage = live?.flows
+            ? 'Last 5 minutes · ' + number(live.flows) + ' flow records · Latest observation ' + date(live.latest_epoch) + ' IST'
+            : 'No flow records in the last 5 minutes.';
+        if (liveStatus.textContent !== liveMessage) liveStatus.textContent = liveMessage;
+        section.querySelectorAll('[data-netflow-live]').forEach((reading) => {
+            const value = numeric(live?.values?.[reading.dataset.netflowLive]);
+            reading.textContent = value === null ? '—' :
+                value.toLocaleString('en-IN', { maximumFractionDigits: 6 }) + ' ' + reading.dataset.unit;
+        });
         const totals = document.querySelector('#netflow-totals');
         totals.replaceChildren();
         const hasReadings = numeric(data.totals.flows) !== null && Number(data.totals.flows) > 0;
@@ -169,6 +194,8 @@
             Number(data.chart_interval) / 60 +
             '-minute average throughput from exported flow records.';
         drawChart(data.chart, data.chart_interval);
+    }
+    function renderBreakdown(data) {
         const rankings = document.querySelector('#netflow-rankings');
         rankings.replaceChildren();
         for (const [key, label] of [
@@ -208,6 +235,8 @@
             panel.append(table);
             rankings.append(panel);
         }
+    }
+    function renderRecords(data) {
         const records = document.querySelector('#netflow-records');
         records.replaceChildren();
         for (const r of data.rows) {
@@ -251,6 +280,8 @@
             : '0 items';
         document.querySelector('#netflow-prev').disabled = page === 1;
         document.querySelector('#netflow-next').disabled = page === data.pages;
+    }
+    function renderAnomalies(data) {
         const events = document.querySelector('#netflow-events');
         events.replaceChildren();
         for (const r of data.events) {
@@ -259,21 +290,39 @@
             icctSetSeverity(sev, r.severity);
             const td = cell('');
             td.append(sev);
+            const alarm = cell(r.alarm_key ? '' : '—');
+            if (r.alarm_key) {
+                const link = make('a', 'View alarm');
+                link.href = 'alarms/controllers/alarms.php?view=' + encodeURIComponent(r.alarm_key);
+                alarm.append(link);
+            }
             tr.append(
                 cell(date(r.opened_epoch), date(r.updated_epoch)),
                 td,
                 cell(r.state),
                 cell(r.message),
+                alarm,
             );
             events.append(tr);
         }
         if (!events.children.length) {
+            let message = 'No recorded anomalies match the selected filters.';
+            if (!applied.get('anomalies').has('netflow_alarm')) {
+                if (!data.assignment) message = 'No exporter is configured for this device. Add one in Protocol Config to start checking for anomalies.';
+                else if (data.health === 'Waiting for flows' && !data.totals?.flows)
+                    message = 'Waiting for flow records. Anomalies appear when collected traffic matches a rule.';
+            }
             const tr = make('tr'),
-                td = cell('No recorded anomalies in this time range.');
-            td.colSpan = 4;
+                td = cell(message);
+            td.colSpan = 5;
             tr.append(td);
             events.append(tr);
         }
+    }
+    function filterQuery(filters) {
+        const query = new URLSearchParams(filters);
+        query.set('id', forms[0].dataset.deviceId);
+        return query;
     }
     async function load() {
         if (busy) {
@@ -281,12 +330,17 @@
             return;
         }
         busy = true;
-        const query = new URLSearchParams(applied);
-        query.set('id', form.dataset.deviceId);
-        query.set('page', String(page));
-        query.set('size', document.querySelector('#netflow-size').value);
-        document.querySelector('#netflow-export').href =
-            'protocols/netflow/controllers/netflow.php?' + query.toString() + '&export=1';
+        const view = activeView;
+        const filters = applied.get(view);
+        const requestedPage = page;
+        const isCurrent = () => activeView === view && applied.get(view) === filters &&
+            (view !== 'records' || page === requestedPage);
+        const query = filterQuery(filters);
+        if (view === 'overview') query.set('live', '1');
+        if (view === 'records') {
+            query.set('page', String(requestedPage));
+            query.set('size', document.querySelector('#netflow-size').value);
+        }
         try {
             const response = await fetch('protocols/netflow/controllers/netflow.php?' + query, {
                 credentials: 'same-origin',
@@ -298,9 +352,9 @@
                 throw Error('Session expired. Reload and sign in.');
             const result = await response.json();
             if (!response.ok) throw Error(result.error || 'Unable to load readings.');
-            render(result);
+            if (isCurrent()) render(result);
         } catch (e) {
-            feedback.textContent = e.message;
+            if (isCurrent()) feedback.textContent = e.message;
         } finally {
             busy = false;
             if (pending) {
@@ -309,18 +363,90 @@
             }
         }
     }
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        applied = new URLSearchParams(new FormData(form));
-        page = 1;
-        load();
-    });
-    form.addEventListener('reset', () => {
-        setTimeout(() => {
-            applied = new URLSearchParams(new FormData(form));
+    function showCustomDates(form) {
+        const custom = form.elements.hours.value === 'custom';
+        form.querySelectorAll('[data-netflow-custom-date]').forEach((label) => {
+            label.hidden = !custom;
+            const input = label.querySelector('input');
+            input.disabled = !custom;
+            input.required = custom;
+        });
+    }
+    function applyFilters(form, reset) {
+        if (!form.checkValidity()) return;
+        const view = form.dataset.netflowView;
+        const filters = new URLSearchParams(new FormData(form));
+        if (filters.get('hours') === 'custom') filters.delete('hours');
+        const previous = applied.get(view);
+        if (previous.has('netflow_alarm')) {
+            if (reset) {
+                const url = new URL(location.href);
+                url.searchParams.delete('netflow_alarm');
+                history.replaceState(history.state, '', url);
+                linkedFinding.hidden = true;
+            } else {
+                filters.set('netflow_alarm', previous.get('netflow_alarm'));
+            }
+        }
+        if (!reset && filters.toString() === previous.toString()) return;
+        applied.set(view, filters);
+        if (view === 'records') {
             page = 1;
+            document.querySelector('#netflow-export').href =
+                'protocols/netflow/controllers/netflow.php?' + filterQuery(filters) + '&export=1';
+        }
+        if (view === 'breakdown') {
+            document.querySelector('#netflow-breakdown-export').href =
+                'protocols/netflow/controllers/netflow.php?' + filterQuery(filters) + '&export=breakdown';
+        }
+        if (activeView === view) load();
+    }
+    forms.forEach((form) => {
+        let inputTimer;
+        const apply = (reset = false) => {
+            clearTimeout(inputTimer);
+            showCustomDates(form);
+            applyFilters(form, reset);
+        };
+        showCustomDates(form);
+        form.addEventListener('change', () => apply());
+        form.addEventListener('input', (event) => {
+            if (!event.target.matches('input[type="text"], input:not([type]), input[type="number"]')) return;
+            clearTimeout(inputTimer);
+            inputTimer = setTimeout(apply, 350);
+        });
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            apply();
+        });
+        form.addEventListener('reset', () => {
+            clearTimeout(inputTimer);
+            setTimeout(() => apply(true), 0);
+        });
+    });
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => {
+            activeView = forms[index].dataset.netflowView;
+            tabs.forEach((button, i) => {
+                button.setAttribute('aria-selected', String(i === index));
+                button.tabIndex = i === index ? 0 : -1;
+                forms[i].closest('[role="tabpanel"]').hidden = i !== index;
+            });
+            feedback.textContent = '';
             load();
-        }, 0);
+        });
+        tab.addEventListener('keydown', (event) => {
+            const next = {
+                ArrowLeft: (index + tabs.length - 1) % tabs.length,
+                ArrowRight: (index + 1) % tabs.length,
+                Home: 0,
+                End: tabs.length - 1,
+            }[event.key];
+            if (next === undefined) return;
+            event.preventDefault();
+            tabs[next].focus();
+            tabs[next].click();
+        });
     });
     document.querySelector('#netflow-size').addEventListener('change', () => {
         page = 1;
@@ -345,5 +471,11 @@
     setInterval(() => {
         if (!section.hidden && !document.hidden) load();
     }, 30000);
-    if (location.hash === '#view-netflow') load();
+    if (location.hash === '#view-netflow') {
+        if (applied.get('anomalies').has('netflow_alarm')) {
+            tabs[forms.findIndex((form) => form.dataset.netflowView === 'anomalies')].click();
+        } else {
+            load();
+        }
+    }
 })();

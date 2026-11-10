@@ -57,8 +57,8 @@ function db_fetch_assoc_prepared($sql, $args)
 }
 function db_fetch_cell_prepared($sql, $args)
 {
-    if (str_starts_with($args[0] ?? '', 'fault_rules_')) {
-        return '[]';
+    if (str_contains($sql, 'SELECT meta_value FROM plugin_icct_nms_meta')) {
+        return $GLOBALS['records'][$args[0]] ?? null;
     }
 
     return str_contains($sql, 'GET_LOCK') || str_contains($sql, 'RELEASE_LOCK') ? 1 : 'tester';
@@ -72,6 +72,14 @@ function icct_backend_serial_assignment($id)
     return [];
 }
 function icct_backend_syslog_assignment($id)
+{
+    return [];
+}
+function icct_nms_trap_sender($id)
+{
+    return '';
+}
+function icct_nms_passive_fault_rules($id)
 {
     return [];
 }
@@ -108,6 +116,13 @@ verify(
     $first['snapshot']['netflow.collector'] === '192.0.2.10' &&
         $first['snapshot']['netflow.version'] === '9',
     'NetFlow settings are included in configuration history',
+);
+$records['netflow_fault_rules_1'] = '[{"name":"Test bandwidth"}]';
+icct_nms_configuration_record(1, 'netflow_faults');
+$savedRule = json_decode($records['configuration_latest_1'], true);
+verify(
+    $savedRule['changes']['fault.netflow_rules']['after'] === $records['netflow_fault_rules_1'],
+    'Custom NetFlow rules are included in configuration history',
 );
 verify(
     !isset($first['snapshot']['device.snmp_community']),

@@ -1,0 +1,217 @@
+.installation-checks > .titlebar {
+    height: auto;
+    min-height: 80px;
+    gap: 1rem;
+    border-bottom: 1px solid #ddd;
+}
+
+.installation-checks > .titlebar p {
+    color: #525252;
+    margin: 0 0 .5rem;
+}
+
+.installation-tabs {
+    display: flex;
+    border-bottom: 1px solid #ddd;
+}
+
+.installation-tabs a {
+    padding: .9rem 1.2rem;
+    border-bottom: 2px solid transparent;
+    color: inherit;
+    text-decoration: none;
+}
+
+.installation-tabs a[aria-current] {
+    border-bottom-color: #0f62fe;
+    color: #0f62fe;
+    font-weight: 600;
+}
+
+.installation-table-wrap {
+    margin-top: 1rem;
+    overflow-x: auto;
+}
+
+.installation-table {
+    min-width: 600px;
+}
+
+.icct-inventory table.installation-table > tbody > tr > td {
+    vertical-align: middle;
+}
+
+.installation-table .device-status {
+    white-space: nowrap;
+}
+
+.installation-packages {
+    padding: 0 1rem 1rem;
+}
+
+.installation-package-actions,
+.installation-package-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+
+.installation-package-toolbar {
+    align-items: center;
+    justify-content: space-between;
+    margin-block: 1rem;
+}
+
+.installation-package-toolbar p {
+    margin: 0;
+}
+
+.installation-packages .installation-table {
+    min-width: 860px;
+}
+
+.installation-version-note {
+    color: #525252;
+}
+
+.installation-packages summary {
+    width: fit-content;
+    cursor: pointer;
+}
+
+.installation-profile-toggle {
+    position: relative;
+    display: grid;
+    gap: .2rem;
+    width: 100%;
+    padding: .35rem .4rem .35rem 1.65rem;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.installation-profile-toggle::before {
+    position: absolute;
+    top: .72rem;
+    left: .45rem;
+    width: .48rem;
+    height: .48rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    content: "";
+}
+
+.installation-profile-toggle[aria-expanded="true"]::before {
+    transform: rotate(45deg);
+}
+
+.installation-profile-toggle:hover,
+.installation-profile-toggle[aria-expanded="true"] {
+    color: #0f62fe;
+}
+
+.installation-profile-toggle:focus-visible {
+    outline: 2px solid #0f62fe;
+    outline-offset: 2px;
+}
+
+.icct-inventory table.installation-table > tbody > .installation-profile-details > td {
+    background: #fff !important;
+}
+
+.icct-inventory table.installation-rpms {
+    width: 100%;
+    margin: 0;
+    background: #fff;
+    border-collapse: collapse;
+    table-layout: auto;
+}
+
+.icct-inventory table.installation-rpms :is(th, td) {
+    padding: .65rem .75rem;
+    text-align: left;
+    vertical-align: middle;
+    overflow-wrap: anywhere;
+}
+
+.installation-rpms .installation-package-actions {
+    flex-wrap: nowrap;
+}
+
+.icct-inventory table.installation-rpms .button {
+    width: auto;
+    min-width: max-content;
+    min-height: 2rem;
+    padding: .25rem .65rem;
+}
+
+.installation-runner-dialog {
+    width: min(44rem, calc(100% - 2rem));
+    max-height: calc(100vh - 2rem);
+    padding: 0;
+    border: 0;
+}
+
+.installation-runner-header,
+.installation-runner-dialog .message-actions {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: 1rem 1.25rem;
+    background: #f4f4f4;
+}
+
+.installation-runner-header {
+    justify-content: space-between;
+}
+
+.installation-runner-header h2 {
+    margin: 0;
+}
+
+.installation-runner-body {
+    max-height: min(55vh, 28rem);
+    padding: 1rem 1.25rem;
+    overflow: auto;
+    overflow-wrap: anywhere;
+}
+
+.installation-runner-body > p {
+    margin-top: 0;
+}
+
+.installation-runner-body [data-status="failed"] {
+    color: #a2191f;
+    font-weight: 600;
+}
+
+.installation-runner-body [data-status="complete"] {
+    color: #12672a;
+}
+
+.installation-runner-dialog [data-package-confirm][data-destructive] {
+    background: #a2191f;
+    color: #fff;
+}
+
+.installation-runner-dialog progress {
+    width: 100%;
+    height: .7rem;
+    accent-color: #0f62fe;
+}
+
+.installation-runner-dialog progress[data-status="complete"] {
+    accent-color: #198038;
+}
+
+.installation-runner-log {
+    margin-top: .75rem;
+}
+
+.installation-runner-dialog li {
+    margin: .45rem 0;
+}

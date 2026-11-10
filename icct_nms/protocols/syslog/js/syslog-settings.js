@@ -29,6 +29,13 @@
         hidden.addEventListener('input', render);
         render();
     });
+    document.querySelectorAll('[data-syslog-history-severity]').forEach((menu) => {
+        const summary = menu.querySelector('#syslog-severity-summary');
+        menu.addEventListener('change', () => {
+            const count = menu.querySelectorAll('input:checked').length;
+            summary.textContent = count ? `${count} selected` : 'All severities';
+        });
+    });
     menus.forEach((menu) => {
         menu.querySelector('summary').addEventListener('click', () => {
             if (!menu.open)

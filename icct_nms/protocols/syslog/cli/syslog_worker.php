@@ -8,13 +8,15 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../../../../../include/cli_check.php';
 require_once __DIR__ . '/../../../shared/services/bootstrap.php';
 require_once __DIR__ . '/../services/syslog_faults.php';
-$options = getopt('', ['file:', 'once', 'follow', 'sleep::']);
+$options = getopt('', ['file:', 'traps', 'once', 'follow', 'sleep::']);
 $file = $options['file'] ?? '';
 $sleep = filter_var($options['sleep'] ?? 0.5, FILTER_VALIDATE_FLOAT);
 if (!is_string($file) || $file === '' || $sleep === false || $sleep < 0.1 || $sleep > 10) {
     fwrite(STDERR, "Supply --file and a sleep interval between 0.1 and 10 seconds.\n");
     exit(2);
 }
+$traps = isset($options['traps']);
+$ingestLine = $traps ? 'icct_nms_trap_ingest_line' : null;
 $once = isset($options['once']) || !isset($options['follow']);
 try {
     icct_nms_backend();
@@ -27,7 +29,7 @@ try {
             break;
         }
         clearstatcache(true, $file);
-        $result = is_file($file) ? icct_backend_syslog_import_spool_once($file) : null;
+        $result = is_file($file) ? icct_backend_syslog_import_spool_once($file, 2000, $ingestLine) : null;
         // The durable outbox is drained even when no new packets arrive after an upgrade/restart.
         $faults = icct_backend_syslog_sync_faults();
         [, $state] = icct_backend_syslog_worker_state($file);
@@ -43,7 +45,7 @@ try {
             'last_record_at' => $state['last_record_at'] ?? null,
             'drop_reasons' => $result['drop_reasons'] ?? [],
             'last_error' => implode('; ', $result['error_messages'] ?? []),
-        ]);
+        ], $traps ? 'trap_worker_status' : 'syslog_worker_status');
         if (!$once && ($result['processed'] ?? 0) < 2000 && $faults < 200) {
             usleep((int) ($sleep * 1000000));
         }

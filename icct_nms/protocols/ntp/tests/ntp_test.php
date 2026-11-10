@@ -106,4 +106,32 @@ checkNtp(
     ],
     'Clock-control command exposed.',
 );
-echo "PASS: strict presets, unit conversion, real zero, unknown measurements, malformed responses and fixed read-only command.\n";
+require_once __DIR__ . '/../services/ntp_history.php';
+$filter = icct_nms_ntp_history_filter(2, ['ntp_from' => '2026-11-04', 'ntp_to' => '2026-11-04']);
+checkNtp(
+    $filter['args'] === [2, '2026-11-04 00:00:00', '2026-11-04 23:59:59'],
+    'History filter must include the whole selected day.',
+);
+rejectsNtp(fn() => icct_nms_ntp_history_filter(2, ['ntp_from' => '2026-02-29']));
+rejectsNtp(fn() => icct_nms_ntp_history_filter(2, ['ntp_from' => '2026-11-05', 'ntp_to' => '2026-11-04']));
+$statusFilter = icct_nms_ntp_history_filter(2, ['ntp_from' => '2026-11-04', 'ntp_status' => 'Unavailable']);
+checkNtp(
+    $statusFilter['where'] === 'host_id=? AND observed_at>=? AND status=?' &&
+        $statusFilter['args'] === [2, '2026-11-04 00:00:00', 'Unavailable'] &&
+        $statusFilter['params'] === ['ntp_from' => '2026-11-04', 'ntp_status' => 'Unavailable'],
+    'History status must be bound with the selected date and preserved in pagination and export.',
+);
+rejectsNtp(fn() => icct_nms_ntp_history_filter(2, ['ntp_status' => ['Unavailable']]));
+$rows = [
+    ['observed_at' => '2026-11-04 12:00:00', 'sample' => ['jitter_ms' => 0.0]],
+    ['observed_at' => '2026-11-04 12:05:00', 'sample' => null],
+    ['observed_at' => '2026-11-04 12:10:00', 'sample' => ['jitter_ms' => 5.0]],
+    ['observed_at' => '2026-11-04 12:30:00', 'sample' => ['jitter_ms' => 6.0]],
+    ['observed_at' => '2026-11-04 12:20:00', 'sample' => ['jitter_ms' => 2.0]],
+];
+$trend = icct_nms_ntp_history_trend($rows, 'jitter_ms', 300);
+checkNtp(
+    $trend['min'] === 0.0 && array_values(array_map('count', $trend['segments'])) === [1, 1, 1, 1],
+    'The trend must show real zero and break at unknown readings, missed cycles and backward clock steps.',
+);
+echo "PASS: NTP parsing, read-only commands, date filters and trend gaps.\n";

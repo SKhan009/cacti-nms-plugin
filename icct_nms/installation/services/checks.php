@@ -247,39 +247,6 @@ function icct_nms_installation_unit_exists($unit)
     return false;
 }
 
-/** Only missing installable components expose an Install action. */
-function icct_nms_installation_action($check)
-{
-    if (isset($check['component'])) {
-        return ($check['installed'] ?? null) === false ? 'component-' . $check['component'] : '';
-    }
-    if ($check['status'] === 'Ready' || $check['status'] === 'Unavailable' || ($check['installed'] ?? null) === true) {
-        return '';
-    }
-    if (($check['installed'] ?? null) === false) {
-        return $check['feature'] === 'SSH' ? 'ssh' : 'packages';
-    }
-    if ($check['status'] !== 'Missing') {
-        return '';
-    }
-    if ($check['feature'] === 'SSH') {
-        return 'ssh';
-    }
-    if ($check['item'] === 'Pathchar') {
-        return 'pathchar';
-    }
-    if (strpos($check['detail'], 'Bundled plugin asset') !== false) {
-        return 'plugin';
-    }
-    if ($check['item'] === 'Plugin database') {
-        return 'plugin';
-    }
-    if (in_array($check['item'], ['Cacti version', 'PHP CLI', 'PHP Web'], true)) {
-        return '';
-    }
-    return 'packages';
-}
-
 /** CLI observation avoids granting the PHP web domain system-service control. */
 function icct_nms_installation_save_services()
 {

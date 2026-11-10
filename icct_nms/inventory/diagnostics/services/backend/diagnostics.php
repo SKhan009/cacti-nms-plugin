@@ -403,7 +403,10 @@ function icct_backend_diag_program($name)
         }
     }
 
-    return '';
+    $bundled = '/opt/icct-nms/native/pchar-1.5/sbin/pchar';
+    return in_array($name, ['pathchar', 'pchar'], true) && is_file($bundled) && is_executable($bundled)
+        ? $bundled
+        : '';
 }
 
 /** Reused Inventory service: diag result. */

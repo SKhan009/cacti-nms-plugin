@@ -2,6 +2,7 @@
 
 /** Installation/upgrade and per-format save regression without touching device tables. */
 require __DIR__ . '/../../protocols/shared/services/protocol_seed.php';
+require_once __DIR__ . '/../../configuration/services/backend/configuration_validation.php';
 $meta = [];
 $writes = 0;
 $transaction = null;
@@ -56,7 +57,11 @@ function check($ok, $message)
 icct_nms_seed_protocol_presets();
 $defaults = icct_nms_protocol_presets();
 $profiles = icct_nms_netflow_profiles();
-check(count($defaults) === 8 && count($profiles) === 4, 'Fresh install missing presets.');
+check(count($defaults) === 10 && count($profiles) === 4, 'Fresh install missing presets.');
+check(
+    $defaults['snmp_notifications'] === ['trap_enabled' => '0', 'trap_source_mode' => 'device'],
+    'SNMP notification defaults must start off and use each device’s own IP.',
+);
 foreach ([5, 7, 9, 10] as $v) {
     $checked = icct_nms_netflow_validate($profiles[$v]);
     check((int) $checked['version'] === $v, 'Wrong profile version.');
@@ -66,6 +71,17 @@ check(!str_contains(json_encode($defaults), '10.0.2.15'), 'Shipped a development
 $before = $writes;
 icct_nms_seed_protocol_presets();
 check($writes === $before, 'Install not idempotent.');
+icct_nms_save_protocol_preset([
+    'preset_protocol' => 'snmp_notifications',
+    'trap_enabled' => '1',
+    'trap_source_mode' => 'manual',
+]);
+icct_nms_seed_protocol_presets();
+check(
+    icct_nms_protocol_presets()['snmp_notifications'] === ['trap_enabled' => '1', 'trap_source_mode' => 'manual'] &&
+        icct_nms_protocol_presets()['snmp'] === $defaults['snmp'],
+    'Saving or reseeding notification defaults changed polling defaults or lost saved choices.',
+);
 foreach ([5 => 2056, 7 => 2057, 9 => 2059, 10 => 4740] as $v => $port) {
     icct_nms_save_protocol_preset(
         array_replace($profiles[$v], [

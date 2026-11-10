@@ -10,6 +10,7 @@ CONF=/etc/rsyslog.d/00-icct-nms.conf
 LEGACY_CONF=/etc/rsyslog.d/30-icct-nms.conf
 SPOOL_DIR=/var/log/icct-nms
 SPOOL_FILE=$SPOOL_DIR/remote.ndjson
+TEMPLATE_FILE="$PLUGIN/protocols/syslog/rhel/rsyslog-template.conf"
 
 if [[ $EUID -ne 0 ]]; then
     echo "Run as root." >&2
@@ -19,6 +20,12 @@ if [[ ! -f "$PLUGIN/setup.php" || ! -f "$CACTI_ROOT/include/global.php" ]]; then
     echo "Cacti/ICCT plugin not found under $CACTI_ROOT" >&2
     exit 1
 fi
+if [[ ! -s "$TEMPLATE_FILE" ]]; then
+    echo "Missing Syslog template: $TEMPLATE_FILE" >&2
+    exit 1
+fi
+# The rsyslog service runs in its own SELinux domain and cannot read the Cacti tree.
+rsyslog_template="$(cat "$TEMPLATE_FILE")"
 for cmd in rsyslogd systemctl php ss awk grep sed stat install; do
     command -v "$cmd" > /dev/null 2>&1 || {
         echo "Missing required command: $cmd" >&2
@@ -98,7 +105,7 @@ cat > "$CONF" << RSYSLOG
 $load_udp
 $load_tcp
 
-include(file="$PLUGIN/protocols/syslog/rhel/rsyslog-template.conf")
+$rsyslog_template
 
 ruleset(name="icct-nms-network") {
   action(type="omfile"

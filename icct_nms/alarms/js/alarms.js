@@ -313,7 +313,6 @@
     form.addEventListener('reset', (event) => {
         event.preventDefault();
         for (const input of Array.from(form.elements)) if (input.name) input.value = '';
-        icctSetSeverity(controls.severity, '');
         page = 1;
         render();
     });

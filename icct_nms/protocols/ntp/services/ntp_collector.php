@@ -164,13 +164,16 @@ function icct_nms_ntp_due($method, $poller)
     if (!icct_nms_ntp_ready()) {
         return [];
     }
+    // A slightly earlier Cacti cycle should not defer collection for a whole extra cycle.
+    $cycleTolerance = $method === 'local' ? 5 : 0;
     return db_fetch_assoc_prepared(
         'SELECT d.host_id FROM plugin_icct_nms_ntp_monitors d JOIN host h ON h.id=d.host_id ' .
             'LEFT JOIN plugin_icct_nms_ntp_monitor_state s ON s.host_id=d.host_id ' .
             'WHERE h.deleted=\'\' AND h.disabled=\'\' AND h.poller_id=? AND d.method=? ' .
             'AND NOT EXISTS(SELECT 1 FROM plugin_icct_nms_meta m WHERE m.meta_key=CONCAT(\'protocol_disabled_ntp_\',d.host_id) AND m.meta_value=\'1\') ' .
-            'AND (s.last_attempt IS NULL OR TIMESTAMPDIFF(SECOND,s.last_attempt,NOW())>=d.interval_seconds) ORDER BY s.last_attempt LIMIT 4',
-        [(int) $poller, $method],
+            'AND (s.last_attempt IS NULL OR s.last_attempt>NOW() OR ' .
+            'TIMESTAMPDIFF(SECOND,s.last_attempt,NOW())+?>=d.interval_seconds) ORDER BY s.last_attempt LIMIT 4',
+        [(int) $poller, $method, $cycleTolerance],
     );
 }
 

@@ -173,7 +173,17 @@ try {
         echo json_encode(icct_nms_topology_data($mapData), JSON_THROW_ON_ERROR);
         exit();
     }
-    $dashboardReadings = icct_nms_dashboard_readings($mapData);
+    $includeNtp = isset($_GET['ntp_widget']) || in_array(
+        'ntp',
+        $dashboardPreferences['dashboards'][$dashboardPreferences['selected']]['widgets'],
+        true,
+    );
+    $includeNetflowTalkers = isset($_GET['netflow_talkers_widget']) || in_array(
+        'netflow_talkers',
+        $dashboardPreferences['dashboards'][$dashboardPreferences['selected']]['widgets'],
+        true,
+    );
+    $dashboardReadings = icct_nms_dashboard_readings($mapData, $includeNtp, $includeNetflowTalkers);
     $dashboardReadings['lnms'] = icct_nms_lnms_data(icct_nms_topology_data($mapData)['links']);
     $dashboardReadings['center'] = $dashboardReadings['lnms']['center'];
     $mapData['lnms'] = $dashboardReadings['lnms'];

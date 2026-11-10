@@ -52,7 +52,7 @@ def source_files(root):
     return files
 
 
-def build_archive(root, output, bundle=None, native_bundles=None, component_bundles=None):
+def build_archive(root, output, bundle=None, native_bundles=None, component_bundles=None, media=None):
     setup.check_python_runtime()
     root, output = Path(root).resolve(), Path(output).resolve()
     if root in output.parents:
@@ -62,6 +62,18 @@ def build_archive(root, output, bundle=None, native_bundles=None, component_bund
     files = source_files(root)
     if not (root / "setup.php").is_file() or not (root / "installation/cli/deploy.py").is_file():
         raise ValueError("Incomplete plugin source.")
+    if media:
+        if bundle or native_bundles or component_bundles:
+            raise ValueError("--media supplies the base, component and native bundles together.")
+        media = Path(media).resolve()
+        bundle = media / "packages"
+        target = json.loads((bundle / "bundle.json").read_text())["target"]
+        component_bundles = [
+            media / "components" / component
+            for component in setup.MANIFEST["optional_components"]
+            if setup.component_packages(target, component)
+        ]
+        native_bundles = [media / "native" / name for name in ("guacamole-strict", "pathchar")]
     packages, target = [], None
     if bundle:
         bundle = Path(bundle).resolve()
@@ -103,6 +115,7 @@ def build_archive(root, output, bundle=None, native_bundles=None, component_bund
         "target": target,
         "native_components": native_components,
         "package_components": package_components,
+        "complete_media": bool(media),
         "files": {},
     }
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -137,11 +150,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True)
     parser.add_argument("--bundle")
+    parser.add_argument("--media", help="Build a complete installer from packages/, components/ and native/")
     parser.add_argument("--component-bundle", action="append", default=[])
     parser.add_argument("--native-bundle", action="append", default=[])
     args = parser.parse_args()
     result = build_archive(
-        ROOT, args.output, args.bundle, args.native_bundle, args.component_bundle
+        ROOT, args.output, args.bundle, args.native_bundle, args.component_bundle, media=args.media
     )
     print(
         json.dumps(

@@ -90,6 +90,13 @@ foreach ([2 => '127.0.0.1', 1 => '::1'] as $id => $address) {
     icct_backend_protocol_state_write($id, 'syslog', true);
     icct_nms_save_syslog($id, [], $base + ['source_address' => $address]);
 }
+foreach ([2 => ['ICCT_DUP', 'ICCT_OUTBOX'], 1 => ['ICCT_V6']] as $id => $programs) {
+    $rules = array_map(static fn ($program) => [
+        'source' => 'syslog', 'name' => $program, 'program' => $program,
+        'severity' => 'Critical', 'enabled' => true,
+    ], $programs);
+    icct_nms_save_passive_faults($id, ['passive_rules' => json_encode($rules, JSON_THROW_ON_ERROR)]);
+}
 $stamp = gmdate('Y-m-d\TH:i:s\Z');
 $duplicate = '<0>1 ' . $stamp . ' claimed-other-device ICCT_DUP - - - emergency wire event';
 sendSyslog($duplicate);
@@ -126,6 +133,7 @@ wireCheck(
     $nil['timestamp_kind'] === 'receiver' && $nil['receiver_time'] === $nil['event_time'],
     'NIL timestamp was presented as a sender time.',
 );
+wireCheck($nil['alarm_key'] === null, 'Unmatched history must create no alarm.');
 wireCheck(
     (int) db_fetch_cell(
         "SELECT host_id FROM plugin_icct_nms_syslog_events WHERE program='ICCT_V6'",

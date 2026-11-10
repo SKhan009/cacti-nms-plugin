@@ -25,6 +25,9 @@
             'diagnostics',
             'ports',
             'faults',
+            'passive_faults',
+            'netflow_faults',
+            'trap_sender',
         ].includes(f.elements.action?.value),
     );
 
@@ -53,7 +56,20 @@
                 p.querySelector('.protocol-enable input')?.checked !== state.enabled
             );
         });
-    const dirtyForms = () => [basic, ...forms].filter((f) => snapshot(f) !== baseline.get(f));
+    const dirtyForms = () => {
+        const source = forms.find((form) => form.dataset.discoveryTimingSource === '1');
+        const withoutSharedTimings = (value) => JSON.stringify(
+            JSON.parse(value).filter(([name]) => !discoveryTimingNames.has(name)),
+        );
+        return [basic, ...forms].filter((form) => {
+            const current = snapshot(form);
+            const saved = baseline.get(form);
+            if (source && form !== source && form.elements.action?.value === 'discovery') {
+                return withoutSharedTimings(current) !== withoutSharedTimings(saved);
+            }
+            return current !== saved;
+        });
+    };
     const dirty = () => dirtyForms().length > 0 || staged.size > 0 || protocolChanges().length > 0;
     const currentStep = () =>
         steps.includes(location.hash.slice(1))
@@ -211,7 +227,7 @@
             if (
                 panel &&
                 !panel.hidden &&
-                (!id || protocolInitial.get(panel.id)?.hidden) &&
+                (form.dataset.presetSyncPending === '1' || !id || protocolInitial.get(panel.id)?.hidden) &&
                 !changed.includes(form)
             )
                 changed.push(form);
@@ -220,6 +236,7 @@
         const active = changed.filter(
             (f) =>
                 f === basic ||
+                f.elements.action?.value === 'trap_sender' ||
                 !f.closest('.protocol-item') ||
                 f.closest('.protocol-item').querySelector('.protocol-enable input')?.checked,
         );
@@ -253,11 +270,18 @@
                 protocolInitial.set(name, { hidden: p.hidden, enabled });
                 saved++;
             }
-            for (const form of active.filter(
-                (f) => f !== basic && f.elements.action?.value !== 'faults',
-            )) {
+            const isFaultForm = (form) => ['faults', 'passive_faults', 'netflow_faults'].includes(form.elements.action?.value);
+            const discoverySource = forms.find(
+                (form) => form.dataset.discoveryTimingSource === '1' && !form.closest('.protocol-item')?.hidden,
+            ) || active.find((form) => form.elements.action?.value === 'discovery');
+            for (const form of active.filter((form) => form !== basic && !isFaultForm(form))) {
                 errorContext = form;
-                await post(new FormData(form));
+                const data = new FormData(form);
+                if (form.elements.action?.value === 'discovery') {
+                    data.set('discovery_timing_source', form === discoverySource ? '1' : '0');
+                }
+                await post(data);
+                delete form.dataset.presetSyncPending;
                 baseline.set(form, snapshot(form));
                 saved++;
             }
@@ -269,9 +293,16 @@
                 staged.delete(k);
                 saved++;
             }
-            for (const form of active.filter((f) => f.elements.action?.value === 'faults')) {
+            for (const form of active.filter(isFaultForm)) {
                 errorContext = form;
-                await post(new FormData(form));
+                const data = new FormData(form);
+                const result = await post(data);
+                if (result.netflow_revision && form.elements.netflow_revision) {
+                    form.elements.netflow_revision.value = result.netflow_revision;
+                }
+                form.dispatchEvent(new CustomEvent('icct-fault-saved', {
+                    detail: data.get('fault_rules') ?? data.get('passive_rules') ?? data.get('netflow_rules'),
+                }));
                 baseline.set(form, snapshot(form));
                 saved++;
             }
@@ -426,6 +457,9 @@
                     'diagnostics',
                     'ports',
                     'faults',
+                    'passive_faults',
+                    'netflow_faults',
+                    'trap_sender',
                 ].includes(action)
             ) {
                 explicitSave();

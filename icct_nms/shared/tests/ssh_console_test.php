@@ -31,6 +31,15 @@ function icct_backend_current_user_id()
 {
     return 1;
 }
+function icct_backend_require_management($realm) {}
+function db_fetch_cell_prepared($sql, $params)
+{
+    return 'audit-tester';
+}
+function icct_backend_category_execute($sql, $params)
+{
+    $GLOBALS['sshAuditRecords'][$params[0]] ??= json_decode($params[1], true, 8, JSON_THROW_ON_ERROR);
+}
 function icct_backend_ssh_https()
 {
     if (!empty($GLOBALS['http'])) {
@@ -98,6 +107,21 @@ try {
     consoleReject(static fn () => icct_nms_ssh_console_session($id, 2, $GLOBALS['device']));
     $GLOBALS['session'] = $valid;
     consoleReject(static fn () => icct_nms_ssh_console_session('../invalid', 2, $GLOBALS['device']));
+    $audit = ['action' => 'audit', 'session_id' => $id, 'parameter' => 'GigabitEthernet0/1 description',
+        'request_id' => str_repeat('c', 32), 'user_id' => 999];
+    $_SERVER['REMOTE_ADDR'] = '192.0.2.20';
+    consoleCheck(icct_nms_ssh_console_operation(2, $audit)['recorded'], 'Active session could not record a change.');
+    icct_nms_ssh_console_operation(2, $audit);
+    $auditRecord = reset($GLOBALS['sshAuditRecords']);
+    consoleCheck(count($GLOBALS['sshAuditRecords']) === 1 && $auditRecord['host_id'] === 2 &&
+        $auditRecord['user_id'] === 1 && $auditRecord['user'] === 'audit-tester' &&
+        $auditRecord['parameter'] === $audit['parameter'] && $auditRecord['source_ip'] === '192.0.2.20' &&
+        strtotime($auditRecord['time']) > 0 && strlen(array_key_first($GLOBALS['sshAuditRecords'])) <= 64,
+        'SSH audit attribution or retry deduplication is incorrect.');
+    consoleReject(static fn () => icct_nms_ssh_console_operation(2, array_replace($audit, ['parameter' => "test\nsecret"])));
+    $GLOBALS['session']['lease_valid'] = 0;
+    consoleReject(static fn () => icct_nms_ssh_console_operation(2, $audit));
+    $GLOBALS['session'] = $valid;
     $GLOBALS['realm'] = false;
     consoleReject(static fn () => icct_nms_ssh_console_operation(2, ['action' => 'open', 'width' => 800, 'height' => 600]));
     $GLOBALS['realm'] = true;

@@ -3665,12 +3665,6 @@ body.icct-inventory:has(.protocol-form) {
     border-bottom-color: #165dff;
     color: #165dff;
 }
-.fcaps-form-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin: 20px 0;
-}
-
 .configuration-summary {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -4798,9 +4792,9 @@ body.icct-inventory:has(.protocol-form) {
 .device-record-item + .device-record-item {
     border-top: 1px solid #ddd;
 }
-:is(#view-records, #view-diagnostics) .device-record-item > summary {
+:is(#view-records, #view-diagnostics, #view-ports, #view-syslog, #view-traps) .device-record-item > summary {
     display: grid;
-    grid-template-columns: 1.4fr 0.8fr 1.4fr 1fr;
+    grid-template-columns: var(--device-record-columns, 1.4fr 0.8fr 1.4fr 1fr);
     gap: 20px;
     align-items: center;
     padding: 16px 48px 16px 16px;
@@ -4808,6 +4802,7 @@ body.icct-inventory:has(.protocol-form) {
     color: #222;
     list-style: none;
     min-height: 40px;
+    cursor: pointer;
 }
 .device-record-item > summary::-webkit-details-marker {
     display: none;
@@ -4830,7 +4825,7 @@ body.icct-inventory:has(.protocol-form) {
 .device-record-item[open] > summary:after {
     transform: rotate(180deg);
 }
-:is(#view-records, #view-diagnostics) .device-record-item[open] > summary {
+:is(#view-records, #view-diagnostics, #view-ports, #view-syslog, #view-traps) .device-record-item[open] > summary {
     background: #e8f0ff;
     border-bottom: 1px solid #ddd;
 }
@@ -4870,7 +4865,7 @@ body.icct-inventory:has(.protocol-form) {
     margin: 0;
 }
 @media (max-width: 650px) {
-    :is(#view-records, #view-diagnostics) .device-record-item > summary {
+    :is(#view-records, #view-diagnostics, #view-ports, #view-syslog, #view-traps) .device-record-item > summary {
         grid-template-columns: 1fr 1fr;
         gap: 12px;
     }
@@ -4901,7 +4896,7 @@ body.icct-inventory:has(.protocol-form) {
     box-sizing: border-box;
 }
 
-:is(#view-records, #view-diagnostics) .device-record-item .device-status {
+:is(#view-records, #view-diagnostics, #view-ports) .device-record-item .device-status {
     display: inline-block;
     padding: 4px 10px;
     border-radius: 12px;
@@ -5270,6 +5265,19 @@ h6 {
     font-weight: 600;
     background: white;
 }
+.device-port-endpoints summary {
+    cursor: pointer;
+}
+.device-port-endpoints ul {
+    margin: 8px 0 0;
+    padding-left: 16px;
+}
+.device-port-endpoints li + li {
+    margin-top: 8px;
+}
+.device-port-endpoints li {
+    overflow-wrap: anywhere;
+}
 .device-port-table tr[hidden] {
     display: none;
 }
@@ -5347,7 +5355,8 @@ h6 {
 }
 
 /* Fault rules retain the same rows when their measurement source changes. */
-.fault-rule {
+.fault-rule,
+.passive-rule {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 20px 24px;
@@ -5361,25 +5370,22 @@ h6 {
 .fault-rule [hidden] {
     display: none !important;
 }
-.fault-rule .field {
+:is(.fault-rule, .passive-rule) .field {
     min-width: 0;
     margin: 0;
 }
-.fault-rule .field-label {
+:is(.fault-rule, .passive-rule) .field-label {
     display: block;
     margin-bottom: 8px;
     line-height: 1.4;
 }
-.fault-rule input:not([type='checkbox']),
-.fault-rule select,
-.fault-rule textarea {
+:is(.fault-rule, .passive-rule) :is(input:not([type='checkbox']), select, textarea) {
     width: 100%;
     box-sizing: border-box;
     background: #f4f4f4;
     font: inherit;
 }
-.fault-rule input:not([type='checkbox']),
-.fault-rule select {
+:is(.fault-rule, .passive-rule) :is(input:not([type='checkbox']), select) {
     height: 48px;
     min-height: 48px;
 }
@@ -5414,44 +5420,55 @@ h6 {
 .fault-rule .field:has([data-severity]) {
     grid-column: 4;
 }
-.fault-rule .fault-guidance {
-    grid-column: 1 / -1;
-    order: 5;
-}
 .fault-rule textarea {
     min-height: 76px;
     resize: vertical;
     line-height: 1.5;
 }
-.fault-rule .field:has([data-enabled]) {
-    grid-column: 1 / span 3;
-    order: 10;
+.fault-rule .field:has([data-enabled]),
+.passive-rule .fault-enabled-field {
     display: flex;
     flex-direction: row;
     align-items: center;
     gap: 12px;
     align-self: center;
 }
-.fault-rule .field:has([data-enabled]) .field-label {
+.fault-rule .field:has([data-enabled]) .field-label,
+.passive-rule .fault-enabled-field .field-label {
     margin: 0;
 }
-.fault-rule input[type='checkbox'] {
+:is(.fault-rule, .passive-rule) input[type='checkbox'] {
     width: 20px;
     height: 20px;
     min-height: 20px;
     margin: 0;
 }
-.fault-rule > button {
-    grid-column: 4;
-    order: 10;
-    justify-self: end;
-    align-self: center;
+.fault-rule-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.fault-rule-actions > button {
+    margin-inline-start: auto;
+}
+.passive-rule > .field {
+    grid-column: span 2;
+}
+.passive-rule > .field:has([data-field='name'], [data-field='value']) {
+    grid-column: 1 / -1;
 }
 @media (max-width: 1000px) {
-    .fault-rule {
+    .fault-rule,
+    .passive-rule {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         padding: 20px;
         gap: 16px;
+    }
+    .passive-rule > .field {
+        grid-column: auto;
     }
     .fault-rule .field:has([data-name]),
     .fault-rule .field:has([data-source]),
@@ -5477,22 +5494,17 @@ h6 {
     .fault-rule:not([data-condition='outside']) .field:has([data-maximum]) {
         grid-column: auto;
     }
-    .fault-rule .field:has([data-enabled]) {
-        grid-column: 1;
-    }
-    .fault-rule > button {
-        grid-column: 2;
-    }
 }
 @media (max-width: 600px) {
-    .fault-rule {
+    .fault-rule,
+    .passive-rule {
         grid-template-columns: minmax(0, 1fr);
         padding: 16px;
     }
     .fault-rule .field,
+    .passive-rule > .field,
     .fault-rule:not([data-condition='outside']) .field:has([data-minimum]),
-    .fault-rule:not([data-condition='outside']) .field:has([data-maximum]),
-    .fault-rule > button {
+    .fault-rule:not([data-condition='outside']) .field:has([data-maximum]) {
         grid-column: 1 / -1 !important;
     }
 }
@@ -5508,6 +5520,7 @@ h6 {
 
 /* Automatically derived units appear beside the reading, not as a separate field. */
 .fault-rule .field:has([data-reading]),
+.fault-rule[data-measurement='ntp'] .field:has([data-parameter-choice]),
 .fault-rule[data-measurement='snmp'] .field:has([data-oid]) {
     grid-column: 1 / -1;
 }
@@ -5516,10 +5529,11 @@ h6 {
 .fault-source-options {
     display: flex;
     flex-wrap: wrap;
-    gap: 16px 28px;
+    gap: 4px 12px;
     margin: 0 0 24px;
     padding: 0;
     border: 0;
+    border-bottom: 1px solid #ddd;
 }
 .fault-source-options legend {
     margin-bottom: 12px;
@@ -5541,7 +5555,7 @@ h6 {
 }
 .fault-source-options label:has(input:focus-visible) {
     outline: 2px solid #0f62fe;
-    outline-offset: 2px;
+    outline-offset: -3px;
 }
 /* Keep native keyboard radio navigation while displaying the sources as tabs. */
 .fault-source-options input {
@@ -5550,26 +5564,62 @@ h6 {
     height: 1px;
     opacity: 0;
 }
+.fault-rule-type-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    margin: 0 0 16px;
+    padding: 0;
+    border: 0;
+}
+.fault-rule-type-options legend {
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #666;
+}
+.fault-rule-type-options label {
+    cursor: pointer;
+}
+.fault-rule-type-options[hidden],
+.fault-workspace[hidden] {
+    display: none;
+}
 .fault-workspace {
     display: grid;
     grid-template-columns: 240px minmax(0, 1fr);
+    grid-template-areas: 'sources editor';
     gap: 24px;
     align-items: start;
 }
+.fault-workspace > .fault-alarm-sidebar {
+    grid-area: sources;
+}
+.fault-workspace > .fault-alarm-editor {
+    grid-area: editor;
+}
 .fault-alarm-sidebar {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+#fault-graph-section,
+#fault-ntp-section,
+.fault-saved-alarms {
     border: 1px solid #ddd;
     background: #fff;
     border-radius: 4px;
     overflow: hidden;
 }
-.fault-alarm-sidebar h3 {
+.fault-alarm-sidebar h3,
+.fault-saved-alarms h3 {
     margin: 0;
     padding: 16px;
     background: #f4f4f4;
     border-bottom: 1px solid #ddd;
     font-size: 16px;
 }
-#fault-alarm-navigation {
+#fault-alarm-navigation,
+#fault-ntp-navigation {
     max-height: 520px;
     overflow: auto;
 }
@@ -5602,30 +5652,32 @@ h6 {
 .fault-alarm-editor {
     min-width: 0;
 }
-#fault-alarm-empty {
+#fault-alarm-empty,
+.fault-alarm-empty {
     padding: 24px;
     margin: 0;
     border: 1px solid #ddd;
     border-radius: 4px;
 }
 .fault-rule[hidden],
+.passive-rule[hidden],
+.fault-alarm-empty[hidden],
 #fault-alarm-empty[hidden] {
     display: none !important;
-}
-.fault-alarm-editor .fault-rule {
-    margin: 0;
 }
 .fault-alarm-editor .field:has([data-name]) {
     grid-column: 1 / -1;
 }
 @media (max-width: 800px) {
     .fault-workspace {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: 'sources' 'editor';
     }
     .fault-alarm-sidebar {
         width: 100%;
     }
-    #fault-alarm-navigation {
+    #fault-alarm-navigation,
+    #fault-ntp-navigation {
         max-height: 180px;
     }
 }
@@ -5633,9 +5685,70 @@ h6 {
 #fault-oid-section[hidden] {
     display: none !important;
 }
-#fault-oid-navigation {
-    max-height: 360px;
+#fault-oid-section,
+.fault-snmp-sections {
+    display: grid;
+    gap: 12px;
+}
+.fault-snmp-list {
+    overflow: hidden;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+}
+.fault-snmp-oid-list {
+    max-height: 245px;
     overflow: auto;
+}
+.fault-saved-alarms {
+    margin-bottom: 16px;
+}
+.fault-alarm-list-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    padding: 8px 16px;
+    background: #f4f4f4;
+}
+.fault-alarm-list-heading h3 {
+    padding: 0;
+    border: 0;
+}
+.fault-saved-alarms ul {
+    max-height: 300px;
+    overflow: auto;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.fault-saved-alarms li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 14px;
+    border-top: 1px solid #eee;
+    overflow-wrap: anywhere;
+}
+.fault-saved-alarms small {
+    display: block;
+    color: #666;
+}
+.fault-saved-alarms .fault-alarm-edit {
+    flex: none;
+    width: 32px;
+    height: 32px;
+    color: #161616;
+    cursor: pointer;
+}
+.fault-saved-alarms .fault-alarm-edit:hover {
+    background: #eee;
+}
+.passive-rule .select-wrap::after {
+    top: 50%;
+    transform: translateY(-70%) rotate(45deg);
 }
 .fault-oid-link {
     display: block;
@@ -5660,10 +5773,27 @@ h6 {
     margin-top: 5px;
     line-height: 1.5;
 }
+.fault-oid-link .fault-oid-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 6px;
+}
+.fault-oid-rule-count {
+    flex: none;
+    padding: 2px 6px;
+    border-radius: 10px;
+    background: #e5e5e5;
+    color: #393939;
+    font-size: 11px;
+    line-height: 1.4;
+    white-space: nowrap;
+}
 .fault-oid-link:hover {
     background: #f4f7fc;
 }
-.fault-oid-link[aria-pressed='true'] {
+.fault-oid-link[aria-pressed='true'],
+.fault-notification-choice:has(input:checked) {
     background: #e8f0ff;
     box-shadow: inset 3px 0 #0f62fe;
     color: #0f62fe;
@@ -5672,6 +5802,15 @@ h6 {
     margin: 0;
     padding: 16px;
     font-size: 13px;
+}
+.netflow-built-in-table thead th:first-child {
+    width: 29%;
+}
+.netflow-built-in-table thead th:nth-child(2) {
+    width: 96px;
+}
+.netflow-built-in-table tbody th {
+    background: transparent;
 }
 
 #fault-graph-section[hidden] {
@@ -5707,11 +5846,25 @@ h6 {
     color: #0f62fe;
     box-shadow: inset 3px 0 #0f62fe;
 }
-.fault-alarm-editor .fault-rule {
+.fault-alarm-editor :is(.fault-rule, .passive-rule) {
     margin-bottom: 20px;
 }
 .fcaps-form-actions {
+    position: sticky;
+    top: var(--app-header-height, 48px);
+    z-index: 20;
+    margin-bottom: 16px;
+    padding: 12px 0;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 12px;
+}
+#fcaps-fault:has(> #fault-form[hidden]) .fcaps-form-actions > [form='fault-form'],
+#fcaps-fault:has(> #passive-fault-form[hidden]) .fcaps-form-actions > [form='passive-fault-form'] {
+    display: none;
 }
 /* Expand templates with +/- and select measurements with radio-style markers. */
 .fault-template-group summary {
@@ -5759,6 +5912,22 @@ h6 {
 .fault-oid-link[aria-pressed='true']::before {
     border-color: #0f62fe;
     background: radial-gradient(circle, #0f62fe 0 4px, #fff 4.5px);
+}
+.fault-notification-choice::before {
+    content: none;
+}
+.fault-notification-choice input {
+    position: absolute;
+    top: 15px;
+    left: 18px;
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    accent-color: #0f62fe;
+}
+.fault-notification-choice:has(input:focus-visible) {
+    outline: 2px solid #0f62fe;
+    outline-offset: -2px;
 }
 /* Rack unit multi-select uses the same field shell as the device dropdowns. */
 #rack-unit-picker {
@@ -6637,6 +6806,9 @@ h6 {
 .syslog-select-options .check-row {
     padding: 8px 4px;
 }
+.syslog-select-options input[type='checkbox'] {
+    padding: 0;
+}
 .syslog-select-options > button {
     border: 0;
     background: none;
@@ -6760,39 +6932,6 @@ h6 {
     .icct-inventory table.action-table > tbody > tr > td {
         padding: 12px !important;
     }
-}
-
-.device-syslog-search {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    flex-wrap: wrap;
-    margin: 16px 0;
-}
-.device-syslog-search input[type='search'] {
-    width: 360px;
-    max-width: 100%;
-    min-height: 40px;
-    padding: 10px;
-    background: #f4f4f4;
-    border: 0;
-    border-bottom: 1px solid #aaa;
-    font: inherit;
-}
-.device-syslog-table {
-    min-width: 1000px;
-    table-layout: auto;
-}
-.device-syslog-table small {
-    display: block;
-    color: #666;
-    margin-top: 4px;
-}
-.device-syslog-table .device-syslog-message {
-    white-space: pre-wrap;
-    min-width: 280px;
-    max-width: 560px;
-    overflow-wrap: anywhere;
 }
 
 .type-visibility .form-grid {
@@ -7105,26 +7244,6 @@ h6 {
     background: #e7e7e7;
     color: #555;
 }
-/* Device Syslog keeps timestamps, addresses and event origin readable at smaller widths. */
-#view-syslog .site-table-wrap {
-    max-width: 100%;
-    overflow-x: auto;
-}
-#view-syslog .device-syslog-table {
-    min-width: 1150px;
-    table-layout: auto;
-}
-#view-syslog .device-syslog-table th {
-    white-space: nowrap;
-    overflow-wrap: normal;
-}
-#view-syslog
-    .device-syslog-table
-    td:is(:first-child, :nth-child(2), :nth-child(3), :nth-child(4), :nth-child(7), :last-child) {
-    white-space: nowrap;
-    overflow-wrap: normal;
-}
-
 .device-syslog-severity.severity-minor {
     background: var(--icct-severity-minor);
     color: #161616;
@@ -7147,7 +7266,6 @@ h6 {
 .fault-rule .field.fault-description,
 .fault-rule .field.fault-guidance {
     grid-column: span 2;
-    order: 5;
 }
 .fault-rule .fault-description textarea,
 .fault-rule .fault-guidance textarea {
@@ -7995,13 +8113,13 @@ h6 {
 }
 
 /* Flow readings reuse the project fields, tables and pagination. */
-.netflow-heading {
+.device-history-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
 }
-.netflow-heading > div {
+.device-history-heading > div {
     display: flex;
     gap: 12px;
     align-items: center;
@@ -8013,11 +8131,134 @@ h6 {
 .netflow-health.online {
     color: #23894b;
 }
-.netflow-filters {
+.device-history-filters {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 18px;
     margin: 24px 0;
+}
+#view-ntp .ntp-heading h2 {
+    margin: 0;
+}
+#view-ntp .ntp-subtabs {
+    padding: 0;
+    margin: 16px 0 24px;
+}
+.ntp-overview-card {
+    margin-bottom: 16px;
+}
+.ntp-overview-card h3,
+.ntp-overview-card .device-detail-grid {
+    margin: 0;
+}
+.ntp-overview-card .device-detail-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 175px), 1fr));
+    gap: 18px 24px;
+}
+.ntp-technical-details {
+    margin-top: 16px;
+}
+.ntp-technical-details > summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+.ntp-technical-details[open] > .device-detail-grid {
+    margin-top: 16px;
+}
+#view-ntp .ntp-alarm-action {
+    text-align: right;
+    white-space: nowrap;
+}
+#view-ntp .ntp-history-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    align-items: end;
+}
+#view-ntp .ntp-history-filters .device-history-actions {
+    grid-column: auto;
+    flex-wrap: wrap;
+}
+@media (max-width: 900px) {
+    #view-ntp .ntp-history-filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    #view-ntp .ntp-history-filters .device-history-actions {
+        grid-column: 1 / -1;
+    }
+}
+@media (max-width: 520px) {
+    #view-ntp .ntp-history-filters {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+#view-netflow .netflow-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+}
+.netflow-filters > .field {
+    flex: 1 1 120px;
+    min-width: 0;
+    max-width: 300px;
+    margin: 0;
+}
+.netflow-filters > .field[data-netflow-custom-date] {
+    flex-basis: 175px;
+}
+#view-netflow .select-wrap::after {
+    top: 50%;
+    right: 16px;
+    transform: translateY(-70%) rotate(45deg);
+}
+#view-netflow .netflow-filters .select-wrap select {
+    padding-right: 36px;
+}
+#view-netflow .inventory-pagination .select-wrap {
+    display: inline-flex;
+    vertical-align: middle;
+}
+#view-netflow .inventory-pagination .select-wrap::after {
+    right: 7px;
+}
+#view-netflow .inventory-pagination .select-wrap select {
+    padding: 4px 22px 4px 4px;
+    cursor: pointer;
+}
+.netflow-filters [data-netflow-custom-date][hidden] {
+    display: none;
+}
+.netflow-filters .device-history-actions {
+    flex-wrap: wrap;
+    margin-inline-start: auto;
+}
+@media (max-width: 420px) {
+    .netflow-filters > .field {
+        flex-basis: 100%;
+        max-width: none;
+    }
+}
+/* Syslog uses the same filter grid as the flow history. */
+:is(#view-syslog, #view-traps) .device-history-heading h2 {
+    margin: 0;
+}
+.device-history-search,
+.device-history-actions {
+    grid-column: span 2;
+}
+.device-history-actions {
+    display: flex;
+    align-self: end;
+    justify-content: flex-end;
+    gap: 12px;
+}
+@media (max-width: 520px) {
+    #view-syslog .device-history-filters {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .device-history-search,
+    .device-history-actions {
+        grid-column: 1;
+    }
 }
 .netflow-summary {
     display: grid;
@@ -8039,6 +8280,12 @@ h6 {
 .netflow-summary strong {
     font-size: 24px;
     font-weight: 500;
+}
+.netflow-live-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.netflow-live-summary > div:nth-child(n + 4) {
+    border-top: 1px solid #ddd;
 }
 .netflow-chart-panel {
     border: 1px solid #ddd;
@@ -8109,15 +8356,18 @@ h6 {
     display: none;
 }
 @media (max-width: 900px) {
-    .netflow-filters {
+    .device-history-filters {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-    .netflow-heading {
+    .device-history-heading {
         align-items: start;
         flex-direction: column;
     }
     .netflow-summary {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .netflow-live-summary > div:nth-child(n + 3) {
+        border-top: 1px solid #ddd;
     }
     .netflow-rankings {
         grid-template-columns: 1fr;
@@ -8168,62 +8418,6 @@ h6 {
 .settings-submenu[hidden] {
     display: none;
 }
-.installation-checks > .titlebar {
-    height: auto;
-    min-height: 80px;
-    gap: 16px;
-    margin-bottom: 16px;
-}
-.installation-checks > .titlebar p {
-    margin: 0 0 8px;
-    font-size: 12px;
-    color: var(--muted);
-}
-.installation-table-wrap {
-    overflow-x: auto;
-}
-.installation-table {
-    min-width: 760px;
-}
-.installation-feature {
-    width: 13%;
-}
-.installation-component {
-    width: 23%;
-}
-.installation-status {
-    width: 12%;
-}
-.installation-detail {
-    width: 42%;
-}
-.installation-actions {
-    width: 10%;
-}
-.icct-inventory table.installation-table > tbody > tr > td {
-    vertical-align: middle;
-}
-.installation-table .device-status {
-    white-space: nowrap;
-}
-#installation-dialog {
-    max-width: min(800px, calc(100vw - 48px));
-}
-#installation-dialog pre {
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-}
-
-.device-syslog-search {
-    flex-wrap: wrap;
-    align-items: end;
-}
-.device-syslog-search label {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
 /* Preserve readable audit field lines while using the normal interface font. */
 .configuration-history-value {
     white-space: pre-wrap;
@@ -8300,43 +8494,165 @@ h6 {
     }
 }
 
-/* Compact event rows keep the full collected evidence in an independent accordion. */
-.port-alarm-history td small {
+/* Port events share the same expandable record rows as diagnostic results. */
+.port-alarm-history {
+    --device-record-columns: 1.15fr 1.15fr 1.35fr 0.75fr 1fr 1fr;
+}
+.port-history-interface {
     display: block;
     margin-top: 4px;
     color: #666;
+    font-size: 12px;
 }
-.port-history-detail-row > td {
-    padding: 0 14px 10px;
+:is(.port-alarm-history, .syslog-event-history) summary > span {
+    align-self: start;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
-.port-history-details > summary {
-    width: fit-content;
-    cursor: pointer;
-    color: #155cff;
-    padding: 6px 0;
+@media (min-width: 651px) and (max-width: 950px) {
+    .port-alarm-history {
+        --device-record-columns: repeat(3, minmax(0, 1fr));
+    }
 }
-.port-history-evidence {
+.device-help-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+}
+.device-help-heading .heading-help {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    margin: 1px 0 0;
+}
+:is(.port-history-evidence, .syslog-event-evidence) {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px 24px;
     margin: 12px 0;
 }
-.port-history-evidence dt {
+:is(.port-history-evidence, .syslog-event-evidence) dt {
     color: #666;
     font-size: 12px;
     margin-bottom: 4px;
 }
-.port-history-evidence dd {
+:is(.port-history-evidence, .syslog-event-evidence) dd {
     margin: 0;
     overflow-wrap: anywhere;
 }
 @media (max-width: 650px) {
-    .port-history-evidence {
+    :is(.port-history-evidence, .syslog-event-evidence) {
         grid-template-columns: 1fr;
     }
 }
 
-/* All severity labels and controls use the shared palette emitted by the shell.
+.syslog-event-history {
+    --device-record-columns: 1fr 1.4fr 1fr 1fr;
+}
+.syslog-event-details {
+    display: grid;
+    gap: 20px;
+}
+.syslog-event-details h3 {
+    margin: 0 0 8px;
+    font-size: 16px;
+}
+.syslog-event-details p,
+.syslog-event-details .syslog-event-evidence {
+    margin: 0;
+}
+.syslog-event-details p + p {
+    margin-top: 8px;
+}
+@media (min-width: 901px) {
+    .syslog-event-details .syslog-event-evidence {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+.syslog-original-message {
+    padding: 12px 16px;
+    background: #f4f4f4;
+}
+.syslog-event-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.syslog-event-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+#view-syslog .syslog-event-overview {
+    max-width: 88ch;
+    line-height: 1.55;
+}
+#view-traps .trap-event-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    line-height: 1.55;
+}
+.trap-event-summary > div {
+    flex: 1 1 24rem;
+    min-width: 0;
+}
+.trap-event-summary > .button {
+    flex: none;
+}
+#view-traps .site-table :is(th, td) {
+    padding: 12px 14px;
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.45;
+}
+#view-traps .site-table td:first-child {
+    white-space: normal;
+}
+#view-traps .site-table td:first-child strong {
+    display: block;
+}
+#view-traps .site-table th:last-child {
+    width: 44%;
+}
+.trap-field-oid {
+    display: block;
+    margin-top: 4px;
+    color: #666;
+}
+.syslog-event-panels {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 410px), 1fr));
+    gap: 16px;
+    align-items: start;
+}
+.syslog-detail-panel {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid #d7dde5;
+    background: #fff;
+}
+.syslog-verification-panel {
+    border-color: #c4d5f0;
+    background: #f6f9ff;
+}
+.syslog-detail-panel h4,
+.syslog-detail-panel h5 {
+    margin: 0;
+    font-size: 14px;
+}
+.syslog-detail-panel .syslog-original-message h5 {
+    margin-bottom: 6px;
+}
+.syslog-event-details .syslog-detail-panel .syslog-event-evidence {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+}
+.syslog-verification-panel .syslog-event-evidence > :last-child {
+    grid-column: 1 / -1;
+}
+
+/* Displayed severity labels use the shared palette emitted by the shell.
    Operational statuses (Normal, Unknown, Stale) keep their separate status colours. */
 .severity-badge {
     display: inline-flex;
@@ -8354,9 +8670,7 @@ h6 {
     .rack-alarm-count,
     .device-status,
     .mib-fault-severity,
-    .mib-fault-summary .mib-fault-severity,
-    select[data-severity-control],
-    option
+    .mib-fault-summary .mib-fault-severity
 )[data-severity='Critical'],
 .device-status[data-log-status='Critical' i] {
     background: var(--icct-severity-critical);
@@ -8369,9 +8683,7 @@ h6 {
     .rack-alarm-count,
     .device-status,
     .mib-fault-severity,
-    .mib-fault-summary .mib-fault-severity,
-    select[data-severity-control],
-    option
+    .mib-fault-summary .mib-fault-severity
 )[data-severity='Major'],
 .device-status[data-log-status='Major' i] {
     background: var(--icct-severity-major);
@@ -8384,9 +8696,7 @@ h6 {
     .rack-alarm-count,
     .device-status,
     .mib-fault-severity,
-    .mib-fault-summary .mib-fault-severity,
-    select[data-severity-control],
-    option
+    .mib-fault-summary .mib-fault-severity
 )[data-severity='Minor'],
 .device-status[data-log-status='Minor' i] {
     background: var(--icct-severity-minor);
@@ -8399,9 +8709,7 @@ h6 {
     .rack-alarm-count,
     .device-status,
     .mib-fault-severity,
-    .mib-fault-summary .mib-fault-severity,
-    select[data-severity-control],
-    option
+    .mib-fault-summary .mib-fault-severity
 )[data-severity='Warning'],
 .device-status[data-log-status='Warning' i] {
     background: var(--icct-severity-warning);
@@ -8414,9 +8722,7 @@ h6 {
     .rack-alarm-count,
     .device-status,
     .mib-fault-severity,
-    .mib-fault-summary .mib-fault-severity,
-    select[data-severity-control],
-    option
+    .mib-fault-summary .mib-fault-severity
 )[data-severity='Information'],
 .device-status[data-log-status='Information' i] {
     background: var(--icct-severity-information);

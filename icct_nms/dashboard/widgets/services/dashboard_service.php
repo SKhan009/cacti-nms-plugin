@@ -27,7 +27,7 @@ function icct_nms_dashboard_validate($value)
             !is_array($dashboard) ||
             !isset($dashboard['widgets']) ||
             !is_array($dashboard['widgets']) ||
-            count($dashboard['widgets']) > 9
+            count($dashboard['widgets']) > 11
         ) {
             throw new InvalidArgumentException('Invalid dashboard widgets.');
         }
@@ -49,6 +49,8 @@ function icct_nms_dashboard_validate($value)
                 'recent',
                 'ports',
                 'problematic',
+                'ntp',
+                'netflow_talkers',
             ])
         ) {
             throw new InvalidArgumentException('Unknown or duplicate widget.');
@@ -142,7 +144,69 @@ function icct_nms_dashboard_save($value)
     );
     return $clean;
 }
-function icct_nms_dashboard_readings($mapData)
+function icct_nms_dashboard_ntp($devices, $activeCounts)
+{
+    require_once __DIR__ . '/../../../protocols/ntp/services/ntp_service.php';
+    $names = array_column($devices, 'name', 'id');
+    if (!$names || !icct_nms_ntp_ready()) {
+        return [];
+    }
+    $ids = array_map('intval', array_keys($names));
+    $assigned = db_fetch_assoc(
+        'SELECT host_id FROM plugin_icct_nms_ntp_monitors WHERE host_id IN (' .
+            implode(',', $ids) . ')',
+    );
+    $rows = [];
+    foreach ($assigned ?: [] as $assignment) {
+        $id = (int) $assignment['host_id'];
+        $current = icct_nms_ntp_current($id);
+        $sample = $current['sample'] ?? [];
+        $rows[] = [
+            'id' => $id,
+            'name' => $names[$id],
+            'status' => $current['status'],
+            'source' => $sample['source_address'] ?? null,
+            'offset_ms' => $sample['offset_ms'] ?? null,
+            'stratum' => $sample['stratum'] ?? null,
+            'last_success' => $current['last_success'],
+            'active_alarms' => $activeCounts[$id] ?? 0,
+        ];
+    }
+    usort($rows, static fn ($a, $b) => $b['active_alarms'] <=> $a['active_alarms'] ?:
+        strnatcasecmp($a['name'], $b['name']));
+    return $rows;
+}
+
+function icct_nms_dashboard_netflow_talkers($devices)
+{
+    $names = [];
+    foreach ($devices as $device) {
+        if ((int) ($device['id'] ?? 0) > 0) {
+            $names[(int) $device['id']] = $device['name'] ?? 'Device ' . $device['id'];
+        }
+    }
+    if (!$names) {
+        return [];
+    }
+    $placeholders = implode(',', array_fill(0, count($names), '?'));
+    $rows = db_fetch_assoc_prepared(
+        'SELECT f.host_id,f.src_addr,SUM(f.bytes) AS bytes,COUNT(*) AS flows ' .
+        'FROM plugin_icct_nms_netflow_flows f ' .
+        'JOIN plugin_icct_nms_netflow_devices d ON d.host_id=f.host_id AND d.enabled=1 ' .
+        'JOIN host h ON h.id=f.host_id AND h.deleted=\'\' AND h.disabled=\'\' ' .
+        "LEFT JOIN plugin_icct_nms_meta p ON p.meta_key=CONCAT('protocol_disabled_netflow_',f.host_id) " .
+        "WHERE f.host_id IN ($placeholders) AND COALESCE(p.meta_value,'0')<>'1' " .
+        'AND f.last_seen BETWEEN DATE_SUB(NOW(),INTERVAL 5 MINUTE) AND NOW() ' .
+        'GROUP BY f.host_id,f.src_addr ORDER BY bytes DESC,f.src_addr,f.host_id LIMIT 10',
+        array_keys($names),
+    );
+    if ($rows === false) {
+        throw new RuntimeException('Unable to read NetFlow top talkers.');
+    }
+    return array_map(static fn ($row) => $row + ['device' => $names[(int) $row['host_id']]], $rows);
+}
+
+function icct_nms_dashboard_readings($mapData, $includeNtp = false, $includeNetflowTalkers = false)
 {
     $severities = array_fill_keys(['Critical', 'Major', 'Minor', 'Warning', 'Information'], 0);
     $segments = [];
@@ -162,7 +226,42 @@ function icct_nms_dashboard_readings($mapData)
             'status' => $summary['status'],
         ];
     }
-    foreach ($devices as $device) {
+    $visibleIds = array_fill_keys(array_map('intval', array_column($devices, 'id')), true);
+    $workflow = [
+        'ack' => ['Ack' => 0, 'Not_Ack' => 0],
+        'escalation' => ['Esc' => 0, 'Not_Esc' => 0],
+    ];
+    $passive = [];
+    $ntpCounts = [];
+    foreach (icct_nms_alarm_rows() as $alarm) {
+        $id = (int) $alarm['host_id'];
+        if ($alarm['state'] !== 'Active' || !isset($visibleIds[$id])) {
+            continue;
+        }
+        $workflow['ack'][(int) $alarm['acknowledged'] ? 'Ack' : 'Not_Ack']++;
+        $workflow['escalation'][(int) $alarm['escalated'] ? 'Esc' : 'Not_Esc']++;
+        $source = $alarm['source'] ?? '';
+        if ($source === 'NTP') {
+            $ntpCounts[$id] = ($ntpCounts[$id] ?? 0) + 1;
+        } elseif (in_array($source, ['SNMP Traps', 'Syslog', 'Passive events', 'NetFlow'], true) &&
+            isset($severities[$alarm['severity']])) {
+            $passive[$id][] = [
+                'name' => $alarm['name'],
+                'severity' => $alarm['severity'],
+                'source' => $source,
+                'time' => (int) $alarm['occurred_epoch'],
+                'event_description' => $alarm['description'],
+                'alarm_key' => $alarm['alarm_key'],
+                'corrective_action' => $alarm['fix'],
+            ];
+        }
+    }
+    foreach ($devices as &$device) {
+        foreach ($passive[(int) ($device['id'] ?? 0)] ?? [] as $alarm) {
+            $device['fault_alarms'][] = $alarm;
+            $severity = $alarm['severity'];
+            $device['fault_counts'][$severity] = ($device['fault_counts'][$severity] ?? 0) + 1;
+        }
         if (!empty($device['ports']['items'])) {
             $ports[] = [
                 'id' => $device['id'],
@@ -191,6 +290,7 @@ function icct_nms_dashboard_readings($mapData)
         $segment = trim($device['category'] ?? '') ?: 'Unassigned';
         $segments[$segment] = ($segments[$segment] ?? 0) + $total;
     }
+    unset($device);
     foreach ($devices as $device) {
         $counts = array_intersect_key($device['fault_counts'] ?? [], $severities);
         if (array_sum($counts) > 0) {
@@ -216,19 +316,6 @@ function icct_nms_dashboard_readings($mapData)
     );
     require_once __DIR__ . '/../../../inventory/discovery/services/inventory_events.php';
     $inventoryEvents = icct_nms_inventory_recent_events(array_column($devices, 'id'));
-    $total = array_sum($severities);
-    $workflow = [
-        'ack' => ['Ack' => 0, 'Not_Ack' => 0],
-        'escalation' => ['Esc' => 0, 'Not_Esc' => 0],
-    ];
-    $visibleIds = array_fill_keys(array_map('intval', array_column($devices, 'id')), true);
-    foreach (icct_nms_alarm_rows() as $alarm) {
-        if ($alarm['state'] !== 'Active' || !isset($visibleIds[(int) $alarm['host_id']])) {
-            continue;
-        }
-        $workflow['ack'][(int) $alarm['acknowledged'] ? 'Ack' : 'Not_Ack']++;
-        $workflow['escalation'][(int) $alarm['escalated'] ? 'Esc' : 'Not_Esc']++;
-    }
     usort($ports, static fn ($a, $b) => strnatcasecmp($a['name'], $b['name']));
     return [
         'device_counts' => $mapData['counts'] ?? null,
@@ -243,6 +330,8 @@ function icct_nms_dashboard_readings($mapData)
         ),
         'problematic' => ['total_devices' => count($devices), 'devices' => $problematic],
         'ports' => $ports,
+        'ntp' => $includeNtp ? icct_nms_dashboard_ntp($devices, $ntpCounts) : [],
+        'netflow_talkers' => $includeNetflowTalkers ? icct_nms_dashboard_netflow_talkers($devices) : [],
         'recent' => array_slice($recent, 0, 25),
         'frequent' => array_slice($frequent, 0, 10),
         'ack' => $workflow['ack'],

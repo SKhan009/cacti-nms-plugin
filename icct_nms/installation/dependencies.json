@@ -12,6 +12,7 @@
             "php-snmp",
             "php-process",
             "net-snmp-utils",
+            "net-snmp",
             "rrdtool",
             "python3",
             "rsyslog",
@@ -50,6 +51,7 @@
             "php-xml",
             "php-snmp",
             "snmp",
+            "snmptrapd",
             "rrdtool",
             "python3",
             "rsyslog",
@@ -81,6 +83,12 @@
             },
             "services": [],
             "files": ["shared/assets/mibs/SNMPv2-SMI.txt", "protocols/snmp/mibs/js/mib-upload.js"]
+        },
+        "SNMP Traps": {
+            "binaries": {"Trap receiver": ["snmptrapd"]},
+            "services": ["icct-nms-trap-receiver.service", "icct-nms-trap-worker.service"],
+            "files": [],
+            "root_binaries": ["Trap receiver"]
         },
         "Discovery": {
             "binaries": {
@@ -170,8 +178,64 @@
             "note": "Read-only tracking, selected-source jitter and peer delay. Run installation/cli/ntp_access.py on each monitored RHEL device for its monitoring account; clock services and sources are never changed."
         }
     },
+    "rhel_package_groups": {
+        "neighbor-discovery": {
+            "label": "SNMP polling and LLDP / CDP discovery",
+            "packages": ["php-snmp", "net-snmp-utils"],
+            "detail": "The plugin reads LLDP and CDP neighbor tables from devices through SNMP."
+        },
+        "path-diagnostics": {
+            "label": "Path diagnostics",
+            "packages": ["traceroute", "iputils", "mtr", "nmap", "hping3"],
+            "detail": "Traceroute, tracepath, MTR and packet probes."
+        },
+        "snmp-traps": {
+            "label": "SNMP traps",
+            "packages": ["net-snmp"],
+            "detail": "Provides snmptrapd. Configure the receiver and authorized senders during setup."
+        },
+        "syslog": {
+            "label": "Syslog",
+            "packages": ["rsyslog", "logrotate"],
+            "detail": "Provides the Syslog receiver and log rotation."
+        },
+        "netflow": {
+            "label": "NetFlow / IPFIX",
+            "packages": ["nfdump"],
+            "detail": "Provides the nfcapd receiver and nfdump decoder."
+        },
+        "serial-gnss": {
+            "label": "Serial / GNSS collection",
+            "packages": ["python3"],
+            "detail": "The Python runtime runs the bundled serial and GNSS collectors."
+        },
+        "bandwidth-tests": {
+            "label": "Bandwidth diagnostics",
+            "packages": ["iperf3", "netperf"],
+            "detail": "Provides iPerf and Netperf throughput tests."
+        }
+    },
+    "rhel_package_checks": {
+        "SNMP tools": "net-snmp-utils",
+        "SNMP walk": "net-snmp-utils",
+        "RRDTool": "rrdtool",
+        "Trap receiver": "net-snmp",
+        "Receiver": "rsyslog",
+        "Decoder": "nfdump",
+        "Ping": "iputils",
+        "IP / ARP": "iproute",
+        "Traceroute": "traceroute",
+        "MTR": "mtr",
+        "Nping": "nmap",
+        "Hping": "hping3",
+        "iPerf": "iperf3",
+        "Netperf": "netperf"
+    },
+    "rhel_removable_tools": ["traceroute", "mtr", "hping3", "iperf3", "netperf"],
     "pending_features": {
-        "TACACS+": "Plugin authentication integration is not implemented."
+        "TACACS+": "Plugin authentication integration is pending.",
+        "Telnet / FTP / TFTP / SFTP": "Client tools are available. Device configuration and file transfer workflows are pending.",
+        "Vendor-specific protocols": "Device-specific adapters and acceptance tests are required."
     },
     "optional_components": {
         "redis": {
@@ -212,8 +276,22 @@
             },
             "note": "RHEL server tools / Debian client library. Plugin authentication integration pending; no PAM changes."
         },
+        "pathchar": {
+            "label": "Pathchar (pchar)",
+            "packages": {"rhel": ["icct-nms-pathchar"], "debian": []},
+            "native_binary": "/opt/icct-nms/native/pchar-1.5/sbin/pchar",
+            "binaries": ["/opt/icct-nms/native/pchar-1.5/sbin/pchar"],
+            "note": "Path capacity diagnostics supplied by the ICCT NMS RPM."
+        },
+        "guacamole-strict": {
+            "label": "Guacamole strict-auth",
+            "packages": {"rhel": ["icct-nms-guacamole-strict"], "debian": []},
+            "native_binary": "/opt/icct-nms/native/guacamole-1.6.0/sbin/guacd",
+            "binaries": ["/opt/icct-nms/native/guacamole-1.6.0/sbin/guacd"],
+            "note": "The strict-auth SSH daemon requires the broker and HTTPS setup."
+        },
         "guacamole": {
-            "label": "Apache Guacamole",
+            "label": "Guacamole distribution package",
             "packages": {
                 "rhel": ["guacd"],
                 "debian": []
@@ -226,12 +304,12 @@
             "note": "Native daemon dependency. Strict-auth patch, SSH broker and HTTPS are required separately. Debian requires an approved native build."
         },
         "transfer": {
-            "label": "FTP / TFTP / Telnet tools",
+            "label": "FTP / TFTP / SFTP / Telnet tools",
             "packages": {
-                "rhel": ["lftp", "tftp", "telnet"],
-                "debian": ["lftp", "tftp-hpa", "telnet"]
+                "rhel": ["lftp", "tftp", "openssh-clients", "telnet"],
+                "debian": ["lftp", "tftp-hpa", "openssh-client", "telnet"]
             },
-            "binaries": ["lftp", "tftp", "telnet"],
+            "binaries": ["lftp", "tftp", "sftp", "telnet"],
             "note": "Protocol clients only. Device workflows and server configuration are separate."
         }
     },

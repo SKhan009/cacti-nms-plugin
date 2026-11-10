@@ -209,3 +209,67 @@ if (icct_nms_device_discovery_summary(2, $assignment)[0]['status'] !== 'Stale') 
     throw new RuntimeException('Old pending configuration reported as active');
 }
 echo "Queued/running discovery status synchronized; previous configuration excluded.\n";
+
+require __DIR__ . '/../../ports/services/backend/ports.php';
+
+function db_fetch_assoc($sql)
+{
+    return [$GLOBALS['assignment']];
+}
+
+$assignment['id'] = 2;
+$assignment['protocol'] = 'arp,fdb';
+$assignment['methods'] = 'arp,fdb';
+$mac = '00:11:22:33:44:55';
+$secondMac = '00:11:22:33:44:66';
+$fdb = ['ifindex' => 7, 'status' => 3, 'mac' => $mac, 'vlans' => [10]];
+$arp = ['ifindex' => 7, 'state' => 'observed', 'mac' => $mac, 'ip' => '192.0.2.7'];
+$makeSnapshot = static fn ($method, $rows) => [
+    'protocol' => $method,
+    'status' => 'success',
+    'config_hash' => icct_backend_nd_hash($assignment),
+    'succeeded_at' => date('Y-m-d H:i:s'),
+    'data_json' => json_encode(['endpoints' => $rows]),
+];
+$summarySnapshots = [
+    $makeSnapshot('fdb', [
+        $fdb,
+        array_replace($fdb, ['vlans' => [10, 20]]),
+        array_replace($fdb, ['mac' => $secondMac]),
+        array_replace($fdb, ['ifindex' => 0]),
+        array_replace($fdb, ['ifindex' => 9, 'status' => 4]),
+    ]),
+    $makeSnapshot('arp', [
+        $arp,
+        $arp,
+        array_replace($arp, ['ifindex' => 8, 'ip' => '192.0.2.8']),
+        array_replace($arp, ['ip' => '192.0.2.9', 'neighbor_state' => 'Stale neighbour cache']),
+    ]),
+];
+$connections = icct_nms_port_connections(2, [['index' => 7, 'name' => 'port7']], true);
+$learned = $connections[7]['endpoints'];
+if (
+    array_keys($connections) !== [7] ||
+    count($learned) !== 2 ||
+    $learned[$mac]['ips'] !== ['192.0.2.7'] ||
+    array_values($learned[$mac]['vlans']) !== [10, 20] ||
+    $learned[$secondMac]['ips'] !== [] ||
+    isset($connections[7]['addresses']) || isset($connections[7]['names'])
+) {
+    throw new RuntimeException('Learned endpoints must be unique, scoped to the observed interface and distinct from LLDP/CDP');
+}
+$observations = icct_nms_topology_discovery_rows([['id' => 2, 'description' => 'Reporter']]);
+$arpObservations = array_values(array_filter($observations, static fn ($row) => $row['protocol'] === 'ARP'));
+if ($arpObservations[0]['mac'] !== $mac || $arpObservations[0]['address'] !== $arp['ip']) {
+    throw new RuntimeException('Discovery rows must expose the collected ARP MAC and IP together');
+}
+$summarySnapshots[1]['succeeded_at'] = date('Y-m-d H:i:s', time() - 901);
+$connections = icct_nms_port_connections(2, [], true);
+if ($connections[7]['endpoints'][$mac]['ips'] !== []) {
+    throw new RuntimeException('An expired ARP snapshot must not supply IP matches');
+}
+$summarySnapshots[0]['config_hash'] = 'old';
+if (icct_nms_port_connections(2, [], true) !== []) {
+    throw new RuntimeException('FDB from an old SNMP configuration must not supply learned endpoints');
+}
+echo "Discovery MAC evidence, same-interface IP matches, deduplication and stale-reading exclusion passed.\n";

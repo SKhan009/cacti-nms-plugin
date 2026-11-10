@@ -46,7 +46,40 @@ function icct_nms_fault_parameters($id)
         if (!empty($bundle['deleted_at']) || !empty($bundle['deleted'])) {
             continue;
         }
-        foreach (icct_mib_objects($bundle) as $record) {
+        $repositoryFaults = [];
+        $sourceOids = [];
+        foreach ($bundle['rows'] ?? [] as $row) {
+            if (empty($row['oid'])) {
+                continue;
+            }
+            $oid = ltrim($row['oid'], '.');
+            foreach ($row['settings']['fault_presets'] ?? [] as $preset) {
+                $repositoryFaults[$oid][] = $preset['name'];
+            }
+            if (!empty($row['data_template_id'])) {
+                $sourceOids[(int) $row['data_template_id']] = $oid;
+            }
+        }
+        if ($sourceOids) {
+            $nativePresets = db_fetch_assoc_prepared(
+                "SELECT DISTINCT r.data_template_id, r.id AS metric_id, m.meta_value
+                 FROM data_template_rrd r
+                 JOIN graph_templates_item i ON i.task_item_id=r.id AND i.local_graph_id=0
+                 JOIN graph_templates g ON g.id=i.graph_template_id
+                 JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT('graph_fault_presets_',g.id)
+                 WHERE r.local_data_id=0 AND r.data_template_id IN (" .
+                    implode(',', array_fill(0, count($sourceOids), '?')) . ')',
+                array_keys($sourceOids),
+            );
+            foreach ($nativePresets ?: [] as $stored) {
+                foreach (json_decode($stored['meta_value'], true, 64, JSON_THROW_ON_ERROR) as $preset) {
+                    if ((int) ($preset['metric_id'] ?? 0) === (int) $stored['metric_id']) {
+                        $repositoryFaults[$sourceOids[(int) $stored['data_template_id']]][] = $preset['name'];
+                    }
+                }
+            }
+        }
+        foreach (icct_mib_objects($bundle) as $index => $record) {
             if (empty($record['numeric']) || empty($record['base_oid'])) {
                 continue;
             }
@@ -61,6 +94,12 @@ function icct_nms_fault_parameters($id)
                     'units' => $record['units'] ?? '',
                     'scale' => $record['scale'],
                     'type_id' => $bundle['type_id'],
+                    'repository' => true,
+                    'repository_faults' => array_values(array_unique($repositoryFaults[ltrim($record['oid'], '.')] ?? [])),
+                    'repository_url' => 'protocols/snmp/mibs/controllers/mib_repository.php?' .
+                        http_build_query(!empty($bundle['rows'])
+                            ? ['generate' => $bundle['id'], 'stage' => 2, 'review_prepared' => 1]
+                            : ['select' => $bundle['id'], 'object' => $index]),
                     'label' => $record['symbol'],
                     'template_id' => 0,
                     'metric_id' => 0,
@@ -139,6 +178,7 @@ function icct_nms_fault_parameters($id)
     foreach ($parameters as $row) {
         $key =
             $row['oid'] .
+            '|' . ($row['repository_url'] ?? 'device') .
             '|' .
             $row['type_id'] .
             '|' .

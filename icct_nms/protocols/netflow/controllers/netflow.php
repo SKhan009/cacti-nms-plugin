@@ -8,10 +8,30 @@ try {
     icct_backend_require_device_access($id);
     if (isset($_GET['export'])) {
         $filter = icct_nms_netflow_filter($id, $_GET);
+        $breakdown = $_GET['export'] === 'breakdown';
+        $rankings = $breakdown ? icct_nms_netflow_rankings($filter) : [];
         header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="netflow-device-' . $id . '.csv"');
+        header('Content-Disposition: attachment; filename="netflow-device-' . $id .
+            ($breakdown ? '-breakdown' : '') . '.csv"');
         header('Cache-Control: no-store');
         $out = fopen('php://output', 'w');
+        $csvRow = static fn ($row) => fputcsv($out, array_map(
+            static fn ($value) => preg_match('/^[\s]*[=+@-]/', (string) $value) ? "'" . $value : $value,
+            $row,
+        ));
+        if ($breakdown) {
+            $csvRow(['Group', 'Entry', 'Bytes', 'Packets', 'Flows']);
+            foreach ([
+                'hosts' => 'Source hosts', 'destinations' => 'Destination hosts', 'protocols' => 'Protocols',
+                'applications' => 'Applications', 'conversations' => 'Conversations',
+            ] as $key => $label) {
+                foreach ($rankings[$key] as $row) {
+                    $csvRow([$label, $row['label'], $row['bytes'], $row['packets'], $row['flows']]);
+                }
+            }
+            fclose($out);
+            exit();
+        }
         $columns = [
             'first_seen',
             'last_seen',
@@ -41,13 +61,7 @@ try {
                 $filter['args'],
             );
             foreach ($rows as $row) {
-                fputcsv(
-                    $out,
-                    array_map(
-                        static fn ($v) => preg_match('/^[=+@-]/', (string) $v) ? "'" . $v : $v,
-                        array_values($row),
-                    ),
-                );
+                $csvRow(array_values($row));
             }
             $offset += count($rows);
         } while (count($rows) === 1000 && !connection_aborted());

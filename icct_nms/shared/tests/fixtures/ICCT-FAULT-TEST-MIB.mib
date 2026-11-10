@@ -1,0 +1,28 @@
+ICCT-FAULT-TEST-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    enterprises, MODULE-IDENTITY, NOTIFICATION-TYPE
+        FROM SNMPv2-SMI;
+
+icctExampleEnterprise OBJECT IDENTIFIER ::= { enterprises 32473 }
+
+icctFaultTestMib MODULE-IDENTITY
+    LAST-UPDATED "202611050000Z"
+    ORGANIZATION "ICCT NMS test fixtures"
+    CONTACT-INFO "Local test fixture"
+    DESCRIPTION "Notification definitions for local fault-rule testing."
+    REVISION "202611050000Z"
+    DESCRIPTION "Initial test notification definitions."
+    ::= { icctExampleEnterprise 20261105 }
+
+icctReceiverVerification NOTIFICATION-TYPE
+    STATUS current
+    DESCRIPTION "Local test notification used to verify trap reception."
+    ::= { icctFaultTestMib 705 }
+
+icctFaultTestWarning NOTIFICATION-TYPE
+    STATUS current
+    DESCRIPTION "Synthetic notification used to exercise a warning rule."
+    ::= { icctFaultTestMib 706 }
+
+END

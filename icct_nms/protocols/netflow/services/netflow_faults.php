@@ -48,12 +48,26 @@ function icct_nms_netflow_sync_faults($limit = 200)
                 : ($event['state'] === 'Resolved'
                     ? 'Normal'
                     : $event['severity']);
+        [$name, $fix] = match (true) {
+            str_starts_with($event['event_key'], 'rule_') =>
+                [explode("\n", $event['message'], 2)[0], 'Review the measured traffic and the filters on the device NetFlow rule.'],
+            str_starts_with($event['message'], 'Possible distributed SYN flood') =>
+                ['NetFlow distributed SYN flood', 'Review flows to the target IP and confirm the source networks before applying traffic controls.'],
+            str_starts_with($event['message'], 'Possible SYN flood') =>
+                ['NetFlow SYN flood', 'Review SYN traffic from the reported source and check the affected destinations.'],
+            str_starts_with($event['message'], 'Possible worm-like') =>
+                ['NetFlow worm-like traffic', 'Inspect the source endpoint and confirm whether its SMB or RPC activity is expected.'],
+            str_starts_with($event['message'], 'Possible network scan') =>
+                ['NetFlow network scan', 'Check whether the source is an authorized scanner and review the destinations and ports it contacted.'],
+            str_starts_with($event['message'], 'Unusually high bandwidth') =>
+                ['NetFlow bandwidth overuse', 'Review the top source IPs and their conversations to identify which traffic drove the increase.'],
+            default => ['NetFlow traffic anomaly', 'Review the exported flows and the configured thresholds.'],
+        };
         $rule = [
             'source' => 'netflow',
-            'name' => 'NetFlow traffic anomaly',
+            'name' => $name,
             'description' => $event['message'],
-            'corrective_action' =>
-                'Review the exported flows, source endpoints and configured anomaly thresholds.',
+            'corrective_action' => $fix,
         ];
         $observation = [
             'event_id' => (int) $event['id'],

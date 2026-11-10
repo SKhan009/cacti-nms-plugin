@@ -66,18 +66,26 @@ try {
                     continue;
                 }
                 $ipv6 = false;
+                $ipv4 = false;
+                $loopbackOnly = true;
                 foreach ($sources as $source) {
-                    if (str_contains($source[1], ':')) {
-                        $ipv6 = true;
-                    }
+                    $address = $source[1];
+                    $isIpv6 = str_contains($address, ':');
+                    $ipv6 = $ipv6 || $isIpv6;
+                    $ipv4 = $ipv4 || !$isIpv6;
+                    $loopbackOnly = $loopbackOnly && icct_nms_netflow_is_loopback($address);
                 }
+                // A port used solely by same-family local exporters needs no network-facing listener.
+                $bind = $loopbackOnly && !($ipv4 && $ipv6)
+                    ? ($ipv6 ? '::1' : '127.0.0.1')
+                    : ($ipv6 ? '::' : '0.0.0.0');
                 $args = [
                     '/usr/bin/nfcapd',
                     $ipv6 ? '-6' : '-4',
                     '-p',
                     (string) $port,
                     '-b',
-                    $ipv6 ? '::' : '0.0.0.0',
+                    $bind,
                     '-t',
                     '60',
                     '-s',
@@ -167,7 +175,7 @@ try {
             ],
         );
         if (time() - $lastMaintenance > 3600) {
-            // Database flow detail and history are retained for 30 days; raw retry files for 2 days.
+            // Keep active findings while their alarms may still need investigation.
             foreach (
                 [
                     'flows' => 'received_at',
@@ -183,7 +191,8 @@ try {
                         $table .
                         ' WHERE ' .
                         $column .
-                        '<DATE_SUB(NOW(),INTERVAL 30 DAY)',
+                        '<DATE_SUB(NOW(),INTERVAL 30 DAY)' .
+                        ($table === 'events' ? " AND state='Resolved'" : ''),
                     [],
                 );
             }

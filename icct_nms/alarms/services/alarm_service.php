@@ -36,6 +36,9 @@ function icct_nms_alarm_transition($previous, $observation)
 }
 function icct_nms_alarm_key($host, $rule, $observation)
 {
+    if (isset($observation['passive_key'])) {
+        return $observation['passive_key'];
+    }
     if (in_array($rule['source'] ?? '', ['syslog', 'netflow'], true)) {
         return hash('sha256', $rule['source'] . ':' . (int) $observation['event_id']);
     }
@@ -102,6 +105,10 @@ function icct_nms_alarm_record($host, $rule, $observation, $transaction = true)
             [$key],
         );
         $sample = (int) ($observation['sample_time'] ?? 0);
+        if (isset($observation['event_count_delta']) && $previous && $sample < (int) $previous['sample_time']) {
+            $sample = (int) $previous['sample_time'];
+            $observation['observed_at'] = $previous['last_seen'];
+        }
         $change =
             $previous && $sample > 0 && $sample < (int) $previous['sample_time']
                 ? null
@@ -115,6 +122,8 @@ function icct_nms_alarm_record($host, $rule, $observation, $transaction = true)
                         'availability' => 'Availability',
                         'ntp' => 'NTP',
                         'syslog' => 'Syslog',
+                        'trap' => 'SNMP Traps',
+                        'passive' => 'Passive events',
                         'netflow' => 'NetFlow',
                     ][$rule['source'] ?? 'rrd'] ?? 'Cacti';
             $automaticAck =
@@ -123,14 +132,11 @@ function icct_nms_alarm_record($host, $rule, $observation, $transaction = true)
                 !empty($observation['port_context']['auto_acknowledge']) &&
                 icct_nms_port_alarm_severity($observation['state']) &&
                 (!$previous || empty($previous['acknowledged']) || $change['raised']);
-            if ($source === 'Syslog') {
-                if (
-                    $previous &&
-                    (int) $previous['occurrences'] !== (int) $observation['event_count']
-                ) {
+            if (isset($observation['event_count_delta'])) {
+                $change['occurrences'] = (int) ($previous['occurrences'] ?? 0) + $observation['event_count_delta'];
+                if ($previous && !$change['event']) {
                     $change['event'] = 'Occurrences received';
                 }
-                $change['occurrences'] = (int) $observation['event_count'];
             }
             $description = $rule['description'] ?? '';
             $fix = $rule['corrective_action'] ?? '';
@@ -151,7 +157,7 @@ function icct_nms_alarm_record($host, $rule, $observation, $transaction = true)
                         $change['state'],
                         $observation['occurred_at'] ?? null,
                         $observation['observed_at'] ?? null,
-                        (int) ($observation['sample_time'] ?? 0),
+                        $sample,
                         $change['occurrences'],
                         $observation['source_address'] ?? null,
                         $automaticAck ? 1 : 0,
@@ -171,7 +177,7 @@ function icct_nms_alarm_record($host, $rule, $observation, $transaction = true)
                         $change['severity'],
                         $change['state'],
                         $observation['observed_at'] ?? null,
-                        (int) ($observation['sample_time'] ?? 0),
+                        $sample,
                         $change['occurrences'],
                         $automaticAck
                             ? 1
@@ -306,7 +312,7 @@ function icct_nms_collect_alarms()
         if ($current || $host['disabled'] !== '') {
             foreach (
                 db_fetch_assoc_prepared(
-                    "SELECT * FROM plugin_icct_nms_alarms WHERE host_id=? AND source NOT IN ('Syslog','NetFlow') AND state IN ('Active','Closed')",
+                    "SELECT * FROM plugin_icct_nms_alarms WHERE host_id=? AND source NOT IN ('Syslog','SNMP Traps','Passive events','NetFlow') AND state IN ('Active','Closed')",
                     [(int) $host['id']],
                 )
                 as $saved
@@ -361,7 +367,7 @@ function icct_nms_alarm_rows()
         $host = $devices[$row['host_id']];
         $row['device_name'] = $host['description'];
         $row['short_name'] = $host['short_name'] ?? '';
-        $row['address'] = $row['source'] === 'Syslog' ? $row['source_address'] : $host['hostname'];
+        $row['address'] = in_array($row['source'], ['Syslog', 'SNMP Traps', 'Passive events'], true) ? $row['source_address'] : $host['hostname'];
         $row['network_type'] = $host['device_type'] ?? '';
     }
     unset($row);
@@ -523,7 +529,7 @@ function icct_nms_alarm_detail($key)
     $row += [
         'device_name' => $device['description'],
         'short_name' => $device['short_name'] ?? '',
-        'address' => $row['source'] === 'Syslog' ? $row['source_address'] : $device['hostname'],
+        'address' => in_array($row['source'], ['Syslog', 'SNMP Traps', 'Passive events'], true) ? $row['source_address'] : $device['hostname'],
         'model_number' => $device['model_number'] ?? '',
         'serial_number' => $device['serial_number'] ?? '',
         'network_type' => $device['device_type'] ?? '',
@@ -557,10 +563,17 @@ function icct_nms_alarm_detail($key)
         }
     }
     unset($event);
+    $eventOrigins = in_array($row['source'], ['Syslog', 'SNMP Traps', 'Passive events'], true)
+        ? array_column(db_fetch_assoc_prepared(
+            'SELECT DISTINCT event_origin FROM plugin_icct_nms_syslog_events WHERE host_id=? AND alarm_key=?',
+            [(int) $row['host_id'], $key],
+        ), 'event_origin')
+        : [];
     $history = icct_nms_alarm_history_remarks($history);
     return [
         'alarm' => $row,
         'history' => $history,
+        'event_origins' => $eventOrigins,
         'acknowledgement' => !empty($row['acknowledged']) ? $ack : null,
         'escalations' => $escalations,
         'ticket' => icct_nms_alarm_ticket($row, $history),

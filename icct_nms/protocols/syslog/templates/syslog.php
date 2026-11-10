@@ -25,8 +25,8 @@ $syslogHelp = static function ($label, $help) {
 <?php
 };
 ?>
-<?php if (empty($presetMode)): ?>
-    <div class="protocol-grid cols-2">
+<div class="protocol-grid cols-2">
+    <?php if (empty($presetMode)): ?>
         <label class="field">
             <span class="field-label">Source IP address <?php $syslogHelp('Source IP address', 'Numeric sender address observed by this collector. This must uniquely identify the device.'); ?></span>
             <input
@@ -34,18 +34,18 @@ $syslogHelp = static function ($label, $help) {
                 required
                 value="<?= icct_nms_h($syslog['source_address'] ?? ($host['hostname'] ?? ($values['hostname'] ?? ($old['hostname'] ?? '')))) ?>">
         </label>
-        <label class="field">
-            <span class="field-label">Transport <?php $syslogHelp('Transport', 'Accept Syslog messages from this device over the selected listener transport.'); ?></span>
-            <select name="transport">
-                <?php foreach (['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP'] as $transport => $label): ?>
-                    <option
-                        value="<?= $transport ?>"
-                        <?= ($syslog['transport'] ?? 'both') === $transport ? 'selected' : '' ?>><?= $label ?></option>
-                <?php endforeach; ?>
-            </select>
-        </label>
-    </div>
-<?php endif; ?>
+    <?php endif; ?>
+    <label class="field">
+        <span class="field-label">Transport <?php $syslogHelp('Transport', 'Accept Syslog messages from this device over the selected listener transport.'); ?></span>
+        <select name="transport">
+            <?php foreach (['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP'] as $transport => $label): ?>
+                <option
+                    value="<?= $transport ?>"
+                    <?= ($syslog['transport'] ?? 'both') === $transport ? 'selected' : '' ?>><?= $label ?></option>
+            <?php endforeach; ?>
+        </select>
+    </label>
+</div>
 <div class="protocol-grid cols-2 syslog-settings">
     <?php foreach (
         [

@@ -290,38 +290,7 @@ function icct_backend_syslog_ingest(array $record, &$reason = null)
         ]),
     );
 
-    $saved = db_fetch_cell_prepared(
-        'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
-        ['syslog_dedupe_seconds'],
-    );
-    if (!is_scalar($saved) || !preg_match('/^[0-9]+$/D', (string) $saved) || (int) $saved > 3600) {
-        throw new IcctSyslogStorageException(
-            'Saved Syslog deduplication policy is missing or invalid. Run the plugin upgrade.',
-        );
-    }
-    $window = (int) $saved;
-    $threshold = date('Y-m-d H:i:s', time() - $window);
-
-    if ($window > 0) {
-        $existing = db_fetch_row_prepared(
-            'SELECT id FROM plugin_icct_nms_syslog_events WHERE host_id=? AND fingerprint=? AND last_seen>=? ORDER BY id DESC LIMIT 1 FOR UPDATE',
-            [(int) $assignment['host_id'], $fingerprint, $threshold],
-        );
-        if ($existing) {
-            icct_backend_syslog_execute(
-                'UPDATE plugin_icct_nms_syslog_events SET repeat_count=repeat_count+1,last_seen=?,received_at=? WHERE id=?',
-                [$now, $now, (int) $existing['id']],
-            );
-            $reason = 'deduplicated';
-            return 'repeated';
-        }
-    }
-
-    icct_backend_syslog_execute(
-        "INSERT INTO plugin_icct_nms_syslog_events\n        (host_id,event_origin,event_time," .
-            'received_at,last_seen,source_ip,source_host,transport,facility_code,facility,' .
-            "severity_code,severity,nms_severity,program,message,fingerprint,timestamp_kind,receiver_time,raw_message)\n        VALUES(?,?,?,?," .
-            '?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    return icct_backend_store_received_event(
         [
             (int) $assignment['host_id'],
             'syslog',
@@ -343,6 +312,48 @@ function icct_backend_syslog_ingest(array $record, &$reason = null)
             $normalized['receiver_time'],
             $normalized['raw_message'],
         ],
+        $reason,
+    );
+}
+
+/** Shared durable storage for notifications from either authenticated receiver. */
+function icct_backend_store_received_event(array $fields, &$reason)
+{
+    [$hostId, , , $now] = $fields;
+    $fingerprint = $fields[15];
+    $saved = db_fetch_cell_prepared(
+        'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
+        ['syslog_dedupe_seconds'],
+    );
+    if (!is_scalar($saved) || !preg_match('/^[0-9]+$/D', (string) $saved) || (int) $saved > 3600) {
+        throw new IcctSyslogStorageException(
+            'Saved Syslog deduplication policy is missing or invalid. Run the plugin upgrade.',
+        );
+    }
+    $window = (int) $saved;
+    $threshold = date('Y-m-d H:i:s', time() - $window);
+
+    if ($window > 0) {
+        $existing = db_fetch_row_prepared(
+            'SELECT id FROM plugin_icct_nms_syslog_events WHERE host_id=? AND fingerprint=? AND last_seen>=? ORDER BY id DESC LIMIT 1 FOR UPDATE',
+            [$hostId, $fingerprint, $threshold],
+        );
+        if ($existing) {
+            icct_backend_syslog_execute(
+                'UPDATE plugin_icct_nms_syslog_events SET repeat_count=repeat_count+1,last_seen=?,received_at=? WHERE id=?',
+                [$now, $now, (int) $existing['id']],
+            );
+            $reason = 'deduplicated';
+            return 'repeated';
+        }
+    }
+
+    icct_backend_syslog_execute(
+        "INSERT INTO plugin_icct_nms_syslog_events\n        (host_id,event_origin,event_time," .
+            'received_at,last_seen,source_ip,source_host,transport,facility_code,facility,' .
+            "severity_code,severity,nms_severity,program,message,fingerprint,timestamp_kind,receiver_time,raw_message)\n        VALUES(?,?,?,?," .
+            '?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        $fields,
     );
     $reason = 'stored';
     return 'inserted';
@@ -595,8 +606,17 @@ function icct_backend_syslog_worker_state_save(
     );
 }
 
+function icct_backend_syslog_ingest_line($line, &$reason)
+{
+    $record = json_decode($line, true, 32, JSON_THROW_ON_ERROR);
+    if (!is_array($record) || $record === array_values($record)) {
+        throw new RuntimeException('Syslog record must be a JSON object.');
+    }
+    return icct_backend_syslog_ingest($record, $reason);
+}
+
 /** One CLI-only reader serves both bounded imports and the daemon; cursor and events commit together. */
-function icct_backend_syslog_import_spool_once($file, $max_records = 2000)
+function icct_backend_syslog_import_spool_once($file, $max_records = 2000, ?callable $ingestLine = null)
 {
     if (PHP_SAPI !== 'cli') {
         throw new RuntimeException('Syslog ingestion requires the CLI worker.');
@@ -619,7 +639,25 @@ function icct_backend_syslog_import_spool_once($file, $max_records = 2000)
         }
         $inode = (string) $stat['ino'];
         $offset = (int) ($state['source_offset'] ?? 0);
-        if (($state['source_inode'] ?? $inode) !== $inode || $stat['size'] < $offset) {
+        $savedInode = (string) ($state['source_inode'] ?? $inode);
+        if ($savedInode !== $inode && is_readable($file . '.1')) {
+            // Drain the prior generation before moving the cursor to the newly opened file.
+            $previous = fopen($file . '.1', 'rb');
+            if ($previous) {
+                $previousStat = fstat($previous);
+                if ($previousStat && (string) $previousStat['ino'] === $savedInode && $previousStat['size'] > $offset) {
+                    fclose($handle);
+                    $handle = $previous;
+                    $previous = null;
+                    $stat = $previousStat;
+                    $inode = $savedInode;
+                }
+                if ($previous) {
+                    fclose($previous);
+                }
+            }
+        }
+        if ($savedInode !== $inode || $stat['size'] < $offset) {
             $offset = 0;
         }
         if (fseek($handle, $offset, SEEK_SET) !== 0) {
@@ -653,11 +691,7 @@ function icct_backend_syslog_import_spool_once($file, $max_records = 2000)
             $line = preg_replace('/^\xEF\xBB\xBF/', '', trim($line));
             if ($line !== '') {
                 try {
-                    $record = json_decode($line, true, 32, JSON_THROW_ON_ERROR);
-                    if (!is_array($record) || $record === array_values($record)) {
-                        throw new RuntimeException('Syslog record must be a JSON object.');
-                    }
-                    $result = icct_backend_syslog_ingest($record, $reason);
+                    $result = $ingestLine ? $ingestLine($line, $reason) : icct_backend_syslog_ingest_line($line, $reason);
                     $summary[$result]++;
                     if ($result === 'dropped') {
                         $summary['drop_reasons'][$reason] =
@@ -701,13 +735,13 @@ function icct_backend_syslog_import_spool_once($file, $max_records = 2000)
     }
 }
 
-function icct_backend_syslog_heartbeat($payload)
+function icct_backend_syslog_heartbeat($payload, $key = 'syslog_worker_status')
 {
     icct_backend_syslog_execute(
         'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
             'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
         [
-            'syslog_worker_status',
+            $key,
             json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE),
         ],
     );
@@ -796,6 +830,12 @@ function icct_backend_syslog_events(
     if (!empty($filters['origin'])) {
         $where[] = 'e.event_origin=?';
         $params[] = (string) $filters['origin'];
+    } else {
+        $where[] = "e.event_origin IN ('syslog','availability')";
+    }
+    if (isset($filters['alarm_key'])) {
+        $where[] = 'e.alarm_key=?';
+        $params[] = $filters['alarm_key'];
     }
     if (($filters['ack'] ?? '') === 'yes') {
         $where[] = 'COALESCE(a.acknowledged,e.acknowledged)=1';
@@ -824,7 +864,7 @@ function icct_backend_syslog_events(
         $params,
     );
     $sql =
-        "SELECT e.*,COALESCE(a.acknowledged,e.acknowledged) AS acknowledged,h.description,h.hostname,u.username AS ack_username
+        "SELECT e.*,COALESCE(a.acknowledged,e.acknowledged) AS acknowledged,a.state AS alarm_state,h.description,h.hostname,u.username AS ack_username
             FROM plugin_icct_nms_syslog_events e
             INNER JOIN host h ON h.id=e.host_id
             LEFT JOIN plugin_icct_nms_alarms a ON a.alarm_key=e.alarm_key

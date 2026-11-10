@@ -521,19 +521,22 @@ function icct_backend_ports_view($host)
     ];
 }
 
-/** Current neighbour reports from this authorized device, matched by ifIndex or name. */
-function icct_nms_port_connections($id, $ports)
+/** Current neighbour reports and optional learned endpoints from this authorized device. */
+function icct_nms_port_connections($id, $ports, $includeEndpoints = false)
 {
     require_once __DIR__ .
         '/../../../dashboard/topology/services/topology_configuration_service.php';
     $hosts = array_column(icct_backend_nd_hosts(), null, 'id');
     $host = $hosts[$id] ?? null;
     $connections = [];
+    $endpoints = [];
+    $protocols = $includeEndpoints ? ['lldp', 'cdp', 'arp', 'fdb'] : ['lldp', 'cdp'];
+    $placeholders = implode(',', array_fill(0, count($protocols), '?'));
     foreach (
         db_fetch_assoc_prepared(
             'SELECT protocol,status,succeeded_at,config_hash,data_json FROM ' .
-                'plugin_icct_nms_discovery_snapshots WHERE host_id=? AND protocol IN (\'lldp\',\'cdp\')',
-            [$id],
+                "plugin_icct_nms_discovery_snapshots WHERE host_id=? AND protocol IN ($placeholders)",
+            array_merge([$id], $protocols),
         )
         as $snapshot
     ) {
@@ -541,6 +544,10 @@ function icct_nms_port_connections($id, $ports)
             continue;
         }
         $payload = json_decode($snapshot['data_json'], true) ?? [];
+        if (in_array($snapshot['protocol'], ['arp', 'fdb'], true)) {
+            $endpoints[$snapshot['protocol']] = $payload['endpoints'] ?? [];
+            continue;
+        }
         foreach ($payload['neighbors'] ?? [] as $peer) {
             if (isset($peer['present']) && !$peer['present']) {
                 continue;
@@ -564,5 +571,45 @@ function icct_nms_port_connections($id, $ports)
             }
         }
     }
+    if ($includeEndpoints) {
+        $learned = icct_nms_learned_port_endpoints($endpoints['fdb'] ?? [], $endpoints['arp'] ?? []);
+        foreach ($learned as $index => $rows) {
+            $connections[$index]['endpoints'] = $rows;
+        }
+    }
     return $connections;
+}
+
+/** Group learned MACs by interface. IP evidence comes from the same device and exact ifIndex. */
+function icct_nms_learned_port_endpoints($fdb, $arp)
+{
+    $ips = [];
+    foreach ($arp as $row) {
+        // Legacy ARP has no reachability field. For IP-MIB require an explicit reachable state.
+        if (
+            ($row['state'] ?? '') !== 'observed' ||
+            (isset($row['neighbor_state']) && $row['neighbor_state'] !== 'Reachable')
+        ) {
+            continue;
+        }
+        $ips[(int) $row['ifindex']][$row['mac']][$row['ip']] = $row['ip'];
+    }
+    $byPort = [];
+    foreach ($fdb as $row) {
+        $index = (int) $row['ifindex'];
+        if ($index <= 0 || (int) $row['status'] !== 3) {
+            continue;
+        }
+        $mac = $row['mac'];
+        $endpoint = $byPort[$index][$mac] ?? [
+            'mac' => $mac,
+            'ips' => array_values($ips[$index][$mac] ?? []),
+            'vlans' => [],
+        ];
+        foreach ($row['vlans'] as $vlan) {
+            $endpoint['vlans'][$vlan] = $vlan;
+        }
+        $byPort[$index][$mac] = $endpoint;
+    }
+    return $byPort;
 }

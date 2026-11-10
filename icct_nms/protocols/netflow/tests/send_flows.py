@@ -10,6 +10,7 @@ p.add_argument("--port", type=int, required=True)
 p.add_argument("--address", default="127.0.0.1")
 p.add_argument("--source", default="127.0.0.77")
 p.add_argument("--destination", default="198.51.100.20")
+p.add_argument("--version", type=int, choices=[5, 7, 9, 10], action="append")
 p.add_argument("--application-id", action="store_true")
 a = p.parse_args()
 now = int(time.time())
@@ -83,6 +84,8 @@ v10 = struct.pack("!HHIII", 10, 16 + len(payload), now, 0, 102) + payload
 s = socket.socket(socket.AF_INET6 if ":" in a.source else socket.AF_INET, socket.SOCK_DGRAM)
 s.bind((a.source, 0))
 for version, data in [(5, v5), (7, v7), (9, v9), (10, v10)]:
+    if a.version and version not in a.version:
+        continue
     s.sendto(data, (a.address, a.port))
     print("sent", version, len(data))
     time.sleep(0.1)

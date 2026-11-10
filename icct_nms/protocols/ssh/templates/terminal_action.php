@@ -6,7 +6,14 @@ if (!empty($id) && empty($presetMode) && icct_backend_protocol_enabled($id, 'ssh
         icct_nms_ssh_console_device($id);
         $terminalUrl = icct_nms_ssh_terminal_url($id);
         ?>
-        <a class="button" href="<?= icct_nms_h($terminalUrl) ?>">Open SSH Terminal (HTTPS)</a>
+        <a class="button device-tool"
+            href="<?= icct_nms_h($terminalUrl) ?>"
+            aria-label="Open SSH terminal"
+            data-tooltip="Open SSH terminal (HTTPS)">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M4 5h16v14H4z M8 9l3 3-3 3 M13 15h3" />
+            </svg>
+        </a>
         <?php
     } catch (Throwable $error) {
         ?>

@@ -160,6 +160,7 @@ function icct_nms_topology_discovery_rows($devices)
                                 (isset($item['ip']) ? [$item['ip']] : []),
                         ),
                     ),
+                    'mac' => $item['mac'] ?? '',
                     'reporter' => $device['description'],
                     'protocol' => strtoupper($snapshot['protocol']),
                     'port' => $item['local_port'] ?? ($item['interface'] ?? ''),

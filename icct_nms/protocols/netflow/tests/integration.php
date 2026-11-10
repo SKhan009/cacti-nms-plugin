@@ -15,6 +15,7 @@ try {
     require_once __DIR__ . '/../../../shared/services/bootstrap.php';
     require_once __DIR__ . '/../services/netflow_collector.php';
     require_once __DIR__ . '/../services/netflow_faults.php';
+    require_once __DIR__ . '/../../../dashboard/widgets/services/dashboard_service.php';
     icct_nms_backend();
     date_default_timezone_set('Asia/Kolkata');
     $tables = [
@@ -151,11 +152,27 @@ try {
         strtotime($totals['last_seen']) - strtotime($totals['first_seen']) === 1,
         'Wire timestamps were not preserved',
     );
-    $read = icct_nms_netflow_read($id, ['hours' => 24]);
+    $read = icct_nms_netflow_read($id, ['hours' => 24, 'live' => '1']);
     nfAssert(
         (int) $read['totals']['flows'] === 4 && count($read['rankings']['conversations']) === 1,
         'Read model totals/conversations wrong',
     );
+    $live = $read['live_readings'];
+    nfAssert(
+        $live['flows'] === 4 && $live['latest_epoch'] > 0 &&
+        abs($live['values']['bandwidth'] - 49360 * 8 / 300000000) < 0.000001 &&
+        $live['values']['destinations'] === 1.0 && $live['values']['ports'] === 1.0 &&
+        $live['values']['syn_rate'] === 0.0 && $live['values']['distributed_syn_rate'] === 0.0,
+        'Live measurements did not match the decoded flow records.',
+    );
+    $talkers = icct_nms_dashboard_netflow_talkers([['id' => $id, 'name' => 'QA exporter']]);
+    nfAssert(count($talkers) === 1 && $talkers[0]['src_addr'] === '10.21.1.10' &&
+        (int) $talkers[0]['bytes'] === 49360 && $talkers[0]['device'] === 'QA exporter' &&
+        icct_nms_dashboard_netflow_talkers([['id' => 16777215]]) === [],
+        'Top Talkers totals or device scope were incorrect.');
+    $filteredRankings = icct_nms_netflow_rankings(icct_nms_netflow_filter($id, ['protocol' => '17']));
+    nfAssert($filteredRankings['hosts'] === [] && $filteredRankings['conversations'] === [],
+        'Breakdown report did not apply its protocol filter.');
     foreach ([5, 7, 9, 10] as $version) {
         nfAssert(
             (int) icct_nms_netflow_read($id, ['version' => $version])['totals']['flows'] === 1,
@@ -185,16 +202,27 @@ try {
     db_execute(
         'UPDATE plugin_icct_nms_netflow_flows SET last_seen=DATE_SUB(NOW(),INTERVAL 10 MINUTE),received_at=DATE_SUB(NOW(),INTERVAL 10 MINUTE)',
     );
+    $live = icct_nms_netflow_live_readings($id);
+    nfAssert($live['flows'] === 0 && $live['values'] === [], 'Stale records were shown as live readings.');
     $sample = db_fetch_row('SELECT * FROM plugin_icct_nms_netflow_flows LIMIT 1');
     unset($sample['id']);
-    foreach ([['10.22.1.1', 135], ['10.22.1.2', 445]] as $i => [$dst, $port]) {
+    $fixtures = [
+        [$sample['src_addr'], '10.22.1.1', 135, 10000, 50000000, '......S.'],
+        [$sample['src_addr'], '10.22.1.2', 445, 10000, 50000000, '......S.'],
+        ['192.0.2.40', '10.22.2.1', 445, 200, 1000, '......S.'],
+        ['192.0.2.41', '10.22.2.1', 443, 200, 1000, '......S.'],
+        ['192.0.2.40', '10.22.2.2', 443, 10000, 1000, '...A..S.'],
+    ];
+    foreach ($fixtures as $i => [$src, $dst, $port, $packets, $bytes, $flags]) {
         $row = array_replace($sample, [
             'capture_key' => hash('sha256', 'anomaly-fixture-' . $i),
+            'src_addr' => $src,
             'dst_addr' => $dst,
             'dst_port' => $port,
-            'tcp_flags' => '......S.',
-            'bytes' => 50000000,
-            'packets' => 10000,
+            'protocol' => 6,
+            'tcp_flags' => $flags,
+            'bytes' => $bytes,
+            'packets' => $packets,
             'last_seen' => date('Y-m-d H:i:s'),
             'received_at' => date('Y-m-d H:i:s'),
         ]);
@@ -208,22 +236,54 @@ try {
         );
     }
     icct_nms_netflow_anomalies($id);
-    nfAssert(count(icct_nms_netflow_read($id, [])['events']) === 4, 'Anomaly report lost findings');
+    $events = icct_nms_netflow_read($id, [])['events'];
+    $live = icct_nms_netflow_live_readings($id);
+    nfAssert(
+        abs($live['values']['distributed_syn_rate'] - 400 / 300) < 0.0001,
+        'Live peak distributed SYN rate used the wrong destination or included SYN-ACK packets.',
+    );
+    nfAssert(count($events) === 6, 'Anomaly report lost findings or raised unexpected findings');
+    $messages = implode("\n", array_column($events, 'message'));
+    nfAssert(
+        str_contains($messages, 'targeting 10.22.2.1') &&
+            str_contains($messages, 'from 2 source IPs') &&
+            str_contains($messages, 'Top source IPs by traffic share:') &&
+            !str_contains($messages, 'worm-like lateral scanning from 192.0.2.40'),
+        'Distributed flood, top talkers or worm evidence was incorrect',
+    );
+    $criticalEvents = icct_nms_netflow_read($id, ['event_severity' => 'Critical', 'event_state' => 'Active'])['events'];
+    nfAssert(
+        count($criticalEvents) === 2 && array_unique(array_column($criticalEvents, 'severity')) === ['Critical'],
+        'Anomaly severity filter did not isolate the critical finding',
+    );
+    nfAssert(
+        icct_nms_netflow_read($id, ['event_state' => 'Resolved'])['events'] === [],
+        'Anomaly status filter included active findings',
+    );
     nfAssert(
         (int) db_fetch_cell(
             "SELECT COUNT(*) FROM plugin_icct_nms_netflow_events WHERE state='Active'",
-        ) === 4,
+        ) === 6,
         'DoS, scanning, worm-like traffic and bandwidth anomalies were not all detected',
     );
     icct_nms_netflow_sync_faults();
     nfAssert(
         (int) db_fetch_cell(
             "SELECT COUNT(*) FROM plugin_icct_nms_alarms WHERE source='NetFlow' AND state='Active'",
-        ) === 4,
+        ) === 6,
         'NetFlow anomalies did not reach the shared Fault console',
     );
     $alarm = db_fetch_row(
         "SELECT * FROM plugin_icct_nms_alarms WHERE source='NetFlow' ORDER BY alarm_key LIMIT 1",
+    );
+    $linked = icct_nms_netflow_read($id, [
+        'netflow_alarm' => $alarm['alarm_key'],
+        'end' => date('Y-m-d H:i:s', time() - 86400),
+    ])['events'];
+    nfAssert(
+        count($linked) === 1 && $linked[0]['alarm_key'] === $alarm['alarm_key'] &&
+            icct_nms_netflow_read($id, ['netflow_alarm' => str_repeat('0', 64)])['events'] === [],
+        'Alarm link did not isolate the matching finding outside the normal time range',
     );
     icct_nms_alarm_action([
         'alarm_key' => $alarm['alarm_key'],
@@ -235,27 +295,27 @@ try {
     nfAssert(
         (int) db_fetch_cell(
             "SELECT COUNT(*) FROM plugin_icct_nms_alarms WHERE source='NetFlow'",
-        ) === 4 &&
+        ) === 6 &&
             (int) db_fetch_cell(
                 "SELECT SUM(acknowledged) FROM plugin_icct_nms_alarms WHERE source='NetFlow'",
             ) === 1,
         'Bridge replay duplicated alarms or reset acknowledgement',
     );
     db_execute(
-        'UPDATE plugin_icct_nms_netflow_flows SET last_seen=DATE_SUB(NOW(),INTERVAL 10 MINUTE),received_at=DATE_SUB(NOW(),INTERVAL 10 MINUTE)',
+        'UPDATE plugin_icct_nms_netflow_flows SET last_seen=DATE_SUB(NOW(),INTERVAL 10 MINUTE),received_at=NOW()',
     );
     icct_nms_netflow_anomalies($id);
     nfAssert(
         (int) db_fetch_cell(
             "SELECT COUNT(*) FROM plugin_icct_nms_netflow_events WHERE state='Active'",
-        ) === 4,
-        'Missing data incorrectly cleared anomalies',
+        ) === 6,
+        'Late historical data incorrectly cleared anomalies',
     );
     icct_nms_netflow_sync_faults();
     nfAssert(
         (int) db_fetch_cell(
             "SELECT COUNT(*) FROM plugin_icct_nms_alarms WHERE source='NetFlow' AND state='Active'",
-        ) === 4,
+        ) === 6,
         'A capture outage falsely resolved shared NetFlow faults',
     );
 
@@ -274,9 +334,43 @@ try {
     nfAssert(
         (int) db_fetch_cell(
             "SELECT COUNT(*) FROM plugin_icct_nms_alarms WHERE source='NetFlow' AND state='Resolved'",
-        ) === 4,
+        ) === 6,
         'Fresh flow recovery did not resolve the shared NetFlow faults',
     );
+    $rule = [
+        'id' => str_repeat('a', 24), 'name' => 'Test NetFlow bandwidth', 'metric' => 'bandwidth',
+        'threshold' => 0.001, 'severity' => 'Warning', 'enabled' => true, 'dst_port' => 443,
+    ];
+    $initialRevision = icct_nms_netflow_rule_revision([]);
+    $saveRules = static fn ($rules, $revision) => icct_nms_netflow_save_rules($id, [
+        'netflow_rules' => json_encode($rules, JSON_THROW_ON_ERROR), 'netflow_revision' => $revision,
+    ]);
+    $revision = $saveRules([$rule], $initialRevision);
+    try {
+        $saveRules([], $initialRevision);
+        throw new LogicException('A stale edit overwrote the NetFlow rules.');
+    } catch (RuntimeException $error) {
+        nfAssert(str_contains($error->getMessage(), 'another session'), 'Unexpected save rejection.');
+    }
+    db_execute('UPDATE plugin_icct_nms_netflow_flows SET bytes=200000,last_seen=NOW(),received_at=NOW()');
+    icct_nms_netflow_anomalies($id);
+    icct_nms_netflow_sync_faults();
+    $customAlarm = db_fetch_row("SELECT * FROM plugin_icct_nms_alarms WHERE name='Test NetFlow bandwidth'");
+    nfAssert($customAlarm && $customAlarm['severity'] === 'Warning' && $customAlarm['state'] === 'Active' &&
+        str_contains($customAlarm['description'], 'destination port 443'), 'Custom rule did not open the expected alarm.');
+    $rule['name'] = 'Edited NetFlow bandwidth';
+    $rule['severity'] = 'Major';
+    $revision = $saveRules([$rule], $revision);
+    icct_nms_netflow_anomalies($id);
+    icct_nms_netflow_sync_faults();
+    $alarm = db_fetch_row_prepared('SELECT * FROM plugin_icct_nms_alarms WHERE alarm_key=?', [$customAlarm['alarm_key']]);
+    nfAssert($alarm['name'] === $rule['name'] && $alarm['severity'] === 'Major', 'Edit did not update the same alarm.');
+    db_execute('UPDATE plugin_icct_nms_netflow_flows SET last_seen=DATE_SUB(NOW(),INTERVAL 10 MINUTE)');
+    $saveRules([], $revision);
+    icct_nms_netflow_sync_faults();
+    $alarm = db_fetch_row_prepared('SELECT * FROM plugin_icct_nms_alarms WHERE alarm_key=?', [$customAlarm['alarm_key']]);
+    nfAssert(icct_nms_netflow_rules($id) === [] && $alarm['state'] === 'Resolved' &&
+        str_contains($alarm['description'], 'Rule disabled or removed'), 'Deleting the rule did not retire its active alarm.');
     icct_nms_netflow_remove($id);
     nfAssert(
         !icct_nms_netflow_assignment($id) &&

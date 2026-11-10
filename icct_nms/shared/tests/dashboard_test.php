@@ -415,6 +415,39 @@ verify(
 );
 echo "Workflow counts use active journal rows within the visible device scope.\n";
 
+$allWidgets = ['topology', 'birds', 'alarms', 'ack', 'escalation', 'frequent', 'recent', 'ports', 'problematic', 'ntp', 'netflow_talkers'];
+verify(
+    icct_nms_dashboard_validate(['selected' => 0, 'dashboards' => [['widgets' => $allWidgets]]])
+        ['dashboards'][0]['widgets'] === $allWidgets,
+);
+$trap = [
+    'host_id' => 2,
+    'state' => 'Active',
+    'source' => 'SNMP Traps',
+    'severity' => 'Warning',
+    'name' => 'Test notification',
+    'occurred_epoch' => 123,
+    'description' => 'Trap received',
+    'fix' => '',
+    'alarm_key' => 'test-trap',
+    'acknowledged' => 0,
+    'escalated' => 0,
+];
+$workflowAlarms = [
+    $trap,
+    array_replace($trap, [
+        'source' => 'NetFlow', 'severity' => 'Major', 'name' => 'Possible network scan',
+        'alarm_key' => 'test-netflow', 'occurred_epoch' => 124,
+    ]),
+    array_replace($trap, ['host_id' => 999, 'alarm_key' => 'outside-scope']),
+    array_replace($trap, ['state' => 'Closed', 'alarm_key' => 'closed']),
+];
+$dashboard = icct_nms_dashboard_readings(['unlocated' => [['id' => 2]], 'sites' => []]);
+verify($dashboard['total'] === 2 && $dashboard['severity']['Warning'] === 1 && $dashboard['severity']['Major'] === 1);
+verify(array_column($dashboard['recent'], 'alarm_key') === ['test-netflow', 'test-trap']);
+verify(array_column($dashboard['frequent'], 'count') === [1, 1] && $dashboard['problematic']['devices'][0]['id'] === 2);
+echo "NTP widget preferences and scoped active trap and NetFlow alarms passed.\n";
+
 function icct_backend_current_user_id()
 {
     return 1;

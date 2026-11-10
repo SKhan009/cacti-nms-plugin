@@ -195,19 +195,29 @@ function icct_nms_netflow_import_file($assignment, $file)
 }
 function icct_nms_netflow_anomalies($id)
 {
+    icct_nms_netflow_rule_lock($id, static fn () => icct_nms_netflow_evaluate_anomalies($id));
+}
+
+function icct_nms_netflow_evaluate_anomalies($id)
+{
     $config = icct_nms_netflow_assignment($id);
     if (!$config) {
         return;
     }
+    $window = 'host_id=? AND last_seen BETWEEN DATE_SUB(NOW(),INTERVAL 5 MINUTE) AND NOW()';
+    $synOnly = "protocol=6 AND tcp_flags LIKE '%S%' AND tcp_flags NOT LIKE '%A%'";
     $rows = db_fetch_assoc_prepared(
         'SELECT src_addr,COUNT(DISTINCT dst_addr) AS peers,COUNT(DISTINCT dst_port) AS ' .
-            'ports,SUM(bytes) AS bytes,SUM(packets) AS packets,SUM(CASE WHEN tcp_flags LIKE ? AND ' .
-            'tcp_flags NOT LIKE ? THEN packets ELSE 0 END) AS syn_packets,SUM(CASE WHEN dst_port ' .
-            'IN(135,139,445) THEN 1 ELSE 0 END) AS smb FROM plugin_icct_nms_netflow_flows WHERE ' .
-            'host_id=? AND last_seen>=DATE_SUB(NOW(),INTERVAL 5 MINUTE) GROUP BY src_addr ORDER BY ' .
-            'bytes DESC',
-        ['%S%', '%A%', (int) $id],
+            'ports,SUM(bytes) AS bytes,SUM(CASE WHEN ' . $synOnly . ' THEN packets ELSE 0 END) AS syn_packets,' .
+            'COUNT(DISTINCT CASE WHEN ' . $synOnly . ' THEN dst_addr END) AS syn_targets,' .
+            'MIN(CASE WHEN ' . $synOnly . ' THEN dst_addr END) AS syn_target,' .
+            'COUNT(DISTINCT CASE WHEN protocol IN(6,17) AND dst_port IN(135,139,445) THEN dst_addr END) AS smb_peers ' .
+            'FROM plugin_icct_nms_netflow_flows WHERE ' . $window . ' GROUP BY src_addr ORDER BY bytes DESC,src_addr',
+        [(int) $id],
     );
+    if ($rows === false) {
+        throw new RuntimeException('Unable to read the NetFlow anomaly window.');
+    }
     $findings = [];
     foreach ($rows as $r) {
         $ip = $r['src_addr'];
@@ -229,19 +239,40 @@ function icct_nms_netflow_anomalies($id)
         if ((int) $r['syn_packets'] / 300 >= $config['syn_pps_threshold']) {
             $findings['dos_' . $ip] = [
                 'Critical',
-                'Possible SYN flood / DoS from ' .
-                $ip .
+                'Possible SYN flood / DoS from ' . $ip . ' to ' .
+                ((int) $r['syn_targets'] === 1 ? $r['syn_target'] : $r['syn_targets'] . ' destination IPs') .
                 ': ' .
                 round($r['syn_packets'] / 300) .
                 ' SYN packets/s over 5 minutes.',
             ];
         }
-        if ((int) $r['smb'] > 0 && (int) $r['peers'] >= $config['scan_threshold']) {
+        if ((int) $r['smb_peers'] >= $config['scan_threshold']) {
             $findings['worm_' . $ip] = [
                 'Major',
                 'Possible worm-like lateral scanning from ' .
-                $ip .
-                ' includes SMB/RPC ports. Investigate endpoint security; flows do not prove an infection.',
+                $ip . ' reached ' . $r['smb_peers'] .
+                ' destination IPs on SMB/RPC ports in 5 minutes. Check the endpoint for signs of infection.',
+            ];
+        }
+    }
+    if ($rows) {
+        $packetLimit = (int) $config['syn_pps_threshold'] * 300;
+        $targets = db_fetch_assoc_prepared(
+            'SELECT dst_addr,COUNT(*) AS sources,SUM(packets) AS packets FROM (' .
+                'SELECT dst_addr,src_addr,SUM(packets) AS packets FROM plugin_icct_nms_netflow_flows WHERE ' .
+                $window . ' AND ' . $synOnly . ' GROUP BY dst_addr,src_addr) AS senders ' .
+                'GROUP BY dst_addr HAVING COUNT(*)>1 AND SUM(packets)>=? AND MAX(packets)<?',
+            [(int) $id, $packetLimit, $packetLimit],
+        );
+        if ($targets === false) {
+            throw new RuntimeException('Unable to read NetFlow destination rates.');
+        }
+        foreach ($targets as $target) {
+            $findings['ddos_' . $target['dst_addr']] = [
+                'Critical',
+                'Possible distributed SYN flood / DoS targeting ' . $target['dst_addr'] . ': ' .
+                round($target['packets'] / 300) . ' SYN packets/s from ' . $target['sources'] .
+                ' source IPs over 5 minutes.',
             ];
         }
     }
@@ -256,18 +287,24 @@ function icct_nms_netflow_anomalies($id)
         ($total * 8) / 300 >= $config['bandwidth_limit_mbps'] * 1000000 ||
         ($baseline > 1000000 && $total > $baseline * 3)
     ) {
+        $topTalkers = array_map(
+            static fn ($row) => sprintf('%s (%.2f Mbps, %.1f%%)', $row['src_addr'],
+                $row['bytes'] * 8 / 300 / 1000000, $row['bytes'] * 100 / $total),
+            array_slice($rows, 0, 3),
+        );
         $findings['overuse'] = [
             'Major',
             'Unusually high bandwidth: ' .
             round(($total * 8) / 300 / 1000000, 2) .
-            ' Mbps in 5 minutes. Top source: ' .
-            ($rows[0]['src_addr'] ?? 'unavailable') .
+            ' Mbps in 5 minutes. Top source IPs by traffic share: ' .
+            implode(', ', $topTalkers) .
             '.',
         ];
     }
+    $findings += icct_nms_netflow_custom_findings($id, $window);
     $keys = [];
     foreach ($findings as $key => [$severity, $message]) {
-        $key = substr(hash('sha256', $key), 0, 32);
+        $key = str_starts_with($key, 'rule_') ? $key : substr(hash('sha256', $key), 0, 32);
         $keys[] = $key;
         $existing = db_fetch_cell_prepared(
             "SELECT id FROM plugin_icct_nms_netflow_events WHERE host_id=? AND event_key=? AND state='Active'",
@@ -289,7 +326,8 @@ function icct_nms_netflow_anomalies($id)
     }
     // Resolve only with recent data: collector outages must never clear anomalies.
     $recent = db_fetch_cell_prepared(
-        'SELECT COUNT(*) FROM plugin_icct_nms_netflow_flows WHERE host_id=? AND received_at>=DATE_SUB(NOW(),INTERVAL 2 MINUTE)',
+        'SELECT 1 FROM plugin_icct_nms_netflow_flows WHERE ' . $window .
+            ' AND received_at>=DATE_SUB(NOW(),INTERVAL 2 MINUTE) LIMIT 1',
         [(int) $id],
     );
     if ($recent) {

@@ -233,6 +233,7 @@ $display = static function ($value) {
                                 : 'Interfaces/Ports',
                 'fcaps' => 'FCAPS',
                 'syslog' => 'Syslog',
+                'traps' => 'SNMP Traps',
                 'netflow' => 'NetFlow / IPFIX',
                 'ntp' => 'NTP',
                 'records' => 'Logs',
@@ -463,6 +464,29 @@ if (!$viewRules): ?>
                 </tbody>
             </table>
         </div>
+        <?php $passiveViewRules = icct_nms_passive_fault_rules($id); ?>
+        <h3>Received event rules</h3>
+        <div class="site-table-wrap">
+            <table class="site-table">
+                <thead>
+                    <tr><th>Rule</th><th>Event source</th><th>Severity</th><th>Incident group</th><th>Enabled</th></tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($passiveViewRules as $rule): ?>
+                        <tr>
+                            <td><?= $display($rule['name']) ?></td>
+                            <td><?= $rule['source'] === 'trap' ? 'SNMP Traps' : 'Syslog' ?></td>
+                            <td><span class="device-status" data-log-status="<?= icct_nms_h($rule['severity']) ?>"><?= $display($rule['severity']) ?></span></td>
+                            <td><?= $display($rule['group']) ?></td>
+                            <td><?= $rule['enabled'] ? 'Yes' : 'No' ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php if (!$passiveViewRules): ?>
+                        <tr><td colspan="5">No received event rules configured.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
         <?php
         $faults = icct_nms_fault_observations($old);
 if (
@@ -499,6 +523,7 @@ if (
 ?>
     </section>
     <?php require __DIR__ . '/../../protocols/syslog/templates/device_view_syslog.php';
+require __DIR__ . '/../../protocols/snmp/traps/templates/history.php';
 require __DIR__ . '/../../protocols/netflow/templates/device_view_netflow.php';
 require __DIR__ . '/../../protocols/ntp/templates/device_view_ntp.php'; ?>
     <?php require __DIR__ . '/device_records.php'; ?>

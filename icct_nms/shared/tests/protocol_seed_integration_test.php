@@ -20,7 +20,7 @@ try {
     }
     icct_nms_seed_protocol_presets();
     $presets = icct_nms_protocol_presets();
-    if (count($presets) !== 8 || count(icct_nms_netflow_profiles()) !== 4) {
+    if (count($presets) !== 10 || count(icct_nms_netflow_profiles()) !== 4) {
         throw new RuntimeException('Fresh install incomplete.');
     }
     foreach ($presets as $protocol => $values) {

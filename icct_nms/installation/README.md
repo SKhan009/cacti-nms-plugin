@@ -17,7 +17,7 @@ Provision dependencies from approved offline media first, or supply a verified b
 
 Supported package-manager adapters: RHEL/Rocky/AlmaLinux with DNF; Debian/Ubuntu with APT; both require systemd for automatic worker setup. Extra repositories may be needed for nfdump, hping3 or netperf. The installer does not silently enable third-party repositories, skip unavailable packages or claim success when a service fails. Provision approved repositories first. Use `--web-user` and `--web-group` for a custom PHP service account. Use `--no-packages` when packages are already supplied by the administrator.
 
-Open **Settings → Installation Checks** with native Installation/Upgrades permission. It shows real binaries, bundled assets, current web PHP extensions and worker state. Run `php plugins/icct_nms/installation/cli/check.php` for the CLI PHP environment; web and CLI can have different extensions. Repeat setup on every remote collector using that collector's own Cacti configuration/poller ID.
+Open **Settings → Installation Checks → Checks** with native Installation/Upgrades permission. It shows real binaries, bundled assets, current web PHP extensions and worker state. Run `php plugins/icct_nms/installation/cli/check.php` for the CLI PHP environment; web and CLI can have different extensions. Repeat setup on every remote collector using that collector's own Cacti configuration/poller ID.
 
 ## Offline bundle
 
@@ -44,7 +44,7 @@ The installer provisions the verified packages before checking PHP CLI. On RHEL,
 
 - SSH uses the existing strict-auth Guacamole adapter, HTTPS origin and dedicated account. A stock guacd package is insufficient. Follow `protocols/ssh/README.md`; checks do not mark this ready just because a binary exists.
 - Pathchar needs a compatible `pchar` binary from an approved source; it is not available in every base repository. No arbitrary binary download is performed.
-- NTP monitoring and TACACS+ protocol backends are currently unimplemented. Chrony provides OS time synchronization only; no time source is invented or overwritten.
+- RHEL NTP monitoring needs read access to the existing chrony socket. TACACS+ tools are available as packages, while plugin authentication integration is pending.
 - Devices still need valid credentials and protocol assignments; exporters must point to the reachable collector IP/port. Listening sockets or installed packages alone do not prove actual device data collection.
 - Serial/USB access, raw-socket diagnostic permissions and externally managed firewall rules depend on local policy; verify them on the target. Runtime checks report missing components instead of simulating success.
 
@@ -69,9 +69,6 @@ The bootstrap verifies the plugin files and every bundled package, rejects misma
 Debian 12's Netperf package requires the official `non-free` repository component. Have the administrator configure approved repositories before building/installing. The installer does not silently enable components or omit requested tools. Debian package-adapter tests are distinct from systemd service validation on a full Debian host.
 
 For application-only deployment into an existing externally managed Cacti installation, use `python3 install.py --cacti-root /path/to/cacti --application-only`. This installs pages/schema through native Cacti APIs without touching OS packages or worker services. The full installer archive is verified first.
-
-Chrony is not a required plugin package: automatically installing a time daemon could replace the host’s existing time-sync service. Existing OS synchronization is retained; the unimplemented NTP monitoring backend remains clearly unavailable.
-
 
 ### Optional protocol dependencies
 
@@ -104,6 +101,16 @@ Add either/both `--native-bundle` options when building a complete release with 
 
 ### One installer with all protocol package profiles
 
+Build a fresh system installer from a matching media directory with `packages/`, every available `components/<profile>/` bundle and both `native/` bundles:
+
+```sh
+python3 installation/cli/package.py --media /path/to/extracted-media --output /tmp/icct-nms-complete-offline.zip
+```
+
+Extract the ZIP outside the web root. Run `python3 install.py --cacti-root /path/to/cacti --plan` to check the target and list the package and native profiles, then run the same command as root without `--plan`. On RHEL this also provisions the **Offline Packages** runner using the verified media. On a fresh RHEL collector, add `--trap-auth-file /path/to/private-authorization-file --trap-listener udp:COLLECTOR_IP:162` with the actual collector IP to enable the authenticated SNMP trap receiver and worker. Add `--ssh-origin https://nms.example.org` when the SSH broker has a real HTTPS origin. Site authorization files stay separate from the release.
+
+BLR §5.3.2.5.1 includes SFTP. Rebuild the transfer profile to include the OpenSSH client alongside FTP, TFTP and Telnet tools. Device file transfer and Telnet workflows, TACACS+ authentication and vendor-specific adapters require application integration and device acceptance tests.
+
 For online setup, `setup.py install --online --all-components` installs the core dependencies plus all available protocol package profiles. This includes Redis, Python WebSocket support, NTP tools, TACACS+ tools and FTP/TFTP/Telnet clients. RHEL also offers the distribution Guacamole package; Debian uses the verified native build instead. A package being installed does not imply its application backend is implemented.
 
 For a complete offline release, add repeated `--component-bundle /path/to/profile-bundle` arguments to `package.py` together with the core `--bundle` and native bundles. The single resulting archive carries the profile manifests and packages outside the web root. Its bootstrap validates every selected profile's OS/CPU, component ID and SHA-256 hashes before updating source or invoking a package manager, then automatically forwards them to setup. The read-only `install.py --plan` lists the selected components.
@@ -126,7 +133,7 @@ Setup provisions only the required writable application paths: MIB storage, uplo
 
 ## Offline SSH service setup
 
-Include a verified `guacamole-strict` native bundle and matching OS package bundle in the release, then add `--ssh-origin https://nms.example.org` to `install.py`. The installer forwards the exact origin, verifies the strict build and starts the dedicated broker and loopback Guacamole services. RHEL bundles include SELinux policy build tools; enforcement stays enabled. See `protocols/ssh/README.md` for explicit existing-store and account options. Without an explicit origin, setup leaves SSH configuration unchanged and Installation Checks reports its measured state. NTP and TACACS+ backends remain unavailable.
+Include a verified `guacamole-strict` native bundle and matching OS package bundle in the release, then add `--ssh-origin https://nms.example.org` to `install.py`. The installer forwards the exact origin, verifies the strict build and starts the dedicated broker and loopback Guacamole services. RHEL bundles include SELinux policy build tools; enforcement stays enabled. See `protocols/ssh/README.md` for explicit existing-store and account options. Without an explicit origin, setup leaves SSH configuration unchanged and Installation Checks reports its measured state.
 
 ## Read-only NTP statistics on offline RHEL
 
@@ -142,3 +149,20 @@ sudo python3 ntp_access.py install --user monitoring_account
 The fixed policy permits only tracking, source-statistics and peer-data reads as `chrony`, through the explicit `/run/chrony/chronyd.sock` Unix socket. There are no wildcard arguments or UDP/transport fallbacks. Existing SSH host-key approval remains required. NTP collection does not enable SSH health monitoring. Missing permission, insufficient samples or a source change produces an explicit collection error without substitute measurements.
 
 Jitter is chrony's selected-source residual offset standard deviation (`sourcestats`, in milliseconds), with its sample count and span stored alongside it. Peer delay is the measured round-trip delay to that same selected NTP peer (`ntpdata`), distinct from root delay to the ultimate reference. Tracking brackets both reads; a source/reference update invalidates the collection. All measurements and errors are stored per inventory device. Older history retains missing jitter/delay as unknown and is never backfilled with zero or RMS offset.
+
+## Offline Packages in the browser
+
+**Checks** reports application and collector readiness. **Offline Packages** is the RHEL package manager. The page stays read-only on Windows WAMP and other hosts without the RHEL runner.
+
+Keep the complete media folder outside the web root. It has `packages/` for core dependencies and `components/{redis,websocket,ntp,tacacs,guacamole,transfer}/` for the individual verified bundles. See the bundle commands above to build media for a different OS release or CPU. Native Guacamole and Pathchar bundles, when supplied in `native/`, use the native installer described above.
+
+After installing or enabling the plugin, provision its package runner once as a system administrator. Substitute the actual Cacti root, PHP account and extracted media directory.
+
+```sh
+sudo /usr/bin/python3 /var/www/html/cacti/plugins/icct_nms/installation/cli/package_runner.py provision \
+  --cacti-root /var/www/html/cacti --web-user apache --media /media/icct-rhel98-aarch64-package-media
+```
+
+The runner verifies all bundles, installs missing runner prerequisites from the local media, keeps a private copy of the media and starts a systemd timer. The target needs Cacti, PHP and the RHEL system Python/DNF runtime for this initial provisioning. The browser submits only an allowlisted operation through Cacti's authenticated Installation/Upgrades page. It shows the runner's actual RPM checks, transaction selection and verification. RPM operations use local media only and stop if installation would replace an installed package. Service configuration and plugin activation are separate.
+
+**Uninstall** applies to eligible tools installed by this runner. It protects pre-existing packages and core dependencies and rejects transactions that would remove additional packages. Runner failures appear in the progress dialog and in `journalctl -u icct-nms-package-runner.service`.

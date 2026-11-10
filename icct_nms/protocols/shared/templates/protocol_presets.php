@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error) {
     $key = $_POST['preset_protocol'] ?? '';
     if (
         is_string($key) &&
-        in_array($key, ['cdp', 'lldp', 'snmp', 'ssh', 'serial', 'syslog', 'netflow', 'ntp'], true)
+        in_array($key, ['cdp', 'lldp', 'snmp', 'snmp_notifications', 'snmp_discovery', 'ssh', 'serial', 'syslog', 'netflow', 'ntp'], true)
     ) {
         $protocolPresets[$key] = array_intersect_key(
             array_filter($_POST, 'is_scalar'),

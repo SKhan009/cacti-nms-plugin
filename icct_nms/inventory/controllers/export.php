@@ -9,6 +9,13 @@ require_once dirname(__DIR__, 2) . '/shared/services/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/inventory/services/inventory.php';
 try {
     icct_nms_backend();
+    if (isset($_GET['ntp'])) {
+        $id = icct_nms_id($_GET['id'] ?? 0);
+        icct_backend_require_device_access($id);
+        require_once dirname(__DIR__, 2) . '/protocols/ntp/services/ntp_history.php';
+        icct_nms_ntp_export_history($id, $_GET);
+        exit();
+    }
     $devices = icct_nms_inventory();
 } catch (Throwable $e) {
     icct_nms_failure($e);

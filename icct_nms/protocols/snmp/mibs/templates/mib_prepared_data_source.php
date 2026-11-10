@@ -291,7 +291,6 @@ icct_nms_input('RRD Maximum (U=Unknown)', $prefix . '[max]', $settings['max']); 
                 <label class="field">
                     <span class="field-label">Severity</span>
                     <select
-                        data-severity-control
                         data-rule="severity">
                         <?php foreach (
                             ['Information', 'Minor', 'Warning', 'Major', 'Critical'] as $severity
