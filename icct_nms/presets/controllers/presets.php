@@ -56,6 +56,13 @@ $segmentName = '';
 try {
     icct_nms_backend();
     $management = is_realm_allowed(3);
+    $canManageSyslogPort = $activePreset === 'protocols' && $management && is_realm_allowed(26);
+    $syslogPortStatus = ['available' => false];
+    if ($canManageSyslogPort) {
+        require_once dirname(__DIR__, 2) . '/installation/services/package_jobs.php';
+        $syslogPortStatus = icct_nms_package_status($config['base_path']);
+
+    }
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $segmentName = is_string($_POST['segment_name'] ?? null) ? $_POST['segment_name'] : '';
         $editing = $activePreset === 'segment' && ($_POST['action'] ?? '') !== 'delete_segment';
@@ -79,10 +86,40 @@ try {
             if ($activePreset === 'segment') {
                 $segmentId = icct_nms_segment_id($_POST['segment_id'] ?? 0);
             }
+            $redirect = 'presets/controllers/presets.php?tab=' . $activePreset;
             if ($activePreset === 'rack-config') {
                 $message = icct_nms_save_rack_preset($_POST);
             } elseif ($activePreset === 'protocols') {
+                $port = null;
+                $savingSyslog = ($_POST['preset_protocol'] ?? '') === 'syslog';
+                if ($savingSyslog) {
+                    $redirect .= '&protocol=syslog';
+                    if (array_key_exists('receiver_port', $_POST)) {
+                        if (!$canManageSyslogPort || !isset($syslogPortStatus['syslog_port'])) {
+                            throw new RuntimeException('The offline runner is unavailable for Syslog port changes.');
+                        }
+                        $requestedPort = $_POST['receiver_port'];
+                        if (!icct_nms_valid_syslog_port($requestedPort)) {
+                            throw new InvalidArgumentException('Enter a receiver port from 1 to 65535.');
+                        }
+                        if ((int) $requestedPort !== $syslogPortStatus['syslog_port']) {
+                            if (!$syslogPortStatus['available'] || ($syslogPortStatus['job']['status'] ?? '') === 'running') {
+                                throw new RuntimeException('The offline runner is busy or unavailable. Try saving again shortly.');
+                            }
+                            $port = $requestedPort;
+                        }
+                    }
+                }
                 $message = icct_nms_save_protocol_preset($_POST);
+                if ($port !== null) {
+                    try {
+                        $job = icct_nms_package_submit($config['base_path'], 'syslog-port', $port);
+                        $redirect .= '&port_job=' . $job;
+                        $message .= ' Receiver port change queued.';
+                    } catch (Throwable $failure) {
+                        throw new RuntimeException('Syslog presets saved. The port change could not be queued. ' . $failure->getMessage());
+                    }
+                }
             } elseif (($_POST['action'] ?? '') === 'save_gnss') {
                 icct_nms_gnss_save($_POST);
                 $message = 'GNSS source saved.';
@@ -99,7 +136,7 @@ try {
                 $message = icct_nms_save_segment($_POST);
             }
             $_SESSION['icct_nms_notice'] = $message;
-            icct_nms_redirect('presets/controllers/presets.php?tab=' . $activePreset);
+            icct_nms_redirect($redirect);
         } catch (Throwable $failure) {
             $error = $failure->getMessage();
         }

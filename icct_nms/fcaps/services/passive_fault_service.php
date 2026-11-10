@@ -10,6 +10,87 @@ function icct_nms_passive_fault_rules($id)
     return $json ? json_decode($json, true, 32, JSON_THROW_ON_ERROR) : [];
 }
 
+function icct_nms_syslog_alarm_preset_defaults()
+{
+    return file_get_contents(__DIR__ . '/../data/syslog_alarm_presets.json');
+}
+
+function icct_nms_syslog_alarm_catalog()
+{
+    $stored = db_fetch_cell_prepared(
+        'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
+        ['syslog_alarm_presets'],
+    );
+    return json_decode($stored ?: icct_nms_syslog_alarm_preset_defaults(), true, 32, JSON_THROW_ON_ERROR);
+}
+
+function icct_nms_syslog_alarm_choices($binding)
+{
+    $catalog = icct_nms_syslog_alarm_catalog();
+    $choices = [];
+    foreach ($catalog as $group => $severities) {
+        foreach ($severities as $severity => $phrases) {
+            foreach ($phrases as $phrase) {
+                $choices[mb_strtolower($phrase)] = ['group' => $group, 'phrase' => $phrase, 'severity' => $severity];
+            }
+        }
+    }
+    $keywords = $binding ? icct_backend_syslog_filters($binding)['match_strings'] : [];
+    if ($keywords) {
+        $deviceChoices = [];
+        foreach ($keywords as $phrase) {
+            $key = mb_strtolower($phrase);
+            $deviceChoices[$key] = [
+                'group' => 'Device keywords',
+                'phrase' => $phrase,
+                'severity' => $choices[$key]['severity'] ?? 'Warning',
+            ];
+        }
+        $choices = $deviceChoices;
+    }
+    $groups = [];
+    foreach ($choices as $choice) {
+        $groups[$choice['group']][] = $choice;
+    }
+    return $groups;
+}
+
+function icct_nms_syslog_alarm_preset_rows()
+{
+    return array_merge(...array_values(icct_nms_syslog_alarm_choices([])));
+}
+
+function icct_nms_save_syslog_alarm_presets($input)
+{
+    icct_backend_require_management(3);
+    $current = icct_nms_syslog_alarm_preset_rows();
+    if (!is_array($input) || array_keys($input) !== array_keys($current)) {
+        throw new InvalidArgumentException('Reload the Syslog alarm presets and try again.');
+    }
+    $drafts = [];
+    foreach ($current as $i => $entry) {
+        $row = $input[$i];
+        if (!is_array($row)) {
+            throw new InvalidArgumentException('Enter a keyword and a default severity for every row.');
+        }
+        $drafts[] = [
+            'source' => 'syslog',
+            'name' => $row['phrase'] ?? '',
+            'message' => $row['phrase'] ?? '',
+            'severity' => $row['severity'] ?? '',
+        ];
+    }
+    $catalog = [];
+    foreach (icct_nms_passive_fault_validate($drafts) as $i => $rule) {
+        $catalog[$current[$i]['group']][$rule['severity']][] = $rule['message'];
+    }
+    icct_backend_category_execute(
+        'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ' .
+            'ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+        ['syslog_alarm_presets', json_encode($catalog, JSON_THROW_ON_ERROR)],
+    );
+}
+
 function icct_nms_passive_oid($value)
 {
     if (!is_string($value)) {

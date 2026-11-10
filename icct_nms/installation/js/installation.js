@@ -2,6 +2,35 @@
 (function () {
     'use strict';
 
+    const portSave = document.querySelector('[data-syslog-save-job]');
+    if (portSave) {
+        const receiverPort = document.querySelector('#syslog-receiver-port');
+        const initialPort = receiverPort.value;
+        const deadline = Date.now() + 90000;
+        const pollPort = async () => {
+            try {
+                const response = await fetch('installation/controllers/installation.php?view=package-job');
+                if (!response.ok) throw new Error();
+                const state = await response.json();
+                const job = state.job;
+                if (job?.id === portSave.dataset.syslogSaveJob && job.status !== 'running') {
+                    if (job.status === 'complete' && receiverPort.value === initialPort) {
+                        receiverPort.value = state.syslog_port;
+                    }
+                    portSave.textContent = job.status === 'complete'
+                        ? 'Receiver port updated to ' + state.syslog_port + '.'
+                        : (job.steps.at(-1) || 'The receiver port change failed.');
+                    return;
+                }
+            } catch {
+                // Retry briefly while the local runner starts.
+            }
+            if (Date.now() < deadline) window.setTimeout(pollPort, 1500);
+            else portSave.textContent = 'The port change could not be confirmed. Check Installation → Offline Packages.';
+        };
+        pollPort();
+    }
+
     const page = document.querySelector('[data-package-page]');
     if (!page) return;
 
@@ -34,11 +63,13 @@
 
     function updatePackages(state) {
         latestJob = state.job;
-        last.hidden = !latestJob;
+        if (last) last.hidden = !latestJob;
         const installed = { ...state.installed, ...state.external };
         const busy = submitting || Boolean(watchedJob) || state.job?.status === 'running';
-        page.querySelector('[data-package-availability]').textContent = state.message;
-        page.querySelector('[data-package-action="verify"]').disabled = busy || !state.available;
+        const availability = page.querySelector('[data-package-availability]');
+        const verify = page.querySelector('[data-package-action="verify"]');
+        if (availability) availability.textContent = state.message;
+        if (verify) verify.disabled = busy || !state.available;
         page.querySelectorAll('[data-package-profile]').forEach((profile) => {
             const rows = Array.from(profile.querySelectorAll('[data-rpm]'));
             const names = rows.map((row) => row.dataset.rpm);
@@ -172,7 +203,8 @@
                 job.completed + ' / ' + job.total + ' steps complete';
         } else {
             summary.textContent = job.status === 'complete'
-                ? (job.action === 'uninstall' ? 'Uninstall complete.' : 'Package operation complete.') :
+                ? (job.action === 'syslog-port' ? 'Syslog port updated.' :
+                    job.action === 'uninstall' ? 'Uninstall complete.' : 'Package operation complete.') :
                 (job.steps[job.steps.length - 1] || 'Package operation stopped.');
             if (job.id === watchedJob) watchedJob = null;
         }
@@ -190,7 +222,8 @@
             }
             updatePackages(state);
         } catch {
-            page.querySelector('[data-package-availability]').textContent = 'Could not read package status.';
+            const availability = page.querySelector('[data-package-availability]');
+            if (availability) availability.textContent = 'Could not read the offline runner status.';
         }
         window.setTimeout(refresh, watchedJob ? 1200 : 5000);
     }
@@ -212,8 +245,8 @@
         }
         const button = event.target.closest('[data-package-action]');
         if (button && !submitting && !watchedJob) {
-            selection = button;
             const action = button.dataset.packageAction;
+            selection = button;
             title.textContent = button.getAttribute('aria-label');
             resetDialog();
             const descriptions = {

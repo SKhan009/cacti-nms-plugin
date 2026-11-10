@@ -478,6 +478,7 @@ if (!$presetMode) {
         <details
             class="protocol-item"
             id="protocol-syslog"
+            <?= $presetMode && (($failedProtocol ?? '') === 'syslog' || ($_GET['protocol'] ?? '') === 'syslog') ? 'open' : '' ?>
             data-saved="<?= $syslogSaved ? '1' : '0' ?>"
             <?= $syslogSaved || in_array('syslog', $protocolDraft, true) ? '' : 'hidden' ?>>
             <summary>
@@ -513,6 +514,9 @@ if (!$presetMode) {
                     <?php endif; ?>
                     <?php require __DIR__ . '/../../syslog/templates/syslog.php'; ?>
                 </form>
+                <?php if ($presetMode && !empty($canManageSyslogPort) && isset($_GET['port_job'])): ?>
+                    <script src="installation/js/installation.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../../../installation/js/installation.js'), 0, 12) ?>" defer></script>
+                <?php endif; ?>
             </div>
         </details>
         <?php $netflow = $presetMode ? $protocolPresets['netflow'] ?? [] : icct_nms_netflow_assignment($id);

@@ -884,141 +884,180 @@ if (deviceName && shortName && !shortName.disabled) {
     update();
 }
 
-// Search the installed core templates while the native select remains the submitted value.
-document
-    .querySelectorAll('#device-form [name="host_template_id"], [data-searchable-template]')
-    .forEach((templateSelect, templateIndex) => {
-        const templateLabel = templateSelect.dataset.searchableTemplate || 'Device Template';
-        const pluralLabel = templateLabel === 'Data Query' ? 'Data Queries' : `${templateLabel}s`;
-        const optionsId = `template-search-options-${templateIndex}`;
-        const field = templateSelect.closest('.field');
-        const wrap = templateSelect.closest('.select-wrap');
-        const trigger = document.createElement('button');
-        trigger.type = 'button';
-        trigger.className = 'template-select-trigger';
-        trigger.setAttribute('role', 'combobox');
-        trigger.setAttribute('aria-label', templateLabel);
-        trigger.setAttribute('aria-expanded', 'false');
-        trigger.setAttribute('aria-controls', optionsId);
-        trigger.setAttribute('aria-haspopup', 'listbox');
-        trigger.disabled = templateSelect.matches(':disabled');
-        trigger.textContent = templateSelect.selectedOptions[0]?.textContent || 'None';
-        const panel = document.createElement('div');
-        panel.className = 'template-search-dropdown';
-        // Older RHEL browsers may not implement the Popover API or its CSS selector.
-        let usePopover =
-            typeof panel.showPopover === 'function' && typeof panel.hidePopover === 'function';
-        let templatesOpen = false;
+// Searchable dropdowns keep the native select as the source of the saved value.
+let searchableSelectId = 0;
+window.icctMakeSearchableSelect = (templateSelect, templateLabel, pluralLabel, requiredSelection = false) => {
+    const optionsId = `template-search-options-${++searchableSelectId}`;
+    const field = templateSelect.closest('.field');
+    const wrap = templateSelect.closest('.select-wrap');
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'template-select-trigger';
+    trigger.setAttribute('role', 'combobox');
+    trigger.setAttribute('aria-label', templateLabel);
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('aria-controls', optionsId);
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.disabled = templateSelect.matches(':disabled');
+    trigger.textContent = templateSelect.selectedOptions[0]?.textContent || 'None';
+    const panel = document.createElement('div');
+    panel.className = 'template-search-dropdown';
+    // Older RHEL browsers may not implement the Popover API or its CSS selector.
+    let usePopover =
+        typeof panel.showPopover === 'function' && typeof panel.hidePopover === 'function';
+    let templatesOpen = false;
+    panel.hidden = true;
+    if (usePopover) panel.setAttribute('popover', 'manual');
+    const search = document.createElement('input');
+    search.type = 'search';
+    search.placeholder = `Search ${pluralLabel.toLowerCase()}`;
+    search.setAttribute('aria-label', search.placeholder);
+    search.autocomplete = 'off';
+    const list = document.createElement('div');
+    list.id = optionsId;
+    list.className = 'template-search-options';
+    list.setAttribute('role', 'listbox');
+    list.setAttribute('aria-label', pluralLabel);
+    const empty = document.createElement('p');
+    empty.textContent = `No matching ${pluralLabel.toLowerCase()}`;
+    empty.setAttribute('role', 'status');
+    empty.hidden = true;
+    panel.append(search, list, empty);
+    document.body.append(panel);
+    wrap.hidden = true;
+    field.append(trigger);
+    function closeTemplates(restoreFocus = false) {
+        if (!templatesOpen) return;
+        if (usePopover) panel.hidePopover();
+        templatesOpen = false;
+        panel.classList.remove('is-open');
         panel.hidden = true;
-        if (usePopover) panel.setAttribute('popover', 'manual');
-        const search = document.createElement('input');
-        search.type = 'search';
-        search.placeholder = `Search ${pluralLabel.toLowerCase()}`;
-        search.setAttribute('aria-label', search.placeholder);
-        search.autocomplete = 'off';
-        const list = document.createElement('div');
-        list.id = optionsId;
-        list.className = 'template-search-options';
-        list.setAttribute('role', 'listbox');
-        list.setAttribute('aria-label', pluralLabel);
-        const empty = document.createElement('p');
-        empty.textContent =
-            templateLabel === 'Data Query' ? 'No matching data queries' : 'No matching templates';
-        empty.setAttribute('role', 'status');
-        empty.hidden = true;
-        panel.append(search, list, empty);
-        document.body.append(panel);
-        wrap.hidden = true;
-        field.append(trigger);
-        function closeTemplates(restoreFocus = false) {
-            if (!templatesOpen) return;
-            if (usePopover) panel.hidePopover();
-            templatesOpen = false;
-            panel.classList.remove('is-open');
-            panel.hidden = true;
-            trigger.setAttribute('aria-expanded', 'false');
-            if (restoreFocus) trigger.focus();
-        }
-        function renderTemplates() {
-            list.replaceChildren();
-            const query = search.value.trim().toLowerCase();
-            Array.from(templateSelect.options)
-                .filter((option) => option.textContent.toLowerCase().includes(query))
-                .forEach((option) => {
-                    const choice = document.createElement('button');
-                    choice.type = 'button';
-                    choice.setAttribute('role', 'option');
-                    choice.setAttribute('aria-selected', String(option.selected));
-                    choice.textContent = option.textContent;
-                    choice.disabled = option.disabled;
-                    choice.addEventListener('click', () => {
-                        templateSelect.value = option.value;
-                        templateSelect.dispatchEvent(new Event('change', { bubbles: true }));
-                        trigger.textContent = option.textContent;
-                        closeTemplates(true);
-                    });
-                    list.append(choice);
-                });
-            empty.hidden = list.children.length !== 0;
-        }
-        trigger.addEventListener('click', (event) => {
-            event.preventDefault();
-            if (templatesOpen) {
-                closeTemplates();
-                return;
-            }
-            search.value = '';
-            renderTemplates();
-            const rect = trigger.getBoundingClientRect();
-            const height = Math.min(300, Math.max(rect.top - 12, innerHeight - rect.bottom - 12));
-            const width = Math.min(Math.max(rect.width, 280), innerWidth - 24);
-            panel.style.width = `${width}px`;
-            panel.style.left = `${Math.max(12, Math.min(rect.left, innerWidth - width - 12))}px`;
-            panel.style.maxHeight = `${height}px`;
-            panel.style.top = `${innerHeight - rect.bottom >= height + 8 ? rect.bottom + 4 : Math.max(8, rect.top - height - 4)}px`;
-            panel.hidden = false;
-            panel.classList.add('is-open');
-            if (usePopover) {
-                try {
-                    panel.showPopover();
-                } catch (_) {
-                    usePopover = false;
-                    panel.removeAttribute('popover');
+        trigger.setAttribute('aria-expanded', 'false');
+        if (restoreFocus) trigger.focus();
+    }
+    function renderTemplates() {
+        list.replaceChildren();
+        const query = search.value.trim().toLowerCase();
+        let lastGroup;
+        Array.from(templateSelect.options)
+            .filter((option) => {
+                const group = option.closest('optgroup')?.label || '';
+                return (!requiredSelection || !option.disabled) &&
+                    `${group} ${option.textContent}`.toLowerCase().includes(query);
+            })
+            .forEach((option) => {
+                const group = option.closest('optgroup')?.label;
+                if (group && group !== lastGroup) {
+                    const heading = document.createElement('small');
+                    heading.className = 'template-search-group';
+                    heading.textContent = group;
+                    list.append(heading);
                 }
+                lastGroup = group;
+                const choice = document.createElement('button');
+                choice.type = 'button';
+                choice.setAttribute('role', 'option');
+                choice.setAttribute('aria-selected', String(option.selected));
+                choice.textContent = option.textContent;
+                choice.disabled = option.disabled;
+                if (requiredSelection) {
+                    // Chrome on macOS can blur the search before a pointer click reaches the option.
+                    choice.addEventListener('mousedown', (event) => event.preventDefault());
+                }
+                choice.addEventListener('click', () => {
+                    templateSelect.value = option.value;
+                    if (requiredSelection) {
+                        templateSelect.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                    templateSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    trigger.textContent = option.textContent;
+                    closeTemplates(true);
+                });
+                list.append(choice);
+            });
+        empty.hidden = list.children.length !== 0;
+    }
+    trigger.addEventListener('click', (event) => {
+        event.preventDefault();
+        if (templatesOpen) {
+            closeTemplates();
+            return;
+        }
+        search.value = '';
+        renderTemplates();
+        const rect = trigger.getBoundingClientRect();
+        const height = Math.min(300, Math.max(rect.top - 12, innerHeight - rect.bottom - 12));
+        const width = Math.min(Math.max(rect.width, 280), innerWidth - 24);
+        panel.style.width = `${width}px`;
+        panel.style.left = `${Math.max(12, Math.min(rect.left, innerWidth - width - 12))}px`;
+        panel.style.maxHeight = `${height}px`;
+        panel.style.top = `${innerHeight - rect.bottom >= height + 8 ? rect.bottom + 4 : Math.max(8, rect.top - height - 4)}px`;
+        panel.hidden = false;
+        panel.classList.add('is-open');
+        if (usePopover) {
+            try {
+                panel.showPopover();
+            } catch (_) {
+                usePopover = false;
+                panel.removeAttribute('popover');
             }
-            templatesOpen = true;
-            trigger.setAttribute('aria-expanded', 'true');
-            search.focus();
-        });
-        search.addEventListener('input', renderTemplates);
-        panel.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') {
-                event.preventDefault();
-                closeTemplates(true);
+        }
+        templatesOpen = true;
+        trigger.setAttribute('aria-expanded', 'true');
+        search.focus();
+    });
+    search.addEventListener('input', renderTemplates);
+    panel.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            closeTemplates(true);
+        }
+        if (event.key === 'Enter' && event.target === search) {
+            event.preventDefault();
+            list.querySelector('button:not(:disabled)')?.click();
+        }
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            const options = Array.from(list.querySelectorAll('button:not(:disabled)'));
+            const index = options.indexOf(document.activeElement);
+            options[
+                Math.max(
+                    0,
+                    Math.min(options.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)),
+                )
+            ]?.focus();
+        }
+    });
+    const listeners = new AbortController();
+    const options = { signal: listeners.signal };
+    if (requiredSelection) {
+        templateSelect.addEventListener('invalid', (event) => {
+            event.preventDefault();
+            if (templateSelect.form?.querySelector(':invalid:not(fieldset)') === templateSelect) {
+                queueMicrotask(() => trigger.focus());
             }
-            if (event.key === 'Enter' && event.target === search) {
-                event.preventDefault();
-                list.querySelector('button:not(:disabled)')?.click();
-            }
-            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-                event.preventDefault();
-                const options = Array.from(list.querySelectorAll('button:not(:disabled)'));
-                const index = options.indexOf(document.activeElement);
-                options[
-                    Math.max(
-                        0,
-                        Math.min(options.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)),
-                    )
-                ]?.focus();
-            }
-        });
-        document.addEventListener('click', (event) => {
-            if (!panel.contains(event.target) && !trigger.contains(event.target)) closeTemplates();
-        });
-        field
-            .closest('.device-fields, .graphs-page')
-            ?.addEventListener('scroll', () => closeTemplates());
-        window.addEventListener('resize', () => closeTemplates());
+        }, options);
+        panel.addEventListener('focusout', () => queueMicrotask(() => {
+            if (!panel.contains(document.activeElement)) closeTemplates();
+        }), options);
+    }
+    document.addEventListener('click', (event) => {
+        if (!panel.contains(event.target) && !trigger.contains(event.target)) closeTemplates();
+    }, options);
+    field
+        .closest('.device-fields, .graphs-page')
+        ?.addEventListener('scroll', () => closeTemplates(), options);
+    window.addEventListener('resize', () => closeTemplates(), options);
+    return () => {
+        closeTemplates();
+        listeners.abort();
+        panel.remove();
+    };
+};
+document.querySelectorAll('#device-form [name="host_template_id"], [data-searchable-template]')
+    .forEach((select) => {
+        const label = select.dataset.searchableTemplate || 'Device Template';
+        window.icctMakeSearchableSelect(select, label, label === 'Data Query' ? 'Data Queries' : `${label}s`);
     });
 
 // Saved presets populate device type choices for the selected segment.

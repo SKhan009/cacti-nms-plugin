@@ -25,6 +25,8 @@ import native
 
 STATE = Path("/var/lib/icct-nms-package-runner")
 UNIT = "icct-nms-package-runner"
+SYSLOG_UNIT = "icct-nms-syslog-port"
+SYSLOG_SCRIPTS = STATE / "runner/syslog"
 LOGGER = logging.getLogger(UNIT)
 REMOVAL_IMPACTS = {
     "traceroute": "Traceroute UDP, ICMP and TCP tools",
@@ -156,6 +158,18 @@ def provision(args, target):
             destination = program.parent / patch
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(native.ROOT / patch, destination)
+        syslog_source = root / "plugins/icct_nms/protocols/syslog/rhel"
+        SYSLOG_SCRIPTS.mkdir(exist_ok=True)
+        for name in ("install_syslog_rhel.sh", "syslog_port.sh", "rsyslog-template.conf"):
+            shutil.copyfile(syslog_source / name, SYSLOG_SCRIPTS / name)
+        write_unit(
+            SYSLOG_UNIT + "@.service",
+            "[Unit]\nDescription=Apply ICCT NMS Syslog receiver port %i\n"
+            "[Service]\nType=oneshot\nTimeoutStartSec=60s\nIPAddressDeny=any\n"
+            "Environment=SYSLOG_PORT=%i SYSLOG_RECEIVER_ONLY=1 OPEN_FIREWALL=0\n"
+            f"Environment=WEB_USER={account.pw_name} WEB_GROUP={grp.getgrgid(gid).gr_name}\n"
+            f"ExecStart=/usr/bin/bash {SYSLOG_SCRIPTS}/install_syslog_rhel.sh {root}\n",
+        )
         write_unit(UNIT + ".service", "[Unit]\nDescription=ICCT NMS offline package runner\n"
                    "[Service]\nType=oneshot\nUMask=0022\nTimeoutStartSec=15min\nPrivateNetwork=yes\n"
                    f"ExecStart=/usr/bin/python3 {program}/cli/package_runner.py work\n")
@@ -282,12 +296,43 @@ def read_request(path, uid):
             raise ValueError("Invalid or expired package request.")
         job = json.loads(stream.read(513))
     if (not isinstance(job, dict) or not re.fullmatch(r"[a-f0-9]{32}", job.get("id", ""))
-            or job.get("action") not in ("install", "uninstall", "preview-uninstall", "verify")
+            or job.get("action") not in ("install", "uninstall", "preview-uninstall", "verify", "syslog-port")
             or not isinstance(job.get("target"), str)):
         raise ValueError("Invalid package request.")
     if job["action"] == "uninstall" and not re.fullmatch(r"[a-f0-9]{32}", job.get("preview") or ""):
         raise ValueError("Review the uninstall preview before confirming.")
+    if job["action"] == "syslog-port" and not valid_syslog_port(job["target"]):
+        raise ValueError("Choose a Syslog port from 1 to 65535.")
     return job
+
+
+def valid_syslog_port(value):
+    return bool(re.fullmatch(r"[1-9][0-9]{0,4}", value)) and int(value) <= 65535
+
+
+def current_syslog_port():
+    helper = SYSLOG_SCRIPTS / "syslog_port.sh"
+    if not helper.is_file():
+        return None
+    port = subprocess.check_output(
+        ["/usr/bin/bash", "-c", 'source "$1"; icct_syslog_port "$(icct_syslog_saved_port)"',
+         "syslog-port", str(helper)],
+        text=True,
+        timeout=5,
+    ).strip()
+    return int(port) if valid_syslog_port(port) else None
+
+
+def apply_syslog_port(port):
+    unit = f"{SYSLOG_UNIT}@{port}.service"
+    result = subprocess.run(
+        ["/usr/bin/systemctl", "start", unit], capture_output=True, text=True, timeout=75,
+    )
+    if result.returncode:
+        raise ValueError(
+            f"Could not apply Syslog port {port}. Check whether the port is in use or "
+            f"blocked by SELinux. See the local journal for {unit}."
+        )
 
 
 def apply_transaction(action, names, files, target, step, preview=False):
@@ -417,6 +462,11 @@ def work(target):
         state["installed"] = actual
         state["versions"] = package_versions(media, target, grouped, actual)
         state.pop("native", None)
+        try:
+            state["syslog_port"] = current_syslog_port()
+        except (OSError, subprocess.SubprocessError) as error:
+            LOGGER.warning("Could not read the Syslog port: %s", error)
+            state["syslog_port"] = None
         state["external"] = external_installations(target, actual)
         state["removable"] = sorted(
             name for name, versions in actual.items()
@@ -450,6 +500,15 @@ def work(target):
 
     try:
         selection = job["target"]
+        if job["action"] == "syslog-port":
+            job["total"] = 1
+            apply_syslog_port(selection)
+            state["syslog_port"] = current_syslog_port()
+            if state["syslog_port"] != int(selection):
+                raise ValueError("The receiver did not report the requested Syslog port.")
+            job["status"] = "complete"
+            step(f"TCP, UDP and enabled local forwarding use Syslog port {selection}.")
+            return
         if job["action"] == "verify":
             if selection != "media":
                 raise ValueError("Unknown media verification request.")

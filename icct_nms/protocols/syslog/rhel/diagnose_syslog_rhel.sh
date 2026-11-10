@@ -19,21 +19,23 @@ rsyslogd -N1 > /tmp/icct-rsyslog-check.$$ 2>&1 && pass 'rsyslog configuration va
 rm -f /tmp/icct-rsyslog-check.$$ || true
 systemctl is-active --quiet rsyslog && pass 'rsyslog service active' || fail 'rsyslog service inactive'
 systemctl is-active --quiet icct-nms-syslog-worker && pass 'ICCT Syslog worker active' || fail 'ICCT Syslog worker inactive'
-ss -lun | awk '{print $4}' | grep -Eq '(^|:)514$' && pass 'UDP 514 listening' || fail 'UDP 514 not listening'
-ss -ltn | awk '{print $4}' | grep -Eq '(^|:)514$' && pass 'TCP 514 listening' || warn 'TCP 514 not listening'
+source "$(dirname "${BASH_SOURCE[0]}")/syslog_port.sh"
+port=$(icct_syslog_port "$(icct_syslog_saved_port)") || exit 2
+icct_syslog_listening udp "$port" && pass "UDP $port listening" || fail "UDP $port not listening"
+icct_syslog_listening tcp "$port" && pass "TCP $port listening" || warn "TCP $port not listening"
 [[ -f "$SPOOL" ]] && pass "Spool exists: $SPOOL" || fail "Spool missing: $SPOOL"
 if [[ -f "$SPOOL" ]]; then
     stat -c 'Spool owner/mode: %U:%G %a, size=%s bytes, mtime=%y' "$SPOOL"
 fi
 
 echo
-printf '%s\n' '--- Port-514 definitions / rulesets ---'
+printf '%s\n' "--- Listener definitions / rulesets (ICCT port $port) ---"
 grep -RniE 'imudp|imtcp|UDPServerRun|InputTCPServerRun|ruleset|icct-nms' /etc/rsyslog.conf /etc/rsyslog.d 2> /dev/null | head -n 120 || true
 
 echo
 printf '%s\n' '--- Capture self-test ---'
 marker="ICCTNMS_DIAG_$(date +%s)_$$"
-logger --udp -n 127.0.0.1 -P 514 -p local7.notice -t ICCT_DIAG "$marker" || warn 'logger UDP send failed'
+logger --udp -n 127.0.0.1 -P "$port" -p local7.notice -t ICCT_DIAG "$marker" || warn 'logger UDP send failed'
 found=0
 for _ in $(seq 1 20); do
     if grep -Fq "$marker" "$SPOOL" 2> /dev/null; then

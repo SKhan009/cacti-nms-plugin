@@ -74,6 +74,9 @@ try {
         icct_nms_topology_discovery_rows($devices),
         icct_nms_scan_neighbour_rows($scanResults),
     );
+    if ($tab === 'discovered') {
+        $observations = icct_nms_match_discovery_observations($observations);
+    }
     $networks = [];
     $coreDevices = [];
     if ($automation) {

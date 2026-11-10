@@ -122,12 +122,7 @@
                 'other');
         const details = document.querySelector('#lnmsNodeDetails');
         details.replaceChildren();
-        const fields = {
-            'Last heartbeat': node.last_seen || 'Not received',
-            'Location source': node.location_source || 'Unassigned',
-            'Position status': node.location_status || 'Unassigned',
-            'Last GNSS fix': node.last_fix || 'Not received',
-        };
+        const fields = { 'Last heartbeat': node.last_seen || 'Not received' };
         Object.entries(fields).forEach(([name, value]) => {
             const row = document.createElement('div'),
                 label = document.createElement('dt'),

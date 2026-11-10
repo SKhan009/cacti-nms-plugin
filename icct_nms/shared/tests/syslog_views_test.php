@@ -139,7 +139,9 @@ syslog_view_check(
 syslog_view_check(
     str_contains($html, 'scheduled automatic restart attempt 5938 for the older NMS diagnostics listener') &&
         str_contains($html, 'The outcome of that attempt is unknown from this entry.') &&
-        str_contains($html, 'Fix or recovery information is unavailable for this event.') &&
+        !str_contains($html, 'Fix or recovery status') &&
+        substr_count($html, 'syslog-verification-panel') === 1 &&
+        str_contains($html, '<h4>Linked alarm</h4>') &&
         str_contains($html, 'Scheduled restart job, restart counter is at 5938.'),
     'History explains a systemd retry without claiming recovery and preserves the raw message',
 );

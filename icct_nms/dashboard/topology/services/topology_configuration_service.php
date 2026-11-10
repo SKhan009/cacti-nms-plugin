@@ -2,6 +2,7 @@
 
 /** Manual connections are plugin metadata; discovery remains owned by the collectors. */
 require_once __DIR__ . '/../../../protocols/shared/services/backend/discovery_management_addresses.php';
+require_once __DIR__ . '/../../../inventory/services/backend/identity.php';
 
 function icct_nms_manual_links()
 {
@@ -148,7 +149,7 @@ function icct_nms_topology_discovery_rows($devices)
                 if (isset($item['present']) && !$item['present']) {
                     continue;
                 }
-                $rows[] = [
+                $row = [
                     'reporter_id' => (int) $device['id'],
                     'name' =>
                         $item['remote_name'] ??
@@ -173,10 +174,71 @@ function icct_nms_topology_discovery_rows($devices)
                             ? 'IP neighbour observation'
                             : 'Learned MAC; direct link unconfirmed'),
                 ];
+                if ($row['protocol'] === 'FDB') {
+                    // Only the learned status identifies a forwarding port.
+                    $row['learned_port'] = '';
+                    if ((int) ($item['status'] ?? 0) === 3) {
+                        $row['learned_port'] = $row['port'];
+                        if ($row['learned_port'] === '' && (int) ($item['ifindex'] ?? 0) > 0) {
+                            $row['learned_port'] = 'ifIndex ' . (int) $item['ifindex'];
+                        } elseif ($row['learned_port'] === '' && (int) ($item['bridge_port'] ?? 0) > 0) {
+                            $row['learned_port'] = 'Bridge port ' . (int) $item['bridge_port'];
+                        }
+                    }
+                }
+                $rows[] = $row;
             }
         }
     }
     return $rows;
+}
+
+/** Associate IP observations with all learned ports visible to this user. */
+function icct_nms_match_discovery_observations($rows)
+{
+    $macs = [];
+    $ports = [];
+    $ipMacs = [];
+    foreach ($rows as $index => $row) {
+        if (!in_array($row['protocol'], ['ARP', 'FDB'], true)) {
+            continue;
+        }
+        $mac = icct_backend_identity_mac($row['mac']);
+        if ($mac === '') {
+            continue;
+        }
+        $macs[$index] = $mac;
+        if ($row['protocol'] === 'FDB' && $row['learned_port'] !== '') {
+            // BRIDGE-MIB and Q-BRIDGE-MIB can report the same port in one snapshot.
+            $ports[$mac][$row['reporter_id']][$row['learned_port']] = $row;
+        } elseif ($row['protocol'] === 'ARP' && $row['address'] !== '') {
+            $ipMacs[$mac] = true;
+        }
+    }
+
+    $result = [];
+    foreach ($rows as $index => $row) {
+        $mac = $macs[$index] ?? '';
+        if ($row['protocol'] === 'ARP') {
+            if ($row['address'] !== '' && isset($ports[$mac])) {
+                $row['fdb_matches'] = array_merge(...array_map('array_values', array_values($ports[$mac])));
+                $row['detail'] = 'Matched by MAC; direct link unconfirmed';
+            } else {
+                $row['detail'] = $mac === '' || $row['address'] === ''
+                    ? 'IP neighbour observation; no usable IP-to-MAC mapping'
+                    : 'IP neighbour observation; no matching learned port';
+            }
+        } elseif ($row['protocol'] === 'FDB') {
+            if ($row['learned_port'] !== '' && isset($ipMacs[$mac])) {
+                continue;
+            }
+            $row['detail'] = $row['learned_port'] === ''
+                ? 'FDB observation; no learned port available'
+                : 'Learned MAC; no matching IP observation';
+        }
+        $result[] = $row;
+    }
+    return $result;
 }
 
 /** Use the same selected methods, hashes and freshness rules as topology links. */

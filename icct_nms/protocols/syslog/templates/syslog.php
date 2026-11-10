@@ -35,6 +35,25 @@ $syslogHelp = static function ($label, $help) {
                 value="<?= icct_nms_h($syslog['source_address'] ?? ($host['hostname'] ?? ($values['hostname'] ?? ($old['hostname'] ?? '')))) ?>">
         </label>
     <?php endif; ?>
+    <?php if (!empty($presetMode)):
+        $portAvailable = !empty($syslogPortStatus['available']) && isset($syslogPortStatus['syslog_port']);
+        $portJob = $_GET['port_job'] ?? '';
+        $watchPort = !empty($canManageSyslogPort) && is_string($portJob) && preg_match('/^[a-f0-9]{32}$/D', $portJob);
+        ?>
+        <div class="field">
+            <label class="field-label" for="syslog-receiver-port">Receiver port (TCP and UDP)
+                <?php $syslogHelp('Receiver port', 'Save applies this port to both listeners and to local forwarding when enabled. Update your Syslog senders to use the same port.'); ?>
+            </label>
+            <input id="syslog-receiver-port" name="receiver_port" type="number" min="1" max="65535" step="1"
+                placeholder="514" value="<?= (int) ($syslogPortStatus['syslog_port'] ?? 514) ?>"
+                <?= $portAvailable ? 'required' : 'disabled' ?>>
+            <?php if ($watchPort): ?>
+                <small data-syslog-save-job="<?= icct_nms_h($portJob) ?>" role="status">Waiting for the offline runner to apply the port…</small>
+            <?php elseif (!$portAvailable): ?>
+                <small>Changing the port requires Installation permission and an available offline runner.</small>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
     <label class="field">
         <span class="field-label">Transport <?php $syslogHelp('Transport', 'Accept Syslog messages from this device over the selected listener transport.'); ?></span>
         <select name="transport">

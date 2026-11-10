@@ -1,5 +1,6 @@
 <?php
 $passiveRules = $id ? icct_nms_passive_fault_rules($id) : [];
+$syslogAlarmChoices = icct_nms_syslog_alarm_choices($id ? icct_backend_syslog_assignment($id) : []);
 $trapChoices = [
     '1.3.6.1.6.3.1.1.5.1' => 'coldStart',
     '1.3.6.1.6.3.1.1.5.2' => 'warmStart',
@@ -108,16 +109,34 @@ $passiveHelp = static function (string $headingHelpText): void {
                 <template>
                     <div class="passive-rule" role="group" aria-label="<?= $label ?> rule">
                         <label class="field">
-                            <span class="field-label">Alarm Name <?php $passiveHelp('Enter the title operators should see when the alarm is raised. For example, Switch power supply fault.'); ?></span>
-                            <input data-field="name" aria-label="Alarm name" maxlength="160" required>
+                            <span class="field-label">Alarm Name <?php $passiveHelp($source === 'syslog'
+                                ? 'Choose a keyword to fill in Message Contains and Severity. You can adjust the match and severity before saving.'
+                                : 'Enter the title operators should see when the alarm is raised.'); ?></span>
+                            <?php if ($source === 'syslog'): ?>
+                                <span class="select-wrap"><select data-field="name" aria-label="Alarm name" required>
+                                    <option value="" disabled hidden>Choose an alarm</option>
+                                    <?php foreach ($syslogAlarmChoices as $group => $choices): ?>
+                                        <optgroup label="<?= icct_nms_h($group) ?>">
+                                            <?php foreach ($choices as $choice): $name = ucfirst($choice['phrase']); ?>
+                                                <option value="<?= icct_nms_h($name) ?>" data-message="<?= icct_nms_h($choice['phrase']) ?>"
+                                                    data-alarm-severity="<?= icct_nms_h($choice['severity']) ?>"><?= icct_nms_h($name) ?></option>
+                                            <?php endforeach; ?>
+                                        </optgroup>
+                                    <?php endforeach; ?>
+                                </select></span>
+                            <?php else: ?>
+                                <input data-field="name" aria-label="Alarm name" maxlength="160" required>
+                            <?php endif; ?>
                         </label>
                         <?php if ($source === 'syslog'): ?>
                             <?php foreach ([
-                                'severity_code' => ['Message severity', icct_backend_syslog_severity_labels()],
-                                'facility_code' => ['Facility', icct_backend_syslog_facility_labels()],
-                            ] as $field => [$title, $choices]): ?>
+                                'severity_code' => ['Syslog Severity', icct_backend_syslog_severity_labels(),
+                                    'Match the severity reported by the device. Any accepts all Syslog severities. Use Severity below to set the priority of the alarm in ICCT.'],
+                                'facility_code' => ['Facility', icct_backend_syslog_facility_labels(),
+                                    'Match the category reported by the device, such as Kernel or System daemon. Choose Any to accept every category.'],
+                            ] as $field => [$title, $choices, $help]): ?>
                                 <label class="field">
-                                    <span class="field-label"><?= $title ?></span>
+                                    <span class="field-label"><?= $title ?> <?php $passiveHelp($help); ?></span>
                                     <span class="select-wrap"><select data-field="<?= $field ?>">
                                         <option value="">Any</option>
                                         <?php foreach ($choices as $value => $choice): ?>
@@ -126,8 +145,8 @@ $passiveHelp = static function (string $headingHelpText): void {
                                     </select></span>
                                 </label>
                             <?php endforeach; ?>
-                            <label class="field"><span class="field-label">Program</span><input data-field="program" maxlength="128"></label>
-                            <label class="field"><span class="field-label">Message contains</span><input data-field="message" maxlength="160"></label>
+                            <label class="field"><span class="field-label">Program <?php $passiveHelp('Enter the program name exactly as shown in Syslog history, such as systemd. Leave blank to match any program.'); ?></span><input data-field="program" maxlength="128"></label>
+                            <label class="field"><span class="field-label">Message Contains <?php $passiveHelp('Enter text to look for in the Syslog message. Matching ignores case. Leave blank to match any message text. This condition applies to alarms only.'); ?></span><input data-field="message" maxlength="160"></label>
                         <?php else: ?>
                             <label class="field">
                                 <span class="field-label">Trap OID <?php $passiveHelp('Identifies the notification that triggers this rule. This value comes from the selected item in the sidebar. Select another item to work with a different OID.'); ?></span>
@@ -143,12 +162,12 @@ $passiveHelp = static function (string $headingHelpText): void {
                             </label>
                         <?php endif; ?>
                         <label class="field">
-                            <span class="field-label">Incident group (optional) <?php $passiveHelp('Leave blank for an independent rule. To group rules for the same incident, enter a shared label such as port-7-down and give them the same alarm name and severity. Use different labels for different ports.'); ?></span>
-                            <input data-field="group" aria-label="Incident group (optional)" maxlength="64">
+                            <span class="field-label">Incident Group (optional) <?php $passiveHelp('Leave blank for an independent rule. To group rules for the same incident, enter a shared label such as port-7-down and give them the same alarm name and severity. Use different labels for different ports.'); ?></span>
+                            <input data-field="group" aria-label="Incident Group (optional)" maxlength="64">
                         </label>
                         <label class="field">
-                            <span class="field-label">Alarm Severity <?php $passiveHelp('Choose how urgent this alarm should appear in NMS. For example, choose Major for a serious equipment fault or Information for a routine notice.'); ?></span>
-                            <span class="select-wrap"><select data-field="severity" aria-label="Alarm severity" required>
+                            <span class="field-label">Severity <?php $passiveHelp('Choose how urgent this alarm should appear in NMS. For example, choose Major for a serious equipment fault or Information for a routine notice.'); ?></span>
+                            <span class="select-wrap"><select data-field="severity" aria-label="Severity" required>
                                 <option value="">Select severity</option>
                                 <?php foreach (['Critical', 'Major', 'Minor', 'Warning', 'Information'] as $severity): ?>
                                     <option><?= $severity ?></option>

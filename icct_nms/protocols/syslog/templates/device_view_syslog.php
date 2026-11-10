@@ -281,7 +281,11 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
                 $explanation = $context['explanation'];
             }
             $verificationTrap = $verificationTraps[$context['verification_trap_id'] ?? 0] ?? null;
+            $followUp = $context['follow_up'] ?? '';
+            $hasFollowUp = is_string($followUp) && trim($followUp) !== '';
+            $hasRecoveryDetails = $hasFollowUp || $verificationTrap;
             $hasAlarm = !empty($event['alarm_key']);
+            $showAlarmPanel = !$availability && $hasAlarm && !$hasRecoveryDetails;
             $acknowledgement = $hasAlarm
                 ? (empty($event['acknowledged']) ? 'Not acknowledged' : 'Acknowledged')
                 : 'No linked alarm';
@@ -347,13 +351,16 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
                                 </div>
                             <?php endif; ?>
                         </section>
-                        <?php if (!$availability): ?>
+                        <?php if (!$availability && ($hasRecoveryDetails || $showAlarmPanel)): ?>
                             <section class="syslog-detail-panel syslog-verification-panel">
-                                <h4><?= $verificationTrap ? 'What changed and how it was checked' : 'Fix or recovery status' ?></h4>
-                                <?php if (is_string($context['follow_up'] ?? null)): ?>
-                                    <p><?= icct_nms_h($context['follow_up']) ?></p>
-                                <?php elseif (!$verificationTrap): ?>
-                                    <p>Fix or recovery information is unavailable for this event.</p>
+                                <h4><?= $showAlarmPanel ? 'Linked alarm' : ($verificationTrap ? 'What changed and how it was checked' : 'Fix or recovery status') ?></h4>
+                                <?php if ($hasFollowUp): ?>
+                                    <p><?= icct_nms_h($followUp) ?></p>
+                                <?php endif; ?>
+                                <?php if ($showAlarmPanel): ?>
+                                    <div class="syslog-event-actions">
+                                        <a class="button" href="alarms/controllers/alarms.php?view=<?= icct_nms_h($event['alarm_key']) ?>">View linked alarm</a>
+                                    </div>
                                 <?php endif; ?>
                                 <?php if ($verificationTrap): ?>
                                     <h5>Test trap received after the fix</h5>
@@ -382,7 +389,7 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
                             </section>
                         <?php endif; ?>
                     </div>
-                    <?php if ($hasAlarm): ?>
+                    <?php if ($hasAlarm && !$showAlarmPanel): ?>
                         <div class="syslog-event-actions">
                             <a class="button" href="alarms/controllers/alarms.php?view=<?= icct_nms_h($event['alarm_key']) ?>">View linked alarm</a>
                         </div>

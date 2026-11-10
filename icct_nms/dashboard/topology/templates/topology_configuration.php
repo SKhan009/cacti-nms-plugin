@@ -601,20 +601,47 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                             <td><?= $d['known'] ? 'Known to Cacti' : 'Not added' ?> · SNMP <?= $d['snmp'] ? 'Up' : 'Down' ?></td>
                         </tr>
                     <?php endforeach; ?>
-                    <?php foreach ($observations as $d): ?>
+                    <?php foreach ($observations as $d):
+                        $fdbMatches = $d['fdb_matches'] ?? [];
+                        $sources = array_merge([$d], $fdbMatches);
+                        $sourceLabels = [];
+                        if ($fdbMatches) {
+                            $sourceLabels[] = 'ARP: ';
+                            foreach ($fdbMatches as $i => $match) {
+                                $sourceLabels[] = count($fdbMatches) > 1 ? 'FDB ' . ($i + 1) . ': ' : 'FDB: ';
+                            }
+                        } ?>
                         <tr
-                            data-method="<?= icct_nms_h($d['protocol']) ?>"
+                            data-method="<?= icct_nms_h($fdbMatches ? 'ARP|FDB' : $d['protocol']) ?>"
                             data-network="">
                             <td><?= icct_nms_h($d['name']) ?></td>
-                            <td><?= icct_nms_h($d['address']) ?></td>
+                            <td><?= icct_nms_h($d['address'] ?: '—') ?></td>
                             <td><?= icct_nms_h(($d['mac'] ?? '') ?: '—') ?></td>
-                            <td><?= icct_nms_h($d['reporter']) ?></td>
-                            <td><?= icct_nms_h($d['protocol']) ?></td>
-                            <td><?= icct_nms_h($d['port'] . ' / ' . $d['remote_port']) ?></td>
                             <td>
-                                <span class="device-status <?= $d['status'] === 'Current' ? 'online' : 'other' ?>"><?= $d['status'] ?></span>
+                                <?php foreach ($sources as $i => $source): ?>
+                                    <div><?= icct_nms_h(($sourceLabels[$i] ?? '') . $source['reporter']) ?></div>
+                                <?php endforeach; ?>
                             </td>
-                            <td><?= icct_nms_h($d['last_check']) ?></td>
+                            <td><?= icct_nms_h($fdbMatches ? 'ARP + FDB' : $d['protocol']) ?></td>
+                            <td>
+                                <?php foreach ($sources as $i => $source):
+                                    $port = ($source['learned_port'] ?? '') ?: $source['port'];
+                                    if ($source['remote_port'] !== '') {
+                                        $port = ($port ?: '—') . ' / ' . $source['remote_port'];
+                                    } ?>
+                                    <div><?= icct_nms_h(($sourceLabels[$i] ?? '') . ($port ?: '—')) ?></div>
+                                <?php endforeach; ?>
+                            </td>
+                            <td>
+                                <?php foreach ($sources as $i => $source): ?>
+                                    <div><?= icct_nms_h($sourceLabels[$i] ?? '') ?><span class="device-status <?= $source['status'] === 'Current' ? 'online' : 'other' ?>"><?= icct_nms_h($source['status']) ?></span></div>
+                                <?php endforeach; ?>
+                            </td>
+                            <td>
+                                <?php foreach ($sources as $i => $source): ?>
+                                    <div><?= icct_nms_h(($sourceLabels[$i] ?? '') . ($source['last_check'] ?: '—')) ?></div>
+                                <?php endforeach; ?>
+                            </td>
                             <td><?= icct_nms_h($d['detail']) ?></td>
                         </tr>
                     <?php endforeach; ?>

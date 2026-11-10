@@ -238,7 +238,7 @@
         page = 1;
         filtered = rows.filter(
             (row) =>
-                (!method.value || row.dataset.method === method.value) &&
+                (!method.value || row.dataset.method.split('|').includes(method.value)) &&
                 (!network.value || row.dataset.network === network.value) &&
                 row.textContent.toLowerCase().includes(search.value.trim().toLowerCase()),
         );

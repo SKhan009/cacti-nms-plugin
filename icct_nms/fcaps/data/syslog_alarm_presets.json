@@ -1,0 +1,96 @@
+{
+  "Switch ports and uplinks": {
+    "Major": [
+      "link down",
+      "err-disabled",
+      "loss of signal"
+    ],
+    "Information": [
+      "link up"
+    ]
+  },
+  "Routing and redundancy": {
+    "Major": [
+      "neighbor down",
+      "BGP session down",
+      "host unreachable"
+    ],
+    "Warning": [
+      "VRRP state change",
+      "failover"
+    ]
+  },
+  "Power and hardware": {
+    "Major": [
+      "power supply failed",
+      "fan failure",
+      "UPS on battery"
+    ],
+    "Critical": [
+      "temperature critical"
+    ]
+  },
+  "RHEL services": {
+    "Major": [
+      "failed to start",
+      "main process exited",
+      "out of memory"
+    ],
+    "Warning": [
+      "restart counter"
+    ]
+  },
+  "Storage and databases": {
+    "Major": [
+      "no space left on device",
+      "I/O error",
+      "read-only file system"
+    ],
+    "Warning": [
+      "too many connections"
+    ]
+  },
+  "Security and configuration": {
+    "Warning": [
+      "avc: denied",
+      "account locked"
+    ],
+    "Information": [
+      "configuration changed",
+      "commit complete"
+    ]
+  },
+  "Time synchronization": {
+    "Warning": [
+      "no selectable sources",
+      "clock stepped"
+    ],
+    "Major": [
+      "synchronization lost"
+    ]
+  },
+  "VPN and certificates": {
+    "Major": [
+      "tunnel down",
+      "certificate expired"
+    ],
+    "Warning": [
+      "IKE negotiation failed"
+    ]
+  },
+  "Login and access": {
+    "Warning": [
+      "auth failed",
+      "invalid password",
+      "access denied",
+      "unauthorized"
+    ]
+  },
+  "Session and connection security": {
+    "Warning": [
+      "session expired",
+      "bad certificate",
+      "ssh key error"
+    ]
+  }
+}

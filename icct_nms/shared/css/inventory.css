@@ -1961,6 +1961,11 @@ body:has(#inventory-table) .table-scroll {
     min-height: 0;
     overflow-y: auto;
 }
+.template-search-group {
+    display: block;
+    padding: 8px 10px 2px;
+    font-weight: 600;
+}
 .template-search-options > button {
     display: block;
     width: 100%;

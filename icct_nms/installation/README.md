@@ -166,3 +166,11 @@ sudo /usr/bin/python3 /var/www/html/cacti/plugins/icct_nms/installation/cli/pack
 The runner verifies all bundles, installs missing runner prerequisites from the local media, keeps a private copy of the media and starts a systemd timer. The target needs Cacti, PHP and the RHEL system Python/DNF runtime for this initial provisioning. The browser submits only an allowlisted operation through Cacti's authenticated Installation/Upgrades page. It shows the runner's actual RPM checks, transaction selection and verification. RPM operations use local media only and stop if installation would replace an installed package. Service configuration and plugin activation are separate.
 
 **Uninstall** applies to eligible tools installed by this runner. It protects pre-existing packages and core dependencies and rejects transactions that would remove additional packages. Runner failures appear in the progress dialog and in `journalctl -u icct-nms-package-runner.service`.
+
+
+In **Presets → Protocols → Syslog**, enter the receiver port and select **Save**. This control requires the updated RHEL offline
+runner, provisioned by the complete offline installer. The default is 514.
+The runner updates TCP, UDP, and any enabled local journal forwarding together.
+Use the same port on sending devices and in the site firewall. On SELinux
+Enforcing hosts, the selected port must be permitted for rsyslog before applying
+it. The change requires no repository or internet access.

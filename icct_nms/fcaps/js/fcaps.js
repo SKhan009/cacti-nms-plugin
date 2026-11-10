@@ -83,8 +83,9 @@
             button.addEventListener('click', () => {
                 edit(row);
                 const nameField = field('name');
-                nameField.focus({ preventScroll: true });
-                nameField.scrollIntoView({ block: 'center' });
+                const control = row.querySelector('.template-select-trigger') || nameField;
+                control.focus({ preventScroll: true });
+                control.scrollIntoView({ block: 'center' });
             });
             entry.append(text, button);
             container.append(entry);
@@ -525,12 +526,26 @@
             const row = pane.querySelector('template').content.firstElementChild.cloneNode(true);
             for (const field of fields(row)) {
                 if (field.type === 'checkbox') field.checked = !!rule[field.dataset.field];
-                else field.value = rule[field.dataset.field] ?? '';
+                else {
+                    const value = rule[field.dataset.field] ?? '';
+                    if (field.matches('select[data-field="name"]') && value &&
+                        ![...field.options].some((option) => option.value === value)) {
+                        // A saved alarm may predate the catalog or use a previous device keyword.
+                        field.add(new Option(value, value));
+                    }
+                    field.value = value;
+                }
             }
             if (pane.dataset.passivePanel === 'trap') updateTrapPayload(row, rule.varbind ?? '');
             pane.querySelector('[data-passive-rules]').append(row);
+            const cleanupSearch = pane.dataset.passivePanel === 'syslog'
+                ? window.icctMakeSearchableSelect?.(
+                    row.querySelector('select[data-field="name"]'), 'Alarm Name', 'Alarm Keywords', true,
+                )
+                : null;
             row.querySelector('[data-passive-remove]').addEventListener('click', () => {
                 if (row === untouchedTrapDraft) untouchedTrapDraft = null;
+                cleanupSearch?.();
                 row.remove();
                 syncPassive();
             });
@@ -570,6 +585,13 @@
             const row = event.target.closest('.passive-rule');
             if (!row) return;
             if (row === untouchedTrapDraft) untouchedTrapDraft = null;
+            if (event.target.matches('select[data-field="name"]')) {
+                const choice = event.target.selectedOptions[0];
+                if (choice?.dataset.message) {
+                    row.querySelector('[data-field="message"]').value = choice.dataset.message;
+                    row.querySelector('[data-field="severity"]').value = choice.dataset.alarmSeverity;
+                }
+            }
             if (event.target.dataset.field === 'varbind') {
                 updateTrapPayload(row, row.querySelector('[data-field="varbind"]').value);
             }
@@ -586,9 +608,9 @@
             const row = pane === trapPane
                 ? (untouchedTrapDraft && trapOid(untouchedTrapDraft) === choice.value
                     ? untouchedTrapDraft : addTrapDraft(choice))
-                : addPassive(pane, { enabled: true });
+                : addPassive(pane, {});
             syncPassive();
-            row.querySelector('[data-field="name"]').focus();
+            (row.querySelector('.template-select-trigger') || row.querySelector('[data-field="name"]')).focus();
         });
         passiveForm.addEventListener('invalid', (event) => {
             // Keep the first invalid rule visible when the wizard checks multiple source panels.

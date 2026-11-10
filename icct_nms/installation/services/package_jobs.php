@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/runtime.php';
+
 /** The web process can submit a fixed request and read progress from the local RPM runner. */
 const ICCT_NMS_PACKAGE_STATE = '/var/lib/icct-nms-package-runner';
 
@@ -26,6 +28,11 @@ function icct_nms_package_status($root)
     return $status;
 }
 
+function icct_nms_valid_syslog_port($port)
+{
+    return is_string($port) && preg_match('/^[1-9][0-9]{0,4}$/D', $port) && (int) $port <= 65535;
+}
+
 function icct_nms_package_submit($root, $action, $target, $preview = '')
 {
     $status = icct_nms_package_status($root);
@@ -46,6 +53,10 @@ function icct_nms_package_submit($root, $action, $target, $preview = '')
     $valid = $action === 'verify'
         ? $target === 'media'
         : in_array($action, ['install', 'uninstall', 'preview-uninstall'], true) && in_array($target, $targets, true);
+    if ($action === 'syslog-port') {
+        $valid = isset($status['syslog_port']) &&
+            icct_nms_valid_syslog_port($target);
+    }
     if (!$valid || ($action === 'uninstall' && (!is_string($preview) || !preg_match('/^[a-f0-9]{32}$/D', $preview)))) {
         throw new InvalidArgumentException('Choose an available package action.');
     }
