@@ -31,7 +31,6 @@ LOGGER = logging.getLogger(UNIT)
 REMOVAL_IMPACTS = {
     "traceroute": "Traceroute UDP, ICMP and TCP tools",
     "mtr": "On-demand and scheduled MTR diagnostics",
-    "hping3": "Hping packet diagnostics",
     "iperf3": "iPerf bandwidth tests",
     "netperf": "Netperf throughput tests",
     "redis": "Redis cache and messaging services that use this RPM",

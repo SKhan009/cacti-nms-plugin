@@ -226,12 +226,10 @@ foreach ($objects as $i => $object) {
                             <?php elseif ($step === 1): ?>
                                 <h3>Data Source Template</h3>
                                 <div class="protocol-grid cols-2">
-                                    <?php icct_nms_select(
-                                        'Collection Method',
-                                        $prefix . '[collection_method]',
-                                        icct_mib_collection_options($object, $collectionNames),
-                                        icct_mib_collection($object, $r),
-                                    );
+                                    <?php
+                                $collectionChoices = icct_mib_collection_options($object, $collectionNames);
+                                $selectedCollection = icct_mib_collection($object, $r);
+                                require __DIR__ . '/mib_collection_select.php';
                                 icct_nms_select(
                                     'Polling Interval / Cacti Profile',
                                     $prefix . '[profile_id]',

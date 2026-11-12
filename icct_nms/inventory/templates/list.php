@@ -215,25 +215,20 @@
                                         <?php
                                 endforeach;
                 ?>
-                                        <?php $launch = icct_nms_meta('icct_cross_launch_' . $id); ?>
-                                        <?php if (
-                                            $launch !== '' &&
-                                                                                filter_var($launch, FILTER_VALIDATE_URL) &&
-                                                                                in_array(
-                                                                                    strtolower(parse_url($launch, PHP_URL_SCHEME)),
-                                                                                    ['http', 'https'],
-                                                                                    true,
-                                                                                )
+                                        <?php
+                                        $launch = trim((string) icct_nms_meta('icct_cross_launch_' . $id));
+                                        if (
+                                            filter_var($launch, FILTER_VALIDATE_URL) &&
+                                            in_array(strtolower((string) parse_url($launch, PHP_URL_SCHEME)), ['http', 'https'], true)
                                         ): ?>
                                             <a
+                                                class="inventory-cross-launch"
                                                 href="<?= icct_nms_h($launch) ?>"
                                                 target="_blank"
-                                                rel="noopener noreferrer">Cross Launch URL</a>
+                                                rel="noopener noreferrer"
+                                                aria-label="Open Cross Launch URL for <?= icct_nms_h($d['description']) ?> in a new tab">Open Cross Launch URL ↗</a>
                                         <?php else: ?>
-                                            <button
-                                                type="button"
-                                                disabled
-                                                title="Set the device's Cross Launch URL first.">Cross Launch URL</button>
+                                            <a href="inventory/controllers/device.php?id=<?= $id ?>&amp;focus=cross_launch_url">Set Cross Launch URL</a>
                                         <?php endif; ?>
                                         <button
                                             type="button"

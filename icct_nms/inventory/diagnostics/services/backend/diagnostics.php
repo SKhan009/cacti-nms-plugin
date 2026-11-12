@@ -20,24 +20,6 @@ function icct_backend_diag_arguments($row, $tool, $name)
         'trace_hops' => $row['trace_hops'],
         'bandwidth_seconds' => $row['bandwidth_seconds'],
     ]);
-    if (
-        strpos($tool, 'hping3_') === 0 &&
-        filter_var($target, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)
-    ) {
-        throw new InvalidArgumentException(
-            'hping3 supports IPv4 targets only. Choose Nping or MTR for IPv6.',
-        );
-    }
-    // Nping accepts octet ranges as targets; a device check must remain single-host.
-    if (
-        strpos($tool, 'nping_') === 0 &&
-        preg_match('/^[0-9.-]+$/D', $target) &&
-        strpos($target, '-') !== false
-    ) {
-        throw new InvalidArgumentException(
-            'Nping requires one device address, not an address range.',
-        );
-    }
     $ipv6 = filter_var($target, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) ? ['-6'] : [];
 
     $timeout = 40;
@@ -88,28 +70,12 @@ function icct_backend_diag_arguments($row, $tool, $name)
             );
             $timeout = 60;
             break;
-        case 'nping_icmp':
-        case 'nping_tcp':
-            // Nping has no -n switch. --privileged permits capability-based raw sockets; it grants no privilege itself.
-            $args = array_merge(
-                $ipv6,
-                ['--privileged', '-c', (string) $row['ping_count'], '--delay', '1s'],
-                $tool === 'nping_tcp' ? ['--tcp', '--flags', 'syn', '-p', '443'] : ['--icmp'],
-                [$target],
-            );
-            $timeout = $row['ping_count'] + 10;
-            break;
-        case 'hping3_icmp':
-        case 'hping3_tcp':
-            $args = array_merge(
-                ['-n', '-c', (string) $row['ping_count'], '-i', '1'],
-                $tool === 'hping3_tcp' ? ['-S', '-p', '443'] : ['-1'],
-                [$target],
-            );
-            $timeout = $row['ping_count'] + 15;
-            break;
+        case 'iperf3_udp':
         case 'iperf3':
-            $args = ['-c', $target, '-p', '5201', '-t', (string) $row['bandwidth_seconds'], '-J'];
+            $args = ['-c', $target, '-p', '5201', '-t', (string) $row['bandwidth_seconds']];
+            if ($tool === 'iperf3_udp') {
+                array_push($args, '-u', '-b', '1M');
+            }
             $timeout = $row['bandwidth_seconds'] + 10;
             break;
         case 'netperf':
@@ -187,10 +153,7 @@ function icct_backend_diag_assignment($host_id, $tool)
 /** Reused Inventory service: diag available labels. */
 function icct_backend_diag_available_labels()
 {
-    return array_diff_key(
-        icct_backend_diag_labels(),
-        array_flip(['nping_icmp', 'nping_tcp', 'hping3_icmp', 'hping3_tcp']),
-    );
+    return icct_backend_diag_labels();
 }
 
 /** One saved per-device selection for Inventory, Diagnostics and topology actions. */
@@ -284,7 +247,7 @@ function icct_backend_diag_execute($row, $tool)
     }
     [$command, $timeout] = icct_backend_diag_command($row, $tool);
 
-    if ($tool === 'iperf3' && icct_backend_diag_collector_address($row['hostname'])) {
+    if (in_array($tool, ['iperf3', 'iperf3_udp'], true) && icct_backend_diag_collector_address($row['hostname'])) {
         [$command, $result] = icct_backend_diag_iperf_self_test($command, $timeout);
     } elseif ($tool === 'netperf' && icct_backend_diag_collector_address($row['hostname'])) {
         [$command, $result] = icct_backend_diag_netperf_self_test($command, $timeout);
@@ -307,12 +270,9 @@ function icct_backend_diag_labels()
         'traceroute_tcp' => 'Traceroute TCP',
         'mtr_icmp' => 'MTR ICMP',
         'mtr_tcp' => 'MTR TCP',
-        'nping_icmp' => 'Nping ICMP',
-        'nping_tcp' => 'Nping TCP',
-        'hping3_icmp' => 'hping3 ICMP',
-        'hping3_tcp' => 'hping3 TCP',
         'arp' => 'ARP',
         'iperf3' => 'iPerf3',
+        'iperf3_udp' => 'iPerf3 UDP',
         'netperf' => 'Netperf',
         'pathchar' => 'Pathchar',
     ];
@@ -404,7 +364,7 @@ function icct_backend_diag_program($name)
     }
 
     $bundled = '/opt/icct-nms/native/pchar-1.5/sbin/pchar';
-    return in_array($name, ['pathchar', 'pchar'], true) && is_file($bundled) && is_executable($bundled)
+    return $name === 'pchar' && is_file($bundled) && is_executable($bundled)
         ? $bundled
         : '';
 }
@@ -412,38 +372,43 @@ function icct_backend_diag_program($name)
 /** Reused Inventory service: diag result. */
 function icct_backend_diag_result($row, $tool, $command, $result)
 {
-    if ($tool === 'iperf3' && !empty($result['truncated'])) {
+    if ($tool === 'iperf3_udp' && $result['exit'] === 0 && empty($result['truncated'])) {
+        $metrics = icct_backend_diag_udp_metrics($result['stdout']);
+        if ($metrics === null) {
+            $result['protocol_error'] = true;
+            $result['output'] .= "\nThe client returned no complete iPerf3 UDP receiver measurement.";
+        } else {
+            $result['udp_metrics'] = $metrics;
+            $result['output'] = sprintf(
+                "Receiver throughput: %s Mbit/s\nReceiver jitter: %s ms\nReceiver packet loss: %.6g%% (%d/%d datagrams)\n\n",
+                $metrics['throughput'], $metrics['jitter'], $metrics['loss'],
+                $metrics['lost'], $metrics['total'],
+            ) . $result['output'];
+        }
+    }
+    if (in_array($tool, ['iperf3', 'iperf3_udp'], true) && !empty($result['truncated'])) {
         $result['protocol_error'] = true;
         $result['output'] .=
             "\nThe iPerf3 response was truncated; no complete bandwidth measurement is available.";
     }
-    if ($tool === 'iperf3' && empty($result['truncated'])) {
-        $data = json_decode($result['stdout'], true);
-        if (is_array($data) && !empty($data['error'])) {
-            $result['output'] = 'iPerf3: ' . (string) $data['error'] . "\n" . $result['output'];
-            $result['protocol_error'] = true;
-        } elseif (
-            $result['exit'] === 0 &&
-            is_array($data) &&
-            isset($data['end']['sum_received']['bits_per_second'])
-        ) {
-            $result['output'] =
-                'Receiver throughput: ' .
-                number_format(
-                    (float) $data['end']['sum_received']['bits_per_second'] / 1000000,
-                    2,
-                ) .
-                " Mbit/s\n\n" .
-                $result['output'];
-        } elseif ($result['exit'] === 0) {
-            $result['protocol_error'] = true;
-            $result['output'] .= "\nThe client returned no complete iPerf3 receiver measurement.";
-        }
+    if (
+        $tool === 'iperf3' &&
+        empty($result['truncated']) &&
+        $result['exit'] === 0 &&
+        !preg_match(
+            '/^\[\s*(?:[0-9]+|SUM)\]\s+[0-9.]+\s*-\s*[0-9.]+\s+sec\s+[0-9.]+\s+[KMGT]?Bytes\s+[0-9.]+\s+[KMGT]?bits\/sec[^\r\n]*\breceiver[ \t]*\r?$/m',
+            $result['stdout'],
+        )
+    ) {
+        $result['protocol_error'] = true;
+        $result['output'] .= "\nThe client returned no complete iPerf3 receiver measurement.";
     }
     if (preg_match('/permission denied|operation not permitted/i', $result['output'])) {
         $result['output'] .=
             "\nThe collector runtime denied this operation. ICCT NMS cannot override host permissions; no OS settings were changed.";
-    } elseif ($result['exit'] !== 0 && in_array($tool, ['iperf3', 'netperf'], true)) {
+    } elseif ($result['exit'] !== 0 && $tool === 'iperf3_udp') {
+        $result['output'] .= "\nVerify iPerf3 and both TCP and UDP 5201 at the target.";
+    } elseif ($result['exit'] !== 0 && in_array($tool, ['iperf3', 'iperf3_udp', 'netperf'], true)) {
         $result['output'] .=
             $tool === 'iperf3'
                 ? "\nVerify an authorised iperf3 server at the target on TCP 5201 and the network path."
@@ -457,7 +422,7 @@ function icct_backend_diag_result($row, $tool, $command, $result)
     ) {
         $result['output'] = 'No IPv4 or IPv6 neighbours are cached by this collector.';
     }
-    if (in_array($tool, ['iperf3', 'netperf'], true) && !empty($result['self_test'])) {
+    if (in_array($tool, ['iperf3', 'iperf3_udp', 'netperf'], true) && !empty($result['self_test'])) {
         $result['output'] =
             "Collector local-address self-test — this is not network-link bandwidth.\nTemporary local server stopped after the test.\n\n" .
             $result['output'];
@@ -479,6 +444,33 @@ function icct_backend_diag_result($row, $tool, $command, $result)
     return $result;
 }
 
+/** Read the final UDP receiver row, using datagram counts for accurate loss thresholds. */
+function icct_backend_diag_udp_metrics($stdout)
+{
+    if (!preg_match(
+        '/^\[\s*\d+\]\s+[\d.]+\s*-\s*[\d.]+\s+sec\s+[\d.]+\s+[KMGT]?Bytes\s+' .
+            '(\d+(?:\.\d+)?)\s+([KMGT]?)bits\/sec\s+(\d+(?:\.\d+)?)\s+ms\s+' .
+            '(\d+)\s*\/\s*(\d+)\s+\([\d.]+%\)\s+receiver[ \t]*\r?$/m',
+        $stdout,
+        $row,
+    )) {
+        return null;
+    }
+    $lost = (int) $row[4];
+    $total = (int) $row[5];
+    if (!$total || $lost > $total) {
+        return null;
+    }
+    $scale = ['' => 0.000001, 'K' => 0.001, 'M' => 1, 'G' => 1000, 'T' => 1000000];
+    return [
+        'throughput' => (float) $row[1] * $scale[$row[2]],
+        'jitter' => (float) $row[3],
+        'loss' => 100 * $lost / $total,
+        'lost' => $lost,
+        'total' => $total,
+    ];
+}
+
 /** Reused Inventory service: diag run command. */
 function icct_backend_diag_run_command($command, $timeout = 40, ?callable $heartbeat = null)
 {
@@ -490,7 +482,7 @@ function icct_backend_diag_run_command($command, $timeout = 40, ?callable $heart
             'Process execution is unavailable in the Cacti poller PHP runtime.',
         );
     }
-    $timeout = max(1, min(75, (float) $timeout));
+    $timeout = max(1, min(120, (float) $timeout));
     $pipes = [];
     $process = @proc_open(
         $command,

@@ -1,60 +1,43 @@
 <?php /** Read-only, device-scoped received Syslog history; device access is already checked. */
 require_once __DIR__ . '/../services/syslog_sessions.php';
 require_once __DIR__ . '/../services/syslog_systemd.php';
-$syslogSearch = mb_substr(
-    trim(is_scalar($_GET['syslog_search'] ?? '') ? (string) ($_GET['syslog_search'] ?? '') : ''),
-    0,
-    200,
+require_once __DIR__ . '/../services/syslog_history_report.php';
+[$syslogFiltersView, $syslogTab] = icct_nms_syslog_history_request((int) $id, $_GET);
+$syslogSearch = $syslogFiltersView['search'];
+$syslogSeverityFilter = $syslogFiltersView['severity_codes'] ?? [];
+$syslogFacility = (string) ($syslogFiltersView['facility_codes'][0] ?? '');
+$syslogPageSizes = [10, 25, 50, 100];
+$syslogSize = $_GET['syslog_size'] ?? '';
+$syslogPageSize = is_scalar($syslogSize) && in_array((string) $syslogSize, array_map('strval', $syslogPageSizes), true)
+    ? (int) $syslogSize
+    : 10;
+$syslogRequestedPage = $_GET['syslog_target'] ?? $_GET['syslog_page'] ?? 1;
+$syslogPage = is_scalar($syslogRequestedPage) ? max(1, min(1000000, (int) $syslogRequestedPage)) : 1;
+$syslogRequestedPage = $syslogPage;
+[$syslogSummary, $syslogReportRows, $syslogTotal, $syslogPage] = icct_nms_syslog_history_report(
+    (int) $id, $syslogFiltersView, $syslogTab, $syslogPageSize, $syslogPage,
 );
-$syslogFiltersView = ['host_id' => (int) $id, 'search' => $syslogSearch];
-$syslogAlarmKey = $_GET['event_alarm'] ?? '';
-if (is_string($syslogAlarmKey) && preg_match('/^[a-f0-9]{64}$/D', $syslogAlarmKey)) {
-    $syslogFiltersView['alarm_key'] = $syslogAlarmKey;
-}
-$syslogSeverityFilter = $_GET['syslog_severity'] ?? [];
-if (!is_array($syslogSeverityFilter)) {
-    throw new InvalidArgumentException('Choose Syslog severity levels.');
-}
-$syslogSeverityFilter = icct_backend_syslog_filters(['severity_codes' => $syslogSeverityFilter])['severity_codes'];
-if ($syslogSeverityFilter) {
-    $syslogFiltersView['severity_codes'] = $syslogSeverityFilter;
-}
-$syslogAck = $_GET['syslog_ack'] ?? '';
-if (!in_array($syslogAck, ['', 'yes', 'no'], true)) {
-    throw new InvalidArgumentException('Choose a Syslog acknowledgement status.');
-}
-$syslogFiltersView['ack'] = $syslogAck;
-foreach (['since', 'until'] as $bound) {
-    $value = $_GET['syslog_' . $bound] ?? '';
-    if (!is_string($value) || ($value !== '' && !preg_match('/^\d{4}-\d\d-\d\dT\d\d:\d\d$/D', $value))) {
-        throw new InvalidArgumentException('Choose a valid Syslog time window.');
-    }
-    if ($value !== '') {
-        $parsed = DateTimeImmutable::createFromFormat('!Y-m-d\\TH:i', $value);
-        if (!$parsed || $parsed->format('Y-m-d\\TH:i') !== $value) {
-            throw new InvalidArgumentException('Choose a valid Syslog time window.');
-        }
-    }
-    $syslogFiltersView[$bound] = $value === '' ? '' : str_replace('T', ' ', $value) . ':00';
-}
-if ($syslogFiltersView['since'] !== '' && $syslogFiltersView['until'] !== '' && $syslogFiltersView['since'] > $syslogFiltersView['until']) {
-    throw new InvalidArgumentException('Syslog From must not be later than Until.');
-}
-require __DIR__ . '/../../../inventory/templates/device_record_pager.php';
-$syslogPageSize = 50;
-$syslogPage = $recordPage('syslog_page');
-$syslogTotal = 0;
 $readEvents = static function ($page) use ($id, $syslogFiltersView, $syslogPageSize, &$syslogTotal) {
     return icct_backend_syslog_events(
-        [(int) $id], $syslogFiltersView, $syslogPageSize, ($page - 1) * $syslogPageSize, $syslogTotal,
+        [(int) $id],
+        $syslogFiltersView,
+        $syslogPageSize,
+        ($page - 1) * $syslogPageSize,
+        $syslogTotal,
+        include_alarm_details: false,
     );
 };
-$syslogEvents = $readEvents($syslogPage);
-$syslogPages = max(1, (int) ceil($syslogTotal / $syslogPageSize));
-if ($syslogPage > $syslogPages) {
-    $syslogPage = $syslogPages;
+$syslogEvents = [];
+if ($syslogTab === 'all') {
+    $syslogPage = $syslogRequestedPage;
     $syslogEvents = $readEvents($syslogPage);
+    $syslogPages = max(1, (int) ceil($syslogTotal / $syslogPageSize));
+    if ($syslogPage > $syslogPages) {
+        $syslogPage = $syslogPages;
+        $syslogEvents = $readEvents($syslogPage);
+    }
 }
+$syslogOccurrences = icct_nms_syslog_history_occurrences((int) $id, $syslogFiltersView, $syslogEvents);
 $syslogContext = [];
 $verificationTraps = [];
 $contextKeys = [];
@@ -96,15 +79,16 @@ if ($contextKeys) {
     }
 }
 $syslogFilterParams = array_filter([
-    'event_alarm' => $syslogFiltersView['alarm_key'] ?? '',
     'syslog_search' => $syslogSearch,
+    'syslog_facility' => $syslogFacility,
     'syslog_severity' => $syslogSeverityFilter,
-    'syslog_ack' => $syslogAck,
     'syslog_since' => str_replace(' ', 'T', substr($syslogFiltersView['since'], 0, 16)),
     'syslog_until' => str_replace(' ', 'T', substr($syslogFiltersView['until'], 0, 16)),
 ], static fn ($value) => $value !== '' && $value !== []);
 $syslogUrl = static fn ($params = []) => 'inventory/controllers/device.php?' .
     http_build_query(['id' => (int) $id, 'view' => 1] + $params) . '#view-syslog';
+$syslogTabParams = $syslogTab === 'all' ? [] : ['syslog_tab' => $syslogTab];
+$syslogSizeParams = $syslogPageSize === 10 ? [] : ['syslog_size' => $syslogPageSize];
 $syslogSeverityNames = icct_backend_syslog_severity_labels();
 $syslogFacilityNames = icct_backend_syslog_facility_labels();
 $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP', 'internal' => 'Internal'];
@@ -115,9 +99,27 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
     hidden>
     <div class="device-history-heading">
         <h2 data-field-help="Messages received from this device and availability events recorded by Cacti. Expand a row to see its details.">Syslog Event History</h2>
-        <a
-            class="button"
-            href="<?= icct_nms_h($syslogUrl($syslogFilterParams + ['syslog_page' => $syslogPage])) ?>">Refresh</a>
+        <div class="syslog-history-heading-actions">
+            <a class="button" aria-label="Download Syslog CSV" title="Download CSV for the selected tab and applied filters"
+                href="inventory/controllers/export.php?<?= icct_nms_h(http_build_query(['id' => (int) $id, 'syslog' => 1] + $syslogTabParams + $syslogFilterParams)) ?>">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M12 3v12M7 10l5 5 5-5M4 15v6h16v-6"/>
+                </svg>
+            </a>
+            <a class="button"
+                href="<?= icct_nms_h($syslogUrl($syslogFilterParams + $syslogTabParams + $syslogSizeParams + ['syslog_page' => $syslogPage])) ?>">Refresh</a>
+        </div>
+    </div>
+    <div class="netflow-summary syslog-summary" aria-label="Syslog history totals">
+        <?php foreach ([
+            'Total messages' => number_format((int) $syslogSummary['messages']),
+            'Event types' => number_format((int) $syslogSummary['event_types']),
+            'Link-down incidents' => number_format($syslogSummary['incidents']),
+            'Recorded link downtime' => icct_nms_syslog_duration((int) $syslogSummary['downtime']),
+            'Open incidents' => number_format($syslogSummary['open']),
+        ] as $label => $value): ?>
+            <div><span><?= icct_nms_h($label) ?></span><strong><?= icct_nms_h($value) ?></strong></div>
+        <?php endforeach; ?>
     </div>
     <form
         method="get"
@@ -131,8 +133,11 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
             type="hidden"
             name="view"
             value="1">
-        <?php if (isset($syslogFiltersView['alarm_key'])): ?>
-            <input type="hidden" name="event_alarm" value="<?= icct_nms_h($syslogFiltersView['alarm_key']) ?>">
+        <?php if ($syslogSizeParams): ?>
+            <input type="hidden" name="syslog_size" value="<?= $syslogPageSize ?>">
+        <?php endif; ?>
+        <?php if ($syslogTabParams): ?>
+            <input type="hidden" name="syslog_tab" value="<?= icct_nms_h($syslogTab) ?>">
         <?php endif; ?>
         <div class="field">
             <span id="syslog-severity-label" data-field-help="Choose one or more severities reported by the Syslog sender.">Severity</span>
@@ -162,18 +167,6 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
                 </div>
             </details>
         </div>
-        <label class="field">
-            <span data-field-help="Filter by whether the linked alarm or event has been acknowledged.">Acknowledgement</span>
-            <select name="syslog_ack">
-                <option value="">All</option>
-                <option
-                    value="yes"
-                    <?= $syslogAck === 'yes' ? 'selected' : '' ?>>Acknowledged</option>
-                <option
-                    value="no"
-                    <?= $syslogAck === 'no' ? 'selected' : '' ?>>Not acknowledged</option>
-            </select>
-        </label>
         <?php foreach (['since' => 'From', 'until' => 'Until'] as $key => $label): ?>
             <label class="field">
                 <span data-field-help="<?= $key === 'since' ? 'Show events at or after this time.' : 'Show events at or before this time.' ?>"><?= $label ?></span>
@@ -184,19 +177,28 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
             </label>
         <?php endforeach; ?>
         <label class="field device-history-search">
-            <span data-field-help="Search by message text, program, or sender IP.">Search messages</span>
+            <span data-field-help="Search by message text or sender IP.">Search messages</span>
             <input
                 type="search"
                 name="syslog_search"
                 value="<?= icct_nms_h($syslogSearch) ?>"
                 maxlength="200"
-                placeholder="Search message, program or source IP">
+                placeholder="Search message or source IP">
+        </label>
+        <label class="field">
+            <span data-field-help="Filter by the facility reported by the sender.">Facility</span>
+            <select name="syslog_facility">
+                <option value="">All facilities</option>
+                <?php foreach ($syslogFacilityNames as $code => $label): ?>
+                    <option value="<?= $code ?>" <?= (string) $code === $syslogFacility ? 'selected' : '' ?>><?= icct_nms_h($label) ?></option>
+                <?php endforeach; ?>
+            </select>
         </label>
         <div class="device-history-actions">
             <?php if ($syslogFilterParams): ?>
                 <a
                     class="button"
-                    href="<?= icct_nms_h($syslogUrl()) ?>">Clear All</a>
+                    href="<?= icct_nms_h($syslogUrl($syslogTabParams + $syslogSizeParams)) ?>">Clear All</a>
             <?php else: ?>
                 <button
                     class="button"
@@ -208,11 +210,21 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
                 type="submit">Apply</button>
         </div>
     </form>
+    <nav class="device-view-tabs" aria-label="Syslog history views">
+        <?php foreach (['all' => 'All logs', 'repeated' => 'Repeated events', 'incidents' => 'Incidents'] as $syslogTabKey => $syslogTabLabel): ?>
+            <a href="<?= icct_nms_h($syslogUrl($syslogFilterParams + $syslogSizeParams + ($syslogTabKey === 'all' ? [] : ['syslog_tab' => $syslogTabKey]))) ?>"
+                <?= $syslogTabKey === $syslogTab ? 'class="current" aria-current="page"' : '' ?>>
+                <?= icct_nms_h($syslogTabLabel) ?> (<?= number_format((int) ($syslogTabKey === 'all' ? $syslogSummary['messages'] : $syslogSummary[$syslogTabKey])) ?>)
+            </a>
+        <?php endforeach; ?>
+    </nav>
+    <?php if ($syslogTab === 'all'): ?>
     <div class="device-record-list syslog-event-history" aria-label="Syslog and availability events for this device">
         <?php foreach ($syslogEvents as $event):
             $availability = ($event['event_origin'] ?? '') === 'availability';
             $program = $event['program'];
             $message = $event['message'];
+            $occurrences = (int) ($syslogOccurrences[icct_nms_syslog_history_key($event)] ?? $event['repeat_count']);
             $firstLine = strtok(trim($message), "\r\n") ?: '';
             $title = $availability ? 'Device availability changed' : mb_strimwidth($firstLine, 0, 130, '…');
             $title = $title !== '' ? $title : 'Device Syslog message';
@@ -284,11 +296,6 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
             $followUp = $context['follow_up'] ?? '';
             $hasFollowUp = is_string($followUp) && trim($followUp) !== '';
             $hasRecoveryDetails = $hasFollowUp || $verificationTrap;
-            $hasAlarm = !empty($event['alarm_key']);
-            $showAlarmPanel = !$availability && $hasAlarm && !$hasRecoveryDetails;
-            $acknowledgement = $hasAlarm
-                ? (empty($event['acknowledged']) ? 'Not acknowledged' : 'Acknowledged')
-                : 'No linked alarm';
             ?>
             <details class="device-record-item" name="syslog-event-records">
                 <summary>
@@ -298,7 +305,7 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
                         <small>Severity</small>
                         <span class="device-syslog-severity severity-<?= icct_nms_h(icct_backend_syslog_nms_severity($event['severity_code'])) ?>"><?= icct_nms_h($syslogSeverityNames[(int) $event['severity_code']] ?? 'Unknown') ?></span>
                     </span>
-                    <span><small>Alarm status</small><?= icct_nms_h($acknowledgement) ?></span>
+                    <span><small data-field-help="Total times this event appears across the filtered history.">Occurrences</small><?= number_format($occurrences) ?></span>
                 </summary>
                 <div class="device-record-body syslog-event-details">
                     <section class="syslog-event-overview">
@@ -318,7 +325,6 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
                                     'Source IP' => $event['source_ip'],
                                     'Received via' => $syslogTransportLabels[$event['transport'] ?? ''] ?? null,
                                     'Times recorded' => (int) $event['repeat_count'],
-                                    'Program' => $program,
                                     'Facility' => $syslogFacilityNames[(int) $event['facility_code']] ?? $event['facility'],
                                 ] as $label => $value): ?>
                                     <?php if ($value !== '' && $value !== null): ?>
@@ -350,17 +356,18 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
                                     <p class="syslog-event-text"><?= icct_nms_h($message) ?></p>
                                 </div>
                             <?php endif; ?>
+                            <?php if (!empty($event['raw_message'])): ?>
+                                <details class="syslog-original-message">
+                                    <summary>Raw Syslog</summary>
+                                    <pre class="syslog-event-text"><?= icct_nms_h($event['raw_message']) ?></pre>
+                                </details>
+                            <?php endif; ?>
                         </section>
-                        <?php if (!$availability && ($hasRecoveryDetails || $showAlarmPanel)): ?>
+                        <?php if (!$availability && $hasRecoveryDetails): ?>
                             <section class="syslog-detail-panel syslog-verification-panel">
-                                <h4><?= $showAlarmPanel ? 'Linked alarm' : ($verificationTrap ? 'What changed and how it was checked' : 'Fix or recovery status') ?></h4>
+                                <h4><?= $verificationTrap ? 'What changed and how it was checked' : 'Fix or recovery status' ?></h4>
                                 <?php if ($hasFollowUp): ?>
                                     <p><?= icct_nms_h($followUp) ?></p>
-                                <?php endif; ?>
-                                <?php if ($showAlarmPanel): ?>
-                                    <div class="syslog-event-actions">
-                                        <a class="button" href="alarms/controllers/alarms.php?view=<?= icct_nms_h($event['alarm_key']) ?>">View linked alarm</a>
-                                    </div>
                                 <?php endif; ?>
                                 <?php if ($verificationTrap): ?>
                                     <h5>Test trap received after the fix</h5>
@@ -389,11 +396,6 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
                             </section>
                         <?php endif; ?>
                     </div>
-                    <?php if ($hasAlarm && !$showAlarmPanel): ?>
-                        <div class="syslog-event-actions">
-                            <a class="button" href="alarms/controllers/alarms.php?view=<?= icct_nms_h($event['alarm_key']) ?>">View linked alarm</a>
-                        </div>
-                    <?php endif; ?>
                 </div>
             </details>
         <?php endforeach; ?>
@@ -401,5 +403,8 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
             <p class="device-record-empty">No Syslog or availability events<?= $syslogFilterParams ? ' match the current filters' : ' for this device' ?>.</p>
         <?php endif; ?>
     </div>
-    <?php $recordPager('syslog_page', $syslogPage, $syslogTotal, 'view-syslog', $syslogFilterParams, $syslogPageSize); ?>
+    <?php else: ?>
+        <?php require __DIR__ . '/syslog_history_report.php'; ?>
+    <?php endif; ?>
+    <?php require __DIR__ . '/syslog_history_pager.php'; ?>
 </section>

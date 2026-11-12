@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $error) {
 }
 $protocolDraft = ['cdp', 'lldp', 'snmp', 'ssh', 'serial', 'syslog', 'netflow', 'ntp', 'tacacs'];
 $host = array_replace(icct_nms_defaults(), $protocolPresets['snmp'] ?? []);
-$host['snmp_community'] = '';
+$host['snmp_community'] = 'public';
 $host['description'] = 'Protocol defaults';
 $discovery = [];
 $ssh = $protocolPresets['ssh'] ?? [];

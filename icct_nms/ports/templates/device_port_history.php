@@ -102,7 +102,7 @@ if (!is_realm_allowed(3)): ?>
                         <?php endforeach; ?>
                     </dl>
                     <?php if (!empty($event['alarm_key'])): ?>
-                        <a href="alarms/controllers/alarms.php?view=<?= icct_nms_h($event['alarm_key']) ?>">View shared alarm and
+                        <a class="button" href="alarms/controllers/alarms.php?view=<?= icct_nms_h($event['alarm_key']) ?>">View shared alarm and
                             acknowledgement history</a>
                     <?php endif; ?>
                 </div>

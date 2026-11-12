@@ -1371,11 +1371,15 @@
 }
 .mib-browser-state[data-source-state='partial'],
 .mib-browser-badge[data-source-state='partial'] {
-    color: #986600;
+    color: #167651;
+}
+.mib-browser-state[data-source-state='missing'],
+.mib-browser-badge[data-source-state='missing'] {
+    color: #155cff;
 }
 .mib-browser-state[data-source-state='unsupported'],
 .mib-browser-badge[data-source-state='unsupported'] {
-    color: #888;
+    color: #b42318;
 }
 .mib-browser-detail-actions #mibBrowserCreate:not(:disabled) {
     opacity: 1;
@@ -1505,9 +1509,24 @@
     padding: 0;
     min-height: 440px;
 }
+@media (min-width: 761px) {
+    .mib-tree-step .mib-repository-browser {
+        grid-template-columns: minmax(220px, 23%) minmax(0, 1fr);
+    }
+}
 .mib-tree-step .mib-browser-sidebar {
     min-height: 440px;
     max-height: 65vh;
+}
+.mib-tree-step .mib-browser-branch > summary > span,
+.mib-tree-step .mib-browser-leaf > span:first-of-type {
+    min-width: 0;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+.mib-tree-step .mib-browser-children {
+    padding-left: 12px;
 }
 .mib-tree-checkbox {
     float: left;
@@ -4064,11 +4083,6 @@
     }
 }
 
-/* Status is conveyed by the reference icon shape; labels retain its meaning. */
-.mib-browser-state[data-source-state],
-.mib-browser-badge[data-source-state] {
-    color: #161616;
-}
 .mib-browser-state .mib-browser-icon,
 .mib-browser-badge .mib-browser-icon {
     width: 20px;

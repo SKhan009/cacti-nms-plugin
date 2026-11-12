@@ -258,7 +258,7 @@
             body.set('commit_after_save', '1');
             delete form.dataset.commitAfterSave;
         }
-        if (form.dataset.nextAfterSave === '1') {
+        if (form.dataset.nextAfterSave === '1' || event.submitter?.name === 'next_after_save') {
             body.set('next_after_save', '1');
             delete form.dataset.nextAfterSave;
         }
@@ -471,7 +471,7 @@
             add.textContent = dirty ? 'Save' : add.dataset.defaultLabel || 'Add';
         }
         document.querySelectorAll('a.mib-generation-next').forEach((link) => {
-            const blocked = dirty && !ack?.checked;
+            const blocked = dirty && ack && !ack.checked;
             if (blocked) {
                 link.setAttribute('aria-disabled', 'true');
                 link.title = 'Confirm the checkbox to save changes with Next.';
@@ -516,13 +516,14 @@
         link.addEventListener('click', (event) => {
             if (!isDirty()) return;
             event.preventDefault();
-            if (!ack?.checked) {
+            if (ack && !ack.checked) {
                 const error = document.querySelector('#mibGenerationError');
                 error.hidden = false;
                 error.textContent = 'Confirm the checkbox to save changes with Next.';
                 return;
             }
             const form = document.querySelector('#mibGenerationForm');
+            if (!form.reportValidity()) return;
             form.dataset.nextAfterSave = '1';
             form.requestSubmit();
         }),

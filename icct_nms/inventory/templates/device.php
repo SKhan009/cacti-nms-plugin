@@ -93,6 +93,12 @@
     <fieldset
         class="device-fields"
         <?= $readonly ? 'disabled' : '' ?>>
+        <?php
+        $status = $id ? icct_backend_device_status_name($old) : 'Pending';
+        $snmpInformationEnabled = $id && (int) $old['snmp_version'] > 0 &&
+            icct_backend_protocol_enabled($id, 'snmp');
+        require __DIR__ . '/device_snmp_information.php';
+        ?>
         <div class="enable-field">
             <span class="field-label">Enable/Disable Device</span>
             <label class="switch-label">
@@ -199,7 +205,14 @@ icct_nms_input(
 icct_nms_core_select('Device Template', 'host_template_id', $values['host_template_id']);
 icct_nms_core_select('Poller Association', 'poller_id', $values['poller_id']);
 icct_nms_core_select('No. of Collection Threads', 'device_threads', $values['device_threads']);
-icct_nms_input('Cross Launch URL', 'cross_launch_url', $values['cross_launch_url'], 'url'); ?>
+icct_nms_input(
+    'Cross Launch URL',
+    'cross_launch_url',
+    $values['cross_launch_url'],
+    'url',
+    'placeholder="https://device-hostname" maxlength="2048"' .
+        (($_GET['focus'] ?? '') === 'cross_launch_url' ? ' autofocus' : ''),
+); ?>
         </div>
         <label class="field notes">
             <span class="notes-heading">

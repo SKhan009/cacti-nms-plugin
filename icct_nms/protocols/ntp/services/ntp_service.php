@@ -1,6 +1,6 @@
 <?php
 
-/** Read-only chrony monitoring. Presets seed drafts; saved assignments are independent. */
+/** Read-only NTP monitoring. Presets seed drafts; saved assignments are independent. */
 function icct_nms_ntp_fields()
 {
     return ['method', 'timeout', 'interval_seconds', 'stale_seconds'];
@@ -8,7 +8,12 @@ function icct_nms_ntp_fields()
 
 function icct_nms_ntp_methods()
 {
-    return ['local' => 'Local collector chrony', 'ssh' => 'Device chrony over verified SSH'];
+    return [
+        'auto' => 'Automatic (local chrony or direct NTP)',
+        'udp' => 'Direct NTP (UDP 123)',
+        'local' => 'Local collector chrony',
+        'ssh' => 'Device chrony over verified SSH',
+    ];
 }
 
 function icct_nms_ntp_validate($input)
@@ -69,7 +74,24 @@ function icct_nms_ntp_assignment($id)
 /** Local collection must never relabel the collector's clock as an unrelated device's clock. */
 function icct_nms_ntp_local_device($device)
 {
-    return in_array(strtolower($device['hostname']), ['localhost', '127.0.0.1', '::1'], true);
+    $hostname = strtolower($device['hostname']);
+    if (in_array($hostname, ['localhost', '127.0.0.1', '::1'], true)) {
+        return true;
+    }
+    if (!filter_var($hostname, FILTER_VALIDATE_IP) ||
+        !isset($device['poller_id']) ||
+        (int) $device['poller_id'] !== icct_backend_inventory_collector_id()) {
+        return false;
+    }
+    $address = inet_pton($hostname);
+    foreach (net_get_interfaces() ?: [] as $interface) {
+        foreach ($interface['unicast'] ?? [] as $entry) {
+            if (isset($entry['address']) && inet_pton($entry['address']) === $address) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 function icct_nms_ntp_save($id, $input)
@@ -92,7 +114,7 @@ function icct_nms_ntp_save($id, $input)
     }
     if ($values['method'] === 'local' && !icct_nms_ntp_local_device($host)) {
         throw new InvalidArgumentException(
-            'Local chrony monitoring is restricted to an explicit localhost device. Use verified SSH for remote devices.',
+            'Local chrony requires a loopback or an IP assigned to this device’s Cacti collector. Choose Automatic or Direct NTP for a remote NTP server.',
         );
     }
     if ($values['method'] === 'ssh') {

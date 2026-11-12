@@ -108,7 +108,7 @@ function icct_backend_diag_job($id)
     icct_backend_require_device_access((int) $job['host_id']);
     if (
         ($job['status'] === 'queued' && strtotime($job['requested_at']) < time() - 15) ||
-        ($job['status'] === 'running' && strtotime($job['started_at']) < time() - 120)
+        ($job['status'] === 'running' && strtotime($job['started_at']) < time() - 135)
     ) {
         $job['status'] = 'expired';
         $job['result_json'] = json_encode([
@@ -139,7 +139,7 @@ function icct_backend_diag_poll()
         icct_backend_category_execute(
             'UPDATE plugin_icct_nms_diagnostic_jobs SET ' .
                 'status=\'failed\',finished_at=NOW(),result_json=? WHERE poller_id=? AND ' .
-                '((status=\'running\' AND started_at < DATE_SUB(NOW(), INTERVAL 2 MINUTE)) OR ' .
+                '((status=\'running\' AND started_at < DATE_SUB(NOW(), INTERVAL 135 SECOND)) OR ' .
                 '(status=\'queued\' AND requested_at < DATE_SUB(NOW(), INTERVAL 15 SECOND)))',
             [
                 json_encode([
@@ -239,7 +239,7 @@ function icct_backend_diag_run($host_id, $tool)
         $pending = db_fetch_row_prepared(
             'SELECT id FROM plugin_icct_nms_diagnostic_jobs WHERE user_id=? AND host_id=? AND tool=? ' .
                 'AND ((status=\'queued\' AND requested_at > DATE_SUB(NOW(),INTERVAL 15 SECOND)) OR ' .
-                '(status=\'running\' AND started_at > DATE_SUB(NOW(),INTERVAL 2 MINUTE))) ORDER BY id DESC ' .
+                '(status=\'running\' AND started_at > DATE_SUB(NOW(),INTERVAL 135 SECOND))) ORDER BY id DESC ' .
                 'LIMIT 1',
             [$user, (int) $host_id, (string) $tool],
         );
@@ -250,7 +250,7 @@ function icct_backend_diag_run($host_id, $tool)
             (int) db_fetch_cell_prepared(
                 'SELECT COUNT(*) FROM plugin_icct_nms_diagnostic_jobs WHERE user_id=? AND ' .
                     '((status=\'queued\' AND requested_at > DATE_SUB(NOW(), INTERVAL 15 SECOND)) OR ' .
-                    '(status=\'running\' AND started_at > DATE_SUB(NOW(), INTERVAL 2 MINUTE)))',
+                    '(status=\'running\' AND started_at > DATE_SUB(NOW(), INTERVAL 135 SECOND)))',
                 [$user],
             )
         ) {
@@ -262,7 +262,7 @@ function icct_backend_diag_run($host_id, $tool)
             (int) db_fetch_cell_prepared(
                 'SELECT COUNT(*) FROM plugin_icct_nms_diagnostic_jobs WHERE poller_id=? AND ' .
                     '((status=\'queued\' AND requested_at > DATE_SUB(NOW(), INTERVAL 15 SECOND)) OR ' .
-                    '(status=\'running\' AND started_at > DATE_SUB(NOW(), INTERVAL 2 MINUTE)))',
+                    '(status=\'running\' AND started_at > DATE_SUB(NOW(), INTERVAL 135 SECOND)))',
                 [(int) $row['poller_id']],
             ) >= 1
         ) {

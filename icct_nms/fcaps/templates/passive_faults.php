@@ -1,6 +1,5 @@
 <?php
 $passiveRules = $id ? icct_nms_passive_fault_rules($id) : [];
-$syslogAlarmChoices = icct_nms_syslog_alarm_choices($id ? icct_backend_syslog_assignment($id) : []);
 $trapChoices = [
     '1.3.6.1.6.3.1.1.5.1' => 'coldStart',
     '1.3.6.1.6.3.1.1.5.2' => 'warmStart',
@@ -69,9 +68,7 @@ $passiveHelp = static function (string $headingHelpText): void {
         array_map('array_values', $trapPayloadChoices),
         JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR,
     ) ?></script>
-    <?php foreach (['syslog' => 'Syslog', 'trap' => 'SNMP notification'] as $source => $label): ?>
-        <section data-passive-panel="<?= $source ?>"<?= $source === 'trap' ? ' class="fault-workspace"' : '' ?> hidden>
-            <?php if ($source === 'trap'): ?>
+        <section data-passive-panel="trap" class="fault-workspace" hidden>
                 <aside class="fault-alarm-sidebar" aria-label="Notification OIDs">
                     <div class="fault-snmp-sections" role="radiogroup" aria-label="Notification OID">
                         <?php foreach ($trapGroups as $group => $choices): ?>
@@ -96,71 +93,31 @@ $passiveHelp = static function (string $headingHelpText): void {
                         <?php endforeach; ?>
                     </div>
                 </aside>
-            <?php endif; ?>
             <div class="fault-alarm-editor">
                 <section class="fault-saved-alarms" aria-label="Alarm rules">
                     <h3>Alarm rules</h3>
                     <ul data-passive-alarm-list></ul>
                 </section>
                 <div data-passive-rules></div>
-                <p class="fault-alarm-empty" data-passive-empty><?= $source === 'trap'
-                    ? 'Select a notification or use Add Rule for the selected OID.'
-                    : 'No Syslog alarm rules configured.' ?></p>
+                <p class="fault-alarm-empty" data-passive-empty>Select a notification or use Add Rule for the selected OID.</p>
                 <template>
-                    <div class="passive-rule" role="group" aria-label="<?= $label ?> rule">
+                    <div class="passive-rule" role="group" aria-label="SNMP notification rule">
                         <label class="field">
-                            <span class="field-label">Alarm Name <?php $passiveHelp($source === 'syslog'
-                                ? 'Choose a keyword to fill in Message Contains and Severity. You can adjust the match and severity before saving.'
-                                : 'Enter the title operators should see when the alarm is raised.'); ?></span>
-                            <?php if ($source === 'syslog'): ?>
-                                <span class="select-wrap"><select data-field="name" aria-label="Alarm name" required>
-                                    <option value="" disabled hidden>Choose an alarm</option>
-                                    <?php foreach ($syslogAlarmChoices as $group => $choices): ?>
-                                        <optgroup label="<?= icct_nms_h($group) ?>">
-                                            <?php foreach ($choices as $choice): $name = ucfirst($choice['phrase']); ?>
-                                                <option value="<?= icct_nms_h($name) ?>" data-message="<?= icct_nms_h($choice['phrase']) ?>"
-                                                    data-alarm-severity="<?= icct_nms_h($choice['severity']) ?>"><?= icct_nms_h($name) ?></option>
-                                            <?php endforeach; ?>
-                                        </optgroup>
-                                    <?php endforeach; ?>
-                                </select></span>
-                            <?php else: ?>
-                                <input data-field="name" aria-label="Alarm name" maxlength="160" required>
-                            <?php endif; ?>
+                            <span class="field-label">Alarm Name <?php $passiveHelp('Enter the title operators should see when the alarm is raised.'); ?></span>
+                            <input data-field="name" aria-label="Alarm name" maxlength="160" required>
                         </label>
-                        <?php if ($source === 'syslog'): ?>
-                            <?php foreach ([
-                                'severity_code' => ['Syslog Severity', icct_backend_syslog_severity_labels(),
-                                    'Match the severity reported by the device. Any accepts all Syslog severities. Use Severity below to set the priority of the alarm in ICCT.'],
-                                'facility_code' => ['Facility', icct_backend_syslog_facility_labels(),
-                                    'Match the category reported by the device, such as Kernel or System daemon. Choose Any to accept every category.'],
-                            ] as $field => [$title, $choices, $help]): ?>
-                                <label class="field">
-                                    <span class="field-label"><?= $title ?> <?php $passiveHelp($help); ?></span>
-                                    <span class="select-wrap"><select data-field="<?= $field ?>">
-                                        <option value="">Any</option>
-                                        <?php foreach ($choices as $value => $choice): ?>
-                                            <option value="<?= (int) $value ?>"><?= icct_nms_h($choice) ?></option>
-                                        <?php endforeach; ?>
-                                    </select></span>
-                                </label>
-                            <?php endforeach; ?>
-                            <label class="field"><span class="field-label">Program <?php $passiveHelp('Enter the program name exactly as shown in Syslog history, such as systemd. Leave blank to match any program.'); ?></span><input data-field="program" maxlength="128"></label>
-                            <label class="field"><span class="field-label">Message Contains <?php $passiveHelp('Enter text to look for in the Syslog message. Matching ignores case. Leave blank to match any message text. This condition applies to alarms only.'); ?></span><input data-field="message" maxlength="160"></label>
-                        <?php else: ?>
-                            <label class="field">
-                                <span class="field-label">Trap OID <?php $passiveHelp('Identifies the notification that triggers this rule. This value comes from the selected item in the sidebar. Select another item to work with a different OID.'); ?></span>
-                                <input data-field="oid" aria-label="Trap OID" readonly>
-                            </label>
-                            <label class="field">
-                                <span class="field-label">Payload field OID <?php $passiveHelp('Choose a field from a trap already received from this device, such as the interface index. Choose Any payload to match every notification with the selected Trap OID.'); ?></span>
-                                <span class="select-wrap"><select data-field="varbind" aria-label="Payload field OID"><option value="">Any payload</option></select></span>
-                            </label>
-                            <label class="field">
-                                <span class="field-label">Expected field value <?php $passiveHelp('Copy the exact reported value for the selected field from SNMP Trap History. For example, enter 7 if the interface index is reported as 7. This field is unavailable when Any payload is selected.'); ?></span>
-                                <input data-field="value" aria-label="Expected field value" maxlength="160">
-                            </label>
-                        <?php endif; ?>
+                        <label class="field">
+                            <span class="field-label">Trap OID <?php $passiveHelp('Identifies the notification that triggers this rule. This value comes from the selected item in the sidebar. Select another item to work with a different OID.'); ?></span>
+                            <input data-field="oid" aria-label="Trap OID" readonly>
+                        </label>
+                        <label class="field">
+                            <span class="field-label">Payload field OID <?php $passiveHelp('Choose a field from a trap already received from this device, such as the interface index. Choose Any payload to match every notification with the selected Trap OID.'); ?></span>
+                            <span class="select-wrap"><select data-field="varbind" aria-label="Payload field OID"><option value="">Any payload</option></select></span>
+                        </label>
+                        <label class="field">
+                            <span class="field-label">Expected field value <?php $passiveHelp('Copy the exact reported value for the selected field from SNMP Trap History. For example, enter 7 if the interface index is reported as 7. This field is unavailable when Any payload is selected.'); ?></span>
+                            <input data-field="value" aria-label="Expected field value" maxlength="160">
+                        </label>
                         <label class="field">
                             <span class="field-label">Incident Group (optional) <?php $passiveHelp('Leave blank for an independent rule. To group rules for the same incident, enter a shared label such as port-7-down and give them the same alarm name and severity. Use different labels for different ports.'); ?></span>
                             <input data-field="group" aria-label="Incident Group (optional)" maxlength="64">
@@ -185,5 +142,4 @@ $passiveHelp = static function (string $headingHelpText): void {
                 </template>
             </div>
         </section>
-    <?php endforeach; ?>
 </form>

@@ -245,7 +245,7 @@ function icct_nms_fault_validate($rules, $catalogue, $associated)
             throw new InvalidArgumentException('Invalid fault rule.');
         }
         $source = $rule['source'] ?? 'rrd';
-        if (!in_array($source, ['rrd', 'snmp', 'ntp'], true)) {
+        if (!in_array($source, ['rrd', 'snmp', 'ntp', 'iperf3_udp'], true)) {
             throw new InvalidArgumentException('Choose a supported measurement source.');
         }
         $template = $source === 'rrd' ? icct_nms_id($rule['template_id'] ?? 0) : 0;
@@ -295,6 +295,13 @@ function icct_nms_fault_validate($rules, $catalogue, $associated)
                 );
             }
             $extra['expected_source'] = $parameter === 'source_matches' ? $expected : '';
+        }
+        if ($source === 'iperf3_udp') {
+            $parameters = icct_nms_udp_fault_parameters();
+            if (!isset($parameters[$parameter])) {
+                throw new InvalidArgumentException('Choose an iPerf3 UDP measurement.');
+            }
+            $units = $parameters[$parameter]['units'];
         }
         $oid = $source === 'snmp' ? icct_nms_fault_oid($rule['oid'] ?? '') : '';
         if ($source === 'snmp' && trim($parameter) === '') {
@@ -414,7 +421,7 @@ function icct_nms_fault_validate($rules, $catalogue, $associated)
                     $template,
                     $metric,
                     $oid,
-                    $source === 'ntp' ? $parameter : '',
+                    in_array($source, ['ntp', 'iperf3_udp'], true) ? $parameter : '',
                     $condition,
                     $bounds,
                     (float) $scale,
@@ -549,7 +556,7 @@ function icct_backend_collect_faults()
         $snmpDeadline = microtime(true) + min(60, max(10, $interval / 3));
         foreach ($rules as $number => $rule) {
             // NTP uses its fresh saved observation directly, after the local NTP collector runs.
-            if (($rule['source'] ?? 'rrd') === 'ntp') {
+            if (in_array($rule['source'] ?? 'rrd', ['ntp', 'iperf3_udp'], true)) {
                 continue;
             }
             if (($rule['source'] ?? 'rrd') === 'snmp') {
@@ -683,6 +690,7 @@ function icct_nms_fault_observations($host, $collector = false)
         true,
     );
     $ntp = icct_nms_ntp_fault_observations($host, $rules);
+    $udp = icct_nms_udp_fault_observations($host, $rules);
     $age = time() - (int) ($data['time'] ?? 0);
     if (
         $host['disabled'] !== '' ||
@@ -690,7 +698,7 @@ function icct_nms_fault_observations($host, $collector = false)
         $age > 2 * max(60, (int) read_config_option('poller_interval')) ||
         ($data['rules_hash'] ?? '') !== hash('sha256', json_encode($rules, JSON_THROW_ON_ERROR))
     ) {
-        return array_merge(icct_nms_port_faults($host), $ntp);
+        return array_merge(icct_nms_port_faults($host), $ntp, $udp);
     }
     $allowed = $collector
         ? array_map(
@@ -711,6 +719,7 @@ function icct_nms_fault_observations($host, $collector = false)
         ),
         icct_nms_port_faults($host),
         $ntp,
+        $udp,
     );
 }
 
@@ -807,4 +816,58 @@ function icct_nms_fault_description($rule)
             $suffix;
     }
     return substr('Alarm when ' . $parameter . ' is ' . $limit . '.', 0, 1000);
+}
+
+function icct_nms_udp_fault_parameters()
+{
+    return [
+        'throughput' => ['label' => 'Receiver throughput', 'units' => 'Mbit/s'],
+        'jitter' => ['label' => 'Receiver jitter', 'units' => 'ms'],
+        'loss' => ['label' => 'Receiver packet loss', 'units' => '%'],
+    ];
+}
+
+function icct_nms_udp_fault_observations($host, $rules)
+{
+    $rules = array_filter($rules, static fn($rule) => ($rule['source'] ?? '') === 'iperf3_udp');
+    if (!$rules) {
+        return [];
+    }
+
+    $latest = [];
+    if ($host['disabled'] === '') {
+        try {
+            $assignment = icct_backend_diag_assignment((int) $host['id'], 'iperf3_udp');
+            $latest = db_fetch_row_prepared(
+                "SELECT status, result_json, UNIX_TIMESTAMP(finished_at) AS sample_time
+                 FROM plugin_icct_nms_diagnostic_jobs
+                 WHERE host_id=? AND poller_id=? AND tool='iperf3_udp' AND config_hash=?
+                     AND status IN ('complete','failed')
+                 ORDER BY id DESC LIMIT 1",
+                [(int) $host['id'], (int) $host['poller_id'], icct_backend_diag_signature($assignment)],
+            ) ?: [];
+        } catch (RuntimeException | InvalidArgumentException $failure) {
+            // A disabled or unavailable diagnostic assignment has no current measurement.
+        }
+    }
+
+    $result = json_decode($latest['result_json'] ?? '', true);
+    $metrics = ($latest['status'] ?? '') === 'complete' && empty($result['self_test'])
+        ? ($result['udp_metrics'] ?? [])
+        : [];
+    $parameters = icct_nms_udp_fault_parameters();
+    $observations = [];
+    foreach ($rules as $index => $rule) {
+        $parameter = $rule['parameter'];
+        $value = $metrics[$parameter] ?? null;
+        $observations[] = [
+            'rule' => $index,
+            'graph_id' => 0,
+            'graph' => $parameters[$parameter]['label'] ?? $parameter,
+            'value' => $value,
+            'sample_time' => $value !== null ? (int) $latest['sample_time'] : 0,
+            'state' => $host['disabled'] !== '' ? 'Disabled' : icct_nms_fault_state($rule, $value),
+        ];
+    }
+    return $observations;
 }

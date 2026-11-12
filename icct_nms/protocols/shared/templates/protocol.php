@@ -575,9 +575,13 @@ $netflow = array_replace(
             </div>
         </details>
         <?php
-$ntpSaved = !$presetMode && (bool) icct_nms_ntp_assignment($id);
+$ntpAssignment = $presetMode ? [] : icct_nms_ntp_assignment($id);
+$ntpSaved = (bool) $ntpAssignment;
 $ntp = $presetMode ? ($protocolPresets['ntp'] ?? []) :
-    array_replace(icct_nms_protocol_presets()['ntp'] ?? [], icct_nms_ntp_assignment($id));
+    array_replace(icct_nms_protocol_presets()['ntp'] ?? [], $ntpAssignment);
+if (!$presetMode && !$ntpSaved && in_array($ntp['method'] ?? '', ['', 'local', 'ssh'], true)) {
+    $ntp['method'] = 'auto';
+}
 if ($failedProtocol === 'ntp') {
     $ntp = array_intersect_key(array_filter($_POST, 'is_scalar'), array_flip(icct_nms_ntp_fields()));
 }
@@ -696,8 +700,8 @@ if ($failedProtocol === 'ntp') {
                 0,
             ],
             [
-                'iPerf (Sec)',
-                ['iperf3' => 'iPerf (Sec)'],
+                'iPerf3',
+                ['iperf3' => 'TCP', 'iperf3_udp' => 'UDP'],
                 'bandwidth_seconds',
                 'Bandwidth Test (Sec)',
                 1,
@@ -722,7 +726,7 @@ if ($failedProtocol === 'ntp') {
                                 <?php if ($isGroup): ?>
                                     <input
                                         type="checkbox"
-                                        <?= $group === 'MTR' ? 'data-mtr-group' : 'data-traceroute-group' ?>
+                                        <?= ['MTR' => 'data-mtr-group', 'iPerf3' => 'data-iperf-group'][$group] ?? 'data-traceroute-group' ?>
                                         aria-label="<?= icct_nms_h($group) ?>" />
                                 <?php else: ?>
                                     <input

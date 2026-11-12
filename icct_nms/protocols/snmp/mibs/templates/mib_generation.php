@@ -236,6 +236,7 @@ if (!$generationDone && !$generationError) {
     <footer
         class="mib-generation-navigation"
         aria-label="Configuration step navigation">
+        <?php if ($generationStage !== 2): ?>
         <div
             class="mib-session-save"
             data-session-save
@@ -248,6 +249,7 @@ if (!$generationDone && !$generationError) {
                         : 'Save changes for the selected OIDs in this session.' ?>
             </label>
         </div>
+        <?php endif; ?>
         <?php if ($generationStaged): ?>
             <a
                 class="button mib-generation-previous"
@@ -285,6 +287,16 @@ if (!$generationDone && !$generationError) {
                 <span>Next</span>
                 <span aria-hidden="true">→</span>
             </a>
+        <?php elseif ($generationStage === 2 && $generationStaged && !$generationError): ?>
+            <button
+                type="submit"
+                form="mibGenerationForm"
+                name="next_after_save"
+                value="1"
+                class="button primary mib-generation-next">
+                <span>Next</span>
+                <span aria-hidden="true">→</span>
+            </button>
         <?php else: ?>
             <button
                 type="button"

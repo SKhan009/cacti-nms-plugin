@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/ntp_service.php';
 require_once __DIR__ . '/ntp_details.php';
+require_once __DIR__ . '/ntp_udp.php';
 
 /** Fixed read-only commands; neither request text nor source addresses become shell commands. */
 function icct_nms_ntp_command($kind = 'tracking')
@@ -88,7 +89,9 @@ function icct_nms_ntp_evaluate($sample, $device)
     if (!$sample['synchronized']) {
         return [
             $sample['local_reference'] ? 'Local reference' : 'Unsynchronized',
-            'The device is not synchronized to an external time source.',
+            isset($sample['server_address'])
+                ? 'The NTP server reports that it is unsynchronized.'
+                : 'The device is not synchronized to an external time source.',
         ];
     }
     return ['Synchronized', ''];
@@ -97,8 +100,15 @@ function icct_nms_ntp_evaluate($sample, $device)
 /** One transport per assignment and one command timeout budget for the coherent observation. */
 function icct_nms_ntp_read($device)
 {
+    $method = $device['method'];
+    if ($method === 'auto') {
+        $method = icct_nms_ntp_local_device($device) ? 'local' : 'udp';
+    }
+    if ($method === 'udp') {
+        return icct_nms_ntp_udp_read($device['hostname'], (int) $device['timeout']);
+    }
     $ssh = null;
-    if ($device['method'] === 'local') {
+    if ($method === 'local') {
         if (!icct_nms_ntp_local_device($device)) {
             throw new RuntimeException(
                 'Local NTP collection is not allowed for a remote inventory address.',
@@ -109,7 +119,7 @@ function icct_nms_ntp_read($device)
                 'Install chrony from the offline RHEL bundle; /usr/bin/chronyc is unavailable.',
             );
         }
-    } elseif ($device['method'] === 'ssh') {
+    } elseif ($method === 'ssh') {
         // Reuse saved credentials and host-key approval without enabling SSH health monitoring.
         $ssh = icct_backend_ssh_connect(icct_backend_ssh_device($device['host_id']));
     } else {
@@ -165,15 +175,17 @@ function icct_nms_ntp_due($method, $poller)
         return [];
     }
     // A slightly earlier Cacti cycle should not defer collection for a whole extra cycle.
-    $cycleTolerance = $method === 'local' ? 5 : 0;
+    $methods = (array) $method;
+    $placeholders = implode(',', array_fill(0, count($methods), '?'));
+    $cycleTolerance = in_array('ssh', $methods, true) ? 0 : 5;
     return db_fetch_assoc_prepared(
-        'SELECT d.host_id FROM plugin_icct_nms_ntp_monitors d JOIN host h ON h.id=d.host_id ' .
+        'SELECT d.host_id,d.method FROM plugin_icct_nms_ntp_monitors d JOIN host h ON h.id=d.host_id ' .
             'LEFT JOIN plugin_icct_nms_ntp_monitor_state s ON s.host_id=d.host_id ' .
-            'WHERE h.deleted=\'\' AND h.disabled=\'\' AND h.poller_id=? AND d.method=? ' .
+            'WHERE h.deleted=\'\' AND h.disabled=\'\' AND h.poller_id=? AND d.method IN (' . $placeholders . ') ' .
             'AND NOT EXISTS(SELECT 1 FROM plugin_icct_nms_meta m WHERE m.meta_key=CONCAT(\'protocol_disabled_ntp_\',d.host_id) AND m.meta_value=\'1\') ' .
             'AND (s.last_attempt IS NULL OR s.last_attempt>NOW() OR ' .
             'TIMESTAMPDIFF(SECOND,s.last_attempt,NOW())+?>=d.interval_seconds) ORDER BY s.last_attempt LIMIT 4',
-        [(int) $poller, $method, $cycleTolerance],
+        [(int) $poller, ...$methods, $cycleTolerance],
     );
 }
 

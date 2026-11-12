@@ -75,7 +75,7 @@ function icct_nms_protocol_starters()
             'transport' => 'both',
         ],
         'ntp' => [
-            'method' => 'local',
+            'method' => 'auto',
             'timeout' => 5,
             'interval_seconds' => $cadence,
             'stale_seconds' => 3 * $cadence,

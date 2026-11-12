@@ -71,8 +71,13 @@ $ntpNumber = static function ($value): string {
                 <h3 data-field-help="Synchronization means the device is following a time source. Separate alarms can still flag jitter or delay.">Current readings</h3>
                 <dl class="device-detail-grid">
                     <div>
-                        <dt data-field-help="IP address of the time source reported by the latest reading.">Observed source IP</dt>
-                        <dd><?= $display($ntpSample['source_address'] ?? null) ?></dd>
+                        <?php if (isset($ntpSample['server_address'])): ?>
+                            <dt>Queried NTP server</dt>
+                            <dd><?= $display($ntpSample['server_address']) ?></dd>
+                        <?php else: ?>
+                            <dt data-field-help="IP address of the time source reported by the latest reading.">Observed source IP</dt>
+                            <dd><?= $display($ntpSample['source_address'] ?? null) ?></dd>
+                        <?php endif; ?>
                     </div>
                     <div>
                         <dt data-field-help="The device’s level in the NTP time hierarchy. A lower number means fewer levels from the reference clock.">Stratum</dt>
@@ -91,7 +96,11 @@ $ntpNumber = static function ($value): string {
                         <dd><?= $ntpNumber($ntpSample['jitter_ms'] ?? null) ?></dd>
                     </div>
                     <div>
-                        <dt data-field-help="How long an NTP request takes to reach the selected time server and return.">Peer round-trip delay (ms)</dt>
+                        <?php if (isset($ntpSample['server_address'])): ?>
+                            <dt data-field-help="Round-trip time between the collector and the queried server.">Collector round-trip delay (ms)</dt>
+                        <?php else: ?>
+                            <dt data-field-help="How long an NTP request takes to reach the selected time server and return.">Peer round-trip delay (ms)</dt>
+                        <?php endif; ?>
                         <dd><?= $ntpNumber($ntpSample['peer_delay_ms'] ?? null) ?></dd>
                     </div>
                 </dl>

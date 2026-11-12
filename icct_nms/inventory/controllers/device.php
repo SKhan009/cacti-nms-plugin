@@ -130,6 +130,7 @@ try {
             icct_backend_require_device_access($matches[0]);
             icct_nms_redirect('inventory/controllers/device.php?id=' . $matches[0]);
         }
+        $scanResult = icct_nms_scan_result($discoveryResult);
         $old = icct_nms_scan_wizard_host($discoveryResult);
         $values = array_replace($values, $old, $prefill);
         $shortNameAuto = true;
@@ -203,7 +204,6 @@ try {
     if ($wizard) {
         require dirname(__DIR__, 2) . '/inventory/services/wizard_view.php';
         if (!empty($discoveryResult) && (int) $old['snmp_version'] > 0) {
-            $scanResult = icct_nms_scan_result($discoveryResult);
             $scanJob = icct_nms_scan_job($scanResult['job_id']);
             $protocolDraft = array_values(
                 array_intersect(json_decode($scanJob['config_json'], true)['methods'] ?? [], [

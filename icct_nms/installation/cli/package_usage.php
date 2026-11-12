@@ -12,8 +12,7 @@ $packages = array_slice($argv, 1);
 $diagnostics = [
     'traceroute' => ['traceroute', 'traceroute_icmp', 'traceroute_tcp'],
     'mtr' => ['mtr_icmp', 'mtr_tcp'],
-    'hping3' => ['hping3_icmp', 'hping3_tcp'],
-    'iperf3' => ['iperf3'],
+    'iperf3' => ['iperf3', 'iperf3_udp'],
     'netperf' => ['netperf'],
     'icct-nms-pathchar' => ['pathchar'],
 ];

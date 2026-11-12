@@ -6,9 +6,15 @@
         select = document.querySelector('#shared-diagnostic-tool'),
         status = document.querySelector('#shared-diagnostic-status'),
         output = document.querySelector('#shared-diagnostic-output'),
+        summary = document.querySelector('#shared-diagnostic-summary'),
+        reading = document.querySelector('#shared-diagnostic-reading'),
         title = document.querySelector('#shared-diagnostic-title'),
         run = form.querySelector('[type=submit]');
     const endpoint = new URL('inventory/diagnostics/controllers/diagnostics.php', document.baseURI);
+    const page = new URL(location.href);
+    const fromSavedLink =
+        page.pathname === new URL('inventory/controllers/device.php', document.baseURI).pathname &&
+        page.searchParams.get('open_diagnostic') === '1';
     let timer = null,
         version = 0,
         host = 0,
@@ -79,13 +85,15 @@
         /diagnostic runner.*(offline|unavailable)|collector.*(offline|unavailable)|worker (stopped|timed out)|request expired/i.test(
             message || '',
         );
-    function showRecovery(message = '', expired = false) {
+    const pathcharPermissionFailure = (message) =>
+        /\bsocket[^\r\n]*(?:operation not permitted|permission denied)/i.test(message || '');
+    function showRecovery(message = '', expired = false, failedTool = '') {
         const runner = expired || runnerFailure(message);
         serviceRecovery.hidden = !runner;
-        pathcharRecovery.hidden = select.value !== 'pathchar' || pending || busy;
+        pathcharRecovery.hidden = failedTool !== 'pathchar' || !pathcharPermissionFailure(message);
         recovery.hidden = serviceRecovery.hidden && pathcharRecovery.hidden;
     }
-    select.addEventListener('change', () => showRecovery(output.textContent));
+    select.addEventListener('change', () => showRecovery());
     function controls() {
         run.disabled = busy || pending || !select.options.length;
         select.disabled = busy || pending;
@@ -102,8 +110,14 @@
         pending = ['queued', 'running'].includes(data.status);
         status.textContent = 'Result: ' + data.status;
         output.textContent = data.output || '';
-        output.hidden = !data.output;
-        showRecovery(data.output, data.status === 'expired');
+        if (summary) summary.innerHTML = data.summary_html || '';
+        reading.hidden = !data.output;
+        output.scrollTop = 0;
+        showRecovery(
+            data.output,
+            data.status === 'expired',
+            data.status === 'failed' ? data.tool || select.value : '',
+        );
         controls();
         if (pending) timer = setTimeout(() => poll(version), 500);
     }
@@ -143,7 +157,8 @@
         title.textContent = 'Device Diagnostics';
         status.textContent = 'Loading…';
         output.textContent = '';
-        output.hidden = true;
+        reading.hidden = true;
+        reading.dispatchEvent?.(new Event('diagnostic-reset'));
         recovery.hidden = true;
         controls();
         if (!dialog.open) dialog.showModal();
@@ -185,12 +200,15 @@
         busy = true;
         recovery.hidden = true;
         status.textContent = 'Requesting diagnostic…';
+        reading.hidden = true;
+        output.textContent = '';
+        reading.dispatchEvent?.(new Event('diagnostic-reset'));
         controls();
         try {
             const data = await request(endpoint, { method: 'POST', body });
             if (v === version && dialog.open) {
                 busy = false;
-                if (location.pathname === endpoint.pathname) {
+                if (fromSavedLink) {
                     const url = new URL(location.href);
                     url.searchParams.set('tool', select.value);
                     url.searchParams.set('job_id', data.job_id);
@@ -208,6 +226,11 @@
     dialog.addEventListener('close', () => {
         clearTimeout(timer);
         version++;
+        if (fromSavedLink) {
+            const url = new URL(location.href);
+            ['open_diagnostic', 'tool', 'job_id'].forEach((key) => url.searchParams.delete(key));
+            history.replaceState(null, '', url);
+        }
         if (returnFocus?.isConnected) returnFocus.focus();
     });
     window.addEventListener('pagehide', () => {
@@ -236,18 +259,13 @@
         e.preventDefault();
         open(url, link.closest('.device-diagnostic-menu')?.querySelector('summary') || link);
     });
-    if (
-        location.pathname === endpoint.pathname &&
-        document.querySelector('#diagnostic-live-result')
-    ) {
-        const section = document.querySelector('.diagnostics-page');
-        section.hidden = true;
-        const reopen = document.createElement('button');
-        reopen.type = 'button';
-        reopen.className = 'button primary';
-        reopen.textContent = 'Open Diagnostics';
-        section.after(reopen);
-        reopen.addEventListener('click', () => open(new URL(location.href), reopen));
-        open(new URL(location.href), reopen);
+    if (fromSavedLink) {
+        const url = new URL(endpoint);
+        url.search = new URLSearchParams({
+            host_id: page.searchParams.get('id'),
+            tool: page.searchParams.get('tool') || '',
+            job_id: page.searchParams.get('job_id') || '',
+        });
+        open(url, null);
     }
 })();

@@ -798,6 +798,7 @@ function icct_backend_syslog_events(
     $limit,
     $offset,
     &$total,
+    bool $include_alarm_details = true,
 ) {
     $allowed_host_ids = array_values(array_unique(array_map('intval', $allowed_host_ids)));
     if (!$allowed_host_ids) {
@@ -823,6 +824,11 @@ function icct_backend_syslog_events(
         $where[] = 'e.severity_code IN (' . implode(',', array_fill(0, count($codes), '?')) . ')';
         array_push($params, ...$codes);
     }
+    if (!empty($filters['facility_codes'])) {
+        $codes = icct_backend_syslog_filters(['facility_codes' => $filters['facility_codes']])['facility_codes'];
+        $where[] = 'e.facility_code IN (' . implode(',', array_fill(0, count($codes), '?')) . ')';
+        array_push($params, ...$codes);
+    }
     if (!empty($filters['severity'])) {
         $where[] = 'e.nms_severity=?';
         $params[] = (string) $filters['severity'];
@@ -833,20 +839,21 @@ function icct_backend_syslog_events(
     } else {
         $where[] = "e.event_origin IN ('syslog','availability')";
     }
-    if (isset($filters['alarm_key'])) {
+    if ($include_alarm_details && isset($filters['alarm_key'])) {
         $where[] = 'e.alarm_key=?';
         $params[] = $filters['alarm_key'];
     }
-    if (($filters['ack'] ?? '') === 'yes') {
+    if ($include_alarm_details && ($filters['ack'] ?? '') === 'yes') {
         $where[] = 'COALESCE(a.acknowledged,e.acknowledged)=1';
-    } elseif (($filters['ack'] ?? '') === 'no') {
+    } elseif ($include_alarm_details && ($filters['ack'] ?? '') === 'no') {
         $where[] = 'COALESCE(a.acknowledged,e.acknowledged)=0';
     }
-    if (!empty($filters['search'])) {
-        $where[] =
-            '(e.message LIKE ? OR e.program LIKE ? OR e.source_ip LIKE ? OR h.description LIKE ? OR h.hostname LIKE ?)';
-        $like = '%' . $filters['search'] . '%';
-        array_push($params, $like, $like, $like, $like, $like);
+    if (($filters['search'] ?? '') !== '') {
+        $fields = $include_alarm_details
+            ? ['e.message', 'e.program', 'e.source_ip', 'h.description', 'h.hostname']
+            : ['e.message', 'e.source_ip'];
+        $where[] = '(' . implode(' LIKE ? OR ', $fields) . ' LIKE ?)';
+        array_push($params, ...array_fill(0, count($fields), '%' . $filters['search'] . '%'));
     }
     if (!empty($filters['since'])) {
         $where[] = 'e.event_time>=?';
@@ -858,17 +865,15 @@ function icct_backend_syslog_events(
         $params[] = $filters['until'];
     }
     $where_sql = ' WHERE ' . implode(' AND ', $where);
-    $total = (int) db_fetch_cell_prepared(
-        'SELECT COUNT(*) FROM plugin_icct_nms_syslog_events e INNER JOIN host h ON h.id=e.host_id LEFT JOIN plugin_icct_nms_alarms a ON a.alarm_key=e.alarm_key' .
-            $where_sql,
-        $params,
-    );
+    $from = ' FROM plugin_icct_nms_syslog_events e INNER JOIN host h ON h.id=e.host_id';
+    $alarmJoin = $include_alarm_details ? ' LEFT JOIN plugin_icct_nms_alarms a ON a.alarm_key=e.alarm_key' : '';
+    $total = (int) db_fetch_cell_prepared('SELECT COUNT(*)' . $from . $alarmJoin . $where_sql, $params);
+    $fields = $include_alarm_details
+        ? 'e.*,COALESCE(a.acknowledged,e.acknowledged) AS acknowledged,a.state AS alarm_state,h.description,h.hostname,u.username AS ack_username'
+        : 'e.id,e.event_origin,e.event_time,e.last_seen,e.source_ip,e.transport,e.repeat_count,e.program,e.facility_code,e.facility,e.message,e.timestamp_kind,e.severity_code,e.fingerprint,e.raw_message';
+    $userJoin = $include_alarm_details ? ' LEFT JOIN user_auth u ON u.id=e.acknowledged_by' : '';
     $sql =
-        "SELECT e.*,COALESCE(a.acknowledged,e.acknowledged) AS acknowledged,a.state AS alarm_state,h.description,h.hostname,u.username AS ack_username
-            FROM plugin_icct_nms_syslog_events e
-            INNER JOIN host h ON h.id=e.host_id
-            LEFT JOIN plugin_icct_nms_alarms a ON a.alarm_key=e.alarm_key
-            LEFT JOIN user_auth u ON u.id=e.acknowledged_by
+        "SELECT {$fields}{$from}{$alarmJoin}{$userJoin}
             {$where_sql}
             ORDER BY e.event_time DESC,e.id DESC
             LIMIT " .

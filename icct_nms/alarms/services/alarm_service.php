@@ -54,7 +54,7 @@ function icct_nms_alarm_key($host, $rule, $observation)
                 $rule['template_id'] ?? 0,
                 ($rule['source'] ?? '') === 'ntp'
                     ? $rule['parameter'] . ':' . ($rule['expected_source'] ?? '')
-                    : $rule['metric_id'] ?? 0,
+                    : (($rule['source'] ?? '') === 'iperf3_udp' ? $rule['parameter'] : ($rule['metric_id'] ?? 0)),
                 $rule['oid'] ?? '',
                 (string) $observation['graph_id'],
                 $rule['condition'] ?? '',
@@ -121,6 +121,7 @@ function icct_nms_alarm_record($host, $rule, $observation, $transaction = true)
                         'snmp' => 'SNMP',
                         'availability' => 'Availability',
                         'ntp' => 'NTP',
+                        'iperf3_udp' => 'iPerf3 UDP',
                         'syslog' => 'Syslog',
                         'trap' => 'SNMP Traps',
                         'passive' => 'Passive events',

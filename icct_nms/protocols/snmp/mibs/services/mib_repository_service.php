@@ -776,20 +776,23 @@ function icct_mib_collection($record, $values)
     }
     return $method;
 }
-/** Names shown in the wizard come from the native methods used by template creation. */
+/** Use the same installed Data Input Method catalog as Cacti's Data Source form. */
 function icct_mib_collection_names()
 {
-    $get = db_fetch_cell(
-        'SELECT di.name FROM data_input di JOIN data_template_data dtd ON ' .
+    $catalog = array_column(db_fetch_assoc('SELECT id, name FROM data_input ORDER BY name') ?: [], 'name', 'id');
+    $get = (int) db_fetch_cell(
+        'SELECT di.id FROM data_input di JOIN data_template_data dtd ON ' .
             'dtd.data_input_id=di.id JOIN data_template dt ON dt.id=dtd.data_template_id WHERE ' .
             'dt.name=\'SNMP - Generic OID Template\' AND dtd.local_data_id=0 AND di.type_id=2 LIMIT 1',
     );
-    $indexed = db_fetch_cell('SELECT name FROM data_input WHERE type_id=3 ORDER BY id LIMIT 1');
+    $indexed = (int) db_fetch_cell('SELECT id FROM data_input WHERE type_id=3 ORDER BY id LIMIT 1');
     return [
-        'get' => $get ?: 'SNMP GET (not installed)',
-        'indexed' => $indexed ?: 'Indexed SNMP (not installed)',
-        'get_available' => (bool) $get,
-        'indexed_available' => (bool) $indexed,
+        'catalog' => $catalog,
+        'native_ids' => ['get' => $get, 'indexed' => $indexed],
+        'get' => $catalog[$get] ?? 'SNMP GET (not installed)',
+        'indexed' => $catalog[$indexed] ?? 'Indexed SNMP (not installed)',
+        'get_available' => isset($catalog[$get]),
+        'indexed_available' => isset($catalog[$indexed]),
     ];
 }
 /** Only the installed native SNMP methods relevant to this object are offered. */

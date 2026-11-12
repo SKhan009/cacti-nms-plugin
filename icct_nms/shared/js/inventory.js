@@ -1194,7 +1194,7 @@ if (diagnosticSettings) {
             'mtr_tcp',
             'pathchar',
         ],
-        bandwidth_seconds: ['iperf3', 'netperf'],
+        bandwidth_seconds: ['iperf3', 'iperf3_udp', 'netperf'],
         mtr_cycles: ['mtr_icmp', 'mtr_tcp'],
         arp_interface: ['arp'],
         pathchar_hops: ['pathchar'],
@@ -1218,6 +1218,15 @@ if (diagnosticSettings) {
             input.checked = mtrGroup.checked;
         });
     });
+    const iperfGroup = diagnosticSettings.querySelector('[data-iperf-group]');
+    const iperfMethods = [
+        ...diagnosticSettings.querySelectorAll('input[name="diagnostic_tools[]"]'),
+    ].filter((input) => ['iperf3', 'iperf3_udp'].includes(input.value));
+    iperfGroup?.addEventListener('change', () => {
+        iperfMethods.forEach((input) => {
+            input.checked = iperfGroup.checked;
+        });
+    });
     const monitor = diagnosticSettings.querySelector('input[name="mtr_background"]');
     const updateDiagnostics = () => {
         if (monitor) {
@@ -1233,6 +1242,11 @@ if (diagnosticSettings) {
             const checked = traceMethods.filter((input) => input.checked).length;
             traceGroup.checked = checked === traceMethods.length && checked > 0;
             traceGroup.indeterminate = checked > 0 && checked < traceMethods.length;
+        }
+        if (iperfGroup) {
+            const checked = iperfMethods.filter((input) => input.checked).length;
+            iperfGroup.checked = checked === iperfMethods.length && checked > 0;
+            iperfGroup.indeterminate = checked > 0 && checked < iperfMethods.length;
         }
         const selected = [
             ...diagnosticSettings.querySelectorAll('input[type=checkbox]:checked'),
@@ -1533,7 +1547,7 @@ if (protocolDefaultData) {
         const priorProfile = inheritance.profiles?.[protocol]?.[priorVariant] || {};
         if (isDiscovery) form.dataset.discoveryTimingSource = '1';
         for (const [name, value] of Object.entries(values)) {
-            const deviceChoice = (saved && protocol === 'ntp' && name === 'method') ||
+            const deviceChoice = (protocol === 'ntp' && name === 'method') ||
                 (saved && protocol === 'serial' && name === 'serial_interface') ||
                 ((saved || switching) && name === variantField);
             if (deviceChoice || overrides[protocol]?.includes(name) || dirty.get(protocol)?.has(name))
@@ -2012,3 +2026,39 @@ document.addEventListener('click', (event) => {
         document.querySelector('#segment-tree-empty').hidden = count > 0;
     });
 })();
+
+document.querySelectorAll('.diagnostic-reading-tabs').forEach((tabList) => {
+    const tabs = [...tabList.querySelectorAll('[role="tab"]')];
+    function selectTab(selected, focus = true) {
+        tabs.forEach((tab) => {
+            const active = tab === selected;
+            tab.setAttribute('aria-selected', String(active));
+            tab.tabIndex = active ? 0 : -1;
+            document.getElementById(tab.getAttribute('aria-controls')).hidden = !active;
+        });
+        if (focus) selected.focus();
+    }
+    tabList.closest('.diagnostic-reading')?.addEventListener('diagnostic-reset', () => selectTab(tabs[0], false));
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => selectTab(tab));
+        tab.addEventListener('keydown', (event) => {
+            const next = {
+                ArrowLeft: (index + tabs.length - 1) % tabs.length,
+                ArrowRight: (index + 1) % tabs.length,
+                Home: 0,
+                End: tabs.length - 1,
+            }[event.key];
+            if (next === undefined) return;
+            event.preventDefault();
+            selectTab(tabs[next]);
+        });
+    });
+});
+
+const diagnosticPager = document.querySelector('[data-diagnostic-pager]');
+diagnosticPager?.addEventListener('change', (event) => {
+    if (event.target.name === 'diagnostics_size') {
+        diagnosticPager.elements.diagnostics_page.value = '1';
+    }
+    diagnosticPager.requestSubmit();
+});

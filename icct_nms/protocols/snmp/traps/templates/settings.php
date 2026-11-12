@@ -1,8 +1,12 @@
 <?php
-$trapPreset = ($presetMode ? $protocolPresets : ($id ? [] : icct_nms_protocol_presets()))['snmp_notifications'] ?? [];
-$trapEnabled = $trapSender !== '' || (string) ($trapPreset['trap_enabled'] ?? '0') === '1';
+$trapPreset = ($presetMode ? $protocolPresets : icct_nms_protocol_presets())['snmp_notifications'] ?? [];
+$trapEnabled = $trapSender !== '' || (($presetMode || !$id) && (string) ($trapPreset['trap_enabled'] ?? '0') === '1');
 $trapSourceMode = $trapPreset['trap_source_mode'] ?? 'device';
-$trapUseDeviceIp = !$id && !$presetMode && $trapSourceMode === 'device';
+$trapUseDeviceIp = !$presetMode && $trapSourceMode === 'device' && $trapSender === '';
+$trapSourceAddress = $trapSender;
+if ($id && $trapUseDeviceIp && filter_var($host['hostname'] ?? '', FILTER_VALIDATE_IP) !== false) {
+    $trapSourceAddress = $host['hostname'];
+}
 $trapHelp = static function (string $headingHelpText): void {
     require __DIR__ . '/../../../../shared/templates/heading_help.php';
 };
@@ -56,7 +60,7 @@ $trapHelp = static function (string $headingHelpText): void {
                     <span class="field-label">Trap sender IP address
                         <?php $trapHelp('Enter the IPv4 or IPv6 source address the collector sees. This can differ from the device’s polling address.'); ?>
                     </span>
-                    <input name="trap_source_address" maxlength="45" value="<?= icct_nms_h($trapSender) ?>"
+                    <input name="trap_source_address" maxlength="45" value="<?= icct_nms_h($trapSourceAddress) ?>"
                         <?= $trapUseDeviceIp ? 'placeholder="Uses the device IP if blank"' : '' ?>>
                 </label>
             </div>

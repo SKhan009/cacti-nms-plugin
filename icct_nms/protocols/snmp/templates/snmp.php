@@ -21,7 +21,7 @@
             'snmp_community',
             !empty($readonly) ? '' : $values['snmp_community'],
             'text',
-            'autocomplete="off" spellcheck="false"',
+            'autocomplete="off" spellcheck="false"' . (!empty($presetMode) ? ' readonly' : ''),
         );
 icct_nms_input(
     'SNMP Port',

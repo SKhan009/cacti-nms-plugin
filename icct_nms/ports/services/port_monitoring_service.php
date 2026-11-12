@@ -35,7 +35,8 @@ function icct_nms_port_monitor_validate($settings, $known)
             !ctype_digit((string) $key) ||
             (int) $key < 1 ||
             !is_array($row) ||
-            ($known[$key] ?? null) !== ($row['name'] ?? null)
+            !isset($known[$key]) ||
+            $known[$key] !== ($row['name'] ?? null)
         ) {
             throw new InvalidArgumentException(
                 'Port identity changed. Reload the device before saving.',
@@ -64,8 +65,8 @@ function icct_nms_port_monitor_validate($settings, $known)
             'name' => $row['name'],
             'alarm' => !empty($row['alarm']),
             'cnms' => !empty($row['cnms']),
-            'oper_severity' => $row['oper_severity'],
-            'admin_severity' => $row['admin_severity'],
+            'oper_severity' => $row['oper_severity'] ?? '',
+            'admin_severity' => $row['admin_severity'] ?? '',
         ];
     }
     return $out;
@@ -84,10 +85,12 @@ function icct_nms_save_port_monitoring($id, $input)
             $known[$index] = $row['name'];
         }
     }
-    $settings = icct_nms_port_monitor_validate(
-        json_decode($raw, true, 512, JSON_THROW_ON_ERROR),
-        $known,
-    );
+    try {
+        $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (JsonException $error) {
+        throw new InvalidArgumentException('Port settings could not be read. Reopen Port Config and try again.', 0, $error);
+    }
+    $settings = icct_nms_port_monitor_validate($decoded, $known);
     icct_backend_category_execute(
         'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
             'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',

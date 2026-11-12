@@ -139,8 +139,8 @@
                     checkbox(rule, 'alarm'),
                 ),
                 field(
-                    'Escalate to CNMS?',
-                    'Save the forwarding preference. CNMS delivery requires an integration.',
+                    'Escalate to CNMS',
+                    'Optional forwarding preference. Port severities and local alarms work with this unchecked.',
                     checkbox(rule, 'cnms'),
                 ),
                 field(

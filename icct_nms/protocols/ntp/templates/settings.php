@@ -1,14 +1,14 @@
 <?php
-/** One field definition serves presets and inventory; no transport or server is guessed. */
+/** Shared NTP settings for presets and inventory. */
 $ntpFields = [
     'method' => ['Collection method', 'select'],
-    'timeout' => ['Command timeout (seconds)', 'number', 1, 30, 1],
+    'timeout' => ['Collection timeout (seconds)', 'number', 1, 30, 1],
     'interval_seconds' => ['Collection interval (seconds)', 'number', 60, 86400, 1],
     'stale_seconds' => ['Stale after (seconds)', 'number', 60, 604800, 1],
 ];
 $ntpHelp = [
-    'method' => 'Read-only chrony tracking, jitter and peer delay through the fixed Unix socket. The device account requires the offline NTP read-only access policy. Local mode requires localhost on its assigned collector. Remote Linux devices require saved SSH credentials and an approved host key. No alternate transport is attempted.',
-    'timeout' => 'Combined command timeout: 1–30 seconds for tracking, jitter and peer-delay reads. SSH connection uses its saved connection settings. A failed or timed-out read shows an error without substitute measurements.',
+    'method' => 'Automatic reads local chrony for a collector address and otherwise queries the inventory address on UDP port 123. Direct NTP requires an NTP server that answers on that address. Only the optional remote chrony method uses SSH.',
+    'timeout' => 'Time allowed for the direct NTP query or combined chrony reads. Optional SSH mode uses its own saved connection timeout.',
     'interval_seconds' => 'Collection interval: 60–86400 seconds, in multiples of the Cacti poller interval.',
     'stale_seconds' => 'Must cover the collection interval plus timeout. Older observations are excluded from current measurements.',
 ];

@@ -9,6 +9,13 @@ require_once dirname(__DIR__, 2) . '/shared/services/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/inventory/services/inventory.php';
 try {
     icct_nms_backend();
+    if (isset($_GET['syslog'])) {
+        $id = icct_nms_id($_GET['id'] ?? 0);
+        icct_nms_device($id);
+        require_once dirname(__DIR__, 2) . '/protocols/syslog/services/syslog_history_export.php';
+        icct_nms_syslog_export_history($id, $_GET);
+        exit();
+    }
     if (isset($_GET['ntp'])) {
         $id = icct_nms_id($_GET['id'] ?? 0);
         icct_backend_require_device_access($id);

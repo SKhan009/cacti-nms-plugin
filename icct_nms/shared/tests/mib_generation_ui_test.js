@@ -84,7 +84,8 @@ class Element {
             },
         },
     );
-    const pending = form.events.submit({ preventDefault() {} });
+    const pending = form.events.submit({ preventDefault() {}, submitter: { name: 'next_after_save' } });
+    assert.equal(requests[0].body.get('next_after_save'), '1');
     assert.equal(elements['#mibGenerate'].disabled, true);
     assert.equal(elements['#mibGenerationProgress'].hidden, false);
     assert.equal(elements['.mib-generation-spinner'].hidden, false);
@@ -146,3 +147,37 @@ class Element {
     console.error(error);
     process.exitCode = 1;
 });
+
+const source = fs.readFileSync(path.join(__dirname, '../../protocols/snmp/mibs/js/mib-repository.js'), 'utf8');
+const reviewCode = source.slice(
+    source.indexOf('// Review the current stage'),
+    source.indexOf('// Cacti and fault settings'),
+);
+const review = new Element();
+const next = new Element();
+const field = { name: 'records[0][fault_presets]', value: '[]', matches: () => false };
+const generationForm = new Element();
+let submissions = 0;
+generationForm.reportValidity = () => true;
+generationForm.requestSubmit = () => submissions++;
+review.hasAttribute = () => false;
+review.querySelector = () => new Element();
+review.querySelectorAll = (selector) => selector.includes('input[name]') ? [field] : [];
+vm.runInNewContext(reviewCode, {
+    document: {
+        querySelector: (selector) => ({
+            '[data-prepared-review]': review,
+            '#mibGenerationForm': generationForm,
+        })[selector] ?? null,
+        querySelectorAll: () => [next],
+    },
+});
+next.events.click({ preventDefault: () => assert.fail('Clean review should follow the Next link') });
+field.value = '[{"name":"Test fault"}]';
+review.events.input({ target: field });
+assert.equal(next.getAttribute('aria-disabled'), undefined);
+next.events.click({ preventDefault() {} });
+assert.equal(submissions, 1);
+assert.equal(generationForm.dataset.nextAfterSave, '1');
+field.value = '[]';
+next.events.click({ preventDefault: () => assert.fail('Review with no faults should follow Next') });

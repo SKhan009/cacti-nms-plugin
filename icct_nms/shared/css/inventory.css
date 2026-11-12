@@ -1526,6 +1526,9 @@ a.button {
 .row-menu-panel button:disabled {
     color: var(--muted);
 }
+.row-menu-panel a.inventory-cross-launch {
+    color: #0f62fe;
+}
 .row-menu-panel .danger-action {
     border-top: 1px solid var(--line);
 }
@@ -4270,7 +4273,17 @@ body.icct-inventory:has(.protocol-form) {
     justify-content: flex-end;
     margin-top: 20px;
 }
+.diagnostic-reading > :is(h3, h5) {
+    margin: 0 0 8px;
+    font-size: 14px;
+}
+/* Preserve terminal columns despite the shared UI font rule. */
+#shared-diagnostic-output,
+#view-diagnostics .diagnostic-reading-panel > pre {
+    font-family: ui-monospace, monospace !important;
+}
 #shared-diagnostic-output {
+    margin: 0;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     padding: 16px;
@@ -4513,6 +4526,41 @@ body.icct-inventory:has(.protocol-form) {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 28px 32px;
     margin: 0 0 24px;
+}
+.device-view-identity .device-view-status {
+    margin-inline-start: 8px;
+    font-weight: 600;
+}
+.device-snmp-information {
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 20px;
+}
+.device-snmp-information h2 {
+    font-size: 16px;
+    margin: 0 0 8px;
+}
+.device-snmp-information p {
+    margin: 0 0 12px;
+}
+.device-snmp-information .device-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 12px 32px;
+    margin-bottom: 16px;
+}
+@media (max-width: 650px) {
+    .device-snmp-information .device-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.device-snmp-information dt {
+    color: #666;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+.device-snmp-information dd {
+    margin: 0;
+    overflow-wrap: anywhere;
 }
 .device-view-section {
     border-top: 1px solid #ddd;
@@ -5866,10 +5914,6 @@ h6 {
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: 12px;
-}
-#fcaps-fault:has(> #fault-form[hidden]) .fcaps-form-actions > [form='fault-form'],
-#fcaps-fault:has(> #passive-fault-form[hidden]) .fcaps-form-actions > [form='passive-fault-form'] {
-    display: none;
 }
 /* Expand templates with +/- and select measurements with radio-style markers. */
 .fault-template-group summary {
@@ -8242,7 +8286,13 @@ h6 {
         max-width: none;
     }
 }
-/* Syslog uses the same filter grid as the flow history. */
+#view-syslog .device-history-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+#view-syslog :is(.device-history-search, .device-history-actions) {
+    grid-column: auto;
+}
+/* Syslog and trap history share the heading layout. */
 :is(#view-syslog, #view-traps) .device-history-heading h2 {
     margin: 0;
 }
@@ -8285,6 +8335,25 @@ h6 {
 .netflow-summary strong {
     font-size: 24px;
     font-weight: 500;
+}
+@media (min-width: 901px) {
+    .netflow-summary.syslog-summary {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
+#view-syslog .inventory-pagination {
+    margin: 0;
+}
+.syslog-history-heading-actions {
+    display: flex;
+    gap: 8px;
+}
+#view-syslog .device-view-tabs {
+    margin-bottom: 16px;
+}
+#view-syslog pre.syslog-event-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 .netflow-live-summary {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -8552,7 +8621,10 @@ h6 {
 }
 
 .syslog-event-history {
-    --device-record-columns: 1fr 1.4fr 1fr 1fr;
+    --device-record-columns: 1fr 2fr 1fr;
+}
+#view-syslog .syslog-event-history {
+    --device-record-columns: 1fr 2fr 1fr 0.65fr;
 }
 .syslog-event-details {
     display: grid;
@@ -8732,4 +8804,127 @@ h6 {
 .device-status[data-log-status='Information' i] {
     background: var(--icct-severity-information);
     color: #fff;
+}
+
+.diagnostic-reading-tabs {
+    padding: 0;
+    margin-bottom: 16px;
+}
+.diagnostic-reading-tabs button {
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: #333;
+    cursor: pointer;
+    padding: 12px 16px;
+}
+.diagnostic-reading-tabs button[aria-selected='true'] {
+    border-bottom-color: #155cff;
+    color: #155cff;
+    font-weight: 600;
+}
+.diagnostic-summary-heading {
+    background: #e6eefc;
+    border: 1px solid #c9d9f5;
+    padding: 14px 16px;
+}
+.diagnostic-summary-heading p {
+    margin: 6px 0 0;
+}
+.diagnostic-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(150px, calc((100% - 36px) / 4))), 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 12px;
+}
+.diagnostic-summary-metrics {
+    grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+    padding: 0;
+    margin-top: 12px;
+}
+.diagnostic-summary-metrics > div,
+.diagnostic-summary-section {
+    border: 1px solid #ddd;
+}
+.diagnostic-summary-metrics > div {
+    display: grid;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+    row-gap: 4px;
+    padding: 12px;
+    min-width: 0;
+}
+.diagnostic-summary-metrics > div > dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+}
+.diagnostic-summary-grid > div {
+    min-width: 0;
+}
+.diagnostic-summary-grid dt,
+.diagnostic-summary-grid small {
+    color: #505050;
+}
+.diagnostic-summary-grid dd {
+    margin: 4px 0;
+    overflow-wrap: anywhere;
+}
+.diagnostic-summary-metrics dd {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+.diagnostic-summary-section {
+    margin-top: 12px;
+}
+.diagnostic-summary-section h5 {
+    background: #f1f4fa;
+    font-size: 1rem;
+    margin: 0;
+    padding: 10px 12px;
+}
+.diagnostic-summary-table {
+    overflow-x: auto;
+}
+.diagnostic-summary-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.diagnostic-summary-table th,
+.diagnostic-summary-table td {
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+    border-top: 1px solid #e5e5e5;
+}
+.diagnostic-summary-table td {
+    font-variant-numeric: tabular-nums;
+}
+.diagnostic-summary-table meter {
+    display: block;
+    width: 100%;
+    min-width: 80px;
+    accent-color: #155cff;
+}
+
+.diagnostic-filters {
+    padding: 0 0 16px;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) auto auto;
+}
+.diagnostic-filters input,
+.diagnostic-filters select,
+.diagnostic-filters > .button {
+    height: 40px;
+    box-sizing: border-box;
+}
+.diagnostic-pagination {
+    margin: 0;
+}
+@media (max-width: 1000px) {
+    .diagnostic-filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .diagnostic-pagination {
+        flex-wrap: wrap;
+    }
 }

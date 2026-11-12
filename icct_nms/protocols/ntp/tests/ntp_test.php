@@ -32,7 +32,7 @@ $values = [
 checkNtp(icct_nms_ntp_validate($values)['timeout'] === 5, 'Collection settings conversion failed.');
 foreach (
     [
-        'method' => 'auto',
+        'method' => 'invalid',
         'timeout' => 0,
         'interval_seconds' => 61,
         'stale_seconds' => 60,
@@ -48,6 +48,27 @@ checkNtp(
     !icct_nms_ntp_local_device(['hostname' => '192.0.2.4']),
     'Remote clock relabelled as collector.',
 );
+
+foreach (['auto', 'udp'] as $method) {
+    checkNtp(icct_nms_ntp_validate(array_replace($values, ['method' => $method]))['method'] === $method,
+        'Direct monitoring method was rejected.');
+}
+$sent = 2085978495.875; // The response crosses the 2036 NTP timestamp rollover.
+$origin = icct_nms_ntp_timestamp($sent);
+$reply = "\x24\x02" . str_repeat("\0", 10) . "GPS\0" .
+    icct_nms_ntp_timestamp($sent - 1) . $origin .
+    icct_nms_ntp_timestamp($sent + 0.25) . icct_nms_ntp_timestamp($sent + 0.375);
+$direct = icct_nms_ntp_udp_sample($reply, $origin, $sent, $sent + 0.5, 'ntp.lan');
+checkNtp(
+    $direct['synchronized'] && $direct['offset_ms'] === 62.5 &&
+        $direct['peer_delay_ms'] === 375.0 && $direct['server_address'] === 'ntp.lan' &&
+        $direct['source_address'] === null && $direct['jitter_ms'] === null,
+    'Direct NTP timestamps or source semantics are incorrect.',
+);
+$unsynced = icct_nms_ntp_udp_sample("\xe4" . substr($reply, 1), $origin, $sent, $sent + 0.5, 'ntp.lan');
+checkNtp(!$unsynced['synchronized'] && $unsynced['offset_ms'] === null, 'Unsynchronized reply produced a clock offset.');
+rejectsNtp(fn() => icct_nms_ntp_udp_sample($reply, str_repeat("\0", 8), $sent, $sent + 0.5, 'ntp.lan'));
+rejectsNtp(fn() => icct_nms_ntp_udp_sample(substr($reply, 0, 47), $origin, $sent, $sent + 0.5, 'ntp.lan'));
 
 $csv = 'C0000201,192.0.2.1,2,1793799702.492115327,0.0001,-0.002,0.003,1,0,2,0.004,0.005,64,Normal';
 $sample = icct_nms_ntp_parse($csv);

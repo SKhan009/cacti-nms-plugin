@@ -23,6 +23,13 @@ $settings = icct_nms_port_monitor_validate(
 if ($settings['ports'][2] !== $rule) {
     throw new Exception('Port settings lost');
 }
+$withoutCnms = $rule;
+unset($withoutCnms['cnms']);
+$settings = icct_nms_port_monitor_validate(['enabled' => true, 'ports' => [2 => $withoutCnms]], [2 => 'eth0']);
+if ($settings['ports'][2]['cnms'] || !$settings['ports'][2]['alarm'] ||
+    $settings['ports'][2]['oper_severity'] !== 'Major') {
+    throw new Exception('CNMS must be optional for local port alarms');
+}
 foreach (
     [
         ['admin' => 1, 'oper' => 2, 'fresh' => true, 'state' => 'Major'],

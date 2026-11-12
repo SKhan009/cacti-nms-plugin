@@ -41,7 +41,7 @@ class Element {
     }
 }
 const nodes = Object.fromEntries(
-    ['dialog', 'form', 'tool', 'status', 'output', 'title'].map((key) => [
+    ['dialog', 'form', 'tool', 'status', 'output', 'reading', 'title'].map((key) => [
         key,
         new Element(key === 'tool' ? 'select' : 'div'),
     ]),
@@ -103,15 +103,15 @@ const link = {
     href: 'http://localhost/cacti/plugins/icct_nms/inventory/diagnostics/controllers/diagnostics.php?host_id=2&tool=pathchar',
     closest: () => null,
 };
-events.click({ target: { closest: () => link }, button: 0, preventDefault() {} });
+events.click({ target: { closest: (selector) => selector === 'a[href]' ? link : null }, button: 0, preventDefault() {} });
 (async () => {
     await new Promise(setImmediate);
     const recovery = actions.beforeElement;
     const service = recovery.children.find((child) => child.tag === 'div');
     const pathchar = recovery.children.filter((child) => child.tag === 'div')[1];
-    assert.equal(recovery.hidden, false);
+    assert.equal(recovery.hidden, true, 'Opening Pathchar showed recovery commands');
     assert.equal(service.hidden, true);
-    assert.equal(pathchar.hidden, false);
+    assert.equal(pathchar.hidden, true);
     assert(
         pathchar.children.some((child) =>
             child.textContent.includes('sudo setcap cap_net_raw=ep /usr/local/bin/pchar'),
@@ -126,7 +126,13 @@ events.click({ target: { closest: () => link }, button: 0, preventDefault() {} }
     assert.equal(nodes.output.textContent, 'socket: Operation not permitted');
     assert.equal(pathchar.hidden, false, 'Permission failure hid the recovery commands');
     assert.equal(service.hidden, true);
-    result = { ok: true, job_id: 6, status: 'expired', output: 'Diagnostic runner unavailable' };
+    result = { ok: true, job_id: 6, status: 'failed', output: 'Test exceeded its 60-second limit' };
+    await nodes.form.events.submit({ preventDefault() {} });
+    assert.equal(recovery.hidden, true, 'A timeout showed raw-socket commands');
+    result = { ok: true, job_id: 7, status: 'complete', output: 'Path length: 1 hops' };
+    await nodes.form.events.submit({ preventDefault() {} });
+    assert.equal(recovery.hidden, true, 'A successful test showed recovery commands');
+    result = { ok: true, job_id: 8, status: 'expired', output: 'Diagnostic runner unavailable' };
     nodes.tool.value = 'ping';
     await nodes.form.events.submit({ preventDefault() {} });
     assert.equal(service.hidden, false, 'Runner failure hid the restart commands');

@@ -4,7 +4,8 @@ $faultInfo = $preparedFaultInfo[$position];
 $settings['fault_presets'] = $faultInfo['rules'];
 $faultSuggestions = $faultInfo['suggested'];
 $profileChoices = array_column(icct_mib_profiles(), 'name', 'id');
-$collectionChoices = icct_mib_collection_options($record, icct_mib_collection_names());
+$collectionNames ??= icct_mib_collection_names();
+$collectionChoices = icct_mib_collection_options($record, $collectionNames);
 $selectedCollection =
     ($settings['collection_method'] ?? 'auto') === 'auto'
         ? $record['resolved_method']
@@ -69,12 +70,7 @@ $sourceTypes = array_intersect_key($data_source_types, [
             'text',
             'maxlength="190"',
         );
-icct_nms_select(
-    'Collection Method',
-    $prefix . '[collection_method]',
-    $collectionChoices,
-    $selectedCollection,
-);
+require __DIR__ . '/mib_collection_select.php';
 icct_nms_select(
     'Polling Interval/Cacti Profile',
     $prefix . '[profile_id]',

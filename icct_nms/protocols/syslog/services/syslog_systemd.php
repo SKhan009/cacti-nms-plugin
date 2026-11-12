@@ -1,5 +1,15 @@
 <?php
 
+const ICCT_NMS_SYSLOG_RESTART_PATTERN =
+    '^([A-Za-z0-9_.@:-]+[.]service): Scheduled restart job, restart counter is at ([0-9]+)[.]$';
+
+function icct_nms_syslog_restart(string $message): ?array
+{
+    return preg_match('/' . ICCT_NMS_SYSLOG_RESTART_PATTERN . '/D', $message, $parts)
+        ? ['unit' => $parts[1], 'attempt' => $parts[2]]
+        : null;
+}
+
 /** Explain what a systemd record establishes without guessing why the process failed. */
 function icct_nms_syslog_systemd_event(string $message): ?array
 {
@@ -12,10 +22,10 @@ function icct_nms_syslog_systemd_event(string $message): ?array
         'icct-nms-diagnostics.service' => 'the ICCT NMS diagnostics collector',
         default => 'the ' . $unit . ' service',
     };
-    if (preg_match('/^Scheduled restart job, restart counter is at (\d+)\.$/D', $detail, $restart)) {
+    if ($restart = icct_nms_syslog_restart($message)) {
         return [
             'Automatic restart scheduled for ' . $unit,
-            'The system service manager (systemd) scheduled automatic restart attempt ' . $restart[1] .
+            'The system service manager (systemd) scheduled automatic restart attempt ' . $restart['attempt'] .
                 ' for ' . $service . '. The outcome of that attempt is unknown from this entry.',
         ];
     }

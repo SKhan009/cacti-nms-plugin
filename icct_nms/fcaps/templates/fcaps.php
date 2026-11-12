@@ -67,7 +67,7 @@
                     value="ntp"> NTP
             </label>
             <label>
-                <input type="radio" name="alarm_source_view" value="syslog" data-passive-source> Syslog
+                <input type="radio" name="alarm_source_view" value="iperf3_udp"> iPerf3 UDP
             </label>
             <label>
                 <input type="radio" name="alarm_source_view" value="netflow"> NetFlow / IPFIX
@@ -83,12 +83,8 @@
             </label>
         </fieldset>
         <div class="fcaps-form-actions">
-            <button type="button" class="button" form="fault-form" id="add-fault-rule">+ Add Threshold</button>
-            <button type="submit" class="button primary" form="fault-form">Save</button>
-            <button type="button" class="button" form="passive-fault-form" data-passive-add>+ Add Rule</button>
-            <button type="submit" class="button primary" form="passive-fault-form">Save</button>
-            <button type="button" class="button" form="netflow-fault-form" data-netflow-action id="add-netflow-fault" hidden>+ Add Rule</button>
-            <button type="submit" class="button primary" form="netflow-fault-form" data-netflow-action hidden>Save</button>
+            <button type="button" class="button" id="add-fault-rule">+ Add Rule</button>
+            <button type="submit" class="button primary" form="fault-form" id="save-fault-rule">Save</button>
         </div>
         <form
             id="fault-form"
@@ -126,6 +122,7 @@
                         id="fault-ntp-section"
                         hidden>
                         <h3>NTP Parameters</h3>
+                        <p id="fault-udp-help" hidden>Thresholds use the latest iPerf3 UDP test to this device. The test sends at 1 Mbit/s and runs on demand.</p>
                         <div id="fault-ntp-navigation"></div>
                     </section>
                 </aside>
@@ -327,6 +324,10 @@
             $faultCatalogue,
             JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE,
         ) ?></script>
+    <script type="application/json" id="fault-udp-parameters"><?= json_encode(
+        icct_nms_udp_fault_parameters(),
+        JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR,
+    ) ?></script>
     <?php $ntpFaultCurrent = icct_nms_ntp_current($id);
     $ntpFaultAssignment = icct_nms_ntp_assignment($id); ?>
     <script

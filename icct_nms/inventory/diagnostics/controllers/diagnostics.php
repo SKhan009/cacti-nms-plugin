@@ -74,12 +74,28 @@ if (($_GET['action'] ?? '') === 'status' || ($_POST['action'] ?? '') === 'queue'
             throw new RuntimeException('The result belongs to another device.');
         }
         $result = $job['result_json'] !== '' ? json_decode($job['result_json'], true) : null;
+        $summary = '';
+        if (isset($result['output'])) {
+            require_once __DIR__ . '/../services/diagnostic_reading.php';
+            $run = $job;
+            $labels = icct_backend_diag_labels();
+            $display = static fn($value) => icct_nms_h(trim((string) $value) !== '' ? $value : '—');
+            ob_start();
+            try {
+                require __DIR__ . '/../../templates/device_diagnostic_summary.php';
+                $summary = ob_get_contents();
+            } finally {
+                ob_end_clean();
+            }
+        }
         echo json_encode(
             [
                 'ok' => true,
                 'job_id' => (int) $job['id'],
                 'status' => $job['status'],
+                'tool' => $job['tool'],
                 'output' => $result['output'] ?? '',
+                'summary_html' => $summary,
             ],
             JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR,
         );
@@ -92,52 +108,34 @@ if (($_GET['action'] ?? '') === 'status' || ($_POST['action'] ?? '') === 'queue'
     }
     exit();
 }
-$error = '';
-$notice = '';
-$result = null;
-$job = null;
 try {
     icct_nms_backend();
-    $id = icct_nms_id($_GET['host_id'] ?? 0);
-    $host = icct_nms_device($id);
     icct_backend_require_management(3);
-    $diagnosticLabels = icct_backend_diag_selected_labels($id);
-    $tool =
-        (string) ($_POST['tool'] ?? ($_GET['tool'] ?? (array_key_first($diagnosticLabels) ?? '')));
-    if ($tool !== '' && !isset($diagnosticLabels[$tool])) {
+    $id = icct_nms_id($_GET['host_id'] ?? 0);
+    icct_nms_device($id);
+    $labels = icct_backend_diag_selected_labels($id);
+    $tool = (string) ($_POST['tool'] ?? $_GET['tool'] ?? array_key_first($labels) ?? '');
+    if ($tool !== '' && !isset($labels[$tool])) {
         throw new InvalidArgumentException(
             'This diagnostic is not selected for the device. Select it in Device Diagnostics first.',
         );
     }
+    $jobId = 0;
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         icct_nms_post();
-        try {
-            $jobId = icct_backend_diag_run($id, $tool);
-            icct_nms_redirect(
-                'inventory/diagnostics/controllers/diagnostics.php?host_id=' .
-                    $id .
-                    '&tool=' .
-                    rawurlencode($tool) .
-                    '&job_id=' .
-                    $jobId,
-            );
-        } catch (Throwable $exception) {
-            $error = $exception->getMessage();
-        }
-    }
-    if (isset($_GET['job_id'])) {
-        $job = icct_backend_diag_job(icct_nms_id($_GET['job_id']));
+        $jobId = icct_backend_diag_run($id, $tool);
+    } elseif (isset($_GET['job_id'])) {
+        $jobId = icct_nms_id($_GET['job_id']);
+        $job = icct_backend_diag_job($jobId);
         if ((int) $job['host_id'] !== $id) {
             throw new RuntimeException('The result belongs to another device.');
         }
-        if ($job['result_json'] !== '') {
-            $result = json_decode($job['result_json'], true, 512, JSON_THROW_ON_ERROR);
-        }
     }
-    $title = 'Device Diagnostics';
-    require dirname(__DIR__, 3) . '/shared/templates/header.php';
-    require dirname(__DIR__, 3) . '/inventory/diagnostics/templates/diagnostics.php';
-    require dirname(__DIR__, 3) . '/shared/templates/footer.php';
+    $params = ['id' => $id, 'view' => 1, 'open_diagnostic' => 1, 'tool' => $tool];
+    if ($jobId) {
+        $params['job_id'] = $jobId;
+    }
+    icct_nms_redirect('inventory/controllers/device.php?' . http_build_query($params));
 } catch (Throwable $exception) {
     icct_nms_failure($exception);
 }

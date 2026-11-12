@@ -75,6 +75,16 @@
         steps.includes(location.hash.slice(1))
             ? location.hash.slice(1)
             : wizard.dataset.initialStep || 'basic';
+    const headerSave = basic.querySelector('[data-wizard-save]');
+    const faultPanel = document.querySelector('#fcaps-fault');
+    const syncHeaderSave = () => {
+        if (headerSave && faultPanel) headerSave.hidden = currentStep() === 'fcaps' && !faultPanel.hidden;
+    };
+    if (faultPanel) {
+        new MutationObserver(syncHeaderSave).observe(faultPanel, {
+            attributes: true, attributeFilter: ['hidden'],
+        });
+    }
     function showStep() {
         const step = currentStep(),
             index = Math.max(0, steps.indexOf(step));
@@ -87,6 +97,7 @@
         document.querySelector('#device-data-queries').hidden = step !== 'data-query';
         document.querySelector('#device-ports').hidden = step !== 'ports';
         document.querySelector('#device-fcaps').hidden = step !== 'fcaps';
+        syncHeaderSave();
         nav.forEach((item, i) => {
             item.classList.toggle('current', i === index);
             item.classList.toggle('completed', i < index);
@@ -173,6 +184,23 @@
     }
     basic.elements.host_template_id.addEventListener('change', updateTemplateAssociations);
     updateTemplateAssociations();
+    async function readSaveResponse(response) {
+        const sessionError = 'Cacti blocked the save. Check your session before retrying.';
+        if (response.type === 'opaqueredirect' || response.redirected ||
+            response.status === 401 || response.status === 403) {
+            throw new Error(sessionError);
+        }
+        const payload = response.headers.get('content-type')?.includes('application/json')
+            ? await response.json().catch(() => null)
+            : null;
+        if (!payload || typeof payload !== 'object') {
+            throw new Error(`Cacti returned an unexpected response (HTTP ${response.status}). Check your session and retry.`);
+        }
+        if (!response.ok || payload.ok !== true) {
+            throw new Error(payload.error || payload.responseText || 'Changes could not be saved.');
+        }
+        return payload;
+    }
     async function post(data) {
         if (basic.dataset.staticPreview)
             return {
@@ -187,10 +215,10 @@
             method: 'POST',
             body: data,
             credentials: 'same-origin',
+            redirect: 'manual',
+            headers: { Accept: 'application/json' },
         });
-        const payload = await response.json();
-        if (!response.ok || !payload.ok)
-            throw new Error(payload.error || 'Changes could not be saved.');
+        const payload = await readSaveResponse(response);
         id = Number(payload.id);
         wizard.dataset.deviceId = String(id);
         return payload;
@@ -213,16 +241,17 @@
         form.reportValidity();
         return false;
     }
-    async function save() {
+    async function save(onlyForm = null) {
         if (busy) return false;
         wizard.querySelectorAll('.inline-feedback.error').forEach((node) => node.remove());
         wizard
             .querySelectorAll('[aria-invalid]')
             .forEach((node) => node.removeAttribute('aria-invalid'));
-        const changed = dirtyForms().filter(
+        const onlyPanel = onlyForm?.closest('.protocol-item');
+        const changed = (onlyForm ? [onlyForm] : dirtyForms()).filter(
             (f) => f === basic || !f.closest('.protocol-item')?.hidden,
         );
-        for (const form of forms) {
+        for (const form of onlyForm ? [] : forms) {
             const panel = form.closest('.protocol-item');
             if (
                 panel &&
@@ -240,6 +269,7 @@
                 !f.closest('.protocol-item') ||
                 f.closest('.protocol-item').querySelector('.protocol-enable input')?.checked,
         );
+        if (onlyForm && !active.includes(onlyForm)) return false;
         if (active.some((f) => !valid(f))) return false;
         busy = true;
         wizard.inert = true;
@@ -256,6 +286,7 @@
                 saved++;
             }
             for (const [name, state] of protocolChanges()) {
+                if (onlyPanel && name !== onlyPanel.id) continue;
                 const p = document.getElementById(name),
                     enabled = p.querySelector('.protocol-enable input')?.checked;
                 errorContext = p;
@@ -285,7 +316,7 @@
                 baseline.set(form, snapshot(form));
                 saved++;
             }
-            for (const [k, data] of staged) {
+            for (const [k, data] of onlyForm ? [] : staged) {
                 errorContext = document.querySelector(
                     k.startsWith('graph:') ? '#device-graphs' : '#device-data-queries',
                 );
@@ -309,6 +340,7 @@
             // Hidden/disabled draft edits are discarded after a successful explicit save.
             for (const form of changed) baseline.set(form, snapshot(form));
             for (const [name] of protocolInitial) {
+                if (onlyPanel && name !== onlyPanel.id) continue;
                 const p = document.getElementById(name);
                 protocolInitial.set(name, {
                     hidden: p.hidden,
@@ -391,8 +423,8 @@
     dialog
         .querySelectorAll('[data-draft-choice]')
         .forEach((b) => b.addEventListener('click', () => dialog.close(b.dataset.draftChoice)));
-    async function explicitSave(returnToInventory = false) {
-        if (!(await save())) return;
+    async function explicitSave(returnToInventory = false, onlyForm = null) {
+        if (!(await save(onlyForm))) return;
         const message = {
             title: 'Saved',
             text: basic.dataset.staticPreview
@@ -462,7 +494,7 @@
                     'trap_sender',
                 ].includes(action)
             ) {
-                explicitSave();
+                explicitSave(false, action === 'ntp' ? form : null);
                 return;
             }
             const data = new FormData(form);

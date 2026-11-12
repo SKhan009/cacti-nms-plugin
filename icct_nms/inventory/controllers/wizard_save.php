@@ -1,6 +1,15 @@
 <?php
 
 /** Explicit wizard saves only; step navigation never calls this endpoint. */
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store');
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    http_response_code(405);
+    header('Allow: POST');
+    echo json_encode(['ok' => false, 'error' => 'POST is required.']);
+    exit;
+}
+$auth_json = true;
 require dirname(__DIR__, 2) . '/../../include/auth.php';
 require_once $config['base_path'] . '/include/global_form.php';
 require_once dirname(__DIR__, 2) . '/configuration/services/configuration_history.php';
@@ -15,8 +24,6 @@ require_once dirname(__DIR__, 2) . '/protocols/serial/services/serial_service.ph
 require_once dirname(__DIR__, 2) . '/graphs/services/graph_service.php';
 require_once dirname(__DIR__, 2) . '/graphs/services/data_query_service.php';
 require_once dirname(__DIR__, 2) . '/fcaps/services/fcaps_service.php';
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store');
 try {
     icct_nms_backend();
     icct_nms_post();

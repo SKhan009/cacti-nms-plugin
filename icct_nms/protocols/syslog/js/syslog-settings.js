@@ -36,6 +36,15 @@
             summary.textContent = count ? `${count} selected` : 'All severities';
         });
     });
+    document.querySelectorAll('[data-syslog-history-pager]').forEach((form) => {
+        const size = form.elements.syslog_size;
+        const page = form.elements.syslog_page;
+        size.addEventListener('change', () => {
+            page.value = '1';
+            form.requestSubmit();
+        });
+        page.addEventListener('change', () => form.requestSubmit());
+    });
     menus.forEach((menu) => {
         menu.querySelector('summary').addEventListener('click', () => {
             if (!menu.open)

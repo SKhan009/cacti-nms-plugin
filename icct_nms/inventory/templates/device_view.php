@@ -23,7 +23,8 @@ $ssh = db_fetch_row_prepared(
     [$id],
 );
 $protocols = [];
-if ((int) $old['snmp_version'] > 0 && icct_backend_protocol_enabled($id, 'snmp')) {
+$snmpInformationEnabled = (int) $old['snmp_version'] > 0 && icct_backend_protocol_enabled($id, 'snmp');
+if ($snmpInformationEnabled) {
     $protocols[] = 'SNMP';
 }
 foreach (['lldp' => 'LLDP', 'cdp' => 'CDP'] as $key => $label) {
@@ -66,7 +67,7 @@ foreach ($diagnostics as $tool => $label) {
         ? 'traceroute'
         : (in_array($tool, ['mtr_icmp', 'mtr_tcp'], true)
             ? 'mtr'
-            : $tool);
+            : ($tool === 'iperf3_udp' ? 'iperf3' : $tool));
     $diagnosticGroups[$family][$tool] = $label;
 }
 $display = static function ($value) {
@@ -86,6 +87,9 @@ $display = static function ($value) {
 
             </h1>
             <span><?= icct_nms_h($values['hostname']) ?></span>
+            <?php if ($status !== 'Up'): ?>
+                <span class="device-view-status"><?= icct_nms_h($status) ?></span>
+            <?php endif; ?>
         </div>
         <dl class="device-view-metrics">
             <div>
@@ -247,6 +251,7 @@ $display = static function ($value) {
     <section
         id="view-details"
         data-device-view-panel="details">
+        <?php require __DIR__ . '/device_snmp_information.php'; ?>
         <dl class="device-detail-grid">
             <?php foreach (
                 [

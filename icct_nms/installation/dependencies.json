@@ -23,8 +23,6 @@
             "net-tools",
             "traceroute",
             "mtr",
-            "nmap",
-            "hping3",
             "iperf3",
             "netperf",
             "acl",
@@ -62,8 +60,6 @@
             "net-tools",
             "traceroute",
             "mtr-tiny",
-            "nmap",
-            "hping3",
             "iperf3",
             "netperf",
             "acl",
@@ -150,8 +146,6 @@
                 "IP / ARP": ["ip"],
                 "Traceroute": ["traceroute"],
                 "MTR": ["mtr"],
-                "Nping": ["nping"],
-                "Hping": ["hping3", "hping"],
                 "iPerf": ["iperf3"],
                 "Netperf": ["netperf"],
                 "Pathchar": ["pchar", "pathchar", "/opt/icct-nms/native/pchar-1.5/sbin/pchar"]
@@ -186,7 +180,7 @@
         },
         "path-diagnostics": {
             "label": "Path diagnostics",
-            "packages": ["traceroute", "iputils", "mtr", "nmap", "hping3"],
+            "packages": ["traceroute", "iputils", "mtr"],
             "detail": "Traceroute, tracepath, MTR and packet probes."
         },
         "snmp-traps": {
@@ -226,12 +220,10 @@
         "IP / ARP": "iproute",
         "Traceroute": "traceroute",
         "MTR": "mtr",
-        "Nping": "nmap",
-        "Hping": "hping3",
         "iPerf": "iperf3",
         "Netperf": "netperf"
     },
-    "rhel_removable_tools": ["traceroute", "mtr", "hping3", "iperf3", "netperf"],
+    "rhel_removable_tools": ["traceroute", "mtr", "iperf3", "netperf"],
     "pending_features": {
         "TACACS+": "Plugin authentication integration is pending.",
         "Telnet / FTP / TFTP / SFTP": "Client tools are available. Device configuration and file transfer workflows are pending.",
