@@ -34,9 +34,7 @@ function api_device_save(...$args)
     $GLOBALS['saves'][] = $args;
     return $args[0] ?: 88;
 }
-function icct_backend_managed_object_record($type, $id)
-{
-}
+function icct_backend_managed_object_record($type, $id) {}
 function cacti_log($message, $stdout, $tag)
 {
     throw new RuntimeException($message);
@@ -106,7 +104,8 @@ try {
 }
 $duplicateName = false;
 foreach (
-    [['snmp_port' => 0], ['snmp_community' => ''], ['snmp_version' => 3, 'snmp_username' => '']] as $bad
+    [['snmp_port' => 0], ['snmp_community' => ''], ['snmp_version' => 3, 'snmp_username' => '']]
+    as $bad
 ) {
     try {
         icct_backend_device_save(2, array_replace($input, $bad));

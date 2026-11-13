@@ -4,20 +4,29 @@
 function icct_nms_site_fields()
 {
     return [
-        'name' => ['Site Name', 100],
-        'address1' => ['Address 1', 100],
-        'address2' => ['Address 2', 100],
-        'city' => ['City', 50],
+        'name' => ['Name', 100],
+        'address1' => ['Address1', 100],
+        'address2' => ['Address2', 100],
+        'city' => ['City', 30],
         'state' => ['State', 20],
-        'postal_code' => ['Postal / Zip Code', 20],
+        'postal_code' => ['Postal/Zip Code', 20],
         'country' => ['Country', 30],
         'timezone' => ['Timezone', 40],
         'latitude' => ['Latitude', 30],
         'longitude' => ['Longitude', 30],
-        'zoom' => ['Map Zoom', 4],
-        'notes' => ['Notes', 1024],
+        'zoom' => ['Zoom', 4],
+        'notes' => ['Notes', 255],
         'alternate_id' => ['Alternate Name', 30],
     ];
+}
+/** Use the same timezone catalog as Cacti sites.php. */
+function icct_nms_site_timezones()
+{
+    $rows = db_fetch_assoc('SELECT Name AS name FROM mysql.time_zone_name ORDER BY Name');
+    if (!is_array($rows)) {
+        throw new RuntimeException('Unable to read the Cacti timezone catalog.');
+    }
+    return array_column($rows, 'name');
 }
 function icct_nms_site_values($input)
 {
@@ -61,17 +70,15 @@ function icct_nms_site_values($input)
     if (!ctype_digit($save['zoom']) || (int) $save['zoom'] > 23) {
         throw new InvalidArgumentException('Map zoom must be between 0 and 23.');
     }
-    if (
-        $save['timezone'] !== '' &&
-        !in_array($save['timezone'], DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC), true)
-    ) {
+    if ($save['timezone'] !== '' && !in_array($save['timezone'], icct_nms_site_timezones(), true)) {
         throw new InvalidArgumentException('Select a valid timezone.');
     }
     return $save;
 }
 function icct_nms_save_site($input)
 {
-    $id = icct_backend_topology_integer($input['site_id'] ?? 0, 0, 4294967295, 'Site ID');
+    $siteId = $input['site_id'] ?? 0;
+    $id = icct_backend_topology_integer($siteId === '' ? 0 : $siteId, 0, 4294967295, 'Site ID');
     if ($id && !db_fetch_cell_prepared('SELECT id FROM sites WHERE id=?', [$id])) {
         throw new InvalidArgumentException('Choose a saved site.');
     }

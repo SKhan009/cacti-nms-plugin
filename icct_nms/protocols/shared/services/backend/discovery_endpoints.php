@@ -2,7 +2,6 @@
 
 /** ICCT-owned discovery endpoints services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: nd mac. */
 function icct_backend_nd_mac($bytes)
 {
     if (strlen($bytes) !== 6) {
@@ -11,7 +10,6 @@ function icct_backend_nd_mac($bytes)
     return implode(':', str_split(bin2hex($bytes), 2));
 }
 
-/** Reused Inventory service: nd parse arp. */
 function icct_backend_nd_parse_arp($values, $interfaces)
 {
     $root = '1.3.6.1.2.1.4.22.1';
@@ -117,7 +115,6 @@ function icct_backend_nd_parse_arp($values, $interfaces)
     ];
 }
 
-/** Reused Inventory service: nd parse fdb. */
 function icct_backend_nd_parse_fdb($values, $interfaces)
 {
     $base = '1.3.6.1.2.1.17';
@@ -140,7 +137,8 @@ function icct_backend_nd_parse_fdb($values, $interfaces)
         $vlans[(string) $fdb][$vlan] = $vlan;
     }
     foreach (
-        [[$base . '.4.3.1', 6, 'BRIDGE-MIB'], [$base . '.7.1.2.2.1', 7, 'Q-BRIDGE-MIB']] as $spec
+        [[$base . '.4.3.1', 6, 'BRIDGE-MIB'], [$base . '.7.1.2.2.1', 7, 'Q-BRIDGE-MIB']]
+        as $spec
     ) {
         [$root, $parts, $source] = $spec;
         foreach (icct_backend_nd_table_indices($values, $root, $parts) as $index) {
@@ -201,7 +199,6 @@ function icct_backend_nd_parse_fdb($values, $interfaces)
     ];
 }
 
-/** Reused Inventory service: nd physical index. */
 function icct_backend_nd_physical_index($index)
 {
     if (!preg_match('/^[0-9]+(?:\.[0-9]+)+$/D', $index)) {

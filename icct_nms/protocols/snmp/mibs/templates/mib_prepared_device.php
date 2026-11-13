@@ -5,7 +5,7 @@ $deviceGraphs = isset($generationWork['plans'][3])
 $deviceRecords = $generationWork['plans'][3]['records'] ?? [];
 $deviceDefaults = icct_mib_device_core_defaults($generationBundle, $deviceRecords);
 $deviceOptions = icct_mib_device_graph_options($generationBundle, $deviceRecords);
-$deviceChosen = $readyDraft['device_template']['graphs'] ?? $deviceDefaults['graphs'];
+$deviceChosen = array_values(array_intersect($readyDraft['device_template']['graphs'] ?? $deviceDefaults['graphs'], array_keys($deviceOptions)));
 $deviceName = $readyDraft['device_template']['name'] ?? $deviceDefaults['name'];
 $deviceFields = icct_mib_device_core_fields();
 $deviceClass = $readyDraft['device_template']['class'] ?? '' ?: $deviceDefaults['class'];
@@ -47,10 +47,12 @@ $deviceSourceCount = count(array_unique($deviceSources)); ?>
             templates for devices that expose the required MIB objects.</span>
     </div>
     <div class="mib-device-details">
-        <h2>Device Template Details</h2>
-        <div class="mib-device-native-fields">
+        <h2><?= icct_nms_h($deviceName) ?></h2>
+        <div class="mib-device-native-fields" hidden>
             <label class="field">
-                <span class="field-label">Device Template Name *</span>
+                <span
+                    class="field-label"
+                    data-field-help="Name of the device template saved in Cacti when you complete Add or Save.">Device Template Name *</span>
                 <input
                     name="device_name"
                     aria-label="Device Template Name"
@@ -63,7 +65,9 @@ $deviceSourceCount = count(array_unique($deviceSources)); ?>
                 isset($deviceFields['class'])
             ): ?>
                 <label class="field">
-                    <span class="field-label"><?= icct_nms_h($deviceFields['class']['label']) ?></span>
+                    <span
+                        class="field-label"
+                        data-field-help="Device class offered by the installed Cacti core for this device template."><?= icct_nms_h($deviceFields['class']['label']) ?></span>
                     <select
                         name="device_class"
                         aria-label="Device Template Class">
@@ -101,13 +105,13 @@ $deviceSourceCount = count(array_unique($deviceSources)); ?>
         </dl>
         <header class="mib-device-associated-heading">
             <h3>Associated Graph Templates</h3>
-            <label class="mib-device-select-all">
+            <label class="mib-device-select-all" hidden>
                 <input
                     type="checkbox"
                     data-device-all> Select all
             </label>
         </header>
-        <label class="field mib-device-search">
+        <label class="field mib-device-search" hidden>
             <span class="sr-only">Search graph templates</span>
             <input
                 type="search"
@@ -125,6 +129,7 @@ foreach (
                 <label class="mib-device-graph-row">
                     <input
                         type="checkbox"
+                        hidden
                         value="<?= icct_nms_h($option['key']) ?>"
                         data-device-graph
                         data-device-queries="<?= icct_nms_h(json_encode($option['queries'])) ?>"
@@ -142,6 +147,7 @@ foreach (
         <p
             data-device-empty
             hidden>No matching graph templates.</p>
+        <div hidden>
         <h3>Associated Data Queries</h3>
         <input
             type="hidden"
@@ -157,7 +163,9 @@ foreach (
             data-tooltip="Selected graphs use direct SNMP polling; no data query is required.">ⓘ</span>
         <div class="mib-device-query-add">
             <label class="field">
-                <span class="field-label">Add Data Query</span>
+                <span
+                    class="field-label"
+                    data-field-help="Associate an installed Cacti data query with this prepared device template.">Add Data Query</span>
                 <select
                     data-device-query-choice
                     aria-label="Add Data Query">
@@ -188,6 +196,7 @@ foreach (
                 value="add_generated"
                 class="button primary"
                 data-device-save>Save Device Template</button>
+        </div>
         </div>
     </div>
 </div>

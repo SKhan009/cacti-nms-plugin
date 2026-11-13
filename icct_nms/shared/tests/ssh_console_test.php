@@ -7,8 +7,23 @@ mkdir($directory, 0700);
 session_save_path($directory);
 session_start();
 $GLOBALS['realm'] = true;
-$GLOBALS['device'] = ['device_revision' => 7, 'preset_revision' => 2, 'host_key' => 'approved key', 'verified_endpoint' => '127.0.0.1:22', 'endpoint' => '127.0.0.1:22'];
-$GLOBALS['session'] = ['id' => str_repeat('a', 64), 'host_id' => 2, 'user_id' => 1, 'session_hash' => hash('sha256', session_id()), 'device_revision' => 7, 'preset_revision' => 2, 'status' => 'active', 'lease_valid' => 1];
+$GLOBALS['device'] = [
+    'device_revision' => 7,
+    'preset_revision' => 2,
+    'host_key' => 'approved key',
+    'verified_endpoint' => '127.0.0.1:22',
+    'endpoint' => '127.0.0.1:22',
+];
+$GLOBALS['session'] = [
+    'id' => str_repeat('a', 64),
+    'host_id' => 2,
+    'user_id' => 1,
+    'session_hash' => hash('sha256', session_id()),
+    'device_revision' => 7,
+    'preset_revision' => 2,
+    'status' => 'active',
+    'lease_valid' => 1,
+];
 $GLOBALS['rpc'] = [];
 $GLOBALS['closed'] = [];
 $GLOBALS['queries'] = [];
@@ -38,7 +53,12 @@ function db_fetch_cell_prepared($sql, $params)
 }
 function icct_backend_category_execute($sql, $params)
 {
-    $GLOBALS['sshAuditRecords'][$params[0]] ??= json_decode($params[1], true, 8, JSON_THROW_ON_ERROR);
+    $GLOBALS['sshAuditRecords'][$params[0]] ??= json_decode(
+        $params[1],
+        true,
+        8,
+        JSON_THROW_ON_ERROR,
+    );
 }
 function icct_backend_ssh_https()
 {
@@ -93,66 +113,146 @@ function consoleReject($operation)
 try {
     $valid = $GLOBALS['session'];
     $id = $valid['id'];
-    consoleCheck(icct_nms_ssh_console_session($id, 2, $GLOBALS['device']) === $valid, 'Valid binding lost.');
-    foreach (['host_id' => 3, 'user_id' => 3, 'session_hash' => hash('sha256', 'other-browser'), 'device_revision' => 8, 'preset_revision' => 3, 'status' => 'closed', 'lease_valid' => 0] as $key => $value) {
+    consoleCheck(
+        icct_nms_ssh_console_session($id, 2, $GLOBALS['device']) === $valid,
+        'Valid binding lost.',
+    );
+    foreach (
+        [
+            'host_id' => 3,
+            'user_id' => 3,
+            'session_hash' => hash('sha256', 'other-browser'),
+            'device_revision' => 8,
+            'preset_revision' => 3,
+            'status' => 'closed',
+            'lease_valid' => 0,
+        ]
+        as $key => $value
+    ) {
         $GLOBALS['session'] = array_replace($valid, [$key => $value]);
-        consoleReject(static fn () => icct_nms_ssh_console_session($id, 2, $GLOBALS['device']));
+        consoleReject(static fn() => icct_nms_ssh_console_session($id, 2, $GLOBALS['device']));
     }
     foreach (['status' => 'closed', 'lease_valid' => 0] as $field => $value) {
         $GLOBALS['session'] = array_replace($valid, [$field => $value]);
-        consoleReject(static fn () => icct_nms_ssh_console_session($id, 2, $GLOBALS['device']));
-        consoleCheck(icct_nms_ssh_console_session($id, 2, $GLOBALS['device'], true) === $GLOBALS['session'], 'Owner must be able to close an expired or already closed session.');
+        consoleReject(static fn() => icct_nms_ssh_console_session($id, 2, $GLOBALS['device']));
+        consoleCheck(
+            icct_nms_ssh_console_session($id, 2, $GLOBALS['device'], true) === $GLOBALS['session'],
+            'Owner must be able to close an expired or already closed session.',
+        );
     }
     $GLOBALS['session'] = false;
-    consoleReject(static fn () => icct_nms_ssh_console_session($id, 2, $GLOBALS['device']));
+    consoleReject(static fn() => icct_nms_ssh_console_session($id, 2, $GLOBALS['device']));
     $GLOBALS['session'] = $valid;
-    consoleReject(static fn () => icct_nms_ssh_console_session('../invalid', 2, $GLOBALS['device']));
-    $audit = ['action' => 'audit', 'session_id' => $id, 'parameter' => 'GigabitEthernet0/1 description',
-        'request_id' => str_repeat('c', 32), 'user_id' => 999];
+    consoleReject(static fn() => icct_nms_ssh_console_session('../invalid', 2, $GLOBALS['device']));
+    $audit = [
+        'action' => 'audit',
+        'session_id' => $id,
+        'parameter' => 'GigabitEthernet0/1 description',
+        'request_id' => str_repeat('c', 32),
+        'user_id' => 999,
+    ];
     $_SERVER['REMOTE_ADDR'] = '192.0.2.20';
-    consoleCheck(icct_nms_ssh_console_operation(2, $audit)['recorded'], 'Active session could not record a change.');
+    consoleCheck(
+        icct_nms_ssh_console_operation(2, $audit)['recorded'],
+        'Active session could not record a change.',
+    );
     icct_nms_ssh_console_operation(2, $audit);
     $auditRecord = reset($GLOBALS['sshAuditRecords']);
-    consoleCheck(count($GLOBALS['sshAuditRecords']) === 1 && $auditRecord['host_id'] === 2 &&
-        $auditRecord['user_id'] === 1 && $auditRecord['user'] === 'audit-tester' &&
-        $auditRecord['parameter'] === $audit['parameter'] && $auditRecord['source_ip'] === '192.0.2.20' &&
-        strtotime($auditRecord['time']) > 0 && strlen(array_key_first($GLOBALS['sshAuditRecords'])) <= 64,
-        'SSH audit attribution or retry deduplication is incorrect.');
-    consoleReject(static fn () => icct_nms_ssh_console_operation(2, array_replace($audit, ['parameter' => "test\nsecret"])));
+    consoleCheck(
+        count($GLOBALS['sshAuditRecords']) === 1 &&
+            $auditRecord['host_id'] === 2 &&
+            $auditRecord['user_id'] === 1 &&
+            $auditRecord['user'] === 'audit-tester' &&
+            $auditRecord['parameter'] === $audit['parameter'] &&
+            $auditRecord['source_ip'] === '192.0.2.20' &&
+            strtotime($auditRecord['time']) > 0 &&
+            strlen(array_key_first($GLOBALS['sshAuditRecords'])) <= 64,
+        'SSH audit attribution or retry deduplication is incorrect.',
+    );
+    consoleReject(
+        static fn() => icct_nms_ssh_console_operation(
+            2,
+            array_replace($audit, ['parameter' => "test\nsecret"]),
+        ),
+    );
     $GLOBALS['session']['lease_valid'] = 0;
-    consoleReject(static fn () => icct_nms_ssh_console_operation(2, $audit));
+    consoleReject(static fn() => icct_nms_ssh_console_operation(2, $audit));
     $GLOBALS['session'] = $valid;
     $GLOBALS['realm'] = false;
-    consoleReject(static fn () => icct_nms_ssh_console_operation(2, ['action' => 'open', 'width' => 800, 'height' => 600]));
+    consoleReject(
+        static fn() => icct_nms_ssh_console_operation(2, [
+            'action' => 'open',
+            'width' => 800,
+            'height' => 600,
+        ]),
+    );
     $GLOBALS['realm'] = true;
-    consoleReject(static fn () => icct_nms_ssh_console_operation(3, ['action' => 'read', 'session_id' => $id]));
+    consoleReject(
+        static fn() => icct_nms_ssh_console_operation(3, ['action' => 'read', 'session_id' => $id]),
+    );
     $GLOBALS['http'] = true;
-    consoleReject(static fn () => icct_nms_ssh_console_operation(2, ['action' => 'read', 'session_id' => $id]));
+    consoleReject(
+        static fn() => icct_nms_ssh_console_operation(2, ['action' => 'read', 'session_id' => $id]),
+    );
     $GLOBALS['http'] = false;
-    foreach ([['width' => 99, 'height' => 600], ['width' => 800, 'height' => 2161], ['width' => 'invalid', 'height' => 600]] as $size) {
-        consoleReject(static fn () => icct_nms_ssh_console_operation(2, ['action' => 'open'] + $size));
+    foreach (
+        [
+            ['width' => 99, 'height' => 600],
+            ['width' => 800, 'height' => 2161],
+            ['width' => 'invalid', 'height' => 600],
+        ]
+        as $size
+    ) {
+        consoleReject(
+            static fn() => icct_nms_ssh_console_operation(2, ['action' => 'open'] + $size),
+        );
     }
     consoleCheck(!$GLOBALS['rpc'], 'Invalid requests reached the broker.');
     $GLOBALS['device']['host_key'] = '';
-    consoleReject(static fn () => icct_nms_ssh_console_operation(2, ['action' => 'open', 'width' => 800, 'height' => 600]));
+    consoleReject(
+        static fn() => icct_nms_ssh_console_operation(2, [
+            'action' => 'open',
+            'width' => 800,
+            'height' => 600,
+        ]),
+    );
     $GLOBALS['device']['host_key'] = 'approved key';
     icct_nms_ssh_console_operation(2, ['action' => 'open', 'width' => 800, 'height' => 600]);
-    consoleCheck($GLOBALS['rpc'][0]['console_action'] === 'open' && !isset($GLOBALS['rpc'][0]['secret']), 'Open must use native ticket and saved credential.');
+    consoleCheck(
+        $GLOBALS['rpc'][0]['console_action'] === 'open' && !isset($GLOBALS['rpc'][0]['secret']),
+        'Open must use native ticket and saved credential.',
+    );
     session_start();
     icct_nms_ssh_console_operation(2, ['action' => 'read', 'session_id' => $id]);
     session_start();
-    icct_nms_ssh_console_operation(2, ['action' => 'write', 'session_id' => $id, 'data' => base64_encode('3.nop;')]);
+    icct_nms_ssh_console_operation(2, [
+        'action' => 'write',
+        'session_id' => $id,
+        'data' => base64_encode('3.nop;'),
+    ]);
     session_start();
-    consoleReject(static fn () => icct_nms_ssh_console_operation(2, ['action' => 'write', 'session_id' => $id, 'data' => '!invalid']));
+    consoleReject(
+        static fn() => icct_nms_ssh_console_operation(2, [
+            'action' => 'write',
+            'session_id' => $id,
+            'data' => '!invalid',
+        ]),
+    );
     $GLOBALS['failRpc'] = true;
-    consoleReject(static fn () => icct_nms_ssh_console_operation(2, ['action' => 'test']));
+    consoleReject(static fn() => icct_nms_ssh_console_operation(2, ['action' => 'test']));
     consoleCheck(in_array($id, $GLOBALS['closed'], true), 'Failed ticket was not closed.');
     session_start();
     $before = count($GLOBALS['rpc']);
     icct_nms_ssh_console_operation(2, ['action' => 'close', 'session_id' => $id]);
-    consoleCheck(count($GLOBALS['rpc']) === $before, 'Disconnect must revoke authorization even without a reachable broker.');
+    consoleCheck(
+        count($GLOBALS['rpc']) === $before,
+        'Disconnect must revoke authorization even without a reachable broker.',
+    );
     foreach ($GLOBALS['queries'] as $query) {
-        consoleCheck(!str_contains($query, 'monitoring='), 'Terminal operations must not change monitoring.');
+        consoleCheck(
+            !str_contains($query, 'monitoring='),
+            'Terminal operations must not change monitoring.',
+        );
     }
 } finally {
     if (session_status() === PHP_SESSION_ACTIVE) {

@@ -67,9 +67,9 @@ $key = array_key_first($stored);
 if ($stored[$key]['target'] !== 2) {
     throw new LogicException('Link not persisted');
 }
-rejects(fn () => icct_nms_connection_save($input));
+rejects(fn() => icct_nms_connection_save($input));
 rejects(
-    fn () => icct_nms_connection_save(
+    fn() => icct_nms_connection_save(
         array_replace($input, [
             'source' => '2',
             'target' => '1',
@@ -85,20 +85,21 @@ foreach (
         ['profile' => 'missing'],
         ['source_port' => str_repeat('x', 101)],
         ['source' => []],
-    ] as $bad
+    ]
+    as $bad
 ) {
-    rejects(fn () => icct_nms_connection_save(array_replace($input, $bad)));
+    rejects(fn() => icct_nms_connection_save(array_replace($input, $bad)));
 }
 icct_nms_connection_save($input + ['link_id' => $key]);
 if (count($stored) !== 1) {
     throw new LogicException('Edit duplicated link');
 }
 $denied = [2];
-rejects(fn () => icct_nms_connection_delete($key));
-rejects(fn () => icct_nms_connection_save($input + ['link_id' => $key]));
+rejects(fn() => icct_nms_connection_delete($key));
+rejects(fn() => icct_nms_connection_save($input + ['link_id' => $key]));
 $denied = [];
 $management = false;
-rejects(fn () => icct_nms_connection_delete($key));
+rejects(fn() => icct_nms_connection_delete($key));
 $management = true;
 icct_nms_connection_delete($key);
 if ($stored) {
@@ -129,7 +130,8 @@ foreach (
         ['protocol' => 'cdp'],
         ['config_hash' => 'old-config'],
         ['succeeded_at' => date('Y-m-d H:i:s', time() - 1000)],
-    ] as $bad
+    ]
+    as $bad
 ) {
     if (icct_nms_discovery_current(array_replace($snapshot, $bad), $host)) {
         throw new LogicException('Invalid discovery treated as current');

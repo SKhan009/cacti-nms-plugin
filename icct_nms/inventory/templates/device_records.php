@@ -12,12 +12,10 @@ require __DIR__ . '/device_record_pager.php'; ?>
     <?php else:
         $prefix = 'configuration_history_' . (int) $id . '_';
         $changeFilter =
-            (
-                'LEFT(meta_key,?)=? AND CASE WHEN JSON_VALID(meta_value) THEN '
-    . 'JSON_LENGTH(JSON_EXTRACT(meta_value,\'$.changes\'))>0 AND '
-    . 'COALESCE(JSON_UNQUOTE(JSON_EXTRACT(meta_value,\'$.action\')),\'\')<>\'Initial baseline\' ELSE '
-    . '0 END'
-            );
+            'LEFT(meta_key,?)=? AND CASE WHEN JSON_VALID(meta_value) THEN ' .
+            'JSON_LENGTH(JSON_EXTRACT(meta_value,\'$.changes\'))>0 AND ' .
+            'COALESCE(JSON_UNQUOTE(JSON_EXTRACT(meta_value,\'$.action\')),\'\')<>\'Initial baseline\' ELSE ' .
+            '0 END';
         $totalChanges = (int) db_fetch_cell_prepared(
             'SELECT COUNT(*) FROM plugin_icct_nms_meta WHERE ' . $changeFilter,
             [strlen($prefix), $prefix],

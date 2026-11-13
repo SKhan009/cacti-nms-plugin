@@ -26,7 +26,8 @@ function icct_nms_save_device($id, $old, $input)
             'rack_id',
             'rack_position',
             'cross_launch_url',
-        ] as $field
+        ]
+        as $field
     ) {
         if (!array_key_exists($field, $input) || !is_scalar($input[$field])) {
             throw new InvalidArgumentException('Missing field: ' . $field);
@@ -279,7 +280,8 @@ function icct_nms_save_snmp($id, $old, $input)
         [
             'snmp_password' => 'snmp_password_confirm',
             'snmp_priv_passphrase' => 'snmp_priv_confirm',
-        ] as $secret => $confirm
+        ]
+        as $secret => $confirm
     ) {
         if (isset($input[$confirm]) && ($input[$secret] ?? '') !== $input[$confirm]) {
             throw new InvalidArgumentException(

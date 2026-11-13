@@ -134,6 +134,9 @@ function icct_nms_protocol_inheritance_baseline(): array
 function icct_nms_protocol_preset_validate($protocol, $input)
 {
     global $fields_host_edit;
+    if ($protocol === 'ntp') {
+        $input = icct_nms_ntp_form_values($input);
+    }
     if ($protocol === 'snmp') {
         $input += array_replace(
             icct_nms_defaults(),
@@ -189,8 +192,16 @@ function icct_nms_protocol_preset_validate($protocol, $input)
             $out['snmp_priv_protocol'] = '[None]';
         }
     } elseif ($protocol === 'snmp_notifications') {
-        $out['trap_enabled'] = icct_backend_config_choice((string) $out['trap_enabled'], ['0', '1'], 'Collect SNMP notifications');
-        $out['trap_source_mode'] = icct_backend_config_choice($out['trap_source_mode'], ['device', 'manual'], 'Trap sender IP mode');
+        $out['trap_enabled'] = icct_backend_config_choice(
+            (string) $out['trap_enabled'],
+            ['0', '1'],
+            'Collect SNMP notifications',
+        );
+        $out['trap_source_mode'] = icct_backend_config_choice(
+            $out['trap_source_mode'],
+            ['device', 'manual'],
+            'Trap sender IP mode',
+        );
     } elseif (in_array($protocol, ['cdp', 'lldp', 'snmp_discovery'], true)) {
         $validated = icct_backend_nd_preset_validate(
             $out + [
@@ -223,7 +234,11 @@ function icct_nms_protocol_preset_validate($protocol, $input)
     } elseif ($protocol === 'netflow') {
         $out = icct_nms_netflow_validate($out);
     } elseif ($protocol === 'syslog') {
-        $out['transport'] = icct_backend_config_choice($out['transport'], ['both', 'udp', 'tcp'], 'Syslog transport');
+        $out['transport'] = icct_backend_config_choice(
+            $out['transport'],
+            ['both', 'udp', 'tcp'],
+            'Syslog transport',
+        );
         foreach (icct_backend_syslog_filters($out) as $field => $values) {
             $out[$field] = json_encode($values, JSON_THROW_ON_ERROR);
         }
@@ -252,12 +267,18 @@ function icct_nms_save_protocol_preset($input)
     }
     try {
         $presets = icct_nms_protocol_presets();
-        $profiles = $protocol === 'netflow' ? icct_nms_netflow_profiles() : ($variant ? icct_nms_protocol_profiles() : []);
-        $profileField = $protocol === 'netflow' ? 'version' : ($variant['field'] ?? null);
+        $profiles =
+            $protocol === 'netflow'
+                ? icct_nms_netflow_profiles()
+                : ($variant
+                    ? icct_nms_protocol_profiles()
+                    : []);
+        $profileField = $protocol === 'netflow' ? 'version' : $variant['field'] ?? null;
         $profile = $profileField ? (string) $values[$profileField] : 'default';
         $previous = $presets[$protocol] ?? [];
         if ($profileField) {
-            $previous = ($variant ? ($profiles[$protocol][$profile] ?? null) : ($profiles[$profile] ?? null)) ??
+            $previous =
+                ($variant ? $profiles[$protocol][$profile] ?? null : $profiles[$profile] ?? null) ??
                 ((string) ($previous[$profileField] ?? '') === $profile ? $previous : []);
         }
         $baseline = icct_nms_protocol_inheritance_baseline();
@@ -306,7 +327,10 @@ function icct_nms_save_protocol_preset($input)
     } finally {
         db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)', [$lock]);
     }
-    return (['snmp_notifications' => 'SNMP notification', 'snmp_discovery' => 'SNMP discovery'][$protocol] ?? strtoupper($protocol)) .
+    return (['snmp_notifications' => 'SNMP notification', 'snmp_discovery' => 'SNMP discovery'][
+        $protocol
+    ] ??
+        strtoupper($protocol)) .
         ' defaults saved. Inherited fields in Inventory use these values when the device is opened.';
 }
 
@@ -314,7 +338,10 @@ function icct_nms_save_protocol_preset($input)
 function icct_nms_protocol_device_overrides($id)
 {
     $out = [];
-    foreach (['snmp', 'snmp_discovery', 'cdp', 'lldp', 'ssh', 'serial', 'syslog', 'netflow', 'ntp'] as $protocol) {
+    foreach (
+        ['snmp', 'snmp_discovery', 'cdp', 'lldp', 'ssh', 'serial', 'syslog', 'netflow', 'ntp']
+        as $protocol
+    ) {
         $json = $id
             ? db_fetch_cell_prepared(
                 'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
@@ -351,9 +378,11 @@ function icct_nms_protocol_record_overrides($id, $action, $input)
         ]);
         return;
     }
-    $protocol = $action === 'discovery'
-        ? ($input['discovery_protocol'] ?? (!empty($input['discovery_policy']) ? 'snmp_discovery' : ''))
-        : $action;
+    $protocol =
+        $action === 'discovery'
+            ? $input['discovery_protocol'] ??
+                (!empty($input['discovery_policy']) ? 'snmp_discovery' : '')
+            : $action;
     if (
         !is_string($protocol) ||
         !in_array(
@@ -392,7 +421,8 @@ function icct_nms_protocol_record_overrides($id, $action, $input)
         }
         $same =
             (string) $submitted === (string) $value ||
-            ((is_int($value) || is_float($value)) && is_numeric($submitted) &&
+            ((is_int($value) || is_float($value)) &&
+                is_numeric($submitted) &&
                 (float) $submitted === (float) $value);
         $overrides = array_values(array_diff($overrides, [$field]));
         if (!$same) {

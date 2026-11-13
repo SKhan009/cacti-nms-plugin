@@ -28,7 +28,7 @@ function icct_nms_network_options()
         ],
         'threads' => array_combine(
             [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 50],
-            array_map(fn ($n) => $n . ' Threads', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 50]),
+            array_map(fn($n) => $n . ' Threads', [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 50]),
         ),
         'run_limit' => [
             60 => '1 Minute',
@@ -101,7 +101,8 @@ function icct_nms_network_defaults($options)
             'ping_port' => 'ping_port',
             'ping_timeout' => 'ping_timeout',
             'ping_retries' => 'ping_retries',
-        ] as $key => $setting
+        ]
+        as $key => $setting
     ) {
         $defaults[$key] = read_config_option($setting);
     }
@@ -148,7 +149,8 @@ function icct_nms_network_save($input)
             'notification_email' => 250,
             'notification_fromname' => 32,
             'notification_fromemail' => 128,
-        ] as $key => $limit
+        ]
+        as $key => $limit
     ) {
         $v = $input[$key] ?? '';
         if (
@@ -173,7 +175,8 @@ function icct_nms_network_save($input)
             'run_limit',
             'ping_method',
             'recur_every',
-        ] as $key
+        ]
+        as $key
     ) {
         $v = $input[$key] ?? '';
         if (!is_scalar($v) || !isset($options[$key][$v])) {
@@ -184,7 +187,8 @@ function icct_nms_network_save($input)
         $save[$key] = (int) $v;
     }
     foreach (
-        ['ping_port' => [0, 65535], 'ping_timeout' => [0, 99999], 'ping_retries' => [0, 99999]] as $key => $bounds
+        ['ping_port' => [0, 65535], 'ping_timeout' => [0, 99999], 'ping_retries' => [0, 99999]]
+        as $key => $bounds
     ) {
         $save[$key] = icct_backend_topology_integer(
             $input[$key] ?? '',
@@ -205,7 +209,8 @@ function icct_nms_network_save($input)
             'same_sysname',
             'rerun_data_queries',
             'notification_enabled',
-        ] as $key
+        ]
+        as $key
     ) {
         $save[$key] = empty($input[$key]) ? '' : 'on';
     }
@@ -213,7 +218,7 @@ function icct_nms_network_save($input)
         $v = $input[$key] ?? [];
         if (
             !is_array($v) ||
-            array_filter($v, fn ($n) => !is_scalar($n) || !isset($options[$key][$n]))
+            array_filter($v, fn($n) => !is_scalar($n) || !isset($options[$key][$n]))
         ) {
             throw new InvalidArgumentException('Select valid schedule days and months.');
         }
@@ -267,7 +272,8 @@ function icct_nms_network_save($input)
     }
     if ($save['notification_email'] !== '') {
         foreach (
-            preg_split('/[;,\s]+/', $save['notification_email'], -1, PREG_SPLIT_NO_EMPTY) as $email
+            preg_split('/[;,\s]+/', $save['notification_email'], -1, PREG_SPLIT_NO_EMPTY)
+            as $email
         ) {
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 throw new InvalidArgumentException('Enter valid notification email addresses.');

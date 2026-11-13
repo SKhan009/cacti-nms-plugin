@@ -2,7 +2,6 @@
 
 /** ICCT-owned ssh platform services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: ssh absolute path. */
 function icct_backend_ssh_absolute_path($path, $family = null)
 {
     $family = $family ?? PHP_OS_FAMILY;
@@ -22,7 +21,6 @@ function icct_backend_ssh_absolute_path($path, $family = null)
     return $path[0] === '/' && !preg_match('~(?:^|/)\.{1,2}(?:/|$)~', $path);
 }
 
-/** Reused Inventory service: ssh rpc cipher. */
 function icct_backend_ssh_rpc_cipher($payload, $c, $decrypt = false, $context = 'request')
 {
     $key = file_get_contents($c['rpc_key']);
@@ -65,7 +63,6 @@ function icct_backend_ssh_rpc_cipher($payload, $c, $decrypt = false, $context = 
     return $plain;
 }
 
-/** Reused Inventory service: ssh windows identity. */
 function icct_backend_ssh_windows_identity($path = null)
 {
     if (PHP_OS_FAMILY !== 'Windows') {

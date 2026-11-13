@@ -131,7 +131,8 @@ function icct_nms_device_rack_choices($excludeDevice = 0)
             db_fetch_assoc_prepared(
                 'SELECT start_unit,unit_height FROM plugin_icct_nms_rack_devices WHERE rack_id=? AND host_id<>?',
                 [(int) $row['id'], (int) $excludeDevice],
-            ) as $placement
+            )
+            as $placement
         ) {
             for (
                 $u = (int) $placement['start_unit'];
@@ -206,7 +207,8 @@ function icct_nms_rack_delete_block_reason($profile)
     foreach (
         db_fetch_assoc_prepared('SELECT * FROM plugin_icct_nms_racks WHERE profile_id=?', [
             $profile,
-        ]) as $rack
+        ])
+        as $rack
     ) {
         if (
             db_fetch_cell_prepared(

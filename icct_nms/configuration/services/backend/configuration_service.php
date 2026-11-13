@@ -2,7 +2,6 @@
 
 /** ICCT-owned configuration service services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: serial assign. */
 function icct_backend_serial_assign($host_id, array $input)
 {
     return icct_backend_serial_mutation(function () use ($host_id, $input) {
@@ -10,7 +9,6 @@ function icct_backend_serial_assign($host_id, array $input)
     });
 }
 
-/** Reused Inventory service: serial assign locked. */
 function icct_backend_serial_assign_locked($host_id, array $input)
 {
     $host_id = icct_backend_config_integer($host_id, 1, 16777215, 'Device ID');
@@ -79,7 +77,6 @@ function icct_backend_serial_assign_locked($host_id, array $input)
     );
 }
 
-/** Reused Inventory service: serial assignment. */
 function icct_backend_serial_assignment($host_id)
 {
     icct_backend_require_device_access($host_id);
@@ -119,7 +116,6 @@ function icct_backend_serial_device_settings($host_id, $connection_id)
     return $snapshot['settings'];
 }
 
-/** Reused Inventory service: serial connection get. */
 function icct_backend_serial_connection_get($id)
 {
     icct_backend_require_management();
@@ -134,7 +130,8 @@ function icct_backend_serial_connection_get($id)
         db_fetch_assoc_prepared(
             "SELECT d.host_id FROM plugin_icct_nms_serial_devices d JOIN host h ON h.id=d.host_id WHERE d.connection_id=? AND h.deleted=''",
             [$id],
-        ) as $member
+        )
+        as $member
     ) {
         icct_backend_require_device_access((int) $member['host_id']);
     }
@@ -142,7 +139,6 @@ function icct_backend_serial_connection_get($id)
     return $row;
 }
 
-/** Reused Inventory service: serial connections. */
 function icct_backend_serial_connections($collector = 0)
 {
     icct_backend_require_management();
@@ -164,7 +160,6 @@ function icct_backend_serial_connections($collector = 0)
     return $result;
 }
 
-/** Reused Inventory service: serial mutation. */
 function icct_backend_serial_mutation(callable $operation)
 {
     icct_backend_require_management();

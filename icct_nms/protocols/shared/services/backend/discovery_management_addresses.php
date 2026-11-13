@@ -18,7 +18,6 @@ function icct_nms_management_addresses($values)
     return array_values($addresses);
 }
 
-/** Reused Inventory service: nd cdp management addresses. */
 function icct_backend_nd_management_address($bytes, $family, $source)
 {
     if (

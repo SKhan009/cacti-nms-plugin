@@ -9,7 +9,8 @@ api_plugin_load_realms();
 require_once $config['base_path'] . '/lib/auth.php';
 if (db_fetch_cell("SHOW COLUMNS FROM plugin_icct_nms_racks LIKE 'node_id'")) {
     foreach (
-        ['plugin_icct_nms_racks', 'plugin_icct_nms_rack_nodes', 'plugin_icct_nms_meta'] as $table
+        ['plugin_icct_nms_racks', 'plugin_icct_nms_rack_nodes', 'plugin_icct_nms_meta']
+        as $table
     ) {
         if (
             !db_execute("CREATE TEMPORARY TABLE qa_copy LIKE `$table`") ||
@@ -101,4 +102,4 @@ echo 'PASS: dashboard/map/rack template renders with native site controls; ' .
     ' rack choices and ' .
     count($before) .
     ' placements retained.',
-"\n";
+    "\n";

@@ -23,7 +23,8 @@ foreach (
         ['mtr_interval' => 59],
         ['mtr_interval' => 3601],
         ['diagnostic_tools' => ['ping']],
-    ] as $invalid
+    ]
+    as $invalid
 ) {
     try {
         icct_backend_diag_profile_validate(

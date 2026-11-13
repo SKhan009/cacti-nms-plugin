@@ -5,7 +5,7 @@ uasort($deviceTypes, static function ($a, $b) use ($sort) {
     $cmp = strnatcasecmp($a['name'], $b['name']) ?: $a['category_id'] <=> $b['category_id'];
     return $sort === 'desc' ? -$cmp : $cmp;
 });
-$perPage = in_array((int) ($_GET['per_page'] ?? 10), [10, 25, 50], true)
+$perPage = in_array((int) ($_GET['per_page'] ?? 10), [10, 25, 50, 100], true)
     ? (int) ($_GET['per_page'] ?? 10)
     : 10;
 $total = count($deviceTypes);
@@ -37,7 +37,9 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
         <h2 id="type-editor-title"><?= empty($typeValues['type_id']) ? 'Add Device Type' : 'Edit Device Type' ?></h2>
         <div class="form-grid">
             <label class="field">
-                <span class="field-label">Device Type Name *</span>
+                <span
+                    class="field-label"
+                    data-field-help="Name used to identify this device type in presets and inventory. Maximum 150 characters.">Device Type Name *</span>
                 <input
                     name="type_name"
                     maxlength="150"
@@ -46,7 +48,10 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
                     value="<?= icct_nms_h($typeValues['type_name'] ?? '') ?>">
             </label>
             <label class="field">
-                <span class="field-label">Segment</span>
+                <span
+                    class="field-label"
+                    data-field-help="Segment this device type belongs to. Choose None to leave it unassigned.">Segment</span>
+                <span class="select-wrap">
                 <select name="category_id">
                     <option value="0">None</option>
                     <?php foreach (
@@ -57,11 +62,13 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
                             <?= (int) ($typeValues['category_id'] ?? 0) === (int) $segment['id'] ? 'selected' : '' ?>><?= icct_nms_h($segment['name']) ?></option>
                     <?php endforeach; ?>
                 </select>
+                </span>
             </label>
             <div class="field icon-picker">
                 <span
                     class="field-label"
-                    id="icon-picker-label">Icon</span>
+                    id="icon-picker-label"
+                    data-field-help="Icon used for devices of this type when the view display type is set to Icon.">Icon</span>
                 <input
                     type="hidden"
                     name="icon"
@@ -69,6 +76,8 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
                 <button
                     type="button"
                     id="icon-picker-toggle"
+                    class="select-wrap"
+                    aria-labelledby="icon-picker-label icon-picker-value"
                     aria-haspopup="listbox"
                     aria-expanded="false"
                     aria-controls="icon-picker-grid">
@@ -77,7 +86,6 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
                         alt=""
                         hidden>
                     <span id="icon-picker-value">Select Icon</span>
-                    <span aria-hidden="true">⌄</span>
                 </button>
                 <div
                     id="icon-picker-grid"
@@ -104,7 +112,9 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
                 </div>
             </div>
             <label class="field">
-                <span class="field-label">No. of Ports</span>
+                <span
+                    class="field-label"
+                    data-field-help="Optional physical port count for devices of this type. Enter a whole number from 0 to 65535.">No. of Ports</span>
                 <input
                     name="physical_ports"
                     type="number"
@@ -115,7 +125,7 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
             </label>
         </div>
         <section class="type-shape-section">
-            <h3>Device Shape</h3>
+            <h3 data-field-help="Shape used to represent devices of this type in the topology view.">Device Shape</h3>
             <fieldset class="type-shape-options">
                 <legend class="sr-only">Device Shape</legend>
                 <?php foreach (
@@ -174,7 +184,10 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
                     ['network' => 'Network Topology', 'rack' => 'Rack View'] as $view => $label
                 ): ?>
                     <label class="field">
-                        <span class="field-label"><?= $label ?></span>
+                        <span
+                            class="field-label"
+                            data-field-help="Choose how this device type appears in <?= icct_nms_h($label) ?>: None, its selected icon, or its uploaded image."><?= $label ?></span>
+                        <span class="select-wrap">
                         <select name="display_<?= $view ?>">
                             <option value="">Select display type</option>
                             <?php foreach (
@@ -185,6 +198,7 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
                                     <?= ($typeValues['display_' . $view] ?? '') === $mode ? 'selected' : '' ?>><?= $text ?></option>
                             <?php endforeach; ?>
                         </select>
+                        </span>
                     </label>
                 <?php endforeach; ?>
             </div>
@@ -317,8 +331,10 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
             <?php endif; ?>
         </tbody>
     </table>
-    <footer class="type-pagination">
-        <form method="get">
+    <form
+        method="get"
+        class="inventory-pagination"
+        id="device-type-pagination">
             <input
                 type="hidden"
                 name="tab"
@@ -331,16 +347,21 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
                     name="per_page"
                     aria-label="Items per page">
                     <?php foreach (
-                        [10, 25, 50] as $size
+                        [10, 25, 50, 100] as $size
                     ): ?>
                         <option <?= $perPage === $size ? 'selected' : '' ?>><?= $size ?></option>
                     <?php endforeach; ?>
                 </select>
             </label>
-            <button type="submit">Apply</button>
-        </form>
+            <noscript><button type="submit">Apply</button></noscript>
         <span><?= $total ? ($page - 1) * $perPage + 1 . '–' . min($total, $page * $perPage) : '0' ?> of <?= $total ?> items</span>
-        <span class="type-page-count"><?= $page ?> of <?= $pages ?> pages</span>
+        <div class="page-controls">
+            <label><span class="sr-only">Page</span><select name="page" aria-label="Page">
+                <?php for ($n = 1; $n <= $pages; $n++): ?>
+                    <option value="<?= $n ?>" <?= $n === $page ? 'selected' : '' ?>><?= $n ?></option>
+                <?php endfor; ?>
+            </select></label>
+            <span>of <?= $pages ?> pages</span>
         <a
             href="<?= icct_nms_h($pageUrl(max(1, $page - 1))) ?>"
             aria-label="Previous page"
@@ -369,5 +390,6 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
                 <path d="M9 5 17 12 9 19Z" />
             </svg>
         </a>
-    </footer>
+        </div>
+    </form>
 </div>

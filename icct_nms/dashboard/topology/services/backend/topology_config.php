@@ -3,7 +3,6 @@
 require_once __DIR__ . '/../../../../presets/services/rack_reservation_service.php';
 /** ICCT-owned topology config services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: topology config apply. */
 function icct_backend_topology_config_apply($action, $site_id, $input)
 {
     $user = icct_backend_current_user_id();
@@ -92,29 +91,6 @@ function icct_backend_topology_config_apply($action, $site_id, $input)
     return (int) $rack['site_id'];
 }
 
-/** Reused Inventory service: topology config write. */
-function icct_backend_topology_config_write($action, $site_id, $input)
-{
-    $lock =
-        'icct_backend_racks_' .
-        substr(hash('sha256', (string) db_fetch_cell('SELECT DATABASE()')), 0, 32);
-    if ((int) db_fetch_cell_prepared('SELECT GET_LOCK(?, 10)', [$lock]) !== 1) {
-        throw new RuntimeException('Rack configuration is busy. Please retry.');
-    }
-    icct_backend_category_execute('START TRANSACTION');
-    try {
-        $id = icct_backend_topology_config_apply($action, $site_id, $input);
-        icct_backend_category_execute('COMMIT');
-        return $id;
-    } catch (Throwable $error) {
-        db_execute('ROLLBACK');
-        throw $error;
-    } finally {
-        db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)', [$lock]);
-    }
-}
-
-/** Reused Inventory service: topology integer. */
 function icct_backend_topology_integer($value, $min, $max, $label)
 {
     if (

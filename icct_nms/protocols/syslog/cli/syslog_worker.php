@@ -29,23 +29,28 @@ try {
             break;
         }
         clearstatcache(true, $file);
-        $result = is_file($file) ? icct_backend_syslog_import_spool_once($file, 2000, $ingestLine) : null;
+        $result = is_file($file)
+            ? icct_backend_syslog_import_spool_once($file, 2000, $ingestLine)
+            : null;
         // The durable outbox is drained even when no new packets arrive after an upgrade/restart.
         $faults = icct_backend_syslog_sync_faults();
         [, $state] = icct_backend_syslog_worker_state($file);
-        icct_backend_syslog_heartbeat([
-            'pid' => getmypid(),
-            'file' => $file,
-            'status' => $result === null ? 'waiting-for-spool' : 'running',
-            'offset' => (int) ($state['source_offset'] ?? 0),
-            'ingested' => (int) ($state['records_ingested'] ?? 0),
-            'dropped' => (int) ($state['records_dropped'] ?? 0),
-            'errors' => (int) ($state['errors'] ?? 0),
-            'faults_normalized' => $faults,
-            'last_record_at' => $state['last_record_at'] ?? null,
-            'drop_reasons' => $result['drop_reasons'] ?? [],
-            'last_error' => implode('; ', $result['error_messages'] ?? []),
-        ], $traps ? 'trap_worker_status' : 'syslog_worker_status');
+        icct_backend_syslog_heartbeat(
+            [
+                'pid' => getmypid(),
+                'file' => $file,
+                'status' => $result === null ? 'waiting-for-spool' : 'running',
+                'offset' => (int) ($state['source_offset'] ?? 0),
+                'ingested' => (int) ($state['records_ingested'] ?? 0),
+                'dropped' => (int) ($state['records_dropped'] ?? 0),
+                'errors' => (int) ($state['errors'] ?? 0),
+                'faults_normalized' => $faults,
+                'last_record_at' => $state['last_record_at'] ?? null,
+                'drop_reasons' => $result['drop_reasons'] ?? [],
+                'last_error' => implode('; ', $result['error_messages'] ?? []),
+            ],
+            $traps ? 'trap_worker_status' : 'syslog_worker_status',
+        );
         if (!$once && ($result['processed'] ?? 0) < 2000 && $faults < 200) {
             usleep((int) ($sleep * 1000000));
         }

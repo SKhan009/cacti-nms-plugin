@@ -2,7 +2,6 @@
 
 /** ICCT-owned configuration jobs services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: config job authorize. */
 function icct_backend_config_job_authorize(array $job)
 {
     $user = (int) $job['user_id'];
@@ -25,7 +24,6 @@ function icct_backend_config_job_authorize(array $job)
     }
 }
 
-/** Reused Inventory service: config target. */
 function icct_backend_config_target($host_id, $authorize = true)
 {
     $host_id = icct_backend_config_integer($host_id, 1, 16777215, 'Device ID');

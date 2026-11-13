@@ -28,8 +28,11 @@ function icct_nms_ntp_udp_sample($packet, $origin, $sent, $received, $host)
     }
     $header = ord($packet[0]);
     $version = ($header >> 3) & 7;
-    if (($header & 7) !== 4 || !in_array($version, [3, 4], true) ||
-        !hash_equals($origin, substr($packet, 24, 8))) {
+    if (
+        ($header & 7) !== 4 ||
+        !in_array($version, [3, 4], true) ||
+        !hash_equals($origin, substr($packet, 24, 8))
+    ) {
         throw new RuntimeException('The direct NTP response did not match the request.');
     }
     $stratum = ord($packet[1]);
@@ -51,8 +54,8 @@ function icct_nms_ntp_udp_sample($packet, $origin, $sent, $received, $host)
         if ($serverSent < $serverReceived || $received < $sent) {
             throw new RuntimeException('Invalid timestamp order in the direct NTP measurement.');
         }
-        $offset = (($serverReceived - $sent) + ($serverSent - $received)) * 500;
-        $delay = max(0, ($received - $sent) - ($serverSent - $serverReceived)) * 1000;
+        $offset = ($serverReceived - $sent + ($serverSent - $received)) * 500;
+        $delay = max(0, $received - $sent - ($serverSent - $serverReceived)) * 1000;
         $referenceBytes = substr($packet, 16, 8);
         if ($referenceBytes !== str_repeat("\0", 8)) {
             $reference = icct_nms_ntp_timestamp_read($referenceBytes, $sent);
@@ -79,8 +82,10 @@ function icct_nms_ntp_udp_read($host, $timeout)
 {
     if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
         $endpoint = '[' . $host . ']';
-    } elseif (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) ||
-        filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
+    } elseif (
+        filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) ||
+        filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)
+    ) {
         $endpoint = $host;
     } else {
         throw new RuntimeException('Direct NTP requires an inventory IP address or hostname.');
@@ -88,7 +93,9 @@ function icct_nms_ntp_udp_read($host, $timeout)
     $deadline = hrtime(true) + $timeout * 1000000000;
     $socket = @stream_socket_client('udp://' . $endpoint . ':123', $errno, $error, $timeout);
     if ($socket === false) {
-        throw new RuntimeException('Could not open a direct NTP connection to the inventory address.');
+        throw new RuntimeException(
+            'Could not open a direct NTP connection to the inventory address.',
+        );
     }
     try {
         stream_set_blocking($socket, false);
@@ -100,14 +107,26 @@ function icct_nms_ntp_udp_read($host, $timeout)
         $remaining = (int) (($deadline - hrtime(true)) / 1000);
         $read = [$socket];
         $write = $except = null;
-        if ($remaining <= 0 ||
-            @stream_select($read, $write, $except, intdiv($remaining, 1000000), $remaining % 1000000) !== 1) {
-            throw new RuntimeException('No direct NTP response. Check that the inventory address serves NTP on UDP 123.');
+        if (
+            $remaining <= 0 ||
+            @stream_select(
+                $read,
+                $write,
+                $except,
+                intdiv($remaining, 1000000),
+                $remaining % 1000000,
+            ) !== 1
+        ) {
+            throw new RuntimeException(
+                'No direct NTP response. Check that the inventory address serves NTP on UDP 123.',
+            );
         }
         $packet = @stream_socket_recvfrom($socket, 2048);
         $received = microtime(true);
         if ($packet === false || $packet === '' || hrtime(true) > $deadline) {
-            throw new RuntimeException('No direct NTP response. Check that the inventory address serves NTP on UDP 123.');
+            throw new RuntimeException(
+                'No direct NTP response. Check that the inventory address serves NTP on UDP 123.',
+            );
         }
         return icct_nms_ntp_udp_sample($packet, $origin, $sent, $received, $host);
     } finally {

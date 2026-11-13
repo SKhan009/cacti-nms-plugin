@@ -2,7 +2,6 @@
 
 /** ICCT-owned ssh linux services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: ssh key envelope. */
 function icct_backend_ssh_key_envelope($key)
 {
     if (!is_string($key) || strlen($key) > 65536 || strpos($key, "\0") !== false) {
@@ -30,7 +29,6 @@ function icct_backend_ssh_key_envelope($key)
     );
 }
 
-/** Reused Inventory service: ssh preset values. */
 function icct_backend_ssh_preset_values($input)
 {
     $out = [];
@@ -55,7 +53,8 @@ function icct_backend_ssh_preset_values($input)
             'command_timeout' => [1, 300],
             'retries' => [0, 2],
             'keepalive' => [0, 300],
-        ] as $field => $range
+        ]
+        as $field => $range
     ) {
         $value = $input[$field] ?? null;
         if (

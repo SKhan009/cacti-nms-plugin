@@ -583,17 +583,24 @@ if (!$presetMode && !$ntpSaved && in_array($ntp['method'] ?? '', ['', 'local', '
     $ntp['method'] = 'auto';
 }
 if ($failedProtocol === 'ntp') {
-    $ntp = array_intersect_key(array_filter($_POST, 'is_scalar'), array_flip(icct_nms_ntp_fields()));
+    $ntp = array_intersect_key(array_filter(icct_nms_ntp_form_values($_POST), 'is_scalar'), array_flip(icct_nms_ntp_fields()));
 }
 ?>
         <details class="protocol-item" id="protocol-ntp" data-saved="<?= $ntpSaved ? '1' : '0' ?>"
             <?= $ntpSaved || in_array('ntp', $protocolDraft, true) ? '' : 'hidden' ?>
             <?= $failedProtocol === 'ntp' ? 'open' : '' ?>>
             <summary>
-                <span class="accordion-chevron" aria-hidden="true"></span>
+                <span
+                    class="accordion-chevron"
+                    aria-hidden="true"></span>
                 <span>NTP <?php $protocolPresetHelp('ntp', 'NTP'); ?></span>
-                <button type="button" class="delete-protocol" aria-label="Remove protocol">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
+                <button
+                    type="button"
+                    class="delete-protocol"
+                    aria-label="Remove protocol">
+                    <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"><path d="M5 6h14M9 6V3h6v3M7 6l1 15h8l1-15M10 10v7M14 10v7" /></svg>
                 </button>
             </summary>
             <div class="protocol-content">

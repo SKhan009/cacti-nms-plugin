@@ -43,7 +43,8 @@ function icct_mib_fault_presets($input)
         }
         $clean = [];
         foreach (
-            ['name' => 120, 'description' => 1000, 'corrective_action' => 1000] as $key => $limit
+            ['name' => 120, 'description' => 1000, 'corrective_action' => 1000]
+            as $key => $limit
         ) {
             $value = $rule[$key] ?? '';
             if (!is_string($value) || strlen($value) > $limit || str_contains($value, "\0")) {
@@ -177,22 +178,22 @@ function icct_mib_mib_fault_presets($record)
         'info' => 'Information',
     ];
     $severityStates = array_values(
-        array_filter($states, fn ($state) => isset($levels[strtolower($state[1])])),
+        array_filter($states, fn($state) => isset($levels[strtolower($state[1])])),
     );
     if (
         !$severityStates &&
         !preg_match('/status|state|health/i', $record['label'] ?? ($record['symbol'] ?? '')) &&
-        !array_filter($states, fn ($state) => $healthy($state[1]))
+        !array_filter($states, fn($state) => $healthy($state[1]))
     ) {
         return [];
     }
     $faults =
-        $severityStates ?: array_values(array_filter($states, fn ($state) => !$healthy($state[1])));
+        $severityStates ?: array_values(array_filter($states, fn($state) => !$healthy($state[1])));
     if (count($faults) > 8) {
         return [];
     }
     return array_map(
-        fn ($state) => [
+        fn($state) => [
             'name' => substr(($record['label'] ?? $record['symbol']) . ' - ' . $state[1], 0, 120),
             'condition' => 'equals',
             'threshold' => (float) $state[2],
@@ -225,7 +226,7 @@ function icct_mib_review_fault_presets($record, $bundle, $settings)
         }
     }
     return [
-        'rules' => array_map(fn ($rule) => icct_mib_fault_context($record, $rule), $rules),
+        'rules' => array_map(fn($rule) => icct_mib_fault_context($record, $rule), $rules),
         'suggested' => $suggested,
     ];
 }
@@ -297,7 +298,8 @@ function icct_mib_range_fault_presets($record)
     }
     $rules = [];
     foreach (
-        [['below', $range[1], 'Below MIB Minimum'], ['above', $range[2], 'Above MIB Maximum']] as [$condition, $bound, $title]
+        [['below', $range[1], 'Below MIB Minimum'], ['above', $range[2], 'Above MIB Maximum']]
+        as [$condition, $bound, $title]
     ) {
         $rules[] = [
             'name' => substr(($record['label'] ?? $record['symbol']) . ' - ' . $title, 0, 120),

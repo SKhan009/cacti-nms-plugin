@@ -2,7 +2,6 @@
 
 /** ICCT-owned interface rates services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: interface counter delta. */
 function icct_backend_interface_counter_delta($current, $previous)
 {
     foreach ([$current, $previous] as $value) {
@@ -30,7 +29,6 @@ function icct_backend_interface_counter_delta($current, $previous)
     return (float) $result;
 }
 
-/** Reused Inventory service: interface rates. */
 function icct_backend_interface_rates(array $current, array $previous, int $maxAge): array
 {
     $elapsed = (int) ($current['collected'] ?? 0) - (int) ($previous['collected'] ?? 0);

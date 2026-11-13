@@ -5,7 +5,12 @@
     const feedback = section.querySelector('#netflow-feedback'),
         tabs = [...section.querySelectorAll('[role="tab"]')],
         forms = [...section.querySelectorAll('[data-netflow-view]')],
-        applied = new Map(forms.map((form) => [form.dataset.netflowView, new URLSearchParams(new FormData(form))]));
+        applied = new Map(
+            forms.map((form) => [
+                form.dataset.netflowView,
+                new URLSearchParams(new FormData(form)),
+            ]),
+        );
     const linkedFinding = section.querySelector('#netflow-linked-finding');
     const linkedAlarm = new URLSearchParams(location.search).get('netflow_alarm');
     if (/^[a-f0-9]{64}$/.test(linkedAlarm || '')) {
@@ -59,8 +64,13 @@
         if (small) td.append(make('small', small));
         return td;
     }
+    let chartData = null;
     function drawChart(rows, interval) {
+        chartData = { rows, interval };
         const svg = document.querySelector('#netflow-chart');
+        const width = Math.max(320, svg.clientWidth || 900),
+            left = 100, right = width - 16, top = 20, bottom = 188;
+        svg.setAttribute('viewBox', `0 0 ${width} 240`);
         svg.replaceChildren();
         const ns = 'http://www.w3.org/2000/svg',
             add = (tag, attrs, text) => {
@@ -73,7 +83,7 @@
         if (!rows.length) {
             add(
                 'text',
-                { x: 450, y: 110, 'text-anchor': 'middle', fill: '#777' },
+                { x: width / 2, y: 110, 'text-anchor': 'middle', fill: '#777' },
                 'No flow readings in this time range.',
             );
             return;
@@ -91,11 +101,11 @@
             divisor = max >= 1e9 ? 1e9 : max >= 1e6 ? 1e6 : max >= 1e3 ? 1e3 : 1,
             unit = max >= 1e9 ? 'Gbps' : max >= 1e6 ? 'Mbps' : max >= 1e3 ? 'kbps' : 'bps';
         for (let i = 0; i <= 4; i++) {
-            const y = 20 + i * 42;
-            add('line', { x1: 80, y1: y, x2: 880, y2: y, stroke: '#e5e5e5' });
+            const y = top + i * (bottom - top) / 4;
+            add('line', { x1: left, y1: y, x2: right, y2: y, stroke: '#e5e5e5', 'stroke-width': 1 });
             add(
                 'text',
-                { x: 70, y: y + 4, 'text-anchor': 'end', fill: '#777', 'font-size': 12 },
+                { x: left - 10, y: y + 4, 'text-anchor': 'end', fill: '#777', 'font-size': 12 },
                 (((1 - i / 4) * max) / divisor).toFixed(2) + ' ' + unit,
             );
         }
@@ -129,19 +139,26 @@
                     continue;
                 }
                 points.push([
-                    80 + ((t - start) / Math.max(300, end - start)) * 800,
-                    188 - (Number(map.get(t)) / max) * 168,
+                    start === end ? (left + right) / 2 : left + ((t - start) / (end - start)) * (right - left),
+                    bottom - (Number(map.get(t)) / max) * (bottom - top),
                 ]);
             }
             drawSegment();
         }
-        add('text', { x: 80, y: 215, fill: '#777', 'font-size': 12 }, date(start));
+        if (start === end) {
+            add('text', { x: (left + right) / 2, y: 215, 'text-anchor': 'middle', fill: '#777', 'font-size': 12 }, date(start));
+            return;
+        }
+        add('text', { x: left, y: 215, fill: '#777', 'font-size': 12 }, date(start));
         add(
             'text',
-            { x: 880, y: 215, 'text-anchor': 'end', fill: '#777', 'font-size': 12 },
+            { x: right, y: width < 520 ? 233 : 215, 'text-anchor': 'end', fill: '#777', 'font-size': 12 },
             date(end),
         );
     }
+    new ResizeObserver(() => {
+        if (chartData) drawChart(chartData.rows, chartData.interval);
+    }).observe(document.querySelector('#netflow-chart'));
     function render(data) {
         document.querySelector('#netflow-health').textContent =
             data.health +
@@ -166,16 +183,25 @@
         if (activeView === 'anomalies') renderAnomalies(data);
     }
     function renderOverview(data) {
-        const live = data.live_readings;
+        const historical = !data.live_readings?.flows && data.historical_readings?.flows;
+        const live = historical ? data.historical_readings : data.live_readings;
         const liveStatus = document.querySelector('#netflow-live-status');
         const liveMessage = live?.flows
-            ? 'Last 5 minutes · ' + number(live.flows) + ' flow records · Latest observation ' + date(live.latest_epoch) + ' IST'
-            : 'No flow records in the last 5 minutes.';
+            ? (historical ? 'Historical readings — no flows in the last 5 minutes. Five-minute window ending ' + date(live.latest_epoch) + ' IST · ' : 'Last 5 minutes · ') +
+              number(live.flows) +
+              ' flow records · Latest observation ' +
+              date(live.latest_epoch) +
+              ' IST'
+            : 'No flow records received. Readings do not require fault rules; configure the device exporter to send traffic to this collector.';
         if (liveStatus.textContent !== liveMessage) liveStatus.textContent = liveMessage;
         section.querySelectorAll('[data-netflow-live]').forEach((reading) => {
             const value = numeric(live?.values?.[reading.dataset.netflowLive]);
-            reading.textContent = value === null ? '—' :
-                value.toLocaleString('en-IN', { maximumFractionDigits: 6 }) + ' ' + reading.dataset.unit;
+            reading.textContent =
+                value === null
+                    ? '—'
+                    : value.toLocaleString('en-IN', { maximumFractionDigits: 6 }) +
+                      ' ' +
+                      reading.dataset.unit;
         });
         const totals = document.querySelector('#netflow-totals');
         totals.replaceChildren();
@@ -282,6 +308,22 @@
         document.querySelector('#netflow-next').disabled = page === data.pages;
     }
     function renderAnomalies(data) {
+        const check = data.anomaly_check;
+        const status = document.querySelector('#netflow-anomaly-status');
+        let result = 'Anomaly check has not completed yet.';
+        if (!data.assignment) result = 'Anomaly checks require a configured exporter.';
+        else if (data.health !== 'Receiving') result = data.health + ' · Awaiting fresh traffic for anomaly checks.';
+        else if (check?.checked_at) {
+            const fresh = Date.now() / 1000 - check.checked_at < 90;
+            result = !fresh ? 'Anomaly check is overdue.' : !check.has_recent_data
+                ? 'Waiting for recent flow records to evaluate.'
+                : Number(check.findings) > 0
+                    ? check.findings + ' findings in the latest 5-minute traffic window.'
+                    : 'No anomalies detected in the latest 5-minute traffic window.';
+            result += ' Last checked: ' + date(check.checked_at) + '.';
+        }
+        status.textContent = result + ' Built-in traffic checks run independently of fault rules.';
+
         const events = document.querySelector('#netflow-events');
         events.replaceChildren();
         for (const r of data.events) {
@@ -306,11 +348,14 @@
             events.append(tr);
         }
         if (!events.children.length) {
-            let message = 'No recorded anomalies match the selected filters.';
+            let message = 'No anomaly events match the selected time range, severity and status.';
             if (!applied.get('anomalies').has('netflow_alarm')) {
-                if (!data.assignment) message = 'No exporter is configured for this device. Add one in Protocol Config to start checking for anomalies.';
+                if (!data.assignment)
+                    message =
+                        'No exporter is configured for this device. Add one in Protocol Config to start checking for anomalies.';
                 else if (data.health === 'Waiting for flows' && !data.totals?.flows)
-                    message = 'Waiting for flow records. Anomalies appear when collected traffic matches a rule.';
+                    message =
+                        'No recent flow records. Open Overview for the last available traffic readings. Readings do not require fault rules; anomalies appear when collected traffic exceeds detection thresholds.';
             }
             const tr = make('tr'),
                 td = cell(message);
@@ -333,7 +378,9 @@
         const view = activeView;
         const filters = applied.get(view);
         const requestedPage = page;
-        const isCurrent = () => activeView === view && applied.get(view) === filters &&
+        const isCurrent = () =>
+            activeView === view &&
+            applied.get(view) === filters &&
             (view !== 'records' || page === requestedPage);
         const query = filterQuery(filters);
         if (view === 'overview') query.set('live', '1');
@@ -373,6 +420,9 @@
         });
     }
     function applyFilters(form, reset) {
+        // Changing to Custom range should allow entry before showing validation errors.
+        if (form.elements.hours.value === 'custom' &&
+            (!form.elements.start.value || !form.elements.end.value)) return;
         if (!form.checkValidity()) return;
         const view = form.dataset.netflowView;
         const filters = new URLSearchParams(new FormData(form));
@@ -397,7 +447,9 @@
         }
         if (view === 'breakdown') {
             document.querySelector('#netflow-breakdown-export').href =
-                'protocols/netflow/controllers/netflow.php?' + filterQuery(filters) + '&export=breakdown';
+                'protocols/netflow/controllers/netflow.php?' +
+                filterQuery(filters) +
+                '&export=breakdown';
         }
         if (activeView === view) load();
     }
@@ -411,7 +463,10 @@
         showCustomDates(form);
         form.addEventListener('change', () => apply());
         form.addEventListener('input', (event) => {
-            if (!event.target.matches('input[type="text"], input:not([type]), input[type="number"]')) return;
+            if (
+                !event.target.matches('input[type="text"], input:not([type]), input[type="number"]')
+            )
+                return;
             clearTimeout(inputTimer);
             inputTimer = setTimeout(apply, 350);
         });

@@ -29,17 +29,33 @@ $trapUrl = 'inventory/controllers/device.php?' . http_build_query(['id' => (int)
 <section id="view-traps" data-device-view-panel="traps" hidden>
     <div class="device-history-heading">
         <h2 data-field-help="Notifications sent to Cacti by this device. A notification may be a test, a status change, or a fault.">SNMP Trap History</h2>
-        <a class="button" href="<?= icct_nms_h($trapUrl . '&' . http_build_query($trapParams + ['trap_page' => $trapPage]) . '#view-traps') ?>">Refresh</a>
+        <a
+            class="button"
+            href="<?= icct_nms_h($trapUrl . '&' . http_build_query($trapParams + ['trap_page' => $trapPage]) . '#view-traps') ?>">Refresh</a>
     </div>
-    <form method="get" action="inventory/controllers/device.php#view-traps" class="device-history-filters">
-        <input type="hidden" name="id" value="<?= (int) $id ?>">
-        <input type="hidden" name="view" value="1">
+    <form
+        method="get"
+        action="inventory/controllers/device.php#view-traps"
+        class="device-history-filters">
+        <input
+            type="hidden"
+            name="id"
+            value="<?= (int) $id ?>">
+        <input
+            type="hidden"
+            name="view"
+            value="1">
         <?php if (isset($trapFilters['alarm_key'])): ?>
             <input type="hidden" name="event_alarm" value="<?= icct_nms_h($trapFilters['alarm_key']) ?>">
         <?php endif; ?>
         <label class="field device-history-search">
             <span data-field-help="Search by notification OID or sender IP. Expand a result to see its readings.">Search traps</span>
-            <input type="search" name="trap_search" maxlength="200" value="<?= icct_nms_h($trapSearch) ?>" placeholder="Search trap OID or source IP">
+            <input
+                type="search"
+                name="trap_search"
+                maxlength="200"
+                value="<?= icct_nms_h($trapSearch) ?>"
+                placeholder="Search trap OID or source IP">
         </label>
         <div class="device-history-actions">
             <?php if ($trapParams): ?>
@@ -48,7 +64,9 @@ $trapUrl = 'inventory/controllers/device.php?' . http_build_query(['id' => (int)
             <button class="button primary" type="submit">Apply</button>
         </div>
     </form>
-    <div class="device-record-list syslog-event-history" aria-label="SNMP notifications for this device">
+    <div
+        class="device-record-list syslog-event-history"
+        aria-label="SNMP notifications for this device">
         <?php foreach ($trapEvents as $trapEvent):
             $trapOid = $trapEvent['program'];
             $hasTrapAlarm = !empty($trapEvent['alarm_key']);

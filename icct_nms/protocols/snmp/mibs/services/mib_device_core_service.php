@@ -8,8 +8,8 @@ function icct_mib_device_graph_options($bundle, $records)
         $options[$group['name']] = [
             'key' => $group['name'],
             'name' => $group['name'],
-            'source' => 'Prepared',
-            'sources' => array_map(fn ($r) => 'prepared:' . $r['symbol'], $group['records']),
+            'source' => 'User Defined',
+            'sources' => array_map(fn($r) => 'prepared:' . $r['symbol'], $group['records']),
             'queries' => [],
             'pending_queries' =>
                 ($group['records'][0]['resolved_method'] ?? '') === 'indexed'
@@ -18,13 +18,17 @@ function icct_mib_device_graph_options($bundle, $records)
         ];
     }
     $native = db_fetch_assoc('SELECT id,name FROM graph_templates ORDER BY name,id') ?: [];
+    $mibGraphIds = $records ? [] : array_map('intval', array_column($bundle['rows'] ?? [], 'graph_template_id'));
     foreach ($native as $row) {
+        if (!in_array((int) $row['id'], $mibGraphIds, true)) {
+            continue;
+        }
         $key = 'core:' . $row['id'];
         $options[$key] = [
             'key' => $key,
             'name' => $row['name'],
             'id' => (int) $row['id'],
-            'source' => 'Cacti Core',
+            'source' => 'User Defined',
             'sources' => [],
             'queries' => [],
             'pending_queries' => [],
@@ -36,7 +40,8 @@ function icct_mib_device_graph_options($bundle, $records)
                 'JOIN data_template_rrd r ON r.id=gi.task_item_id AND r.local_data_id=0 WHERE ' .
                 'gi.local_graph_id=0',
         ) ?:
-        [] as $source
+        []
+        as $source
     ) {
         $key = 'core:' . $source['graph_template_id'];
         if (isset($options[$key])) {
@@ -45,7 +50,8 @@ function icct_mib_device_graph_options($bundle, $records)
     }
     foreach (
         db_fetch_assoc('SELECT DISTINCT graph_template_id,snmp_query_id FROM snmp_query_graph') ?:
-        [] as $row
+        []
+        as $row
     ) {
         $key = 'core:' . $row['graph_template_id'];
         if (isset($options[$key])) {
@@ -91,7 +97,8 @@ function icct_mib_device_auto_class($bundle, $graphIds = [])
                 'SELECT DISTINCT ht.class FROM host_template ht JOIN host_template_graph htg ON htg.host_template_id=ht.id WHERE htg.graph_template_id=?',
                 [(int) $id],
             ) ?:
-            [] as $row
+            []
+            as $row
         ) {
             if (isset($choices[$row['class']])) {
                 $classes[$row['class']] = true;
@@ -133,7 +140,8 @@ function icct_mib_device_core_defaults($bundle, $records)
                 'SELECT graph_template_id FROM host_template_graph WHERE host_template_id=?',
                 [$hostId],
             ) ?:
-            [] as $row
+            []
+            as $row
         ) {
             $graphIds[] = (int) $row['graph_template_id'];
             $chosen[] = 'core:' . $row['graph_template_id'];
@@ -157,7 +165,8 @@ function icct_mib_device_core_defaults($bundle, $records)
                 'SELECT DISTINCT snmp_query_id FROM snmp_query_graph WHERE graph_template_id=?',
                 [$graphId],
             ) ?:
-            [] as $row
+            []
+            as $row
         ) {
             $queries[] = (int) $row['snmp_query_id'];
         }
@@ -165,6 +174,7 @@ function icct_mib_device_core_defaults($bundle, $records)
     if ($class === '') {
         $class = icct_mib_device_auto_class($bundle, $graphIds);
     }
+    $chosen = array_values(array_intersect($chosen, array_keys(icct_mib_device_graph_options($bundle, $records))));
     return [
         'name' => $name,
         'class' => $class,
@@ -178,11 +188,11 @@ function icct_mib_device_graph_selection($bundle, $records, $chosen, $allowEmpty
     if (
         !is_array($chosen) ||
         (!$chosen && !$allowEmpty) ||
-        array_filter($chosen, fn ($key) => !is_string($key)) ||
+        array_filter($chosen, fn($key) => !is_string($key)) ||
         array_diff($chosen, array_keys($allowed))
     ) {
         throw new InvalidArgumentException(
-            'Select graph templates available in Cacti or this prepared batch.',
+            'Select graph templates generated from this MIB’s OIDs.',
         );
     }
     $prepared = [];

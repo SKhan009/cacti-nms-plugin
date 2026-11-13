@@ -35,14 +35,6 @@ function icct_backend_syslog_severity_labels()
     ];
 }
 
-function icct_backend_syslog_event_origin_labels()
-{
-    return [
-        'syslog' => 'Device Syslog',
-        'availability' => 'Availability',
-    ];
-}
-
 function icct_backend_syslog_nms_severity($severity)
 {
     $severity = (int) $severity;
@@ -359,16 +351,6 @@ function icct_backend_store_received_event(array $fields, &$reason)
     return 'inserted';
 }
 
-/** Return enabled Syslog bindings for operator diagnostics. */
-function icct_backend_syslog_bindings()
-{
-    return db_fetch_assoc(
-        'SELECT d.host_id,d.enabled,d.source_address,d.transport,d.max_severity,h.description,h.hostname ' .
-            'FROM plugin_icct_nms_syslog_devices d INNER JOIN host h ON h.id=d.host_id ' .
-            "WHERE h.deleted='' ORDER BY h.description,h.id",
-    );
-}
-
 /** Return the normalized availability state for transition comparison. */
 function icct_backend_syslog_availability_state_name($status, $disabled)
 {
@@ -564,17 +546,6 @@ function icct_backend_syslog_worker_state($source_path)
     return [$key, is_array($row) ? $row : []];
 }
 
-/** Reset only the read cursor for a spool. Existing Syslog events are preserved. */
-function icct_backend_syslog_worker_state_reset($source_path)
-{
-    $key = hash('sha256', (string) $source_path);
-    icct_backend_syslog_execute(
-        'DELETE FROM plugin_icct_nms_syslog_ingest_state WHERE source_key=?',
-        [$key],
-    );
-    return true;
-}
-
 function icct_backend_syslog_worker_state_save(
     $key,
     $path,
@@ -616,8 +587,11 @@ function icct_backend_syslog_ingest_line($line, &$reason)
 }
 
 /** One CLI-only reader serves both bounded imports and the daemon; cursor and events commit together. */
-function icct_backend_syslog_import_spool_once($file, $max_records = 2000, ?callable $ingestLine = null)
-{
+function icct_backend_syslog_import_spool_once(
+    $file,
+    $max_records = 2000,
+    ?callable $ingestLine = null,
+) {
     if (PHP_SAPI !== 'cli') {
         throw new RuntimeException('Syslog ingestion requires the CLI worker.');
     }
@@ -645,7 +619,11 @@ function icct_backend_syslog_import_spool_once($file, $max_records = 2000, ?call
             $previous = fopen($file . '.1', 'rb');
             if ($previous) {
                 $previousStat = fstat($previous);
-                if ($previousStat && (string) $previousStat['ino'] === $savedInode && $previousStat['size'] > $offset) {
+                if (
+                    $previousStat &&
+                    (string) $previousStat['ino'] === $savedInode &&
+                    $previousStat['size'] > $offset
+                ) {
                     fclose($handle);
                     $handle = $previous;
                     $previous = null;
@@ -691,7 +669,9 @@ function icct_backend_syslog_import_spool_once($file, $max_records = 2000, ?call
             $line = preg_replace('/^\xEF\xBB\xBF/', '', trim($line));
             if ($line !== '') {
                 try {
-                    $result = $ingestLine ? $ingestLine($line, $reason) : icct_backend_syslog_ingest_line($line, $reason);
+                    $result = $ingestLine
+                        ? $ingestLine($line, $reason)
+                        : icct_backend_syslog_ingest_line($line, $reason);
                     $summary[$result]++;
                     if ($result === 'dropped') {
                         $summary['drop_reasons'][$reason] =
@@ -740,56 +720,8 @@ function icct_backend_syslog_heartbeat($payload, $key = 'syslog_worker_status')
     icct_backend_syslog_execute(
         'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
             'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
-        [
-            $key,
-            json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE),
-        ],
+        [$key, json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE)],
     );
-}
-
-function icct_backend_syslog_runtime_status()
-{
-    $row = db_fetch_row_prepared(
-        'SELECT meta_value,updated_at FROM plugin_icct_nms_meta WHERE meta_key=?',
-        ['syslog_worker_status'],
-    );
-    $payload = [];
-    if ($row && $row['meta_value'] !== '') {
-        $decoded = json_decode((string) $row['meta_value'], true);
-        if (is_array($decoded)) {
-            $payload = $decoded;
-        }
-    }
-    $age = PHP_INT_MAX;
-    if ($row && !empty($row['updated_at'])) {
-        $stamp = strtotime((string) $row['updated_at']);
-        if ($stamp !== false) {
-            $elapsed = time() - $stamp;
-            $age = $elapsed < 0 ? PHP_INT_MAX : $elapsed;
-        }
-    }
-    return [
-        'online' => $age <= 90,
-        'age' => $age,
-        'updated_at' => $row['updated_at'] ?? '',
-        'payload' => $payload,
-    ];
-}
-
-function icct_backend_syslog_event($event_id)
-{
-    $row = db_fetch_row_prepared(
-        "SELECT e.*,COALESCE(a.acknowledged,e.acknowledged) AS acknowledged,h.description,h.hostname,u.username AS ack_username\n         FROM " .
-            "plugin_icct_nms_syslog_events e\n         INNER JOIN host h ON h.id=e.host_id\n         " .
-            "LEFT JOIN plugin_icct_nms_alarms a ON a.alarm_key=e.alarm_key\n         " .
-            "LEFT JOIN user_auth u ON u.id=e.acknowledged_by\n         WHERE e.id=?",
-        [(int) $event_id],
-    );
-    if (!$row) {
-        return [];
-    }
-    icct_backend_require_device_access((int) $row['host_id']);
-    return $row;
 }
 
 function icct_backend_syslog_events(
@@ -825,7 +757,9 @@ function icct_backend_syslog_events(
         array_push($params, ...$codes);
     }
     if (!empty($filters['facility_codes'])) {
-        $codes = icct_backend_syslog_filters(['facility_codes' => $filters['facility_codes']])['facility_codes'];
+        $codes = icct_backend_syslog_filters(['facility_codes' => $filters['facility_codes']])[
+            'facility_codes'
+        ];
         $where[] = 'e.facility_code IN (' . implode(',', array_fill(0, count($codes), '?')) . ')';
         array_push($params, ...$codes);
     }
@@ -866,8 +800,13 @@ function icct_backend_syslog_events(
     }
     $where_sql = ' WHERE ' . implode(' AND ', $where);
     $from = ' FROM plugin_icct_nms_syslog_events e INNER JOIN host h ON h.id=e.host_id';
-    $alarmJoin = $include_alarm_details ? ' LEFT JOIN plugin_icct_nms_alarms a ON a.alarm_key=e.alarm_key' : '';
-    $total = (int) db_fetch_cell_prepared('SELECT COUNT(*)' . $from . $alarmJoin . $where_sql, $params);
+    $alarmJoin = $include_alarm_details
+        ? ' LEFT JOIN plugin_icct_nms_alarms a ON a.alarm_key=e.alarm_key'
+        : '';
+    $total = (int) db_fetch_cell_prepared(
+        'SELECT COUNT(*)' . $from . $alarmJoin . $where_sql,
+        $params,
+    );
     $fields = $include_alarm_details
         ? 'e.*,COALESCE(a.acknowledged,e.acknowledged) AS acknowledged,a.state AS alarm_state,h.description,h.hostname,u.username AS ack_username'
         : 'e.id,e.event_origin,e.event_time,e.last_seen,e.source_ip,e.transport,e.repeat_count,e.program,e.facility_code,e.facility,e.message,e.timestamp_kind,e.severity_code,e.fingerprint,e.raw_message';

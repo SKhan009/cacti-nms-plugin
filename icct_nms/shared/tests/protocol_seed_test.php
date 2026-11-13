@@ -78,8 +78,10 @@ icct_nms_save_protocol_preset([
 ]);
 icct_nms_seed_protocol_presets();
 check(
-    icct_nms_protocol_presets()['snmp_notifications'] === ['trap_enabled' => '1', 'trap_source_mode' => 'manual'] &&
-        icct_nms_protocol_presets()['snmp'] === $defaults['snmp'],
+    icct_nms_protocol_presets()['snmp_notifications'] === [
+        'trap_enabled' => '1',
+        'trap_source_mode' => 'manual',
+    ] && icct_nms_protocol_presets()['snmp'] === $defaults['snmp'],
     'Saving or reseeding notification defaults changed polling defaults or lost saved choices.',
 );
 foreach ([5 => 2056, 7 => 2057, 9 => 2059, 10 => 4740] as $v => $port) {

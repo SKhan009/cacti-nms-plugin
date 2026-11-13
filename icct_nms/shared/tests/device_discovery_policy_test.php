@@ -21,12 +21,8 @@ function icct_backend_current_user_id()
 {
     return 1;
 }
-function icct_backend_require_management()
-{
-}
-function icct_backend_require_device_access($id)
-{
-}
+function icct_backend_require_management() {}
+function icct_backend_require_device_access($id) {}
 function db_fetch_cell_prepared($sql, $args)
 {
     return 2;
@@ -224,7 +220,7 @@ $mac = '00:11:22:33:44:55';
 $secondMac = '00:11:22:33:44:66';
 $fdb = ['ifindex' => 7, 'status' => 3, 'mac' => $mac, 'vlans' => [10]];
 $arp = ['ifindex' => 7, 'state' => 'observed', 'mac' => $mac, 'ip' => '192.0.2.7'];
-$makeSnapshot = static fn ($method, $rows) => [
+$makeSnapshot = static fn($method, $rows) => [
     'protocol' => $method,
     'status' => 'success',
     'config_hash' => icct_backend_nd_hash($assignment),
@@ -254,12 +250,17 @@ if (
     $learned[$mac]['ips'] !== ['192.0.2.7'] ||
     array_values($learned[$mac]['vlans']) !== [10, 20] ||
     $learned[$secondMac]['ips'] !== [] ||
-    isset($connections[7]['addresses']) || isset($connections[7]['names'])
+    isset($connections[7]['addresses']) ||
+    isset($connections[7]['names'])
 ) {
-    throw new RuntimeException('Learned endpoints must be unique, scoped to the observed interface and distinct from LLDP/CDP');
+    throw new RuntimeException(
+        'Learned endpoints must be unique, scoped to the observed interface and distinct from LLDP/CDP',
+    );
 }
 $observations = icct_nms_topology_discovery_rows([['id' => 2, 'description' => 'Reporter']]);
-$arpObservations = array_values(array_filter($observations, static fn ($row) => $row['protocol'] === 'ARP'));
+$arpObservations = array_values(
+    array_filter($observations, static fn($row) => $row['protocol'] === 'ARP'),
+);
 if ($arpObservations[0]['mac'] !== $mac || $arpObservations[0]['address'] !== $arp['ip']) {
     throw new RuntimeException('Discovery rows must expose the collected ARP MAC and IP together');
 }
@@ -270,6 +271,8 @@ if ($connections[7]['endpoints'][$mac]['ips'] !== []) {
 }
 $summarySnapshots[0]['config_hash'] = 'old';
 if (icct_nms_port_connections(2, [], true) !== []) {
-    throw new RuntimeException('FDB from an old SNMP configuration must not supply learned endpoints');
+    throw new RuntimeException(
+        'FDB from an old SNMP configuration must not supply learned endpoints',
+    );
 }
 echo "Discovery MAC evidence, same-interface IP matches, deduplication and stale-reading exclusion passed.\n";

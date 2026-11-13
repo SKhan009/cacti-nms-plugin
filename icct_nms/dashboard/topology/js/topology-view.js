@@ -128,7 +128,6 @@
             ['Device Details', 'details'],
             ['Graphs', 'graphs'],
             ['Active Alarms', 'fcaps'],
-            ...(d.netflow ? [['NetFlow / IPFIX', 'netflow']] : []),
         ]) {
             const a = el('a', '', label + ' →');
             a.href =
@@ -735,13 +734,17 @@
         )
             return;
         const scope = document.querySelector('#dashboardData');
-        const site = scope ? Number(JSON.parse(scope.textContent).site_id || 0) : 0;
+        const filters = scope ? JSON.parse(scope.textContent) : {};
+        const query = new URLSearchParams({
+            topology_readings: '1',
+            site_id: filters.site_id || 0,
+        });
+        if (filters.poller_id) query.set('poller_id', filters.poller_id);
         try {
-            const response = await fetch(
-                'dashboard/controllers/topology.php?topology_readings=1&site_id=' +
-                    encodeURIComponent(site),
-                { credentials: 'same-origin', cache: 'no-store' },
-            );
+            const response = await fetch('dashboard/controllers/topology.php?' + query, {
+                credentials: 'same-origin',
+                cache: 'no-store',
+            });
             if (!response.ok) throw Error('Discovery refresh unavailable.');
             const fresh = await response.json();
             if (editing || busy || dirty) return;

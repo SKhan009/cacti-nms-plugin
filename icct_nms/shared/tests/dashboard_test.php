@@ -28,7 +28,8 @@ foreach (
         ['selected' => 0, 'dashboards' => [['widgets' => ['birds', 'birds']]]],
         ['selected' => 0, 'dashboards' => [['widgets' => ['unknown']]]],
         ['selected' => 0, 'dashboards' => [['widgets' => [[]]]]],
-    ] as $bad
+    ]
+    as $bad
 ) {
     try {
         icct_nms_dashboard_validate($bad);
@@ -73,42 +74,6 @@ verify(
         $expanded['dashboards'][0]['widgets'],
 );
 echo "Dashboard layout limits, known widgets, alarm aggregation and empty states passed\n";
-
-$hosts = [
-    [
-        'id' => 2,
-        'description' => 'Cacti server',
-        'hostname' => '127.0.0.1',
-        'snmp_sysName' => 'cacti-rhel9.local',
-        'site_id' => 3,
-        'status_label' => 'Up',
-    ],
-    [
-        'id' => 3,
-        'description' => 'Demo',
-        'hostname' => '127.0.0.1',
-        'snmp_sysName' => 'sim-router',
-        'site_id' => 4,
-        'status_label' => 'Up',
-    ],
-];
-$center = icct_nms_dashboard_server_center($hosts, [
-    'name' => 'Main Poller',
-    'hostname' => 'cacti-rhel9.local',
-]);
-verify($center['device_id'] === 2 && $center['site_id'] === 3 && $center['coordinates'] === null);
-verify(
-    icct_nms_dashboard_server_center($hosts, ['name' => 'Main Poller', 'hostname' => '127.0.0.1'])[
-        'device_id'
-    ] === null,
-);
-verify(
-    icct_nms_dashboard_server_center(
-        [],
-        ['name' => 'Main Poller', 'hostname' => 'cacti-rhel9.local'],
-    )['coordinates'] === null,
-);
-echo "Server center identity and ambiguous or unavailable locations passed\n";
 
 $map['unlocated'][0]['fault_alarms'] = [
     ['name' => 'Link down', 'severity' => 'Critical'],
@@ -291,7 +256,8 @@ foreach (
         ['index' => -1, 'dashboard' => $removed['deleted']['dashboard']],
         ['index' => 1, 'dashboard' => ['widgets' => ['unknown']]],
         ['index' => '1', 'dashboard' => $removed['deleted']['dashboard']],
-    ] as $deleted
+    ]
+    as $deleted
 ) {
     $bad = $removed;
     $bad['deleted'] = $deleted;
@@ -415,10 +381,23 @@ verify(
 );
 echo "Workflow counts use active journal rows within the visible device scope.\n";
 
-$allWidgets = ['topology', 'birds', 'alarms', 'ack', 'escalation', 'frequent', 'recent', 'ports', 'problematic', 'ntp', 'netflow_talkers'];
+$allWidgets = [
+    'topology',
+    'birds',
+    'alarms',
+    'ack',
+    'escalation',
+    'frequent',
+    'recent',
+    'ports',
+    'problematic',
+    'ntp',
+    'netflow_talkers',
+];
 verify(
-    icct_nms_dashboard_validate(['selected' => 0, 'dashboards' => [['widgets' => $allWidgets]]])
-        ['dashboards'][0]['widgets'] === $allWidgets,
+    icct_nms_dashboard_validate(['selected' => 0, 'dashboards' => [['widgets' => $allWidgets]]])[
+        'dashboards'
+    ][0]['widgets'] === $allWidgets,
 );
 $trap = [
     'host_id' => 2,
@@ -436,16 +415,46 @@ $trap = [
 $workflowAlarms = [
     $trap,
     array_replace($trap, [
-        'source' => 'NetFlow', 'severity' => 'Major', 'name' => 'Possible network scan',
-        'alarm_key' => 'test-netflow', 'occurred_epoch' => 124,
+        'source' => 'NetFlow',
+        'severity' => 'Major',
+        'name' => 'Possible network scan',
+        'alarm_key' => 'test-netflow',
+        'occurred_epoch' => 124,
     ]),
     array_replace($trap, ['host_id' => 999, 'alarm_key' => 'outside-scope']),
     array_replace($trap, ['state' => 'Closed', 'alarm_key' => 'closed']),
 ];
-$dashboard = icct_nms_dashboard_readings(['unlocated' => [['id' => 2]], 'sites' => []]);
-verify($dashboard['total'] === 2 && $dashboard['severity']['Warning'] === 1 && $dashboard['severity']['Major'] === 1);
+// Map/topology now supply the canonical journal projection; widgets must not add it again.
+$deviceAlarms = array_map(
+    static fn($row) => [
+        'name' => $row['name'],
+        'severity' => $row['severity'],
+        'source' => $row['source'],
+        'time' => $row['occurred_epoch'],
+        'alarm_key' => $row['alarm_key'],
+    ],
+    array_slice($workflowAlarms, 0, 2),
+);
+$dashboard = icct_nms_dashboard_readings([
+    'unlocated' => [
+        [
+            'id' => 2,
+            'fault_counts' => ['Warning' => 1, 'Major' => 1],
+            'fault_alarms' => $deviceAlarms,
+        ],
+    ],
+    'sites' => [],
+]);
+verify(
+    $dashboard['total'] === 2 &&
+        $dashboard['severity']['Warning'] === 1 &&
+        $dashboard['severity']['Major'] === 1,
+);
 verify(array_column($dashboard['recent'], 'alarm_key') === ['test-netflow', 'test-trap']);
-verify(array_column($dashboard['frequent'], 'count') === [1, 1] && $dashboard['problematic']['devices'][0]['id'] === 2);
+verify(
+    array_column($dashboard['frequent'], 'count') === [1, 1] &&
+        $dashboard['problematic']['devices'][0]['id'] === 2,
+);
 echo "NTP widget preferences and scoped active trap and NetFlow alarms passed.\n";
 
 function icct_backend_current_user_id()

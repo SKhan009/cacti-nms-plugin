@@ -28,14 +28,11 @@
     const severityColors = icctSeverityColors;
     function renderLegend() {
         const totals = Object.fromEntries(Object.keys(severityColors).map((level) => [level, 0]));
-        const rackIds = new Set(data.racks.map((rack) => Number(rack.id)));
-        data.devices
-            .filter((device) => rackIds.has(Number(device.rack_id)) && !device.peripheral)
-            .forEach((device) => {
-                Object.keys(totals).forEach(
-                    (level) => (totals[level] += Number(device.fault_counts?.[level] || 0)),
-                );
-            });
+        data.devices.forEach((device) => {
+            Object.keys(totals).forEach(
+                (level) => (totals[level] += Number(device.fault_counts?.[level] || 0)),
+            );
+        });
         const legend = document.querySelector('#rackAlarms');
         legend.replaceChildren(
             el(
@@ -54,18 +51,23 @@
         });
     }
     const dashboardSource = document.querySelector('#dashboardData');
-    const scopeSite = dashboardSource
-        ? Number(JSON.parse(dashboardSource.textContent).site_id || 0)
-        : 0;
+    const scope = dashboardSource ? JSON.parse(dashboardSource.textContent) : {};
+    const scopeSite = Number(scope.site_id || 0);
+    const scopePoller = Number(scope.poller_id || 0);
     function scopedData(value) {
-        if (!scopeSite) return value;
         return {
             ...value,
-            sites: value.sites.filter((site) => Number(site.id) === scopeSite),
-            racks: value.racks,
-            devices: value.devices,
+            sites: value.sites.filter((site) => !scopeSite || Number(site.id) === scopeSite),
+            racks: value.racks.filter((rack) => !scopeSite || Number(rack.site_id) === scopeSite),
+            devices: value.devices.filter(
+                (device) =>
+                    (!scopeSite || Number(device.site_id) === scopeSite) &&
+                    (!scopePoller || Number(device.poller_id) === scopePoller),
+            ),
         };
     }
+    data = scopedData(data);
+    savedData = structuredClone(data);
     function siteDevices() {
         return data.devices;
     }
@@ -518,8 +520,18 @@
                 .catch(() => (message.textContent = 'Fullscreen is unavailable.'));
     });
     render();
-    setInterval(() => {
-        if (!editing && !busy && !document.querySelector('#icct-panel-rack').hidden)
-            refresh().catch((error) => (message.textContent = error.message));
-    }, 30000);
+    setInterval(
+        () => {
+            if (!editing && !busy && !document.querySelector('#icct-panel-rack').hidden)
+                refresh().catch((error) => (message.textContent = error.message));
+        },
+        Math.max(
+            5,
+            Number(
+                dashboardSource
+                    ? JSON.parse(dashboardSource.textContent).preferences.refresh_seconds
+                    : 30,
+            ) || 30,
+        ) * 1000,
+    );
 })();

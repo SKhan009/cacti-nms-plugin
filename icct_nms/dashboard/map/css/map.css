@@ -83,82 +83,6 @@
     background: #fff;
     z-index: 0;
 }
-.icct-map-footer {
-    position: relative;
-    padding: 6px 8px;
-    font-size: 12px;
-}
-.icct-map-footer details[open] {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: white;
-    z-index: 1000;
-    padding: 12px;
-    border: 1px solid #ddd;
-    max-height: 200px;
-    overflow: auto;
-}
-.icct-map-footer summary {
-    cursor: pointer;
-}
-.icct-map-popup {
-    width: 236px;
-    max-width: 100%;
-    max-height: 280px;
-    overflow: auto;
-    font-size: 12px;
-}
-.icct-map-popup p {
-    margin: 6px 0;
-    line-height: 1.4;
-}
-.icct-map-device-name {
-    font-weight: 700;
-    font-size: 14px;
-}
-.icct-map-device-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin: 10px 0;
-}
-.icct-map-device-grid dt {
-    color: #666;
-}
-.icct-map-device-grid dd {
-    margin: 2px 0 0;
-    font-weight: 600;
-    overflow-wrap: anywhere;
-}
-.icct-map-device-alarm {
-    padding: 8px;
-    background: #f4f4f4;
-}
-.icct-map-popup select {
-    width: 100%;
-    margin-bottom: 10px;
-}
-.icct-map-compact-popup .leaflet-popup-content {
-    margin: 12px;
-    width: auto !important;
-}
-.icct-state-label {
-    width: max-content !important;
-    max-width: 120px;
-    text-align: center;
-    font: 11px/1.15 var(--font-ui);
-    color: #364348;
-    text-shadow:
-        0 1px 2px white,
-        1px 0 2px white;
-    pointer-events: none;
-}
-.icct-state-label span {
-    display: block;
-    transform: translate(-50%, -50%);
-}
 .icct-map-site-label {
     font-weight: 700;
     font-size: 13px;
@@ -296,31 +220,6 @@
     padding: 14px;
     border-bottom: 1px solid #ddd;
 }
-.icct-device-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 20px;
-}
-.icct-device-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 18px;
-    border: 1px solid #ddd;
-    color: #333;
-    text-decoration: none;
-    text-align: center;
-}
-.icct-device-card img {
-    width: 64px;
-    height: 64px;
-    object-fit: contain;
-}
-.icct-device-card span {
-    font-size: 12px;
-    color: #666;
-}
 @media (max-width: 700px) {
     .icct-view-tabs button {
         padding: 7px 9px;
@@ -343,17 +242,6 @@
     border-radius: 50%;
     background: currentColor;
     margin-right: 5px;
-}
-
-.rack-toolbar {
-    display: flex;
-    gap: 10px;
-    align-items: end;
-    margin-bottom: 10px;
-}
-.rack-toolbar .field {
-    width: 280px;
-    margin: 0;
 }
 .rack-icon {
     border: 1px solid #555;
@@ -471,16 +359,6 @@
 .rack-device[draggable='true'] {
     cursor: grab;
 }
-.rack-peripherals {
-    padding: 8px 12px;
-    min-height: 60px;
-    border-top: 1px dashed #aaa;
-}
-.rack-peripherals h4 {
-    margin: 0 0 8px;
-    font-size: 12px;
-}
-.rack-peripherals .rack-device,
 #rackDeviceList .rack-device {
     margin: 5px 0;
     min-height: 28px;
@@ -520,18 +398,9 @@
     #rackDevicePool {
         width: auto;
     }
-    .rack-toolbar {
-        flex-wrap: wrap;
-    }
 }
 
 /* Three cabinet carousel with the reference's right-hand control rail. */
-.rack-toolbar {
-    margin: 0 0 10px;
-}
-.rack-toolbar .field {
-    width: 260px;
-}
 #rackViewMessage:empty {
     display: none;
 }
@@ -647,9 +516,6 @@
 .rack-slots > .rack-device small {
     font-size: 10px;
 }
-.rack-peripherals {
-    background: #f4f4f4;
-}
 .rack-slide {
     min-width: 0;
     min-height: 0;
@@ -721,9 +587,6 @@
     }
     .rack-device {
         font-size: 10px;
-    }
-    .rack-peripherals {
-        padding: 5px;
     }
     .rack-controls {
         width: 30px;
@@ -1436,8 +1299,7 @@
     flex: 1;
 }
 .widget-grip,
-.widget-icon,
-.widget-remove {
+.widget-icon {
     background: transparent;
     border: 0;
     cursor: pointer;
@@ -1459,10 +1321,6 @@
     fill: none;
     stroke: currentColor;
     stroke-width: 1.6;
-}
-.topology-widget-remove {
-    order: 3;
-    font-size: 17px;
 }
 .dashboard-grid .icct-map-toolbar {
     padding: 10px;
@@ -1506,21 +1364,6 @@
 }
 .birds-content g:focus-visible {
     outline: 2px solid #0f62fe;
-}
-.birds-center {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    color: #666;
-    font-size: 11px;
-}
-.birds-center select {
-    min-width: 0;
-    width: 100%;
-    font-size: 11px;
-    padding: 4px;
-    border: 0;
-    background: #f4f4f4;
 }
 .birds-content p,
 .alarm-content p {
@@ -1593,14 +1436,6 @@
 .dashboard-no-side {
     grid-template-columns: 1fr;
 }
-.dashboard-no-topology {
-    grid-template-columns: 1fr;
-}
-.dashboard-no-topology .dashboard-widgets {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    align-content: start;
-}
 .dashboard-grid [hidden] {
     display: none !important;
 }
@@ -1652,9 +1487,6 @@
 .dashboard-card {
     flex: none;
     min-height: 0;
-}
-.birds-center {
-    white-space: nowrap;
 }
 .birds-content p {
     font-size: 10px;
@@ -1949,11 +1781,6 @@
 }
 .recent-detail a {
     color: #155cff;
-}
-.recent-note {
-    font-size: 11px;
-    color: #777;
-    padding: 0 16px 10px;
 }
 .dashboard-card.widget-expanded {
     position: fixed;
@@ -2384,19 +2211,6 @@
     padding: 6px;
     font-size: 12px;
     white-space: nowrap;
-}
-
-.dashboard-toolbar .dashboard-inline-name {
-    box-sizing: border-box;
-    width: 240px;
-    min-height: 36px;
-    padding: 6px 12px;
-    background: #f4f4f4;
-    border: 0;
-    border-bottom: 2px solid #0f62fe;
-    font: inherit;
-    font-size: 13px;
-    outline: none;
 }
 .dashboard-toolbar [hidden] {
     display: none !important;

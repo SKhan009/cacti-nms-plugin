@@ -7,7 +7,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     http_response_code(405);
     header('Allow: POST');
     echo json_encode(['ok' => false, 'error' => 'POST is required.']);
-    exit;
+    exit();
 }
 $auth_json = true;
 require dirname(__DIR__, 2) . '/../../include/auth.php';

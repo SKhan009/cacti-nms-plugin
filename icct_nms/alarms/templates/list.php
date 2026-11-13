@@ -144,7 +144,8 @@
             </select>
         </label>
         <span id="alarm-page-count"></span>
-        <div>
+        <div class="page-controls">
+            <span id="alarm-page-number"></span>
             <button
                 type="button"
                 id="alarm-prev"
@@ -158,7 +159,6 @@
                     <path d="M15 5 7 12 15 19Z" />
                 </svg>
             </button>
-            <span id="alarm-page-number"></span>
             <button
                 type="button"
                 id="alarm-next"
@@ -192,19 +192,19 @@
             <div
                 id="alarm-ticket-fields"
                 hidden>
-                <label class="field">Ticket Severity<select name="ticket_severity">
+                <label class="field"><span class="field-label" data-field-help="Priority assigned to the escalation ticket: High, Medium, or Low.">Ticket Severity</span><select name="ticket_severity">
                         <option>High</option>
                         <option>Medium</option>
                         <option>Low</option>
                     </select>
                 </label>
-                <label class="field">Ticket Name
+                <label class="field"><span class="field-label" data-field-help="Title used to identify this escalation ticket. Maximum 320 characters.">Ticket Name</span>
                     <input
                         name="ticket_name"
                         maxlength="320">
                 </label>
             </div>
-            <label class="field">Remarks
+            <label class="field"><span class="field-label" data-field-help="Note saved with this alarm action. Maximum 1000 characters.">Remarks</span>
                 <textarea
                     name="note"
                     maxlength="1000"

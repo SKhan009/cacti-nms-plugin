@@ -387,6 +387,8 @@ if (!$viewGraphs): ?>
             id="device-graph-empty"
             hidden>No graphs match your search.</p>
         <div class="type-pagination">
+            <div class="page-controls">
+            <span id="device-graph-page"></span>
             <button
                 type="button"
                 id="device-graph-prev"
@@ -400,7 +402,6 @@ if (!$viewGraphs): ?>
                     <path d="M15 5 7 12 15 19Z" />
                 </svg>
             </button>
-            <span id="device-graph-page"></span>
             <button
                 type="button"
                 id="device-graph-next"
@@ -414,6 +415,7 @@ if (!$viewGraphs): ?>
                     <path d="M9 5 17 12 9 19Z" />
                 </svg>
             </button>
+            </div>
         </div>
     </section>
     <?php require __DIR__ . '/device_diagnostics.php'; ?>
@@ -429,23 +431,55 @@ if (!$viewGraphs): ?>
                 aria-label="Saved fault rules and current device observations."
                 data-tooltip="Saved fault rules and current device observations.">ⓘ</span>
         </h2>
+        <?php
+        $summaryRows = [];
+                    $viewRules = icct_nms_fault_rules($id);
+                    $faults = icct_nms_fault_observations($old);
+                    $summaryRrdReadings = [];
+foreach ($viewRules as $ruleIndex => $rule) {
+    $ruleReadings = array_values(array_filter($faults, static fn($item) => isset($item['rule']) && (string) $item['rule'] === (string) $ruleIndex));
+    if (($rule['source'] ?? 'rrd') === 'rrd') {
+        $readingKey = $rule['template_id'] . ':' . $rule['metric_id'];
+        if (!isset($summaryRrdReadings[$readingKey])) {
+            try {
+                $summaryRrdReadings[$readingKey] = icct_nms_fault_rrd_read($old, (int) $rule['template_id'], (int) $rule['metric_id']);
+            } catch (Throwable $error) {
+                $summaryRrdReadings[$readingKey] = [['value' => null, 'reason' => 'Unavailable (no fresh sample)']];
+            }
+        }
+        $ruleReadings = $summaryRrdReadings[$readingKey];
+    }
+    $summaryRows[$ruleIndex] = icct_nms_fault_summary_fields($rule, $ruleReadings);
+}
+
+        $faultTab = $_GET['fault_tab'] ?? 'settings';
+        if (!in_array($faultTab, ['settings', 'triggered', 'readings'], true)) $faultTab = 'settings';
+        ?>
+        <nav class="device-view-tabs" aria-label="Fault sections">
+            <?php foreach (['settings' => 'Alarm Settings', 'triggered' => 'Triggered Alarms', 'readings' => 'Current Readings'] as $key => $label): ?>
+                <a href="inventory/controllers/device.php?id=<?= (int) $id ?>&amp;view=1&amp;fault_tab=<?= $key ?>#view-fcaps" class="<?= $faultTab === $key ? 'current' : '' ?>" <?= $faultTab === $key ? 'aria-current="page"' : '' ?>><?= $label ?></a>
+            <?php endforeach; ?>
+        </nav>
+        <?php if ($faultTab === 'settings'): ?>
+        <h3>All configured alarms</h3>
         <div class="site-table-wrap">
             <table class="site-table">
                 <thead>
                     <tr>
                         <th>Rule</th>
                         <th>Severity</th>
-                        <th>Minimum</th>
-                        <th>Maximum</th>
+                        <th>Condition</th>
+                        <th>Threshold Value</th>
+                        <th>Units</th>
                         <th>Description</th>
                         <th>Fix</th>
                         <th>Enabled</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php
-                    $viewRules = icct_nms_fault_rules($id);
-foreach ($viewRules as $rule): ?>
+                    <?php foreach ($viewRules as $ruleIndex => $rule):
+    $summaryFields = $summaryRows[$ruleIndex];
+?>
                         <tr>
                             <td><?= $display($rule['name']) ?></td>
                             <td>
@@ -453,8 +487,9 @@ foreach ($viewRules as $rule): ?>
                                     class="device-status"
                                     data-log-status="<?= icct_nms_h($rule['severity']) ?>"><?= $display($rule['severity']) ?></span>
                             </td>
-                            <td><?= $display($rule['minimum']) ?></td>
-                            <td><?= $display($rule['maximum']) ?></td>
+                            <td><?= $display($summaryFields['condition']) ?></td>
+                            <td><?= $display($summaryFields['threshold']) ?></td>
+                            <td><?= $display($summaryFields['units']) ?></td>
                             <td><?= $display($rule['description'] ?? '') ?></td>
                             <td><?= $display($rule['corrective_action'] ?? '') ?></td>
                             <td><?= $rule['enabled'] ? 'Yes' : 'No' ?></td>
@@ -462,7 +497,7 @@ foreach ($viewRules as $rule): ?>
                     <?php endforeach;
 if (!$viewRules): ?>
                         <tr>
-                            <td colspan="7">No fault rules configured.</td>
+                            <td colspan="8">No fault rules configured.</td>
                         </tr>
                     <?php endif;
 ?>
@@ -492,40 +527,41 @@ if (!$viewRules): ?>
                 </tbody>
             </table>
         </div>
-        <?php
-        $faults = icct_nms_fault_observations($old);
-if (
-    $faults
-): ?>
-            <h3>Current observations</h3>
-            <div class="site-table-wrap">
-                <table class="site-table">
-                    <thead>
-                        <tr>
-                            <th>Graph</th>
-                            <th>Value</th>
-                            <th>State</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach (
-                            $faults as $fault
-                        ): ?>
-                            <tr>
-                                <td><?= $display($fault['graph']) ?></td>
-                                <td><?= $display($fault['value']) ?></td>
-                                <td>
-                                    <span
-                                        class="device-status"
-                                        data-log-status="<?= icct_nms_h($fault['state']) ?>"><?= $display($fault['state']) ?></span>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        <?php endif;
-?>
+
+        <?php elseif ($faultTab === 'triggered'):
+            require_once __DIR__ . '/../../alarms/services/alarm_service.php';
+            $deviceAlarms = array_values(array_filter(icct_nms_alarm_rows(), static fn($alarm) => (int) $alarm['host_id'] === (int) $id));
+        ?>
+        <h3>Triggered alarms for this device</h3>
+        <div class="site-table-wrap"><table class="site-table">
+            <thead><tr><th>Alarm</th><th>Severity</th><th>Event source</th><th>Status</th><th>First occurred</th><th>Last observed</th><th>Count</th></tr></thead>
+            <tbody>
+            <?php foreach ($deviceAlarms as $alarm): ?>
+                <tr>
+                    <td><a class="fault-alarm-link" href="alarms/controllers/alarms.php?view=<?= icct_nms_h($alarm['alarm_key']) ?>"><?= $display($alarm['name']) ?></a></td>
+                    <td><span class="device-status" data-log-status="<?= icct_nms_h($alarm['severity']) ?>"><?= $display($alarm['severity']) ?></span></td>
+                    <td><?= $display($alarm['source']) ?></td><td><?= $display($alarm['state']) ?></td>
+                    <td><?= $display(icct_nms_alarm_format_time($alarm['occurred_epoch'])) ?></td>
+                    <td><?= $display(icct_nms_alarm_format_time($alarm['observed_epoch'])) ?></td>
+                    <td><?= (int) $alarm['occurrences'] ?></td>
+                </tr>
+            <?php endforeach; ?>
+            <?php if (!$deviceAlarms): ?><tr><td colspan="7">No alarms have been triggered for this device.</td></tr><?php endif; ?>
+            </tbody>
+        </table></div>
+        <?php else: ?>
+        <h3>Current readings</h3>
+        <div class="site-table-wrap"><table class="site-table">
+            <thead><tr><th>Rule</th><th>Units</th><th>Current Reading</th><th>Alarm Enabled</th></tr></thead>
+            <tbody>
+            <?php foreach ($viewRules as $ruleIndex => $rule): $summaryFields = $summaryRows[$ruleIndex]; ?>
+                <tr><td><?= $display($rule['name']) ?></td><td><?= $display($summaryFields['units']) ?></td>
+                    <td style="white-space: pre-line"><?= $display($summaryFields['reading']) ?></td><td><?= $rule['enabled'] ? 'Yes' : 'No' ?></td></tr>
+            <?php endforeach; ?>
+            <?php if (!$viewRules): ?><tr><td colspan="4">No fault readings configured for this device.</td></tr><?php endif; ?>
+            </tbody>
+        </table></div>
+        <?php endif; ?>
     </section>
     <?php require __DIR__ . '/../../protocols/syslog/templates/device_view_syslog.php';
 require __DIR__ . '/../../protocols/snmp/traps/templates/history.php';

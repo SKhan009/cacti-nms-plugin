@@ -8,7 +8,9 @@
     <p class="device-record-empty"><?= $showIncidents ? 'No link incidents match the current filters.' : 'No repeated events match the current filters.' ?></p>
 <?php else: ?>
     <div class="site-table-wrap">
-        <table class="site-table" aria-label="<?= $showIncidents ? 'Syslog link incidents' : 'Repeated Syslog events' ?>">
+        <table
+            class="site-table"
+            aria-label="<?= $showIncidents ? 'Syslog link incidents' : 'Repeated Syslog events' ?>">
             <thead>
                 <tr>
                     <?php foreach ($showIncidents

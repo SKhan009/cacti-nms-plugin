@@ -118,7 +118,9 @@ if (!empty($preview['dependencies'])): ?>
         <p><?= icct_nms_h(implode(', ', array_column($preview['files'], 'name'))) ?></p>
         <div class="protocol-grid cols-2">
             <label class="field">
-                <span class="field-label">Device Type *</span>
+                <span
+                    class="field-label"
+                    data-field-help="Device type associated with the uploaded MIB in this repository.">Device Type *</span>
                 <select
                     name="type_id"
                     required>

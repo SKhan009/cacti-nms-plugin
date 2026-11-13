@@ -26,10 +26,12 @@ function icct_nms_syslog_csv_rows(int $host, array $filters, string $tab): Gener
     $cursor = [];
     do {
         $boundary = $cursor ? ' AND (e.event_time<? OR (e.event_time=? AND e.id<?))' : '';
-        $rows = db_fetch_assoc_prepared(
-            $query . $boundary . ' ORDER BY e.event_time DESC,e.id DESC LIMIT ' . $limit,
-            [$host, ...$params, ...$cursor],
-        ) ?: [];
+        $rows =
+            db_fetch_assoc_prepared(
+                $query . $boundary . ' ORDER BY e.event_time DESC,e.id DESC LIMIT ' . $limit,
+                [$host, ...$params, ...$cursor],
+            ) ?:
+            [];
         yield from $rows;
         if (count($rows) === $limit) {
             $last = end($rows);
@@ -46,12 +48,45 @@ function icct_nms_syslog_export_history(int $id, array $input): void
     $severities = icct_backend_syslog_severity_labels();
     $facilities = icct_backend_syslog_facility_labels();
     $columns = match ($tab) {
-        'incidents' => ['Started', 'Interface', 'Event', 'Sender IP', 'Severity', 'Facility', 'Occurrences', 'Recovery', 'Downtime (seconds)', 'Status'],
-        'repeated' => ['First occurrence', 'Last occurrence', 'Event', 'Sender IP', 'Severity', 'Facility', 'Occurrences'],
-        default => ['Event time', 'Last received', 'Event source', 'Sender IP', 'Transport', 'Severity', 'Facility', 'Occurrences', 'Timestamp source', 'Original message', 'Raw Syslog'],
+        'incidents' => [
+            'Started',
+            'Interface',
+            'Event',
+            'Sender IP',
+            'Severity',
+            'Facility',
+            'Occurrences',
+            'Recovery',
+            'Downtime (seconds)',
+            'Status',
+        ],
+        'repeated' => [
+            'First occurrence',
+            'Last occurrence',
+            'Event',
+            'Sender IP',
+            'Severity',
+            'Facility',
+            'Occurrences',
+        ],
+        default => [
+            'Event time',
+            'Last received',
+            'Event source',
+            'Sender IP',
+            'Transport',
+            'Severity',
+            'Facility',
+            'Occurrences',
+            'Timestamp source',
+            'Original message',
+            'Raw Syslog',
+        ],
     };
     header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="syslog-device-' . $id . '-' . $tab . '.csv"');
+    header(
+        'Content-Disposition: attachment; filename="syslog-device-' . $id . '-' . $tab . '.csv"',
+    );
     header('Cache-Control: no-store');
     $out = fopen('php://output', 'w');
     fputcsv($out, $columns, ',', '"', '');
@@ -60,13 +95,40 @@ function icct_nms_syslog_export_history(int $id, array $input): void
         $severity = $severities[(int) $event['severity_code']] ?? 'Unknown';
         $facility = $facilities[$event['facility_code']] ?? '';
         $values = match ($tab) {
-            'incidents' => [$event['event_time'], $row['port'], $event['message'], $event['source_ip'], $severity,
-                $facility, $row['occurrences'], $row['recovery'], $row['seconds'], $row['recovery'] === null ? 'Open' : 'Recovered'],
-            'repeated' => [$row['first_time'], $row['last_time'], $event['message'], $event['source_ip'], $severity,
-                $facility, $row['occurrences']],
-            default => [$event['event_time'], $event['last_seen'], $event['event_origin'], $event['source_ip'],
-                $event['transport'], $severity, $facility, $event['repeat_count'], $event['timestamp_kind'],
-                $event['message'], $event['raw_message']],
+            'incidents' => [
+                $event['event_time'],
+                $row['port'],
+                $event['message'],
+                $event['source_ip'],
+                $severity,
+                $facility,
+                $row['occurrences'],
+                $row['recovery'],
+                $row['seconds'],
+                $row['recovery'] === null ? 'Open' : 'Recovered',
+            ],
+            'repeated' => [
+                $row['first_time'],
+                $row['last_time'],
+                $event['message'],
+                $event['source_ip'],
+                $severity,
+                $facility,
+                $row['occurrences'],
+            ],
+            default => [
+                $event['event_time'],
+                $event['last_seen'],
+                $event['event_origin'],
+                $event['source_ip'],
+                $event['transport'],
+                $severity,
+                $facility,
+                $event['repeat_count'],
+                $event['timestamp_kind'],
+                $event['message'],
+                $event['raw_message'],
+            ],
         };
         $values = array_map(static function ($value) {
             $value = (string) $value;

@@ -497,13 +497,14 @@
                 'preferences' => $dashboardPreferences,
                 'readings' => $dashboardReadings,
                 'site_id' => $dashboardSiteId,
+                'poller_id' => $dashboardPollerId ?? 0,
                 'user' => icct_backend_current_user_id(),
             ],
             JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR,
         ) ?></script>
     <dialog
         id="lnmsNodeDialog"
-        class="topology-device-dialog"
+        class="topology-device-dialog map-site-dialog"
         aria-labelledby="lnmsNodeTitle">
         <header class="topology-summary-heading">
             <div>
@@ -521,11 +522,17 @@
         </header>
         <dl
             id="lnmsNodeDetails"
-            class="topology-summary"></dl>
-        <a
-            id="lnmsCollectorLink"
-            class="button"
-            hidden>View Cacti Collector</a>
+            class="topology-capacity map-site-counts"></dl>
+        <div
+            id="lnmsNodeAlarms"
+            class="topology-summary-alarms"></div>
+        <nav class="topology-summary-links map-site-links">
+            <a id="lnmsTopologyLink">View Topology <span aria-hidden="true">→</span></a>
+            <button
+                type="button"
+                disabled
+                title="Chat is not configured">Chat <span aria-hidden="true">→</span></button>
+        </nav>
     </dialog>
     <script
         type="application/json"

@@ -103,7 +103,11 @@ const link = {
     href: 'http://localhost/cacti/plugins/icct_nms/inventory/diagnostics/controllers/diagnostics.php?host_id=2&tool=pathchar',
     closest: () => null,
 };
-events.click({ target: { closest: (selector) => selector === 'a[href]' ? link : null }, button: 0, preventDefault() {} });
+events.click({
+    target: { closest: (selector) => (selector === 'a[href]' ? link : null) },
+    button: 0,
+    preventDefault() {},
+});
 (async () => {
     await new Promise(setImmediate);
     const recovery = actions.beforeElement;

@@ -2,7 +2,6 @@
 
 /** ICCT-owned configuration equipment services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: equipment fields. */
 function icct_backend_equipment_fields($json, $protocol)
 {
     if (!is_string($json) || strlen($json) > 32768) {
@@ -113,7 +112,6 @@ function icct_backend_equipment_fields($json, $protocol)
     return $result;
 }
 
-/** Reused Inventory service: equipment value. */
 function icct_backend_equipment_value(array $field, $value)
 {
     if ($field['type'] === 'string') {

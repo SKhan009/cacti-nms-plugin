@@ -50,7 +50,7 @@ function icct_nms_map_readings($id)
     }
     $ids = implode(',', array_map('intval', array_column($graphs, 'local_graph_id')));
     $sources = db_fetch_assoc_prepared(
-        "SELECT DISTINCT dtr.local_data_id,dtr.data_source_name FROM graph_local gl JOIN graph_templates_item gti ON gti.local_graph_id=gl.id JOIN data_template_rrd dtr ON dtr.id=gti.task_item_id WHERE gl.host_id=? AND gl.id IN ($ids) AND dtr.data_source_name IN ('cpu_percent','5min_cpu','ssCpuIdle','memory_percent','mem_total','mem_free')",
+        "SELECT DISTINCT dtr.local_data_id,dtr.data_source_name,gtg.title_cache,gtg.vertical_label FROM graph_local gl JOIN graph_templates_graph gtg ON gtg.local_graph_id=gl.id JOIN graph_templates_item gti ON gti.local_graph_id=gl.id JOIN data_template_rrd dtr ON dtr.id=gti.task_item_id WHERE gl.host_id=? AND gl.id IN ($ids)",
         [$id],
     );
     if (!$sources) {
@@ -62,6 +62,35 @@ function icct_nms_map_readings($id)
     $cache = [];
     $values = [];
     foreach ($sources as $source) {
+        $metric = $source['data_source_name'];
+        $known = [
+            'cpu_percent',
+            '5min_cpu',
+            'ssCpuIdle',
+            'memory_percent',
+            'mem_total',
+            'mem_free',
+        ];
+        if (!in_array($metric, $known, true)) {
+            $units = strtolower(trim($source['vertical_label'] ?? ''));
+            $title = strtolower($source['title_cache'] ?? '');
+            if (!in_array($units, ['%', 'percent', 'percentage'], true)) {
+                continue;
+            }
+            if (
+                preg_match('/cpu|processor/', $title) &&
+                preg_match('/usage|utilization|used/', $metric)
+            ) {
+                $metric = 'cpu_percent';
+            } elseif (
+                preg_match('/memory|ram/', $title) &&
+                preg_match('/usage|utilization|used/', $metric)
+            ) {
+                $metric = 'memory_percent';
+            } else {
+                continue;
+            }
+        }
         try {
             $key = (int) $source['local_data_id'];
             if (!isset($cache[$key])) {
@@ -92,9 +121,11 @@ function icct_nms_map_readings($id)
                     is_numeric($point) &&
                     is_finite((float) $point)
                 ) {
-                    $values[$source['data_source_name']] = (float) $point;
+                    $values[$metric] = (float) $point;
                 }
-                break;
+                if (isset($values[$metric])) {
+                    break;
+                }
             }
         } catch (Throwable $failure) {
             /* Missing RRDs remain unknown. */
@@ -176,6 +207,45 @@ function icct_nms_map_measurement($host)
         'collected_at' => $job['finished_at'],
     ];
 }
+/** Shared active journal projection for every dashboard view. */
+function icct_nms_dashboard_alarm_data($id)
+{
+    static $byHost = null;
+    if ($byHost === null) {
+        $byHost = [];
+        foreach (icct_nms_alarm_rows() as $alarm) {
+            if ($alarm['state'] === 'Active') {
+                $byHost[(int) $alarm['host_id']][] = $alarm;
+            }
+        }
+    }
+    $counts = array_fill_keys(['Critical', 'Major', 'Minor', 'Warning', 'Information'], 0);
+    $alarms = [];
+    $highest = null;
+    foreach ($byHost[(int) $id] ?? [] as $row) {
+        if (!isset($counts[$row['severity']])) {
+            continue;
+        }
+        $counts[$row['severity']]++;
+        $alarms[] = [
+            'name' => $row['name'],
+            'severity' => $row['severity'],
+            'source' => $row['source'],
+            'time' => (int) $row['occurred_epoch'],
+            'event_description' => $row['description'],
+            'alarm_key' => $row['alarm_key'],
+            'corrective_action' => $row['fix'],
+        ];
+        if (
+            $highest === null ||
+            array_search($row['severity'], array_keys($counts), true) <
+                array_search($highest['severity'], array_keys($counts), true)
+        ) {
+            $highest = ['severity' => $row['severity'], 'message' => $row['name']];
+        }
+    }
+    return ['fault_counts' => $counts, 'fault_alarms' => $alarms, 'alarm' => $highest];
+}
 function icct_nms_map_data()
 {
     $sites = [];
@@ -192,6 +262,7 @@ function icct_nms_map_data()
         $device = [
             'id' => $id,
             'site_id' => (int) $row['site_id'],
+            'poller_id' => (int) $row['poller_id'],
             'name' => $row['description'],
             'status' => $row['status_label'],
             'address' => $row['hostname'],
@@ -208,7 +279,7 @@ function icct_nms_map_data()
             'fresh' => $portView['fresh'],
             'collected' => $portView['collected'],
             'items' => array_map(
-                static fn ($port) => array_intersect_key(
+                static fn($port) => array_intersect_key(
                     $port,
                     array_flip([
                         'index',
@@ -265,18 +336,9 @@ function icct_nms_map_data()
         $device['diagnostics'] = is_realm_allowed(3) ? icct_backend_diag_selected_labels($id) : [];
         $device['diagnostic_measurement'] = icct_nms_map_measurement($row);
         $device['packet_loss'] = $device['diagnostic_measurement']['packet_loss'];
-        $device['fault_counts'] = array_fill_keys(
-            ['Critical', 'Major', 'Minor', 'Warning', 'Information'],
-            0,
-        );
-        $faults = icct_nms_fault_observations($row);
-        foreach ($faults as $fault) {
-            if (isset($device['fault_counts'][$fault['state']])) {
-                $device['fault_counts'][$fault['state']]++;
-            }
-        }
+        $device = array_replace($device, icct_nms_dashboard_alarm_data($id));
         $portStates = [];
-        foreach ($faults as $fault) {
+        foreach (icct_nms_fault_observations($row) as $fault) {
             if (strpos((string) $fault['rule'], 'port:') === 0) {
                 $portStates[substr($fault['rule'], 5)] = $fault['state'];
             }
@@ -285,36 +347,6 @@ function icct_nms_map_data()
             $port['alarm_state'] = $portStates[$port['index']] ?? 'Unmonitored';
         }
         unset($port);
-        $rules = icct_nms_fault_rules($id);
-        $device['fault_alarms'] = [];
-        foreach ($faults as $fault) {
-            if (isset($device['fault_counts'][$fault['state']])) {
-                $rule = $rules[$fault['rule']] ?? [];
-                $device['fault_alarms'][] = [
-                    'name' =>
-                        trim($rule['name'] ?? '') ?: $fault['graph'] ?? 'Fault threshold exceeded',
-                    'severity' => $fault['state'],
-                    'source' => strpos((string) $fault['rule'], 'port:') === 0 ? 'Port' : 'Fault',
-                    'time' => (int) ($fault['sample_time'] ?? 0),
-                    'value' => $fault['value'] ?? null,
-                    'graph' => $fault['graph'] ?? '',
-                    'graph_id' => (int) ($fault['graph_id'] ?? 0),
-                    'corrective_action' => $rule['corrective_action'] ?? '',
-                ];
-            }
-        }
-        $rank = ['Information' => 1, 'Minor' => 2, 'Warning' => 3, 'Major' => 4, 'Critical' => 5];
-        $highest = 0;
-        foreach ($faults as $fault) {
-            if (($rank[$fault['state']] ?? 0) > $highest) {
-                $highest = $rank[$fault['state']];
-                $rule = $rules[$fault['rule']] ?? [];
-                $device['alarm'] = [
-                    'severity' => $fault['state'],
-                    'message' => ($rule['name'] ?? '' ?: $fault['graph']) . ' — ' . $fault['value'],
-                ];
-            }
-        }
         $point = icct_nms_map_coordinates(
             $location['latitude'] ?? null,
             $location['longitude'] ?? null,

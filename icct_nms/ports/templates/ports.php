@@ -33,6 +33,7 @@
                     type="checkbox"
                     id="port-monitor-enabled"
                     <?= $portSettings['enabled'] ? 'checked' : '' ?>
+
                     aria-label="Port Monitoring">
                 <span class="switch-track"></span>
                 <span id="port-monitor-label"><?= $portSettings['enabled'] ? 'Yes' : 'No' ?></span>

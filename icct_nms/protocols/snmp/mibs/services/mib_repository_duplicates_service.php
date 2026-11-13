@@ -33,7 +33,8 @@ function icct_mib_repository_oid_index($records, $module)
                 'index_description',
                 'table',
                 'numeric',
-            ] as $key
+            ]
+            as $key
         ) {
             $definition[$key] = $record[$key] ?? null;
         }
@@ -143,7 +144,7 @@ function icct_mib_repository_comparison($preview)
     usort($conflicts, $sort);
     usort($warnings, $sort);
     $identity = array_map(
-        fn ($file) => [
+        fn($file) => [
             'module' => $file['module'],
             'name' => $file['name'],
             'hash' => $file['hash'],

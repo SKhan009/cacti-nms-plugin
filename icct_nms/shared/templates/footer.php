@@ -46,7 +46,9 @@
             name="action"
             value="queue">
         <div class="field">
-            <label for="shared-diagnostic-tool">Diagnostic method</label>
+            <label
+                class="field-label"
+                for="shared-diagnostic-tool">Diagnostic method</label>
             <select
                 id="shared-diagnostic-tool"
                 name="tool"></select>
@@ -61,17 +63,41 @@
         id="shared-diagnostic-status"
         role="status"
         aria-live="polite"></p>
-    <section id="shared-diagnostic-reading" class="diagnostic-reading" aria-label="Diagnostic output" hidden>
-        <div class="device-view-tabs diagnostic-reading-tabs" role="tablist" aria-label="Diagnostic result">
-            <button type="button" role="tab" id="shared-diagnostic-summary-tab" aria-selected="true"
+    <section
+        id="shared-diagnostic-reading"
+        class="diagnostic-reading"
+        aria-label="Diagnostic output"
+        hidden>
+        <div
+            class="device-view-tabs diagnostic-reading-tabs"
+            role="tablist"
+            aria-label="Diagnostic result">
+            <button
+                type="button"
+                role="tab"
+                id="shared-diagnostic-summary-tab"
+                aria-selected="true"
                 aria-controls="shared-diagnostic-summary">Summary</button>
-            <button type="button" role="tab" id="shared-diagnostic-raw-tab" aria-selected="false"
-                aria-controls="shared-diagnostic-raw" tabindex="-1">Raw data</button>
+            <button
+                type="button"
+                role="tab"
+                id="shared-diagnostic-raw-tab"
+                aria-selected="false"
+                aria-controls="shared-diagnostic-raw"
+                tabindex="-1">Raw data</button>
         </div>
-        <div class="diagnostic-reading-panel" id="shared-diagnostic-summary" role="tabpanel"
-            aria-labelledby="shared-diagnostic-summary-tab" tabindex="0"></div>
-        <div class="diagnostic-reading-panel" id="shared-diagnostic-raw" role="tabpanel"
-            aria-labelledby="shared-diagnostic-raw-tab" hidden>
+        <div
+            class="diagnostic-reading-panel"
+            id="shared-diagnostic-summary"
+            role="tabpanel"
+            aria-labelledby="shared-diagnostic-summary-tab"
+            tabindex="0"></div>
+        <div
+            class="diagnostic-reading-panel"
+            id="shared-diagnostic-raw"
+            role="tabpanel"
+            aria-labelledby="shared-diagnostic-raw-tab"
+            hidden>
             <pre id="shared-diagnostic-output" tabindex="0" aria-label="Raw diagnostic output"></pre>
         </div>
     </section>

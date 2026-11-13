@@ -2,9 +2,26 @@
 
 require __DIR__ . '/../../inventory/services/inventory.php';
 require __DIR__ . '/../../dashboard/map/services/map_service.php';
+// Counts come from the active alarm journal, independently of transient port observations.
 function icct_nms_alarm_rows()
 {
-    return [];
+    return array_map(
+        static fn($source, $severity) => [
+            'host_id' => 7,
+            'state' => 'Active',
+            'severity' => $severity,
+            'name' => $source . ' fixture',
+            'source' => $source,
+            'occurred_epoch' => 100,
+            'description' => '',
+            'alarm_key' => $source,
+            'fix' => '',
+            'acknowledged' => 0,
+            'escalated' => 0,
+        ],
+        ['Port', 'Fault'],
+        ['Major', 'Critical'],
+    );
 }
 function icct_backend_require_device_access($id)
 {
@@ -302,18 +319,18 @@ foreach (['Normal', 'Unknown'] as $state) {
     $device = icct_nms_map_data()['sites'][0]['devices'][0];
     $widgets = icct_nms_dashboard_readings(['unlocated' => [$device], 'sites' => []]);
     if (
-        $widgets['total'] !== 1 ||
-        $widgets['severity']['Major'] !== 0 ||
-        count($widgets['recent']) !== 1
+        $widgets['total'] !== 2 ||
+        $widgets['severity']['Major'] !== 1 ||
+        count($widgets['recent']) !== 2
     ) {
-        throw new Exception('Dashboard retained cleared/stale port alarm');
+        throw new Exception('Transient observations changed the active journal count');
     }
     if (
-        $device['fault_counts']['Major'] !== 0 ||
-        count($device['fault_alarms']) !== 1 ||
+        $device['fault_counts']['Major'] !== 1 ||
+        count($device['fault_alarms']) !== 2 ||
         $device['ports']['items'][0]['alarm_state'] !== $state
     ) {
-        throw new Exception('Cleared or stale port counted as active');
+        throw new Exception('Journal counts and observed port state were not kept independent');
     }
 }
-echo "Port and fault severity feeds, clearing and stale observations passed\n";
+echo "Canonical journal counts remain consistent across map/widgets while port observations change\n";

@@ -100,17 +100,30 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
     <div class="device-history-heading">
         <h2 data-field-help="Messages received from this device and availability events recorded by Cacti. Expand a row to see its details.">Syslog Event History</h2>
         <div class="syslog-history-heading-actions">
-            <a class="button" aria-label="Download Syslog CSV" title="Download CSV for the selected tab and applied filters"
+            <a
+                class="button"
+                aria-label="Download Syslog CSV"
+                title="Download CSV for the selected tab and applied filters"
                 href="inventory/controllers/export.php?<?= icct_nms_h(http_build_query(['id' => (int) $id, 'syslog' => 1] + $syslogTabParams + $syslogFilterParams)) ?>">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true">
                     <path d="M12 3v12M7 10l5 5 5-5M4 15v6h16v-6"/>
                 </svg>
             </a>
-            <a class="button"
+            <a
+                class="button"
                 href="<?= icct_nms_h($syslogUrl($syslogFilterParams + $syslogTabParams + $syslogSizeParams + ['syslog_page' => $syslogPage])) ?>">Refresh</a>
         </div>
     </div>
-    <div class="netflow-summary syslog-summary" aria-label="Syslog history totals">
+    <div
+        class="netflow-summary syslog-summary"
+        aria-label="Syslog history totals">
         <?php foreach ([
             'Total messages' => number_format((int) $syslogSummary['messages']),
             'Event types' => number_format((int) $syslogSummary['event_types']),
@@ -140,7 +153,9 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
             <input type="hidden" name="syslog_tab" value="<?= icct_nms_h($syslogTab) ?>">
         <?php endif; ?>
         <div class="field">
-            <span id="syslog-severity-label" data-field-help="Choose one or more severities reported by the Syslog sender.">Severity</span>
+            <span
+                id="syslog-severity-label"
+                data-field-help="Choose one or more severities reported by the Syslog sender.">Severity</span>
             <details
                 class="syslog-select-menu"
                 data-syslog-history-severity>
@@ -210,7 +225,9 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
                 type="submit">Apply</button>
         </div>
     </form>
-    <nav class="device-view-tabs" aria-label="Syslog history views">
+    <nav
+        class="device-view-tabs"
+        aria-label="Syslog history views">
         <?php foreach (['all' => 'All logs', 'repeated' => 'Repeated events', 'incidents' => 'Incidents'] as $syslogTabKey => $syslogTabLabel): ?>
             <a href="<?= icct_nms_h($syslogUrl($syslogFilterParams + $syslogSizeParams + ($syslogTabKey === 'all' ? [] : ['syslog_tab' => $syslogTabKey]))) ?>"
                 <?= $syslogTabKey === $syslogTab ? 'class="current" aria-current="page"' : '' ?>>
@@ -386,7 +403,9 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
                                         <?php endforeach; ?>
                                     </dl>
                                     <div class="syslog-event-actions">
-                                        <a class="button primary" href="inventory/controllers/device.php?<?= icct_nms_h(http_build_query([
+                                        <a
+                                            class="button primary"
+                                            href="inventory/controllers/device.php?<?= icct_nms_h(http_build_query([
                                             'id' => (int) $id,
                                             'view' => 1,
                                             'trap_search' => $verificationTrap['program'],

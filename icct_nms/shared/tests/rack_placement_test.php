@@ -106,21 +106,21 @@ if (icct_nms_rack_units(['4', '3'], 24) !== [3, 2]) {
     throw new LogicException('Multi-unit range incorrect');
 }
 foreach ([[], ['0'], ['25'], ['3', '5'], ['3', '3'], ['1.5']] as $units) {
-    reject(fn () => icct_nms_rack_units($units, 24));
+    reject(fn() => icct_nms_rack_units($units, 24));
 }
 $revision = icct_nms_rack_revision(3);
 icct_nms_rack_place(3, 6, 2, ['3', '4'], false, $revision);
 if ($placements[3]['unit_height'] !== 2) {
     throw new LogicException('Range not persisted');
 }
-reject(fn () => icct_nms_rack_place(3, 6, 2, ['5'], false, $revision));
-reject(fn () => icct_nms_rack_place(3, 7, 2, ['5']));
+reject(fn() => icct_nms_rack_place(3, 6, 2, ['5'], false, $revision));
+reject(fn() => icct_nms_rack_place(3, 7, 2, ['5']));
 icct_nms_rack_place(3, 6, 3, ['5']);
 icct_nms_rack_place(3, 6, 3, [], true);
 $overlap = true;
-reject(fn () => icct_nms_rack_place(3, 6, 2, ['5']));
+reject(fn() => icct_nms_rack_place(3, 6, 2, ['5']));
 $overlap = false;
-reject(fn () => icct_nms_rack_place(3, 6, 2, ['24', '25']));
+reject(fn() => icct_nms_rack_place(3, 6, 2, ['24', '25']));
 icct_nms_rack_place(3, 6, 2, [], true);
 if (isset($placements[3]) || ($meta['rack_peripheral_3'] ?? null) !== '2') {
     throw new LogicException('Peripheral transition failed');
@@ -133,7 +133,7 @@ icct_nms_rack_place(3, 6, 0, []);
 // Draft saves are atomic and reject stale or duplicate moves before changing slots.
 $placements = [];
 $meta = [];
-$move = fn ($id, $units, $revision) => [
+$move = fn($id, $units, $revision) => [
     'host_id' => $id,
     'rack_id' => 1,
     'units' => $units,
@@ -147,11 +147,11 @@ if (icct_nms_rack_save_draft($draft) !== [3, 4] || $placements[4]['unit_height']
     throw new LogicException('Batch save failed');
 }
 $before = [$placements, $meta];
-reject(fn () => icct_nms_rack_save_draft($draft));
+reject(fn() => icct_nms_rack_save_draft($draft));
 $valid = $move(3, ['6'], icct_nms_rack_revision(3));
-reject(fn () => icct_nms_rack_save_draft([$valid, $valid]));
+reject(fn() => icct_nms_rack_save_draft([$valid, $valid]));
 reject(
-    fn () => icct_nms_rack_save_draft([$valid, $move(4, ['24', '25'], icct_nms_rack_revision(4))]),
+    fn() => icct_nms_rack_save_draft([$valid, $move(4, ['24', '25'], icct_nms_rack_revision(4))]),
 );
 if ([$placements, $meta] !== $before) {
     throw new LogicException('Failed batch changed saved placements');
@@ -159,24 +159,24 @@ if ([$placements, $meta] !== $before) {
 // Reservations persist without creating hosts and protect physical capacity.
 $placements = [];
 $meta = [];
-$reserve = fn ($items, $revision) => ['rack_id' => 1, 'revision' => $revision, 'items' => $items];
+$reserve = fn($items, $revision) => ['rack_id' => 1, 'revision' => $revision, 'items' => $items];
 $revision = icct_nms_rack_reservation_revision(1);
 $item = ['id' => 'reserved-test', 'start' => 3, 'height' => 2];
 icct_nms_rack_save_draft([], [$reserve([$item], $revision)]);
 if (icct_nms_rack_reserved_units(1) !== [3, 4]) {
     throw new LogicException('Reservation did not persist');
 }
-reject(fn () => icct_nms_rack_place(3, 6, 1, ['3']));
-reject(fn () => icct_nms_rack_save_draft([], [$reserve([], $revision)]));
+reject(fn() => icct_nms_rack_place(3, 6, 1, ['3']));
+reject(fn() => icct_nms_rack_save_draft([], [$reserve([], $revision)]));
 $revision = icct_nms_rack_reservation_revision(1);
 reject(
-    fn () => icct_nms_rack_save_draft(
+    fn() => icct_nms_rack_save_draft(
         [],
         [$reserve([$item, ['id' => 'second', 'start' => 4, 'height' => 1]], $revision)],
     ),
 );
 reject(
-    fn () => icct_nms_rack_save_draft(
+    fn() => icct_nms_rack_save_draft(
         [],
         [$reserve([['id' => 'large', 'start' => 24, 'height' => 2]], $revision)],
     ),
@@ -184,13 +184,13 @@ reject(
 icct_nms_rack_place(3, 6, 1, ['6']);
 $before = [$placements, $meta];
 reject(
-    fn () => icct_nms_rack_save_draft(
+    fn() => icct_nms_rack_save_draft(
         [],
         [$reserve([['id' => 'collision', 'start' => 6, 'height' => 1]], $revision)],
     ),
 );
 reject(
-    fn () => icct_nms_rack_save_draft(
+    fn() => icct_nms_rack_save_draft(
         [$move(3, ['3'], icct_nms_rack_revision(3))],
         [$reserve([$item], $revision)],
     ),

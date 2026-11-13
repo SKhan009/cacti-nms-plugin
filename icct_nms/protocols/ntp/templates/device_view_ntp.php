@@ -53,7 +53,9 @@ $ntpNumber = static function ($value): string {
     <div class="device-history-heading ntp-heading">
         <h2>NTP clock monitoring <?php $ntpHelpText = 'Read-only status from the configured collector or verified SSH device.';
         require __DIR__ . '/help.php'; ?></h2>
-        <span class="device-status" role="status"
+        <span
+            class="device-status"
+            role="status"
             data-log-status="<?= icct_nms_h($ntpCurrent['status']) ?>"><?= icct_nms_h($ntpCurrent['status']) ?></span>
     </div>
     <?php if ($ntpAssignment): ?>
@@ -108,7 +110,9 @@ $ntpNumber = static function ($value): string {
             <h3 data-field-help="Current NTP alarms for this device. Open an alarm to see the reading or condition that raised it.">Active NTP alarms</h3>
             <?php if ($ntpAlarms): ?>
                 <div class="site-table-wrap">
-                    <table class="site-table" aria-label="Active NTP alarms">
+                    <table
+                        class="site-table"
+                        aria-label="Active NTP alarms">
                         <thead>
                             <tr><th>Alarm</th><th>Severity</th><th>Description</th><th class="ntp-alarm-action">Action</th></tr>
                         </thead>
@@ -161,14 +165,29 @@ $ntpNumber = static function ($value): string {
         <?php else: ?>
             <h3>Observation history <?php $ntpHelpText = 'Collection removes records older than 30 days. Older observations without jitter or peer delay display a dash. Export includes all retained rows matching the applied filters.';
             require __DIR__ . '/help.php'; ?></h3>
-            <form method="get" action="inventory/controllers/device.php#view-ntp" class="device-history-filters ntp-history-filters" aria-label="NTP history filters">
-                <input type="hidden" name="id" value="<?= (int) $id ?>">
-                <input type="hidden" name="view" value="1">
-                <input type="hidden" name="ntp_tab" value="history">
+            <form
+                method="get"
+                action="inventory/controllers/device.php#view-ntp"
+                class="device-history-filters ntp-history-filters"
+                aria-label="NTP history filters">
+                <input
+                    type="hidden"
+                    name="id"
+                    value="<?= (int) $id ?>">
+                <input
+                    type="hidden"
+                    name="view"
+                    value="1">
+                <input
+                    type="hidden"
+                    name="ntp_tab"
+                    value="history">
                 <?php foreach (['ntp_from' => 'From', 'ntp_to' => 'Through'] as $field => $label): ?>
                     <label class="field">
                         <span data-field-help="<?= $field === 'ntp_from' ? 'Include readings from the start of this date.' : 'Include readings through the end of this date.' ?>"><?= $label ?></span>
-                        <input type="date" name="<?= $field ?>"
+                        <input
+                            type="date"
+                            name="<?= $field ?>"
                             value="<?= icct_nms_h($ntpFilters[$field] ?? (is_string($_GET[$field] ?? null) ? $_GET[$field] : '')) ?>">
                     </label>
                 <?php endforeach; ?>
@@ -182,8 +201,12 @@ $ntpNumber = static function ($value): string {
                     </select>
                 </label>
                 <div class="device-history-actions">
-                    <button type="submit" class="button primary">Apply</button>
-                    <a class="button" href="<?= icct_nms_h($ntpUrl('history')) ?>">Clear filters</a>
+                    <button
+                        type="submit"
+                        class="button primary">Apply</button>
+                    <a
+                        class="button"
+                        href="<?= icct_nms_h($ntpUrl('history')) ?>">Clear filters</a>
                     <?php if ($ntpTotal): ?>
                         <a class="button" data-tooltip="Download all retained observations matching the applied filters." href="inventory/controllers/export.php?<?= icct_nms_h(http_build_query(['id' => $id, 'ntp' => 1] + $ntpFilters)) ?>">Export CSV</a>
                     <?php endif; ?>

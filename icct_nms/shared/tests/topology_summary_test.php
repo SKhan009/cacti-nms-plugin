@@ -11,7 +11,8 @@ foreach (
         ['Switching Capacity', 'percent', null],
         ['Forwarding Rate', 'bps', null],
         ['Hardware Redundancy', 'percent', null],
-    ] as [$name, $units, $expected]
+    ]
+    as [$name, $units, $expected]
 ) {
     if (icct_nms_topology_capacity_spec($name, $units) !== $expected) {
         throw new LogicException('Incorrect metric or unit mapping: ' . $name);

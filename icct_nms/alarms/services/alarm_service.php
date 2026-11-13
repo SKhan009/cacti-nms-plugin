@@ -54,7 +54,9 @@ function icct_nms_alarm_key($host, $rule, $observation)
                 $rule['template_id'] ?? 0,
                 ($rule['source'] ?? '') === 'ntp'
                     ? $rule['parameter'] . ':' . ($rule['expected_source'] ?? '')
-                    : (($rule['source'] ?? '') === 'iperf3_udp' ? $rule['parameter'] : ($rule['metric_id'] ?? 0)),
+                    : (($rule['source'] ?? '') === 'iperf3_udp'
+                        ? $rule['parameter']
+                        : $rule['metric_id'] ?? 0),
                 $rule['oid'] ?? '',
                 (string) $observation['graph_id'],
                 $rule['condition'] ?? '',
@@ -105,7 +107,11 @@ function icct_nms_alarm_record($host, $rule, $observation, $transaction = true)
             [$key],
         );
         $sample = (int) ($observation['sample_time'] ?? 0);
-        if (isset($observation['event_count_delta']) && $previous && $sample < (int) $previous['sample_time']) {
+        if (
+            isset($observation['event_count_delta']) &&
+            $previous &&
+            $sample < (int) $previous['sample_time']
+        ) {
             $sample = (int) $previous['sample_time'];
             $observation['observed_at'] = $previous['last_seen'];
         }
@@ -134,7 +140,8 @@ function icct_nms_alarm_record($host, $rule, $observation, $transaction = true)
                 icct_nms_port_alarm_severity($observation['state']) &&
                 (!$previous || empty($previous['acknowledged']) || $change['raised']);
             if (isset($observation['event_count_delta'])) {
-                $change['occurrences'] = (int) ($previous['occurrences'] ?? 0) + $observation['event_count_delta'];
+                $change['occurrences'] =
+                    (int) ($previous['occurrences'] ?? 0) + $observation['event_count_delta'];
                 if ($previous && !$change['event']) {
                     $change['event'] = 'Occurrences received';
                 }
@@ -368,7 +375,9 @@ function icct_nms_alarm_rows()
         $host = $devices[$row['host_id']];
         $row['device_name'] = $host['description'];
         $row['short_name'] = $host['short_name'] ?? '';
-        $row['address'] = in_array($row['source'], ['Syslog', 'SNMP Traps', 'Passive events'], true) ? $row['source_address'] : $host['hostname'];
+        $row['address'] = in_array($row['source'], ['Syslog', 'SNMP Traps', 'Passive events'], true)
+            ? $row['source_address']
+            : $host['hostname'];
         $row['network_type'] = $host['device_type'] ?? '';
     }
     unset($row);
@@ -530,7 +539,9 @@ function icct_nms_alarm_detail($key)
     $row += [
         'device_name' => $device['description'],
         'short_name' => $device['short_name'] ?? '',
-        'address' => in_array($row['source'], ['Syslog', 'SNMP Traps', 'Passive events'], true) ? $row['source_address'] : $device['hostname'],
+        'address' => in_array($row['source'], ['Syslog', 'SNMP Traps', 'Passive events'], true)
+            ? $row['source_address']
+            : $device['hostname'],
         'model_number' => $device['model_number'] ?? '',
         'serial_number' => $device['serial_number'] ?? '',
         'network_type' => $device['device_type'] ?? '',
@@ -565,10 +576,13 @@ function icct_nms_alarm_detail($key)
     }
     unset($event);
     $eventOrigins = in_array($row['source'], ['Syslog', 'SNMP Traps', 'Passive events'], true)
-        ? array_column(db_fetch_assoc_prepared(
-            'SELECT DISTINCT event_origin FROM plugin_icct_nms_syslog_events WHERE host_id=? AND alarm_key=?',
-            [(int) $row['host_id'], $key],
-        ), 'event_origin')
+        ? array_column(
+            db_fetch_assoc_prepared(
+                'SELECT DISTINCT event_origin FROM plugin_icct_nms_syslog_events WHERE host_id=? AND alarm_key=?',
+                [(int) $row['host_id'], $key],
+            ),
+            'event_origin',
+        )
         : [];
     $history = icct_nms_alarm_history_remarks($history);
     return [

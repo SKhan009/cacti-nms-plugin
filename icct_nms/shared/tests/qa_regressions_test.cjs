@@ -130,19 +130,30 @@ async function checkWizardSaveResponse() {
     );
     const readResponse = vm.runInNewContext(reader + ';readSaveResponse', {});
     await assert.rejects(readResponse({ type: 'opaqueredirect' }), /Check your session/);
-    await assert.rejects(readResponse({
-        status: 200, headers: { get: () => 'text/html' },
-    }), /unexpected response/);
+    await assert.rejects(
+        readResponse({
+            status: 200,
+            headers: { get: () => 'text/html' },
+        }),
+        /unexpected response/,
+    );
     const json = (payload) => ({
-        ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => payload,
+        ok: true,
+        status: 200,
+        headers: { get: () => 'application/json' },
+        json: async () => payload,
     });
     await assert.rejects(readResponse(json({ responseText: 'Sign in again.' })), /Sign in again/);
     assert.equal((await readResponse(json({ ok: true, id: 2 }))).id, 2);
 }
 
-Promise.all([checkScopedNtpSave(), checkWizardSaveResponse()]).then(() => {
-    console.log('PASS: LAN-safe tokens, nested-tab validation, atomic reservation drafts and independent NTP save.');
-}).catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-});
+Promise.all([checkScopedNtpSave(), checkWizardSaveResponse()])
+    .then(() => {
+        console.log(
+            'PASS: LAN-safe tokens, nested-tab validation, atomic reservation drafts and independent NTP save.',
+        );
+    })
+    .catch((error) => {
+        console.error(error);
+        process.exitCode = 1;
+    });

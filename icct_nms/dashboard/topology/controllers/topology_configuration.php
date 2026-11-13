@@ -60,7 +60,7 @@ try {
     $profiles = icct_nms_connections();
     $links = array_filter(
         icct_nms_manual_links(),
-        fn ($link) => isset($byId[$link['source']], $byId[$link['target']]),
+        fn($link) => isset($byId[$link['source']], $byId[$link['target']]),
     );
     $scanResults = $automation ? icct_nms_scan_rows($byId) : [];
     $connectionScanResults = [];
@@ -91,7 +91,8 @@ try {
         foreach (
             db_fetch_assoc(
                 'SELECT * FROM plugin_icct_nms_scan_jobs WHERE network_id>0 ORDER BY id DESC',
-            ) as $job
+            )
+            as $job
         ) {
             if (!isset($scanJobs[$job['network_id']])) {
                 $scanJobs[$job['network_id']] = $job;
@@ -128,12 +129,14 @@ try {
                     'same_sysname',
                     'rerun_data_queries',
                     'notification_enabled',
-                ] as $key
+                ]
+                as $key
             ) {
                 $networkEdit[$key] = empty($_POST[$key]) ? '' : 'on';
             }
             foreach (
-                ['day_of_week', 'month', 'day_of_month', 'monthly_week', 'monthly_day'] as $key
+                ['day_of_week', 'month', 'day_of_month', 'monthly_week', 'monthly_day']
+                as $key
             ) {
                 $networkEdit[$key] = $_POST[$key] ?? [];
             }

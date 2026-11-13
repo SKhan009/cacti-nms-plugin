@@ -95,7 +95,10 @@ if (!$canReadDiagnostics): ?>
                 <?php foreach (['diagnostics_from' => 'Requested from', 'diagnostics_until' => 'Requested until'] as $key => $label): ?>
                     <label class="field">
                         <span class="field-label"><?= $label ?></span>
-                        <input type="date" name="<?= $key ?>" value="<?= icct_nms_h($filters[$key] ?? '') ?>">
+                        <input
+                            type="date"
+                            name="<?= $key ?>"
+                            value="<?= icct_nms_h($filters[$key] ?? '') ?>">
                     </label>
                 <?php endforeach; ?>
                 <?php if ($filters): ?>
@@ -136,18 +139,38 @@ if (!$canReadDiagnostics): ?>
                             <h4>Result #<?= (int) $run['id'] ?></h4>
                             <?php $readingId = 'diagnostic-result-' . (int) $run['id']; ?>
                             <div class="diagnostic-reading">
-                                <div class="device-view-tabs diagnostic-reading-tabs" role="tablist" aria-label="Diagnostic result">
-                                    <button type="button" role="tab" id="<?= $readingId ?>-summary-tab"
-                                        aria-selected="true" aria-controls="<?= $readingId ?>-summary">Summary</button>
-                                    <button type="button" role="tab" id="<?= $readingId ?>-raw-tab"
-                                        aria-selected="false" aria-controls="<?= $readingId ?>-raw" tabindex="-1">Raw data</button>
+                                <div
+                                    class="device-view-tabs diagnostic-reading-tabs"
+                                    role="tablist"
+                                    aria-label="Diagnostic result">
+                                    <button
+                                        type="button"
+                                        role="tab"
+                                        id="<?= $readingId ?>-summary-tab"
+                                        aria-selected="true"
+                                        aria-controls="<?= $readingId ?>-summary">Summary</button>
+                                    <button
+                                        type="button"
+                                        role="tab"
+                                        id="<?= $readingId ?>-raw-tab"
+                                        aria-selected="false"
+                                        aria-controls="<?= $readingId ?>-raw"
+                                        tabindex="-1">Raw data</button>
                                 </div>
-                                <div class="diagnostic-reading-panel" id="<?= $readingId ?>-summary" role="tabpanel"
-                                    aria-labelledby="<?= $readingId ?>-summary-tab" tabindex="0">
+                                <div
+                                    class="diagnostic-reading-panel"
+                                    id="<?= $readingId ?>-summary"
+                                    role="tabpanel"
+                                    aria-labelledby="<?= $readingId ?>-summary-tab"
+                                    tabindex="0">
                                     <?php require __DIR__ . '/device_diagnostic_summary.php'; ?>
                                 </div>
-                                <div class="diagnostic-reading-panel" id="<?= $readingId ?>-raw" role="tabpanel"
-                                    aria-labelledby="<?= $readingId ?>-raw-tab" hidden>
+                                <div
+                                    class="diagnostic-reading-panel"
+                                    id="<?= $readingId ?>-raw"
+                                    role="tabpanel"
+                                    aria-labelledby="<?= $readingId ?>-raw-tab"
+                                    hidden>
                                     <?php if (isset($result['output'])): ?>
                                         <pre class="device-record-output" tabindex="0" aria-label="Raw diagnostic output"><?= icct_nms_h((string) $result['output']) ?></pre>
                                     <?php else: ?>
@@ -166,7 +189,11 @@ if (!$canReadDiagnostics): ?>
                 <?php endif;
 ?>
             </div>
-            <form class="inventory-pagination diagnostic-pagination" data-diagnostic-pager method="get" action="<?= $diagnosticAction ?>#view-diagnostics">
+            <form
+                class="inventory-pagination diagnostic-pagination"
+                data-diagnostic-pager
+                method="get"
+                action="<?= $diagnosticAction ?>#view-diagnostics">
                 <?php foreach ($baseParams + $filters as $key => $value): ?>
                     <input type="hidden" name="<?= $key ?>" value="<?= icct_nms_h($value) ?>">
                 <?php endforeach; ?>
@@ -194,7 +221,11 @@ if (!$canReadDiagnostics): ?>
                     <?php foreach ([-1 => ['Previous', 'M15 5 7 12 15 19Z'], 1 => ['Next', 'M9 5 17 12 9 19Z']] as $step => [$direction, $path]): ?>
                         <button class="pagination-control" type="submit" name="diagnostics_target" value="<?= $runsPage + $step ?>"
                             aria-label="<?= $direction ?> page" <?= $runsPage + $step < 1 || $runsPage + $step > $pages ? 'disabled' : '' ?>>
-                            <svg class="pagination-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="<?= $path ?>"/></svg>
+                            <svg
+                                class="pagination-arrow"
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                                focusable="false"><path d="<?= $path ?>"/></svg>
                         </button>
                     <?php endforeach; ?>
                     <noscript><button type="submit">Go</button></noscript>

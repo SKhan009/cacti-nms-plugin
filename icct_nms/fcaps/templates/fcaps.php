@@ -67,24 +67,42 @@
                     value="ntp"> NTP
             </label>
             <label>
-                <input type="radio" name="alarm_source_view" value="iperf3_udp"> iPerf3 UDP
-            </label>
-            <label>
-                <input type="radio" name="alarm_source_view" value="netflow"> NetFlow / IPFIX
+                <input
+                    type="radio"
+                    name="alarm_source_view"
+                    value="netflow"> NetFlow / IPFIX
             </label>
         </fieldset>
-        <fieldset id="snmp-fault-rule-type" class="fault-rule-type-options" hidden>
+        <fieldset
+            id="snmp-fault-rule-type"
+            class="fault-rule-type-options"
+            hidden>
             <legend>SNMP rule type</legend>
             <label class="check-row">
-                <input type="radio" name="snmp_fault_view" value="snmp" checked> OID polling thresholds
+                <input
+                    type="radio"
+                    name="snmp_fault_view"
+                    value="snmp"
+                    checked> OID polling thresholds
             </label>
             <label class="check-row">
-                <input type="radio" name="snmp_fault_view" value="trap"> Trap and inform rules
+                <input
+                    type="radio"
+                    name="snmp_fault_view"
+                    value="trap"> Trap and inform rules
             </label>
         </fieldset>
         <div class="fcaps-form-actions">
-            <button type="button" class="button" id="add-fault-rule">+ Add Rule</button>
-            <button type="submit" class="button primary" form="fault-form" id="save-fault-rule">Save</button>
+            <button
+                type="button"
+                class="button"
+                id="add-fault-rule">+ Add Rule</button>
+            <button
+                type="submit"
+                class="button primary"
+                form="fault-form"
+                formnovalidate
+                id="save-fault-rule">Save</button>
         </div>
         <form
             id="fault-form"
@@ -111,33 +129,48 @@
                         hidden>
                         <section class="fault-snmp-list">
                             <h3>SNMP OIDs</h3>
-                            <div id="fault-oid-navigation" class="fault-snmp-oid-list"></div>
+                            <div
+                                id="fault-oid-navigation"
+                                class="fault-snmp-oid-list"></div>
                         </section>
                         <section class="fault-snmp-list">
                             <h3>MIB Repository</h3>
-                            <div id="fault-mib-navigation" class="fault-snmp-oid-list"></div>
+                            <div
+                                id="fault-mib-navigation"
+                                class="fault-snmp-oid-list"></div>
                         </section>
                     </section>
                     <section
                         id="fault-ntp-section"
                         hidden>
                         <h3>NTP Parameters</h3>
-                        <p id="fault-udp-help" hidden>Thresholds use the latest iPerf3 UDP test to this device. The test sends at 1 Mbit/s and runs on demand.</p>
                         <div id="fault-ntp-navigation"></div>
                     </section>
                 </aside>
                 <div class="fault-alarm-editor">
-                    <section class="fault-saved-alarms" aria-label="Alarm rules">
+                    <section
+                        class="fault-saved-alarms"
+                        aria-label="Alarm rules">
                         <div class="fault-alarm-list-heading">
                             <h3>Alarm rules</h3>
-                            <a id="fault-mib-repository-edit" class="button" target="_blank" rel="noopener" hidden>Edit in MIB Repository</a>
+                            <a
+                                id="fault-mib-repository-edit"
+                                class="button"
+                                target="_blank"
+                                rel="noopener"
+                                hidden>Edit in MIB Repository</a>
                         </div>
                         <ul id="fault-saved-alarm-list"></ul>
                     </section>
-                    <section class="fault-saved-alarms" id="fault-mib-preset-section" hidden>
+                    <section
+                        class="fault-saved-alarms"
+                        id="fault-mib-preset-section"
+                        hidden>
                         <h3>MIB Fault Presets <?php $ntpHelpText = 'Select saved MIB fault presets associated with this device. Each preset retains its native Cacti data source. Clear a selection to disable its rule or use Edit thresholds to change it.';
                         require __DIR__ . '/../../protocols/ntp/templates/help.php'; ?></h3>
-                        <div id="fault-mib-presets" aria-label="Select MIB fault presets"></div>
+                        <div
+                            id="fault-mib-presets"
+                            aria-label="Select MIB fault presets"></div>
                     </section>
                     <p
                         id="fault-alarm-empty"
@@ -324,10 +357,6 @@
             $faultCatalogue,
             JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE,
         ) ?></script>
-    <script type="application/json" id="fault-udp-parameters"><?= json_encode(
-        icct_nms_udp_fault_parameters(),
-        JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR,
-    ) ?></script>
     <?php $ntpFaultCurrent = icct_nms_ntp_current($id);
     $ntpFaultAssignment = icct_nms_ntp_assignment($id); ?>
     <script

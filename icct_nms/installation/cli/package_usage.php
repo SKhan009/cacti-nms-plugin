@@ -21,7 +21,10 @@ $blockers = [];
 if ($selected) {
     $collector = icct_backend_inventory_collector_id();
     foreach ($selected as $package => $tools) {
-        $conditions = implode(' OR ', array_fill(0, count($tools), "FIND_IN_SET(?, REPLACE(p.tools, ' ', '')) > 0"));
+        $conditions = implode(
+            ' OR ',
+            array_fill(0, count($tools), "FIND_IN_SET(?, REPLACE(p.tools, ' ', '')) > 0"),
+        );
         $count = db_fetch_cell_prepared(
             "SELECT COUNT(*) FROM host h
              JOIN plugin_icct_nms_diagnostic_devices d ON d.host_id=h.id

@@ -92,7 +92,7 @@ function icct_nms_scan_validate($input)
         !$methods ||
         array_filter(
             $methods,
-            fn ($m) => !is_string($m) || !array_key_exists($m, icct_nms_scan_methods()),
+            fn($m) => !is_string($m) || !array_key_exists($m, icct_nms_scan_methods()),
         )
     ) {
         throw new InvalidArgumentException('Choose discovery methods.');
@@ -249,13 +249,17 @@ function icct_nms_scan_dispatch()
     require_once $config['base_path'] . '/lib/poller.php';
     // Older Cacti releases accept only a shell argument string here.
     $script = ICCT_NMS_ROOT . '/inventory/discovery/cli/discovery_worker.php';
-    exec_background(read_config_option('path_php_binary'), '-q ' . escapeshellarg($script) . ' --once');
+    exec_background(
+        read_config_option('path_php_binary'),
+        '-q ' . escapeshellarg($script) . ' --once',
+    );
 }
 function icct_nms_scan_existing($address, $evidence = [])
 {
     $ids = [];
     foreach (
-        db_fetch_assoc("SELECT id,hostname,snmp_sysName FROM host WHERE deleted='' ") as $host
+        db_fetch_assoc("SELECT id,hostname,snmp_sysName FROM host WHERE deleted='' ")
+        as $host
     ) {
         $literal = @inet_pton($host['hostname']);
         if (
@@ -297,7 +301,8 @@ function icct_nms_scan_rows($allowedHosts)
                 'plugin_icct_nms_scan_results r JOIN plugin_icct_nms_scan_jobs j ON j.id=r.job_id LEFT ' .
                 'JOIN poller p ON p.id=j.poller_id WHERE r.state<>\'pending\' ORDER BY r.observed_at ' .
                 'DESC,r.id DESC',
-        ) as $r
+        )
+        as $r
     ) {
         $key = $r['poller_id'] . '|' . $r['network_id'] . '|' . $r['address'];
         if (isset($seen[$key])) {

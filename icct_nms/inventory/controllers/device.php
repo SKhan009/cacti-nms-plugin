@@ -29,6 +29,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'fault
         icct_nms_backend();
         icct_nms_post();
         $host = icct_nms_device(icct_nms_id($_GET['id'] ?? 0));
+        if (($_POST['source'] ?? 'snmp') === 'rrd') {
+            echo json_encode(['readings' => icct_nms_fault_rrd_read(
+                $host,
+                icct_nms_id($_POST['template_id'] ?? 0),
+                icct_nms_id($_POST['metric_id'] ?? 0),
+            )]);
+            exit();
+        }
         if (
             $host['disabled'] !== '' ||
             (int) $host['snmp_version'] < 1 ||
@@ -98,7 +106,8 @@ try {
     if ($cloneId && !$id) {
         $source = icct_nms_device($cloneId);
         foreach (
-            ['description', 'host_template_id', 'site_id', 'poller_id', 'device_threads', 'notes'] as $field
+            ['description', 'host_template_id', 'site_id', 'poller_id', 'device_threads', 'notes']
+            as $field
         ) {
             $values[$field] = $source[$field];
         }
@@ -227,20 +236,30 @@ try {
             ) .
             '</script>';
         $discoveryMethods = $discovery ? icct_backend_nd_host_methods($discovery, false) : [];
-        $discoveryPreset = $id && $discoveryMethods ? icct_nms_meta('device_discovery_preset_' . $id) : '';
+        $discoveryPreset =
+            $id && $discoveryMethods ? icct_nms_meta('device_discovery_preset_' . $id) : '';
         if (!$discoveryMethods) {
             $discoveryPreset = '';
-        } elseif ($discoveryPreset !== 'snmp_discovery' && !in_array($discoveryPreset, $discoveryMethods, true)) {
+        } elseif (
+            $discoveryPreset !== 'snmp_discovery' &&
+            !in_array($discoveryPreset, $discoveryMethods, true)
+        ) {
             $discoveryPreset = array_intersect(['arp', 'fdb'], $discoveryMethods)
                 ? 'snmp_discovery'
-                : (in_array('lldp', $discoveryMethods, true) ? 'lldp' : 'cdp');
+                : (in_array('lldp', $discoveryMethods, true)
+                    ? 'lldp'
+                    : 'cdp');
         }
         echo '<script type="application/json" id="protocol-inheritance">' .
             json_encode(
                 [
                     'baseline' => icct_nms_protocol_inheritance_baseline(),
-                    'variants' => icct_nms_protocol_variants() + ['netflow' => ['field' => 'version']],
-                    'profiles' => icct_nms_protocol_profiles() + ['netflow' => icct_nms_netflow_profiles()],
+                    'variants' => icct_nms_protocol_variants() + [
+                        'netflow' => ['field' => 'version'],
+                    ],
+                    'profiles' => icct_nms_protocol_profiles() + [
+                        'netflow' => icct_nms_netflow_profiles(),
+                    ],
                     'discoveryPreset' => $discoveryPreset,
                 ],
                 JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR,

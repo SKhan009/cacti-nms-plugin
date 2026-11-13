@@ -943,12 +943,14 @@
                 element(
                     'p',
                     alarm.alarm_key
-                        ? [alarm.source, alarm.event_description, alarm.severity].filter(Boolean).join(' · ')
+                        ? [alarm.source, alarm.event_description, alarm.severity]
+                              .filter(Boolean)
+                              .join(' · ')
                         : alarm.graph +
-                        ' · Reading: ' +
-                        (alarm.value === null ? 'Unavailable' : alarm.value) +
-                        ' · ' +
-                        alarm.severity,
+                              ' · Reading: ' +
+                              (alarm.value === null ? 'Unavailable' : alarm.value) +
+                              ' · ' +
+                              alarm.severity,
                 ),
             );
             if (alarm.corrective_action)
@@ -956,17 +958,25 @@
             const links = element('nav'),
                 device = element('a', 'Device Details →');
             device.href =
-                'inventory/controllers/device.php?id=' + alarm.device_id + '&view=1#' +
-                ({ 'SNMP Traps': 'view-traps', Syslog: 'view-syslog' }[alarm.source] || 'view-fcaps');
+                'inventory/controllers/device.php?id=' +
+                alarm.device_id +
+                '&view=1#' +
+                ({ 'SNMP Traps': 'view-traps', Syslog: 'view-syslog' }[alarm.source] ||
+                    'view-fcaps');
             if (alarm.source === 'NetFlow' && alarm.alarm_key) {
                 device.textContent = 'NetFlow finding →';
-                device.href = 'inventory/controllers/device.php?id=' + alarm.device_id +
-                    '&view=1&netflow_alarm=' + encodeURIComponent(alarm.alarm_key) + '#view-netflow';
+                device.href =
+                    'inventory/controllers/device.php?id=' +
+                    alarm.device_id +
+                    '&view=1&netflow_alarm=' +
+                    encodeURIComponent(alarm.alarm_key) +
+                    '#view-netflow';
             }
             links.append(device);
             if (alarm.alarm_key) {
                 const record = element('a', 'Alarm Details →');
-                record.href = 'alarms/controllers/alarms.php?view=' + encodeURIComponent(alarm.alarm_key);
+                record.href =
+                    'alarms/controllers/alarms.php?view=' + encodeURIComponent(alarm.alarm_key);
                 links.append(record);
             }
             if (alarm.graph_id) {
@@ -994,15 +1004,25 @@
                 link = element('a', 'NTP Details →');
             heading.append(
                 element('strong', device.name),
-                element('small', device.status + ' · ' + device.active_alarms +
-                    (device.active_alarms === 1 ? ' active alarm' : ' active alarms')),
+                element(
+                    'small',
+                    device.status +
+                        ' · ' +
+                        device.active_alarms +
+                        (device.active_alarms === 1 ? ' active alarm' : ' active alarms'),
+                ),
             );
             summary.append(heading);
             body.className = 'recent-detail';
             body.append(
                 element('p', 'Source: ' + (device.source ?? 'Unavailable')),
-                element('p', 'Clock offset: ' +
-                    (device.offset_ms === null ? 'Unavailable' : Number(device.offset_ms).toFixed(3) + ' ms')),
+                element(
+                    'p',
+                    'Clock offset: ' +
+                        (device.offset_ms === null
+                            ? 'Unavailable'
+                            : Number(device.offset_ms).toFixed(3) + ' ms'),
+                ),
                 element('p', 'Stratum: ' + (device.stratum ?? 'Unavailable')),
                 element('p', 'Last successful read: ' + (device.last_success ?? 'Unavailable')),
             );
@@ -1011,11 +1031,17 @@
             detail.append(summary, body);
             root.append(detail);
         }
-        if (!root.children.length) root.append(element('p', 'No devices configured for NTP in this view.'));
+        if (!root.children.length)
+            root.append(element('p', 'No devices configured for NTP in this view.'));
     }
     function netflowTalkers() {
         const root = document.querySelector('#netflowTalkers');
-        root.replaceChildren(element('p', 'Top source IPs by reported bytes per exporter over the last five minutes.'));
+        root.replaceChildren(
+            element(
+                'p',
+                'Top source IPs by reported bytes per exporter over the last five minutes.',
+            ),
+        );
         const rows = readings.netflow_talkers || [];
         for (const row of rows) {
             const detail = element('details'),
@@ -1025,17 +1051,24 @@
                 link = element('a', 'View exporter traffic');
             heading.append(
                 element('strong', row.src_addr),
-                element('small', row.device + ' · ' +
-                    Number(row.bytes).toLocaleString('en-IN') + ' bytes'),
+                element(
+                    'small',
+                    row.device + ' · ' + Number(row.bytes).toLocaleString('en-IN') + ' bytes',
+                ),
             );
             summary.append(heading);
             body.className = 'recent-detail';
-            link.href = 'inventory/controllers/device.php?id=' + row.host_id + '&view=1#view-netflow';
-            body.append(element('p', Number(row.flows).toLocaleString('en-IN') + ' flow records'), link);
+            link.href =
+                'inventory/controllers/device.php?id=' + row.host_id + '&view=1#view-netflow';
+            body.append(
+                element('p', Number(row.flows).toLocaleString('en-IN') + ' flow records'),
+                link,
+            );
             detail.append(summary, body);
             root.append(detail);
         }
-        if (!rows.length) root.append(element('p', 'No recent flows from enabled exporters in this view.'));
+        if (!rows.length)
+            root.append(element('p', 'No recent flows from enabled exporters in this view.'));
     }
     const recentCard = document.querySelector('[data-widget=recent]'),
         expandRecent = document.querySelector('#recentExpand');
@@ -1341,7 +1374,8 @@
             const url = siteUrl(data.site_id);
             url.searchParams.set('dashboard_readings', '1');
             if (widgets().includes('ntp')) url.searchParams.set('ntp_widget', '1');
-            if (widgets().includes('netflow_talkers')) url.searchParams.set('netflow_talkers_widget', '1');
+            if (widgets().includes('netflow_talkers'))
+                url.searchParams.set('netflow_talkers_widget', '1');
             const response = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
             if (!response.ok) throw Error();
             const next = await response.json();

@@ -19,7 +19,7 @@ function db_execute_prepared($sql, $args)
 {
     throw new LogicException('Requirements failure attempted a schema/registration write.');
 }
-if (!icct_nms_check_dependencies()) {
+if (icct_nms_dependency_issues()) {
     throw new RuntimeException('Cacti 1.2.30 with the required APIs was rejected.');
 }
 $version = '';

@@ -2,7 +2,6 @@
 
 /** ICCT-owned inventory services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: collect inventory values. */
 function icct_backend_collect_inventory_values($only_host_id = 0)
 {
     global $config, $snmp_error;
@@ -152,7 +151,6 @@ function icct_backend_collect_inventory_values($only_host_id = 0)
     return $attempted;
 }
 
-/** Reused Inventory service: inventory collector id. */
 function icct_backend_inventory_collector_id()
 {
     global $config, $poller_id;
@@ -185,7 +183,6 @@ function icct_backend_inventory_collector_id()
     return (int) $id;
 }
 
-/** Reused Inventory service: inventory snmp failed. */
 function icct_backend_inventory_snmp_failed($value)
 {
     $value = trim((string) $value);

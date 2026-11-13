@@ -12,7 +12,8 @@ function icct_nms_inventory_observe($poller)
                 'id,hostname,description,status,disabled,site_id,poller_id,snmp_sysName,snmp_sysDescr,snmp_sysObjectID ' .
                 'FROM host WHERE poller_id=? AND deleted=\'\'',
             [(int) $poller],
-        ) as $host
+        )
+        as $host
     ) {
         $key = 'inventory_observation_' . (int) $host['id'];
         $raw = db_fetch_cell_prepared(

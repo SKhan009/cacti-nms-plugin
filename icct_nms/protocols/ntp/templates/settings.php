@@ -23,7 +23,7 @@ $ntpHelp = [
             </span>
             <?php if ($definition[1] === 'select'): ?>
                 <select
-                    name="<?= $field ?>"
+                    name="ntp_method"
                     required>
                     <option value="">Choose collection method</option>
                     <?php foreach (icct_nms_ntp_methods() as $method => $label): ?>

@@ -118,7 +118,8 @@ function icct_mib_staging_data_definition($plan)
                 'graph_options',
                 'graph_items',
                 'graph_deleted_items',
-            ] as $key
+            ]
+            as $key
         ) {
             unset($record[$key]);
         }
@@ -544,7 +545,7 @@ function icct_mib_graph_groups($records)
     return array_values($groups);
 }
 /** Build a native graph with each source's own items and input mappings. */
-function icct_mib_native_graph_group($group, $existing = [])
+function icct_mib_native_graph_group($group, $existing = [], $newQueries = false)
 {
     $entries = [];
     $target = 0;
@@ -557,7 +558,7 @@ function icct_mib_native_graph_group($group, $existing = [])
                 'data' => true,
                 'graph' => true,
                 'reuse_data' => (bool) $existing,
-                'skip_query' => (bool) $existing,
+                'skip_query' => (bool) $existing && (!$newQueries || count($group['records']) > 1),
             ],
             $existing[$record['symbol']] ?? [],
         );
@@ -569,7 +570,8 @@ function icct_mib_native_graph_group($group, $existing = [])
             db_fetch_assoc_prepared(
                 'SELECT id FROM graph_templates_item WHERE graph_template_id=? AND local_graph_id=0 ORDER BY sequence,id',
                 [$graph],
-            ) as $item
+            )
+            as $item
         ) {
             icct_mib_write(
                 'UPDATE graph_templates_item SET graph_template_id=?,sequence=? WHERE id=?',
@@ -648,7 +650,7 @@ function icct_mib_native_graph_group($group, $existing = [])
         );
     }
     if (
-        !$existing &&
+        (!$existing || $newQueries) &&
         count($entries) > 1 &&
         $group['records'][0]['resolved_method'] === 'indexed'
     ) {

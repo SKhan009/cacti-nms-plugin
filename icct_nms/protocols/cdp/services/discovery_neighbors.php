@@ -61,5 +61,3 @@ function icct_backend_nd_parse_cdp($values, $interfaces)
         'neighbors' => $neighbors,
     ];
 }
-
-/** Reused Inventory service: nd parse lldp. */

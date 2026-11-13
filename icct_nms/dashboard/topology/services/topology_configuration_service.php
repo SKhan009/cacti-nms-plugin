@@ -1,7 +1,8 @@
 <?php
 
 /** Manual connections are plugin metadata; discovery remains owned by the collectors. */
-require_once __DIR__ . '/../../../protocols/shared/services/backend/discovery_management_addresses.php';
+require_once __DIR__ .
+    '/../../../protocols/shared/services/backend/discovery_management_addresses.php';
 require_once __DIR__ . '/../../../inventory/services/backend/identity.php';
 
 function icct_nms_manual_links()
@@ -137,7 +138,8 @@ function icct_nms_topology_discovery_rows($devices)
                 'SELECT protocol,status,succeeded_at,attempted_at,config_hash,data_json,error FROM ' .
                     'plugin_icct_nms_discovery_snapshots WHERE host_id=? AND protocol IN (?,?,?,?)',
                 [$device['id'], 'lldp', 'cdp', 'arp', 'fdb'],
-            ) as $snapshot
+            )
+            as $snapshot
         ) {
             if (!in_array($snapshot['protocol'], $selectedMethods, true)) {
                 continue;
@@ -181,7 +183,10 @@ function icct_nms_topology_discovery_rows($devices)
                         $row['learned_port'] = $row['port'];
                         if ($row['learned_port'] === '' && (int) ($item['ifindex'] ?? 0) > 0) {
                             $row['learned_port'] = 'ifIndex ' . (int) $item['ifindex'];
-                        } elseif ($row['learned_port'] === '' && (int) ($item['bridge_port'] ?? 0) > 0) {
+                        } elseif (
+                            $row['learned_port'] === '' &&
+                            (int) ($item['bridge_port'] ?? 0) > 0
+                        ) {
                             $row['learned_port'] = 'Bridge port ' . (int) $item['bridge_port'];
                         }
                     }
@@ -221,20 +226,24 @@ function icct_nms_match_discovery_observations($rows)
         $mac = $macs[$index] ?? '';
         if ($row['protocol'] === 'ARP') {
             if ($row['address'] !== '' && isset($ports[$mac])) {
-                $row['fdb_matches'] = array_merge(...array_map('array_values', array_values($ports[$mac])));
+                $row['fdb_matches'] = array_merge(
+                    ...array_map('array_values', array_values($ports[$mac])),
+                );
                 $row['detail'] = 'Matched by MAC; direct link unconfirmed';
             } else {
-                $row['detail'] = $mac === '' || $row['address'] === ''
-                    ? 'IP neighbour observation; no usable IP-to-MAC mapping'
-                    : 'IP neighbour observation; no matching learned port';
+                $row['detail'] =
+                    $mac === '' || $row['address'] === ''
+                        ? 'IP neighbour observation; no usable IP-to-MAC mapping'
+                        : 'IP neighbour observation; no matching learned port';
             }
         } elseif ($row['protocol'] === 'FDB') {
             if ($row['learned_port'] !== '' && isset($ipMacs[$mac])) {
                 continue;
             }
-            $row['detail'] = $row['learned_port'] === ''
-                ? 'FDB observation; no learned port available'
-                : 'Learned MAC; no matching IP observation';
+            $row['detail'] =
+                $row['learned_port'] === ''
+                    ? 'FDB observation; no learned port available'
+                    : 'Learned MAC; no matching IP observation';
         }
         $result[] = $row;
     }
@@ -288,7 +297,7 @@ function icct_nms_device_discovery_summary($id, $host = null)
         $data = $current ? json_decode($snapshot['data_json'], true) ?? [] : [];
         $items = array_filter(
             array_merge($data['neighbors'] ?? [], $data['endpoints'] ?? []),
-            fn ($item) => !isset($item['present']) || $item['present'],
+            fn($item) => !isset($item['present']) || $item['present'],
         );
         $rows[] = [
             'method' => $method,

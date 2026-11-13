@@ -2,13 +2,11 @@
 
 /** ICCT-owned categories services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: category execute. */
 function icct_backend_category_execute($sql, $params = [])
 {
     icct_backend_storage_execute($sql, $params);
 }
 
-/** Reused Inventory service: category exists. */
 function icct_backend_category_exists($category_id)
 {
     return (int) $category_id > 0 &&
@@ -18,7 +16,6 @@ function icct_backend_category_exists($category_id)
         ) === 1;
 }
 
-/** Reused Inventory service: classification text. */
 function icct_backend_classification_text($text, $max_length)
 {
     if (!is_string($text)) {
@@ -37,7 +34,6 @@ function icct_backend_classification_text($text, $max_length)
     return $text;
 }
 
-/** Reused Inventory service: device classification save. */
 function icct_backend_device_classification_save($host_id, $category_id, $type, $role)
 {
     $host_id = (int) $host_id;
@@ -64,7 +60,6 @@ function icct_backend_device_classification_save($host_id, $category_id, $type, 
     );
 }
 
-/** Reused Inventory service: storage execute. */
 function icct_backend_storage_execute($sql, $params = [])
 {
     if (db_execute_prepared($sql, $params) === false) {

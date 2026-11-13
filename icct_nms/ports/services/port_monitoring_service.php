@@ -88,7 +88,11 @@ function icct_nms_save_port_monitoring($id, $input)
     try {
         $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
     } catch (JsonException $error) {
-        throw new InvalidArgumentException('Port settings could not be read. Reopen Port Config and try again.', 0, $error);
+        throw new InvalidArgumentException(
+            'Port settings could not be read. Reopen Port Config and try again.',
+            0,
+            $error,
+        );
     }
     $settings = icct_nms_port_monitor_validate($decoded, $known);
     icct_backend_category_execute(

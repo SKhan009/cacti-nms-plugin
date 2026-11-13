@@ -17,9 +17,7 @@ function icct_backend_topology_integer($v, $min, $max, $name)
     }
     return (int) $v;
 }
-function icct_backend_require_management($realm)
-{
-}
+function icct_backend_require_management($realm) {}
 function icct_backend_require_device_access($id)
 {
     if ($id !== 7) {
@@ -44,10 +42,8 @@ function icct_backend_protocol_enabled($id, $protocol)
 }
 function icct_backend_nd_discovery_session($host)
 {
-    return new class () {
-        public function close()
-        {
-        }
+    return new class {
+        public function close() {}
     };
 }
 function icct_backend_nd_snmp_scalar($session, $oid, $deadline)
@@ -107,7 +103,8 @@ foreach (
         ['transport' => 'file', 'path' => '/etc/passwd'],
         ['transport' => 'serial', 'path' => '/tmp/device'],
         ['latitude_oid' => 'not-an-oid'],
-    ] as $bad
+    ]
+    as $bad
 ) {
     try {
         icct_nms_gnss_validate(array_replace($input, $bad));

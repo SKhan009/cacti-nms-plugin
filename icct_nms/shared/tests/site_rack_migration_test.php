@@ -54,7 +54,8 @@ foreach (
         'device_node_id_14' => '1',
         'dashboard_user_1' => json_encode($preferences),
         'unrelated' => 'keep',
-    ] as $key => $value
+    ]
+    as $key => $value
 ) {
     db_execute_prepared(
         'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',

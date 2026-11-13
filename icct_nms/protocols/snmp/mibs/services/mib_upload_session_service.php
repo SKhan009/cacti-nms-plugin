@@ -22,7 +22,7 @@ function icct_mib_upload_session_store($token, $draft)
     }
     if (
         count(
-            array_filter($_SESSION['icct_mib_uploads'] ?? [], fn ($entry) => isset($entry['draft'])),
+            array_filter($_SESSION['icct_mib_uploads'] ?? [], fn($entry) => isset($entry['draft'])),
         ) >= 4
     ) {
         throw new InvalidArgumentException(

@@ -134,7 +134,7 @@ function icct_mib_edit_open($bundle, $token = null)
     $draft['device_template'] = icct_mib_device_core_defaults($bundle, array_values($records));
     // Represent saved MIB graphs once, by their prepared group, rather than twice as core IDs.
     $owned = array_map(
-        fn ($id) => 'core:' . $id,
+        fn($id) => 'core:' . $id,
         array_unique(array_column($bundle['rows'], 'graph_template_id')),
     );
     $draft['device_template']['graphs'] = array_values(
@@ -233,7 +233,8 @@ function icct_mib_edit_graph($group, $existing)
                 'graph_templates_item i JOIN data_template_rrd r ON r.id=i.task_item_id WHERE ' .
                 'i.graph_template_id=? AND i.local_graph_id>0',
             [$target],
-        ) as $binding
+        )
+        as $binding
     ) {
         $bindings[$binding['local_graph_id']][$binding['local_data_template_rrd_id']] =
             $binding['id'];
@@ -306,7 +307,8 @@ function icct_mib_edit_graph($group, $existing)
         [$target],
     );
     foreach (
-        db_fetch_assoc_prepared('SELECT id FROM graph_local WHERE graph_template_id=?', [$target]) as $graph
+        db_fetch_assoc_prepared('SELECT id FROM graph_local WHERE graph_template_id=?', [$target])
+        as $graph
     ) {
         $rows = [];
         foreach ($items as $item) {
@@ -423,12 +425,9 @@ function icct_mib_edit_save($id, $token, $stage)
                 $old = $graphGroups[$target];
                 sort($members);
                 sort($old);
-                if ($members !== $old) {
-                    throw new InvalidArgumentException(
-                        'Edit preserves graph source groups. Create a new graph template to split or combine sources.',
-                    );
+                if ($members === $old) {
+                    icct_mib_edit_name($group['name'], 'graph_templates', $target);
                 }
-                icct_mib_edit_name($group['name'], 'graph_templates', $target);
             }
         }
         if ($stage === 4) {
@@ -485,7 +484,8 @@ function icct_mib_edit_save($id, $token, $stage)
                         db_fetch_assoc_prepared(
                             'SELECT id FROM data_local WHERE data_template_id=?',
                             [$tid],
-                        ) as $local
+                        )
+                        as $local
                     ) {
                         api_reapply_suggested_data_source_data($local['id']);
                         $tunes[] = [
@@ -503,15 +503,36 @@ function icct_mib_edit_save($id, $token, $stage)
             }
             if ($stage === 3) {
                 foreach (icct_mib_graph_groups($plan['records']) as $group) {
-                    $target = icct_mib_edit_graph($group, $bySymbol);
+                    $members = array_column($group['records'], 'symbol');
+                    $old = $graphGroups[$bySymbol[$members[0]]['graph_template_id']];
+                    sort($members);
+                    sort($old);
+                    $replacements = [];
+                    if ($members === $old) {
+                        $target = icct_mib_edit_graph($group, $bySymbol);
+                    } else {
+                        // Reuse native data sources; keep existing device graphs and RRD history intact.
+                        $baseName = $group['name'];
+                        $suffix = 1;
+                        while (db_fetch_cell_prepared('SELECT id FROM graph_templates WHERE name=? LIMIT 1', [$group['name']])) {
+                            $group['name'] = substr($baseName, 0, 160) . ' (group ' . $suffix++ . ')';
+                        }
+                        foreach ($group['records'] as &$record) $record['graph_name'] = $group['name'];
+                        unset($record);
+                        foreach (icct_mib_native_graph_group($group, $bySymbol, true) as $entry) {
+                            $replacements[$entry['record']['symbol']] = $entry['pair'];
+                        }
+                        $target = (int) reset($replacements)['graph_template_id'];
+                    }
                     foreach ($group['records'] as $record) {
                         $row = $bySymbol[$record['symbol']];
                         $oldName = $row['settings']['graph_name'];
+                        $row = array_replace($row, $replacements[$record['symbol']] ?? []);
                         $row['settings'] = $record;
                         $existing[$row['object_index']] = $row;
                         if (isset($bundle['device_template']['graphs'])) {
                             $bundle['device_template']['graphs'] = array_map(
-                                fn ($name) => $name === $oldName ? $record['graph_name'] : $name,
+                                fn($name) => $name === $oldName ? $record['graph_name'] : $name,
                                 $bundle['device_template']['graphs'],
                             );
                         }
@@ -521,6 +542,34 @@ function icct_mib_edit_save($id, $token, $stage)
                         $target,
                     ]);
                 }
+            }
+            if ($stage === 3 && !empty($bundle['host_template_id'])) {
+                $hostId = (int) $bundle['host_template_id'];
+                foreach ($existing as $row) {
+                    $prior = $bySymbol[$row['settings']['symbol']];
+                    if ($prior['graph_template_id'] === $row['graph_template_id']) continue;
+                    $linked = $prior['snmp_query_id']
+                        ? db_fetch_cell_prepared('SELECT snmp_query_id FROM host_template_snmp_query WHERE host_template_id=? AND snmp_query_id=?', [$hostId, $prior['snmp_query_id']])
+                        : db_fetch_cell_prepared('SELECT graph_template_id FROM host_template_graph WHERE host_template_id=? AND graph_template_id=?', [$hostId, $prior['graph_template_id']]);
+                    if ($linked) {
+                        if ($row['snmp_query_id']) {
+                            icct_mib_write('REPLACE INTO host_template_snmp_query(host_template_id,snmp_query_id) VALUES(?,?)', [$hostId, $row['snmp_query_id']]);
+                        } else {
+                            icct_mib_write('REPLACE INTO host_template_graph(host_template_id,graph_template_id) VALUES(?,?)', [$hostId, $row['graph_template_id']]);
+                        }
+                    }
+                }
+                foreach ($bySymbol as $prior) {
+                    if (!in_array($prior['graph_template_id'], array_column($existing, 'graph_template_id'))) {
+                        icct_mib_write('DELETE FROM host_template_graph WHERE host_template_id=? AND graph_template_id=?', [$hostId, $prior['graph_template_id']]);
+                    }
+                    if ($prior['snmp_query_id'] && !in_array($prior['snmp_query_id'], array_column($existing, 'snmp_query_id'))) {
+                        icct_mib_write('DELETE FROM host_template_snmp_query WHERE host_template_id=? AND snmp_query_id=?', [$hostId, $prior['snmp_query_id']]);
+                    }
+                }
+            }
+            if ($stage === 3 && isset($bundle['device_template'])) {
+                $bundle['device_template']['graphs'] = array_values(array_unique(array_map(fn($row) => $row['settings']['graph_name'], $existing)));
             }
             if ($stage === 2) {
                 // Faults belong to the data source editor but are keyed by native graph/RRD identity.
@@ -637,7 +686,8 @@ function icct_mib_edit_save($id, $token, $stage)
                     'minimum' => $r['min'],
                     'maximum' => $r['max'],
                     'data-source-type' => $types[$r['ds_type']],
-                ] as $key => $value
+                ]
+                as $key => $value
             ) {
                 $command .= ' --' . $key . ' ' . cacti_escapeshellarg($tune['name'] . ':' . $value);
             }

@@ -689,6 +689,8 @@ CREATE TABLE IF NOT EXISTS plugin_icct_nms_netflow_files (
  capture_key char(64) NOT NULL,
  host_id mediumint unsigned NOT NULL,
  source_file varchar(512) NOT NULL,
+ payload_key char(64) DEFAULT NULL,
+ UNIQUE KEY capture_payload(payload_key),
  records_count int unsigned NOT NULL,
  imported_at datetime NOT NULL,
  PRIMARY KEY(capture_key), KEY imported_at(imported_at)

@@ -111,7 +111,8 @@ function icct_nms_device_types()
     foreach (
         db_fetch_assoc(
             "SELECT DISTINCT category_id,device_type FROM plugin_icct_nms_device_classification WHERE device_type<>''",
-        ) as $row
+        )
+        as $row
     ) {
         foreach ($types as $type) {
             if (
@@ -273,7 +274,8 @@ function icct_nms_save_device_type($input, $file = null, $ownTransaction = true)
                     db_fetch_assoc_prepared(
                         'SELECT host_id FROM plugin_icct_nms_device_classification WHERE category_id=? AND device_type=?',
                         [$old['category_id'], $old['name']],
-                    ) as $device
+                    )
+                    as $device
                 ) {
                     icct_backend_require_device_access((int) $device['host_id']);
                 }

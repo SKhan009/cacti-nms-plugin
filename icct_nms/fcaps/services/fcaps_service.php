@@ -68,13 +68,18 @@ function icct_nms_fault_parameters($id)
                  JOIN graph_templates g ON g.id=i.graph_template_id
                  JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT('graph_fault_presets_',g.id)
                  WHERE r.local_data_id=0 AND r.data_template_id IN (" .
-                    implode(',', array_fill(0, count($sourceOids), '?')) . ')',
+                    implode(',', array_fill(0, count($sourceOids), '?')) .
+                    ')',
                 array_keys($sourceOids),
             );
             foreach ($nativePresets ?: [] as $stored) {
-                foreach (json_decode($stored['meta_value'], true, 64, JSON_THROW_ON_ERROR) as $preset) {
+                foreach (
+                    json_decode($stored['meta_value'], true, 64, JSON_THROW_ON_ERROR)
+                    as $preset
+                ) {
                     if ((int) ($preset['metric_id'] ?? 0) === (int) $stored['metric_id']) {
-                        $repositoryFaults[$sourceOids[(int) $stored['data_template_id']]][] = $preset['name'];
+                        $repositoryFaults[$sourceOids[(int) $stored['data_template_id']]][] =
+                            $preset['name'];
                     }
                 }
             }
@@ -95,11 +100,20 @@ function icct_nms_fault_parameters($id)
                     'scale' => $record['scale'],
                     'type_id' => $bundle['type_id'],
                     'repository' => true,
-                    'repository_faults' => array_values(array_unique($repositoryFaults[ltrim($record['oid'], '.')] ?? [])),
-                    'repository_url' => 'protocols/snmp/mibs/controllers/mib_repository.php?' .
-                        http_build_query(!empty($bundle['rows'])
-                            ? ['generate' => $bundle['id'], 'stage' => 2, 'review_prepared' => 1]
-                            : ['select' => $bundle['id'], 'object' => $index]),
+                    'repository_faults' => array_values(
+                        array_unique($repositoryFaults[ltrim($record['oid'], '.')] ?? []),
+                    ),
+                    'repository_url' =>
+                        'protocols/snmp/mibs/controllers/mib_repository.php?' .
+                        http_build_query(
+                            !empty($bundle['rows'])
+                                ? [
+                                    'generate' => $bundle['id'],
+                                    'stage' => 2,
+                                    'review_prepared' => 1,
+                                ]
+                                : ['select' => $bundle['id'], 'object' => $index],
+                        ),
                     'label' => $record['symbol'],
                     'template_id' => 0,
                     'metric_id' => 0,
@@ -178,7 +192,8 @@ function icct_nms_fault_parameters($id)
     foreach ($parameters as $row) {
         $key =
             $row['oid'] .
-            '|' . ($row['repository_url'] ?? 'device') .
+            '|' .
+            ($row['repository_url'] ?? 'device') .
             '|' .
             $row['type_id'] .
             '|' .
@@ -468,6 +483,19 @@ function icct_nms_save_faults($id, $input)
     icct_backend_require_management(3);
     icct_backend_require_device_access($id);
     $rules = json_decode((string) ($input['fault_rules'] ?? ''), true, 512, JSON_THROW_ON_ERROR);
+    $source = $input['fault_source'] ?? '';
+    if ($source !== '') {
+        if (!in_array($source, ['rrd', 'snmp', 'ntp'], true) || !is_array($rules)) {
+            throw new InvalidArgumentException('Choose a supported fault source.');
+        }
+        foreach ($rules as $rule) {
+            if (!is_array($rule) || ($rule['source'] ?? 'rrd') !== $source) {
+                throw new InvalidArgumentException(
+                    'Each rule must belong to the selected fault source.',
+                );
+            }
+        }
+    }
     $associated = array_map(
         'intval',
         array_column(
@@ -488,12 +516,81 @@ function icct_nms_save_faults($id, $input)
         );
     }
 
-    icct_backend_category_execute(
-        'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
-            'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
-        ['fault_rules_' . $id, json_encode($rules, JSON_THROW_ON_ERROR)],
-    );
+    $key = 'fault_rules_' . $id;
+    $write = static function ($rules) use ($key) {
+        icct_backend_category_execute(
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+            [$key, json_encode($rules, JSON_THROW_ON_ERROR)],
+        );
+    };
+    if ($source === '') {
+        $write($rules);
+        return;
+    }
+
+    icct_backend_category_execute('START TRANSACTION', []);
+    try {
+        // Ensure there is a row to lock even when no rules have been saved yet.
+        icct_backend_category_execute(
+            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ' .
+                'ON DUPLICATE KEY UPDATE meta_key=meta_key',
+            [$key, '[]'],
+        );
+        $stored = db_fetch_cell_prepared(
+            'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=? FOR UPDATE',
+            [$key],
+        );
+        $otherRules = array_filter(
+            json_decode($stored, true, 64, JSON_THROW_ON_ERROR),
+            static fn($rule) => ($rule['source'] ?? 'rrd') !== $source,
+        );
+        if (count($otherRules) + count($rules) > 100) {
+            throw new InvalidArgumentException('Use no more than 100 fault rules.');
+        }
+        $write(array_merge($otherRules, $rules));
+        icct_backend_category_execute('COMMIT', []);
+    } catch (Throwable $e) {
+        icct_backend_category_execute('ROLLBACK', []);
+        throw $e;
+    }
 }
+/** Display saved alarm comparisons without confusing them with observed extrema. */
+function icct_nms_fault_summary_fields($rule, $readings)
+{
+    $minimum = $rule['minimum'] ?? null;
+    $maximum = $rule['maximum'] ?? null;
+    $condition = $rule['condition'] ?? 'outside';
+    if ($condition === 'outside' && $minimum === null) $condition = 'above';
+    if ($condition === 'outside' && $maximum === null) $condition = 'below';
+    $labels = [
+        'above' => '> Above', 'at_or_above' => '≥ At or above',
+        'below' => '< Below', 'at_or_below' => '≤ At or below',
+        'equals' => '= Equals', 'not_equals' => '≠ Not equal',
+        'outside' => '< Lower or > Upper',
+    ];
+    $threshold = $condition === 'outside'
+        ? ($minimum ?? '—') . ' to ' . ($maximum ?? '—')
+        : (in_array($condition, ['below', 'at_or_below'], true) ? $minimum : $maximum);
+    $units = trim((string) ($rule['units'] ?? ''));
+    $values = [];
+    foreach ($readings as $reading) {
+        if ($units === '') $units = trim((string) ($reading['units'] ?? ''));
+        $value = $reading['value'] ?? null;
+        $text = is_numeric($value) && is_finite((float) $value)
+            ? number_format((float) $value, 2, '.', '')
+            : ($reading['reason'] ?? 'Unavailable (no fresh sample)');
+        if (count($readings) > 1 && !empty($reading['graph'])) $text = $reading['graph'] . ': ' . $text;
+        $values[] = $text;
+    }
+    return [
+        'condition' => $labels[$condition] ?? $condition,
+        'threshold' => $threshold ?? '—',
+        'units' => $units ?: 'Not specified',
+        'reading' => $values ? implode("\n", $values) : 'Unavailable (no fresh sample)',
+    ];
+}
+
 function icct_nms_fault_state($rule, $value)
 {
     if (!$rule['enabled']) {
@@ -675,6 +772,92 @@ function icct_backend_collect_faults()
         );
     }
 }
+/** Preview the selected native source independently of whether an alarm rule is enabled. */
+function icct_nms_fault_rrd_read($host, $templateId, $metricId)
+{
+    global $config;
+    require_once $config['base_path'] . '/lib/rrd.php';
+    $allowed = array_map(
+        'intval',
+        array_column(icct_nms_device_graphs((int) $host['id']), 'local_graph_id'),
+    );
+    $sources = db_fetch_assoc_prepared(
+        'SELECT DISTINCT gl.id AS graph_id,dtr.local_data_id,dtr.data_source_name,di.input_string,gtg.vertical_label AS units ' .
+            'FROM graph_local gl JOIN graph_templates_item gti ON gti.local_graph_id=gl.id ' .
+            'LEFT JOIN graph_templates_graph gtg ON gtg.graph_template_id=gl.graph_template_id AND gtg.local_graph_id=0 ' .
+            'JOIN data_template_rrd dtr ON dtr.id=gti.task_item_id ' .
+            'JOIN data_template_rrd origin ON origin.id=? AND origin.local_data_id=0 ' .
+            'AND origin.data_template_id=dtr.data_template_id AND origin.data_source_name=dtr.data_source_name ' .
+            'JOIN data_template_data dtd ON dtd.local_data_id=dtr.local_data_id ' .
+            'LEFT JOIN data_input di ON di.id=dtd.data_input_id WHERE gl.host_id=? AND gl.graph_template_id=?',
+        [$metricId, (int) $host['id'], $templateId],
+    );
+    $results = [];
+    $now = time();
+    $interval = max(60, (int) read_config_option('poller_interval'));
+    foreach ($sources as $source) {
+        if (!in_array((int) $source['graph_id'], $allowed, true)) {
+            continue;
+        }
+        $value = null;
+        $reason = 'No fresh Cacti sample; check Data Source Debug.';
+        if ($host['disabled'] !== '') {
+            $reason = 'Device polling is disabled.';
+        } else {
+            $fetch = rrdtool_function_fetch(
+                (int) $source['local_data_id'],
+                $now - 3 * $interval,
+                $now,
+                $interval,
+                true,
+                null,
+                'AVERAGE',
+            );
+            $column = array_search(
+                $source['data_source_name'],
+                $fetch['data_source_names'] ?? [],
+                true,
+            );
+            $points = $column === false ? [] : $fetch['values'][$column] ?? [];
+            krsort($points, SORT_NUMERIC);
+            foreach ($points as $timestamp => $point) {
+                if ((int) $timestamp > $now) {
+                    continue;
+                }
+                if (
+                    $now - (int) $timestamp <= 2 * $interval &&
+                    is_numeric($point) &&
+                    is_finite((float) $point)
+                ) {
+                    $value = (float) $point;
+                }
+                break;
+            }
+            if (
+                $value === null &&
+                preg_match(
+                    '~/plugins/(?:nms/ssh|icct_nms/protocols/ssh)/metrics\.php(?:\s|$)~',
+                    $source['input_string'] ?? '',
+                )
+            ) {
+                $monitoring = db_fetch_cell_prepared(
+                    'SELECT monitoring FROM plugin_icct_nms_ssh_devices WHERE host_id=?',
+                    [(int) $host['id']],
+                );
+                $reason =
+                    (int) $monitoring === 1
+                        ? 'No fresh SSH sample; check SSH collection status.'
+                        : 'SSH monitoring is disabled in Protocol Config.';
+            }
+        }
+        $results[] = ['value' => $value, 'reason' => $value === null ? $reason : '',
+            'units' => $source['units'] ?? ''];
+    }
+    return $results ?: [
+            ['value' => null, 'reason' => 'No accessible graph instance for this data source.'],
+        ];
+}
+
 function icct_nms_fault_observations($host, $collector = false)
 {
     if ($collector && (int) $host['poller_id'] !== icct_backend_inventory_collector_id()) {
@@ -838,23 +1021,30 @@ function icct_nms_udp_fault_observations($host, $rules)
     if ($host['disabled'] === '') {
         try {
             $assignment = icct_backend_diag_assignment((int) $host['id'], 'iperf3_udp');
-            $latest = db_fetch_row_prepared(
-                "SELECT status, result_json, UNIX_TIMESTAMP(finished_at) AS sample_time
+            $latest =
+                db_fetch_row_prepared(
+                    "SELECT status, result_json, UNIX_TIMESTAMP(finished_at) AS sample_time
                  FROM plugin_icct_nms_diagnostic_jobs
                  WHERE host_id=? AND poller_id=? AND tool='iperf3_udp' AND config_hash=?
                      AND status IN ('complete','failed')
                  ORDER BY id DESC LIMIT 1",
-                [(int) $host['id'], (int) $host['poller_id'], icct_backend_diag_signature($assignment)],
-            ) ?: [];
+                    [
+                        (int) $host['id'],
+                        (int) $host['poller_id'],
+                        icct_backend_diag_signature($assignment),
+                    ],
+                ) ?:
+                [];
         } catch (RuntimeException | InvalidArgumentException $failure) {
             // A disabled or unavailable diagnostic assignment has no current measurement.
         }
     }
 
     $result = json_decode($latest['result_json'] ?? '', true);
-    $metrics = ($latest['status'] ?? '') === 'complete' && empty($result['self_test'])
-        ? ($result['udp_metrics'] ?? [])
-        : [];
+    $metrics =
+        ($latest['status'] ?? '') === 'complete' && empty($result['self_test'])
+            ? $result['udp_metrics'] ?? []
+            : [];
     $parameters = icct_nms_udp_fault_parameters();
     $observations = [];
     foreach ($rules as $index => $rule) {

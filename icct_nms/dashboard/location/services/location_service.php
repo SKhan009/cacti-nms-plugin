@@ -131,7 +131,7 @@ function icct_nms_gnss_validate($input)
         if (
             !$v['fix_values'] ||
             count($v['fix_values']) > 16 ||
-            array_filter($v['fix_values'], fn ($x) => strlen($x) > 32)
+            array_filter($v['fix_values'], fn($x) => strlen($x) > 32)
         ) {
             throw new InvalidArgumentException(
                 'Enter valid receiver fix-status values, for example 1 or A.',
@@ -335,7 +335,8 @@ function icct_nms_gnss_readings()
                 's.poller_id,s.config_json,r.latitude,r.longitude,r.status,r.last_fix,r.source_time,r.last_error ' .
                 'FROM plugin_icct_nms_gnss_sources s LEFT JOIN plugin_icct_nms_gnss_readings r ON ' .
                 'r.poller_id=s.poller_id WHERE s.enabled=1',
-        ) as $row
+        )
+        as $row
     ) {
         $v = json_decode($row['config_json'], true, 32, JSON_THROW_ON_ERROR);
         $fresh =

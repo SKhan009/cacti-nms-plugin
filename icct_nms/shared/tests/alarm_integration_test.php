@@ -50,7 +50,7 @@ try {
         'sample_time' => time(),
     ];
     $key = icct_nms_alarm_key($host, $rule, $o);
-    $get = static fn () => db_fetch_row_prepared(
+    $get = static fn() => db_fetch_row_prepared(
         'SELECT * FROM plugin_icct_nms_alarms WHERE alarm_key=?',
         [$key],
     );

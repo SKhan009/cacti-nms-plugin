@@ -10,7 +10,10 @@ function icct_nms_ntp_history_filter(int $hostId, array $input): array
     $where = ['host_id=?'];
     $args = [$hostId];
     $dates = [];
-    foreach (['ntp_from' => ['>=', '00:00:00'], 'ntp_to' => ['<=', '23:59:59']] as $field => [$comparison, $time]) {
+    foreach (
+        ['ntp_from' => ['>=', '00:00:00'], 'ntp_to' => ['<=', '23:59:59']]
+        as $field => [$comparison, $time]
+    ) {
         $date = $input[$field] ?? '';
         if ($date === '') {
             continue;
@@ -45,8 +48,12 @@ function icct_nms_ntp_history_filter(int $hostId, array $input): array
     ];
 }
 
-function icct_nms_ntp_history_rows(array $filter, int $limit, int $offset = 0, ?int $before = null): array
-{
+function icct_nms_ntp_history_rows(
+    array $filter,
+    int $limit,
+    int $offset = 0,
+    ?int $before = null,
+): array {
     $where = $filter['where'];
     $args = $filter['args'];
     if ($before !== null) {
@@ -55,7 +62,11 @@ function icct_nms_ntp_history_rows(array $filter, int $limit, int $offset = 0, ?
     }
     $rows = db_fetch_assoc_prepared(
         'SELECT id,status,sample_json,error,observed_at FROM plugin_icct_nms_ntp_monitor_history WHERE ' .
-            $where . ' ORDER BY id DESC LIMIT ' . $limit . ' OFFSET ' . $offset,
+            $where .
+            ' ORDER BY id DESC LIMIT ' .
+            $limit .
+            ' OFFSET ' .
+            $offset,
         $args,
     );
     if ($rows === false) {
@@ -95,13 +106,15 @@ function icct_nms_ntp_history_trend(array $rows, string $metric, int $interval):
     foreach ($rows as $i => $row) {
         $time = $times[$i];
         $value = $row['sample'][$metric] ?? null;
-        $gap = $previousTime !== null && ($time <= $previousTime || $time - $previousTime > $interval * 1.5);
+        $gap =
+            $previousTime !== null &&
+            ($time <= $previousTime || $time - $previousTime > $interval * 1.5);
         if ($value === null || $gap) {
             $segments[] = [];
         }
         if ($value !== null) {
-            $x = $duration ? 5 + 390 * ($time - $start) / $duration : 200;
-            $y = $high > $low ? 55 - 50 * ($value - $low) / ($high - $low) : 30;
+            $x = $duration ? 5 + (390 * ($time - $start)) / $duration : 200;
+            $y = $high > $low ? 55 - (50 * ($value - $low)) / ($high - $low) : 30;
             $segments[array_key_last($segments)][] = [round($x, 2), round($y, 2)];
         }
         $previousTime = $time;
@@ -119,7 +132,13 @@ function icct_nms_ntp_export_history(int $hostId, array $input): void
     header('Content-Disposition: attachment; filename="ntp-device-' . $hostId . '.csv"');
     header('Cache-Control: no-store');
     $out = fopen('php://output', 'w');
-    fputcsv($out, ['Observed at', 'Status', 'Source IP', ...array_values($metrics), 'Collection detail'], ',', '"', '');
+    fputcsv(
+        $out,
+        ['Observed at', 'Status', 'Source IP', ...array_values($metrics), 'Collection detail'],
+        ',',
+        '"',
+        '',
+    );
     do {
         foreach ($rows as $row) {
             $sample = $row['sample'];
@@ -127,8 +146,23 @@ function icct_nms_ntp_export_history(int $hostId, array $input): void
             if (preg_match('/^[\s]*[=+@-]/', $error)) {
                 $error = "'" . $error;
             }
-            $values = array_map(static fn($metric) => $sample[$metric] ?? null, array_keys($metrics));
-            fputcsv($out, [$row['observed_at'], $row['status'], $sample['source_address'] ?? '', ...$values, $error], ',', '"', '');
+            $values = array_map(
+                static fn($metric) => $sample[$metric] ?? null,
+                array_keys($metrics),
+            );
+            fputcsv(
+                $out,
+                [
+                    $row['observed_at'],
+                    $row['status'],
+                    $sample['source_address'] ?? '',
+                    ...$values,
+                    $error,
+                ],
+                ',',
+                '"',
+                '',
+            );
         }
         if (count($rows) < $limit || connection_aborted()) {
             break;

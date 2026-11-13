@@ -59,7 +59,8 @@ foreach (
         [2, 2, false],
         [1, 1, true],
         [1, 1, true],
-    ] as [$admin, $oper, $fresh]
+    ]
+    as [$admin, $oper, $fresh]
 ) {
     $view['ports'][0]['admin'] = $admin;
     $view['ports'][0]['oper'] = $oper;

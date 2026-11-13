@@ -2,7 +2,6 @@
 
 /** ICCT-owned discovery snmp services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: nd collect battery. */
 function icct_backend_nd_collect_battery($session, $deadline)
 {
     $oids = [
@@ -27,7 +26,6 @@ function icct_backend_nd_collect_battery($session, $deadline)
     return $out;
 }
 
-/** Reused Inventory service: nd collect direct. */
 function icct_backend_nd_collect_direct($host, $protocol, $jobDeadline)
 {
     if (
@@ -62,7 +60,8 @@ function icct_backend_nd_collect_direct($host, $protocol, $jobDeadline)
                 '1.3.6.1.2.1.31.1.1.1.1',
                 '1.3.6.1.2.1.31.1.1.1.15',
                 '1.3.6.1.2.1.31.1.1.1.18',
-            ] as $root
+            ]
+            as $root
         ) {
             $values += icct_backend_nd_snmp_optional_subtree($session, $root, $deadline, $budget);
         }
@@ -137,7 +136,8 @@ function icct_backend_nd_collect_direct($host, $protocol, $jobDeadline)
                     '1.3.6.1.2.1.17.4.3.1',
                     '1.3.6.1.2.1.17.7.1.2.2.1',
                     '1.3.6.1.2.1.17.7.1.4.2.1.3',
-                ] as $root
+                ]
+                as $root
             ) {
                 $values += icct_backend_nd_snmp_optional_subtree(
                     $session,
@@ -192,7 +192,6 @@ function icct_backend_nd_collect_direct($host, $protocol, $jobDeadline)
     }
 }
 
-/** Reused Inventory service: nd collect identity. */
 function icct_backend_nd_collect_identity($host, $jobDeadline)
 {
     $session = icct_backend_nd_discovery_session($host);
@@ -215,7 +214,8 @@ function icct_backend_nd_collect_identity($host, $jobDeadline)
                 '1.3.6.1.2.1.31.1.1.1.1',
                 '1.3.6.1.2.1.31.1.1.1.15',
                 '1.3.6.1.2.1.31.1.1.1.18',
-            ] as $root
+            ]
+            as $root
         ) {
             try {
                 $values += icct_backend_nd_snmp_subtree($session, $root, $deadline, $budget);
@@ -286,7 +286,6 @@ function icct_backend_nd_collect_identity($host, $jobDeadline)
     }
 }
 
-/** Reused Inventory service: nd discovery session. */
 function icct_backend_nd_discovery_session($host)
 {
     global $config;
@@ -368,7 +367,6 @@ function icct_backend_nd_discovery_session($host)
     return $session;
 }
 
-/** Reused Inventory service: nd hardware. */
 function icct_backend_nd_hardware($values)
 {
     $root = '1.3.6.1.2.1.47.1.1.1.1';
@@ -401,7 +399,6 @@ function icct_backend_nd_hardware($values)
     return ['chassis' => $chassis, 'physical_ports' => $ports, 'error' => ''];
 }
 
-/** Reused Inventory service: nd oid compare. */
 function icct_backend_nd_oid_compare($a, $b)
 {
     $a = explode('.', $a);
@@ -414,7 +411,6 @@ function icct_backend_nd_oid_compare($a, $b)
     return count($a) <=> count($b);
 }
 
-/** Reused Inventory service: nd snmp empty protocol. */
 function icct_backend_nd_snmp_empty_protocol($protocol, $interfaces, $error)
 {
     $data = [
@@ -431,7 +427,6 @@ function icct_backend_nd_snmp_empty_protocol($protocol, $interfaces, $error)
     return $data;
 }
 
-/** Reused Inventory service: nd snmp end of subtree. */
 function icct_backend_nd_snmp_end_of_subtree($session)
 {
     return in_array((int) $session->getErrno(), [2, 8], true) &&
@@ -441,7 +436,6 @@ function icct_backend_nd_snmp_end_of_subtree($session)
         );
 }
 
-/** Reused Inventory service: nd snmp interfaces. */
 function icct_backend_nd_snmp_interfaces($values)
 {
     try {
@@ -451,7 +445,6 @@ function icct_backend_nd_snmp_interfaces($values)
     }
 }
 
-/** Reused Inventory service: nd snmp optional subtree. */
 function icct_backend_nd_snmp_optional_subtree($session, $root, $deadline, &$budget)
 {
     try {
@@ -461,7 +454,6 @@ function icct_backend_nd_snmp_optional_subtree($session, $root, $deadline, &$bud
     }
 }
 
-/** Reused Inventory service: nd snmp scalar. */
 function icct_backend_nd_snmp_scalar($session, $oid, $deadline)
 {
     if (microtime(true) > $deadline) {
@@ -476,7 +468,6 @@ function icct_backend_nd_snmp_scalar($session, $oid, $deadline)
     return icct_backend_nd_snmp_value($response, $oid);
 }
 
-/** Reused Inventory service: nd snmp security. */
 function icct_backend_nd_snmp_security($host)
 {
     if ((string) $host['snmp_version'] === '1') {
@@ -527,7 +518,6 @@ function icct_backend_nd_snmp_security($host)
     return $hasPriv ? 'authPriv' : ($hasAuth ? 'authNoPriv' : 'noAuthNoPriv');
 }
 
-/** Reused Inventory service: nd snmp subtree. */
 function icct_backend_nd_snmp_subtree($session, $root, $deadline, &$budget)
 {
     $values = [];
@@ -567,7 +557,6 @@ function icct_backend_nd_snmp_subtree($session, $root, $deadline, &$budget)
     return $values;
 }
 
-/** Reused Inventory service: nd snmp value. */
 function icct_backend_nd_snmp_value($response, $oid)
 {
     if (

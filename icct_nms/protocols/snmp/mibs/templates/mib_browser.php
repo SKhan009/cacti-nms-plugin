@@ -105,6 +105,7 @@ $renderTree = function ($node, $depth = 0) use (&$renderTree, $browser, $icon, $
             id="mibBrowserEmpty"
             class="mib-browser-empty mib-empty-state"
             <?= $browser['records'] ? 'hidden' : '' ?>
+
             role="status">
             <img
                 src="protocols/snmp/mibs/assets/mib-empty.svg"

@@ -2,7 +2,6 @@
 
 /** ICCT-owned configuration runner services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: config serial execute. */
 function icct_backend_config_serial_execute(
     array $target,
     array $field,
@@ -118,7 +117,6 @@ function icct_backend_config_serial_execute(
     return $result;
 }
 
-/** Reused Inventory service: config snmp execute. */
 function icct_backend_config_snmp_execute(
     array $target,
     array $field,
@@ -180,7 +178,6 @@ function icct_backend_config_snmp_execute(
     }
 }
 
-/** Reused Inventory service: config snmp session. */
 function icct_backend_config_snmp_session(array $target, $write = false)
 {
     global $config;
@@ -234,139 +231,4 @@ function icct_backend_config_snmp_session(array $target, $write = false)
         );
     }
     return $session;
-}
-
-/** Reused Inventory service: config worker once. */
-function icct_backend_config_worker_once($collector)
-{
-    if (PHP_SAPI !== 'cli') {
-        throw new RuntimeException('Collector execution is CLI-only.');
-    }
-    $lock = 'icct_backend_config_worker_' . (int) $collector;
-    if ((int) db_fetch_cell_prepared('SELECT GET_LOCK(?,0)', [$lock]) !== 1) {
-        return;
-    }
-    try {
-        icct_backend_category_execute(
-            'UPDATE plugin_icct_nms_config_jobs SET ' .
-                'status=IF(operation=\'write\',\'unverified\',\'failed\'),finished_at=NOW(),result_json=? ' .
-                'WHERE poller_id=? AND status=\'running\'',
-            [
-                json_encode(['error' => 'Previous worker stopped; request was not replayed.']),
-                $collector,
-            ],
-        );
-        icct_backend_category_execute(
-            'UPDATE plugin_icct_nms_config_jobs SET status=\'failed\',finished_at=NOW(),result_json=? ' .
-                'WHERE poller_id=? AND status=\'queued\' AND requested_at < DATE_SUB(NOW(),INTERVAL 5 ' .
-                'MINUTE)',
-            [json_encode(['error' => 'Request expired before execution.']), $collector],
-        );
-        $job = db_fetch_row_prepared(
-            "SELECT * FROM plugin_icct_nms_config_jobs WHERE poller_id=? AND status='queued' ORDER BY id LIMIT 1",
-            [$collector],
-        );
-        if (!$job) {
-            icct_backend_config_monitor_once($collector);
-            return;
-        }
-        icct_backend_category_execute(
-            "UPDATE plugin_icct_nms_config_jobs SET status='running',started_at=NOW() WHERE id=?",
-            [$job['id']],
-        );
-        $previous_session = $_SESSION ?? [];
-        $dispatched = false;
-        try {
-            icct_backend_config_job_authorize($job);
-            $_SESSION = ['sess_user_id' => (int) $job['user_id']];
-            $result = icct_backend_serial_mutation(function () use (
-                $job,
-                $collector,
-                &$dispatched,
-            ) {
-                // Hold the configuration lock through execution so connection/profile edits cannot race a write.
-                $target = icct_backend_config_target($job['host_id'], false);
-                if (
-                    (int) $target['host']['poller_id'] !== (int) $collector ||
-                    !hash_equals($target['signature'], $job['signature'])
-                ) {
-                    throw new RuntimeException(
-                        'Device, connection or equipment profile changed after submission.',
-                    );
-                }
-                $field = $target['fields'][$job['field_key']] ?? null;
-                if (!$field) {
-                    throw new RuntimeException('Field no longer exists.');
-                }
-                $before = json_decode($job['before_json'], true, 32, JSON_THROW_ON_ERROR);
-                $requested = json_decode($job['requested_json'], true, 32, JSON_THROW_ON_ERROR);
-                if ($job['operation'] === 'write') {
-                    if (!$field['writable']) {
-                        throw new RuntimeException('Field is no longer writable.');
-                    }
-                    $before = icct_backend_equipment_value($field, $before);
-                    $requested = icct_backend_equipment_value($field, $requested);
-                }
-                $dispatched = true;
-                return $target['profile']['protocol'] === 'modbus_rtu'
-                    ? icct_backend_config_serial_execute(
-                        $target,
-                        $field,
-                        $job['operation'],
-                        $before,
-                        $requested,
-                    )
-                    : icct_backend_config_snmp_execute(
-                        $target,
-                        $field,
-                        $job['operation'],
-                        $before,
-                        $requested,
-                    );
-            });
-        } catch (Throwable $e) {
-            // Admission failures cannot have changed equipment; only dispatched writes are uncertain.
-            $result = [
-                'status' => $job['operation'] === 'write' && $dispatched ? 'unverified' : 'failed',
-                'error' => $e->getMessage(),
-            ];
-        } finally {
-            $_SESSION = $previous_session;
-        }
-        $status =
-            [
-                'read' => 'complete',
-                'verified' => 'verified',
-                'unverified' => 'unverified',
-                'failed' => 'failed',
-            ][$result['status'] ?? ''] ?? 'failed';
-        icct_backend_category_execute(
-            'UPDATE plugin_icct_nms_config_jobs SET status=?,result_json=?,finished_at=NOW() WHERE id=?',
-            [$status, json_encode($result, JSON_THROW_ON_ERROR), $job['id']],
-        );
-        if ($job['operation'] === 'write') {
-            icct_backend_category_execute(
-                'DELETE FROM plugin_icct_nms_serial_readings WHERE host_id=? AND field_key=?',
-                [$job['host_id'], $job['field_key']],
-            );
-        }
-        if ($job['operation'] === 'read') {
-            icct_backend_category_execute(
-                'INSERT INTO ' .
-                    'plugin_icct_nms_serial_readings(host_id,field_key,signature,value_json,status,error_text,observed_at) ' .
-                    'VALUES (?,?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE ' .
-                    'signature=VALUES(signature),value_json=VALUES(value_json),status=VALUES(status),error_text=VALUES(error_text),observed_at=NOW()',
-                [
-                    $job['host_id'],
-                    $job['field_key'],
-                    $job['signature'],
-                    json_encode($result['value'] ?? null),
-                    $status,
-                    substr($result['error'] ?? '', 0, 512),
-                ],
-            );
-        }
-    } finally {
-        db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)', [$lock]);
-    }
 }

@@ -90,7 +90,8 @@ foreach (
         'snmp_password',
         'snmp_priv_protocol',
         'snmp_priv_passphrase',
-    ] as $field
+    ]
+    as $field
 ) {
     unset($input[$field]);
 }

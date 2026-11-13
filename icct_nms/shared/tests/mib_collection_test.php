@@ -148,7 +148,7 @@ try {
     unset($savedRow);
     $bundle['wizard_step'] = 3;
     icct_mib_wizard_store($bundle);
-    $indexed = current(array_filter($bundle['rows'], fn ($r) => !empty($r['snmp_query_id'])));
+    $indexed = current(array_filter($bundle['rows'], fn($r) => !empty($r['snmp_query_id'])));
 
     collection_check(
         $indexed['snmp_query_id'] > 0 && $indexed['snmp_query_graph_id'] > 0,
@@ -210,7 +210,8 @@ try {
                 'records' => [$scalar => ['collection_method' => 'script']],
             ],
             ['selected' => [$scalar => 1], 'records' => [$scalar => ['profile_id' => 999999]]],
-        ] as $bad
+        ]
+        as $bad
     ) {
         try {
             icct_mib_plan($preview, array_replace($input, $bad));
@@ -274,7 +275,7 @@ try {
     // Exercise the real RRDtool session-close behavior using an isolated RRD file.
     require_once $config['base_path'] . '/lib/rrd.php';
     $scalarPair = current(
-        array_filter($bundle['rows'], fn ($row) => $row['object_index'] === $scalar),
+        array_filter($bundle['rows'], fn($row) => $row['object_index'] === $scalar),
     );
     $scalarLocal = (int) db_fetch_cell_prepared(
         'SELECT id FROM data_local WHERE host_id=? AND data_template_id=?',
@@ -332,7 +333,7 @@ try {
         ],
     ]);
     $edited = icct_mib_edit_save($bundle['id'], $token, 2);
-    $scalarRow = current(array_filter($edited['rows'], fn ($r) => $r['object_index'] === $scalar));
+    $scalarRow = current(array_filter($edited['rows'], fn($r) => $r['object_index'] === $scalar));
     collection_check(
         session_status() === PHP_SESSION_NONE,
         'Native RRD tuning closes the PHP session during an edit save',

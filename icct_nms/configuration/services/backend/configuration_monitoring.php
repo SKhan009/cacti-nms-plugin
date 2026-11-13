@@ -4,7 +4,6 @@ require_once __DIR__ . '/../../../protocols/serial/services/serial_event_service
 
 /** ICCT-owned configuration monitoring services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: config connection status. */
 function icct_backend_config_connection_status($host_id)
 {
     icct_backend_require_device_access($host_id);
@@ -43,7 +42,6 @@ function icct_backend_config_connection_status($host_id)
     return ['connection' => $label, 'status' => $status];
 }
 
-/** Reused Inventory service: config monitor once. */
 function icct_backend_config_monitor_once($collector)
 {
     if (PHP_SAPI !== 'cli') {
@@ -72,9 +70,13 @@ function icct_backend_config_monitor_once($collector)
                     if ((int) $target['host']['poller_id'] !== (int) $collector) {
                         return false;
                     }
-                    $serialRules = $target['serial'] ? icct_nms_serial_event_rules($device['host_id']) : [];
-                    $serialRules = ($serialRules['profile_id'] ?? null) === (int) $target['profile']['id']
-                        ? $serialRules['rules'] : [];
+                    $serialRules = $target['serial']
+                        ? icct_nms_serial_event_rules($device['host_id'])
+                        : [];
+                    $serialRules =
+                        ($serialRules['profile_id'] ?? null) === (int) $target['profile']['id']
+                            ? $serialRules['rules']
+                            : [];
                     foreach ($target['fields'] as $key => $field) {
                         $row = db_fetch_row_prepared(
                             'SELECT signature,status,value_json,TIMESTAMPDIFF(SECOND,observed_at,NOW()) AS age_seconds FROM ' .
@@ -103,7 +105,13 @@ function icct_backend_config_monitor_once($collector)
                             ];
                         }
                         if (isset($serialRules[$key])) {
-                            icct_nms_serial_event_record($target, $key, $serialRules[$key], $row, $result);
+                            icct_nms_serial_event_record(
+                                $target,
+                                $key,
+                                $serialRules[$key],
+                                $row,
+                                $result,
+                            );
                         }
                         icct_backend_config_store_reading($target, $key, $result);
                         return true;
@@ -123,7 +131,6 @@ function icct_backend_config_monitor_once($collector)
     return false;
 }
 
-/** Reused Inventory service: config reading. */
 function icct_backend_config_reading($host_id, $key, $authorize = true)
 {
     if ($authorize) {
@@ -158,7 +165,6 @@ function icct_backend_config_reading($host_id, $key, $authorize = true)
     ];
 }
 
-/** Reused Inventory service: config store reading. */
 function icct_backend_config_store_reading(array $target, $key, array $result)
 {
     $status = ($result['status'] ?? '') === 'read' ? 'complete' : 'failed';

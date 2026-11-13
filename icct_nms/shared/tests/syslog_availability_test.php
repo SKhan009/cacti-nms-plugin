@@ -126,7 +126,7 @@ check($r['events'] === 1, 'Down transition stored');
 $eventWrites = array_values(
     array_filter(
         $GLOBALS['writes'],
-        fn ($w) => strpos($w[0], 'plugin_icct_nms_syslog_events') !== false,
+        fn($w) => strpos($w[0], 'plugin_icct_nms_syslog_events') !== false,
     ),
 );
 check(count($eventWrites) === 1, 'Exactly one availability event inserted');
@@ -151,7 +151,7 @@ check($r['events'] === 1, 'Recovery stored');
 $eventWrites = array_values(
     array_filter(
         $GLOBALS['writes'],
-        fn ($w) => strpos($w[0], 'plugin_icct_nms_syslog_events') !== false,
+        fn($w) => strpos($w[0], 'plugin_icct_nms_syslog_events') !== false,
     ),
 );
 check(
@@ -173,7 +173,7 @@ check($r['checked'] === 0 && $r['events'] === 0, 'Protocol-disabled devices are 
 check(
     (bool) array_filter(
         $GLOBALS['availabilityQueries'],
-        fn ($sql) => preg_match('~INNER\s+JOIN\s+plugin_icct_nms_syslog_devices\s+d\b~i', $sql),
+        fn($sql) => preg_match('~INNER\s+JOIN\s+plugin_icct_nms_syslog_devices\s+d\b~i', $sql),
     ),
     'Only assigned devices are queried',
 );

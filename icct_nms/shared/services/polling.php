@@ -19,7 +19,10 @@ function icct_nms_poller_bottom()
     }
     try {
         require_once __DIR__ . '/../../protocols/ntp/services/ntp_collector.php';
-        foreach (icct_nms_ntp_due(['local', 'auto', 'udp'], (int) $config['poller_id']) as $device) {
+        foreach (
+            icct_nms_ntp_due(['local', 'auto', 'udp'], (int) $config['poller_id'])
+            as $device
+        ) {
             icct_nms_ntp_collect((int) $device['host_id'], $device['method']);
         }
     } catch (Throwable $error) {

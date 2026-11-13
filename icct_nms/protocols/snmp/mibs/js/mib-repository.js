@@ -1380,13 +1380,6 @@
             grid.append(item);
         });
     }
-    if (document.querySelector('#mibGenerationForm')?.dataset.savedEdit === '1')
-        root.querySelectorAll(
-            '[data-graphs-combine],[data-graphs-separate],[data-graph-add]',
-        ).forEach((control) => {
-            control.disabled = true;
-            control.title = 'Create a new template to change graph source groups.';
-        });
     root.querySelector('[data-graphs-combine]').addEventListener('click', () => {
         const name = groups[active]?.name || sources[0].record.data_name;
         sources.forEach((s) => set(s, 'graph_name', name));
@@ -1528,7 +1521,7 @@
             ? '1'
             : '0';
         root.querySelector('[data-device-information]').textContent = enabled.checked
-            ? 'This optional device template groups the selected graph templates for devices that expose the required MIB objects.'
+            ? 'This device template is suitable for SNMP-enabled devices that expose the selected MIB objects.'
             : 'Device template creation is skipped. Add saves the prepared data source and graph templates.';
         if (!enabled.checked) generate.hidden = true;
         else if (generate.dataset.completed !== '1') generate.hidden = false;

@@ -154,7 +154,8 @@ function icct_nms_dashboard_ntp($devices, $activeCounts)
     $ids = array_map('intval', array_keys($names));
     $assigned = db_fetch_assoc(
         'SELECT host_id FROM plugin_icct_nms_ntp_monitors WHERE host_id IN (' .
-            implode(',', $ids) . ')',
+            implode(',', $ids) .
+            ')',
     );
     $rows = [];
     foreach ($assigned ?: [] as $assignment) {
@@ -172,8 +173,11 @@ function icct_nms_dashboard_ntp($devices, $activeCounts)
             'active_alarms' => $activeCounts[$id] ?? 0,
         ];
     }
-    usort($rows, static fn ($a, $b) => $b['active_alarms'] <=> $a['active_alarms'] ?:
-        strnatcasecmp($a['name'], $b['name']));
+    usort(
+        $rows,
+        static fn($a, $b) => $b['active_alarms'] <=> $a['active_alarms'] ?:
+        strnatcasecmp($a['name'], $b['name']),
+    );
     return $rows;
 }
 
@@ -191,19 +195,19 @@ function icct_nms_dashboard_netflow_talkers($devices)
     $placeholders = implode(',', array_fill(0, count($names), '?'));
     $rows = db_fetch_assoc_prepared(
         'SELECT f.host_id,f.src_addr,SUM(f.bytes) AS bytes,COUNT(*) AS flows ' .
-        'FROM plugin_icct_nms_netflow_flows f ' .
-        'JOIN plugin_icct_nms_netflow_devices d ON d.host_id=f.host_id AND d.enabled=1 ' .
-        'JOIN host h ON h.id=f.host_id AND h.deleted=\'\' AND h.disabled=\'\' ' .
-        "LEFT JOIN plugin_icct_nms_meta p ON p.meta_key=CONCAT('protocol_disabled_netflow_',f.host_id) " .
-        "WHERE f.host_id IN ($placeholders) AND COALESCE(p.meta_value,'0')<>'1' " .
-        'AND f.last_seen BETWEEN DATE_SUB(NOW(),INTERVAL 5 MINUTE) AND NOW() ' .
-        'GROUP BY f.host_id,f.src_addr ORDER BY bytes DESC,f.src_addr,f.host_id LIMIT 10',
+            'FROM plugin_icct_nms_netflow_flows f ' .
+            'JOIN plugin_icct_nms_netflow_devices d ON d.host_id=f.host_id AND d.enabled=1 ' .
+            'JOIN host h ON h.id=f.host_id AND h.deleted=\'\' AND h.disabled=\'\' ' .
+            "LEFT JOIN plugin_icct_nms_meta p ON p.meta_key=CONCAT('protocol_disabled_netflow_',f.host_id) " .
+            "WHERE f.host_id IN ($placeholders) AND COALESCE(p.meta_value,'0')<>'1' " .
+            'AND f.last_seen BETWEEN DATE_SUB(NOW(),INTERVAL 5 MINUTE) AND NOW() ' .
+            'GROUP BY f.host_id,f.src_addr ORDER BY bytes DESC,f.src_addr,f.host_id LIMIT 10',
         array_keys($names),
     );
     if ($rows === false) {
         throw new RuntimeException('Unable to read NetFlow top talkers.');
     }
-    return array_map(static fn ($row) => $row + ['device' => $names[(int) $row['host_id']]], $rows);
+    return array_map(static fn($row) => $row + ['device' => $names[(int) $row['host_id']]], $rows);
 }
 
 function icct_nms_dashboard_readings($mapData, $includeNtp = false, $includeNetflowTalkers = false)
@@ -231,7 +235,6 @@ function icct_nms_dashboard_readings($mapData, $includeNtp = false, $includeNetf
         'ack' => ['Ack' => 0, 'Not_Ack' => 0],
         'escalation' => ['Esc' => 0, 'Not_Esc' => 0],
     ];
-    $passive = [];
     $ntpCounts = [];
     foreach (icct_nms_alarm_rows() as $alarm) {
         $id = (int) $alarm['host_id'];
@@ -243,25 +246,10 @@ function icct_nms_dashboard_readings($mapData, $includeNtp = false, $includeNetf
         $source = $alarm['source'] ?? '';
         if ($source === 'NTP') {
             $ntpCounts[$id] = ($ntpCounts[$id] ?? 0) + 1;
-        } elseif (in_array($source, ['SNMP Traps', 'Syslog', 'Passive events', 'NetFlow'], true) &&
-            isset($severities[$alarm['severity']])) {
-            $passive[$id][] = [
-                'name' => $alarm['name'],
-                'severity' => $alarm['severity'],
-                'source' => $source,
-                'time' => (int) $alarm['occurred_epoch'],
-                'event_description' => $alarm['description'],
-                'alarm_key' => $alarm['alarm_key'],
-                'corrective_action' => $alarm['fix'],
-            ];
         }
     }
+
     foreach ($devices as &$device) {
-        foreach ($passive[(int) ($device['id'] ?? 0)] ?? [] as $alarm) {
-            $device['fault_alarms'][] = $alarm;
-            $severity = $alarm['severity'];
-            $device['fault_counts'][$severity] = ($device['fault_counts'][$severity] ?? 0) + 1;
-        }
         if (!empty($device['ports']['items'])) {
             $ports[] = [
                 'id' => $device['id'],
@@ -305,23 +293,23 @@ function icct_nms_dashboard_readings($mapData, $includeNtp = false, $includeNetf
     $frequent = array_values($frequent);
     usort(
         $frequent,
-        static fn ($a, $b) => $b['count'] <=> $a['count'] ?:
+        static fn($a, $b) => $b['count'] <=> $a['count'] ?:
         strcmp($a['name'], $b['name']) ?:
         strcmp($a['severity'], $b['severity']),
     );
     usort(
         $recent,
-        static fn ($a, $b) => ($b['time'] ?? 0) <=> ($a['time'] ?? 0) ?:
+        static fn($a, $b) => ($b['time'] ?? 0) <=> ($a['time'] ?? 0) ?:
         strcmp($a['name'], $b['name']),
     );
     require_once __DIR__ . '/../../../inventory/discovery/services/inventory_events.php';
     $inventoryEvents = icct_nms_inventory_recent_events(array_column($devices, 'id'));
-    usort($ports, static fn ($a, $b) => strnatcasecmp($a['name'], $b['name']));
+    usort($ports, static fn($a, $b) => strnatcasecmp($a['name'], $b['name']));
     return [
         'device_counts' => $mapData['counts'] ?? null,
         'inventory_changes' => $inventoryEvents,
         'device_alarms' => array_map(
-            static fn ($device) => [
+            static fn($device) => [
                 'id' => (int) ($device['id'] ?? 0),
                 'counts' => $device['fault_counts'] ?? [],
                 'alarm' => $device['alarm'] ?? null,
@@ -331,7 +319,9 @@ function icct_nms_dashboard_readings($mapData, $includeNtp = false, $includeNetf
         'problematic' => ['total_devices' => count($devices), 'devices' => $problematic],
         'ports' => $ports,
         'ntp' => $includeNtp ? icct_nms_dashboard_ntp($devices, $ntpCounts) : [],
-        'netflow_talkers' => $includeNetflowTalkers ? icct_nms_dashboard_netflow_talkers($devices) : [],
+        'netflow_talkers' => $includeNetflowTalkers
+            ? icct_nms_dashboard_netflow_talkers($devices)
+            : [],
         'recent' => array_slice($recent, 0, 25),
         'frequent' => array_slice($frequent, 0, 10),
         'ack' => $workflow['ack'],
@@ -344,62 +334,11 @@ function icct_nms_dashboard_readings($mapData, $includeNtp = false, $includeNetf
     ];
 }
 
-/** Resolve the server by the native poller identity, never an arbitrary demo site. */
-function icct_nms_dashboard_server_center($hosts, $poller)
-{
-    $hostname = strtolower(trim($poller['hostname'] ?? ''));
-    $matches = array_values(
-        array_filter($hosts, static function ($host) use ($hostname) {
-            return $hostname !== '' &&
-                (strtolower(trim($host['hostname'] ?? '')) === $hostname ||
-                    strtolower(trim($host['snmp_sysName'] ?? '')) === $hostname);
-        }),
-    );
-    $center = [
-        'name' => $poller['name'] ?? 'Cacti server',
-        'status' => 'Unknown',
-        'device_id' => null,
-        'site_id' => null,
-        'coordinates' => null,
-    ];
-    if (count($matches) !== 1) {
-        return $center;
-    }
-    $host = $matches[0];
-    return array_replace($center, [
-        'name' => $host['description'],
-        'device_id' => (int) $host['id'],
-        'site_id' => (int) $host['site_id'],
-        'status' =>
-            ['Up' => 'Online', 'Down' => 'Offline', 'Disabled' => 'Disabled'][
-                $host['status_label']
-            ] ?? 'Unknown',
-    ]);
-}
-function icct_nms_dashboard_server()
-{
-    global $config;
-    $poller = db_fetch_row_prepared('SELECT name,hostname FROM poller WHERE id=?', [
-        (int) ($config['poller_id'] ?? 1),
-    ]);
-    $center = icct_nms_dashboard_server_center(icct_nms_inventory(), $poller ?: []);
-    if ($center['site_id']) {
-        $site = db_fetch_row_prepared('SELECT latitude,longitude FROM sites WHERE id=?', [
-            $center['site_id'],
-        ]);
-        $center['coordinates'] = icct_nms_map_coordinates(
-            $site['latitude'] ?? null,
-            $site['longitude'] ?? null,
-        );
-    }
-    return $center;
-}
-
 /** Site choices come from the native site catalogue. */
 function icct_nms_dashboard_sites($map)
 {
     return array_map(
-        static fn ($site) => ['id' => (int) $site['id'], 'name' => $site['name']],
+        static fn($site) => ['id' => (int) $site['id'], 'name' => $site['name']],
         db_fetch_assoc('SELECT id,name FROM sites ORDER BY name,id'),
     );
 }
@@ -412,10 +351,10 @@ function icct_nms_dashboard_scope($map, $siteId)
         throw new RuntimeException('Site unavailable.');
     }
     $map['sites'] = array_values(
-        array_filter($map['sites'], static fn ($site) => (int) $site['id'] === $siteId),
+        array_filter($map['sites'], static fn($site) => (int) $site['id'] === $siteId),
     );
     $map['unlocated'] = array_values(
-        array_filter($map['unlocated'], static fn ($device) => (int) $device['site_id'] === $siteId),
+        array_filter($map['unlocated'], static fn($device) => (int) $device['site_id'] === $siteId),
     );
     return icct_nms_dashboard_recount($map);
 }
@@ -444,4 +383,19 @@ function icct_nms_dashboard_recount($map)
         ]++;
     }
     return $map;
+}
+
+/** Collector membership is always the current native host.poller_id. */
+function icct_nms_dashboard_poller_scope($map, $pollerId)
+{
+    if (!$pollerId) {
+        return $map;
+    }
+    $matches = static fn($device) => (int) $device['poller_id'] === $pollerId;
+    $map['unlocated'] = array_values(array_filter($map['unlocated'], $matches));
+    foreach ($map['sites'] as &$site) {
+        $site['devices'] = array_values(array_filter($site['devices'], $matches));
+    }
+    unset($site);
+    return icct_nms_dashboard_recount($map);
 }

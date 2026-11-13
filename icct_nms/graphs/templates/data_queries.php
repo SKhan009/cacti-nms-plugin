@@ -21,7 +21,9 @@
                     name="action"
                     value="add_data_query" />
                 <label class="field">
-                    <span class="field-label">Add Data Query</span>
+                    <span
+                        class="field-label"
+                        data-field-help="Choose an installed Cacti data query to associate with this device.">Add Data Query</span>
                     <span class="select-wrap">
                         <select
                             name="snmp_query_id"
@@ -38,7 +40,9 @@
                     </span>
                 </label>
                 <label class="field">
-                    <span class="field-label">Re-Index Method</span>
+                    <span
+                        class="field-label"
+                        data-field-help="Choose when Cacti should refresh the discovered indexes for this data query.">Re-Index Method</span>
                     <span class="select-wrap">
                         <select name="reindex_method">
                             <?php foreach (

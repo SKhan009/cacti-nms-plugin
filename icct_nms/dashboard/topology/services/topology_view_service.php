@@ -52,7 +52,7 @@ function icct_nms_topology_link_key($link)
         [(int) $link['source'], trim((string) $link['source_port'])],
         [(int) $link['target'], trim((string) $link['target_port'])],
     ];
-    usort($endpoints, static fn ($a, $b) => $a[0] <=> $b[0]);
+    usort($endpoints, static fn($a, $b) => $a[0] <=> $b[0]);
     return json_encode($endpoints, JSON_THROW_ON_ERROR);
 }
 /** Give each physical port pair a stable ID and direction for refresh/tooltips. */
@@ -84,15 +84,7 @@ function icct_nms_topology_data($mapData)
         $inventory[(int) $host['id']] = $host;
     }
     foreach ($devices as &$device) {
-        $device['fault_counts'] = array_fill_keys(
-            ['Critical', 'Major', 'Minor', 'Warning', 'Information'],
-            0,
-        );
-        foreach (icct_nms_fault_observations($inventory[$device['id']]) as $fault) {
-            if (isset($device['fault_counts'][$fault['state']])) {
-                $device['fault_counts'][$fault['state']]++;
-            }
-        }
+        $device = array_replace($device, icct_nms_dashboard_alarm_data($device['id']));
         $device['fault_count'] = array_sum($device['fault_counts']);
     }
     unset($device);
@@ -126,15 +118,6 @@ function icct_nms_topology_data($mapData)
                     : $host['rack_name'] . ' (Peripheral)'),
         ];
         $device['netflow'] = icct_nms_netflow_topology($device['id']);
-        if ($device['netflow']) {
-            $nf = $device['netflow'];
-            $device['summary']['NetFlow / IPFIX'] = $nf['enabled'] ? 'Enabled' : 'Disabled';
-            $device['summary']['Flow Exporter'] = $nf['exporter'];
-            $device['summary']['Flow Collector'] = $nf['collector'];
-            $device['summary']['Last Flow Received'] = $nf['last_data'];
-            $device['summary']['Flow Records'] = $nf['flows'];
-            $device['summary']['Traffic Anomalies'] = $nf['anomalies'];
-        }
         $device['diagnostics'] = is_realm_allowed(3)
             ? icct_backend_diag_selected_labels($device['id'])
             : [];
@@ -207,7 +190,8 @@ function icct_nms_topology_data($mapData)
                         array_merge(
                             [$neighbor['peer_label'] ?? '', $neighbor['remote_name'] ?? ''],
                             icct_nms_management_addresses($neighbor['management_addresses'] ?? []),
-                        ) as $value
+                        )
+                        as $value
                     ) {
                         if (is_string($value)) {
                             $candidates = array_merge(

@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../map/services/map_service.php';
+
 require_once __DIR__ . '/../../../presets/services/rack_reservation_service.php';
 require_once __DIR__ . '/../../../fcaps/services/fcaps_service.php';
 /** Both rack editing surfaces share these placement records and validation. */
@@ -156,12 +158,7 @@ function icct_nms_rack_view_data()
                 break;
             }
         }
-        $counts = array_fill_keys(['Critical', 'Major', 'Minor', 'Warning', 'Information'], 0);
-        foreach (icct_nms_fault_observations($device) as $fault) {
-            if (isset($counts[$fault['state']])) {
-                $counts[$fault['state']]++;
-            }
-        }
+        $counts = icct_nms_dashboard_alarm_data($id)['fault_counts'];
         $severity = '';
         foreach ($counts as $level => $count) {
             if ($count) {
@@ -182,6 +179,7 @@ function icct_nms_rack_view_data()
             'id' => $id,
             'name' => $device['description'],
             'site_id' => (int) $device['site_id'],
+            'poller_id' => (int) $device['poller_id'],
             'status' => $device['status_label'],
             'rack_id' => (int) ($device['rack_id'] ?: $peripheral),
             'start' => (int) $device['start_unit'],
@@ -201,7 +199,8 @@ function icct_nms_rack_view_data()
             db_fetch_assoc_prepared(
                 'SELECT host_id,start_unit,unit_height FROM plugin_icct_nms_rack_devices WHERE rack_id=?',
                 [(int) $rack['id']],
-            ) as $placement
+            )
+            as $placement
         ) {
             if (!isset($allowed[(int) $placement['host_id']])) {
                 for (

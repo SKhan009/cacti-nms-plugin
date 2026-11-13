@@ -220,7 +220,10 @@ function icct_nms_save_serial($id, $input)
             ['serial_interval_' . $id, (string) $interval],
         );
         if (isset($input['serial_event_rules'])) {
-            icct_nms_save_serial_event_rules(icct_backend_config_target($id), $input['serial_event_rules']);
+            icct_nms_save_serial_event_rules(
+                icct_backend_config_target($id),
+                $input['serial_event_rules'],
+            );
         }
     });
 }

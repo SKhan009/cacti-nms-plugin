@@ -29,7 +29,11 @@
         <?php foreach ([-1 => ['Previous', 'M15 5 7 12 15 19Z'], 1 => ['Next', 'M9 5 17 12 9 19Z']] as $step => [$direction, $path]): ?>
             <button class="pagination-control" type="submit" name="syslog_target" value="<?= $syslogPage + $step ?>"
                 aria-label="<?= $direction ?> page" <?= $syslogPage + $step < 1 || $syslogPage + $step > $syslogPages ? 'disabled' : '' ?>>
-                <svg class="pagination-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="<?= $path ?>"/></svg>
+                <svg
+                    class="pagination-arrow"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"><path d="<?= $path ?>"/></svg>
             </button>
         <?php endforeach; ?>
         <noscript><button type="submit">Go</button></noscript>

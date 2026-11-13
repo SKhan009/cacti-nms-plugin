@@ -16,8 +16,19 @@ function icct_nms_ntp_methods()
     ];
 }
 
+/** Keep the browser field from shadowing HTMLFormElement.method used by Cacti CSRF. */
+function icct_nms_ntp_form_values($input)
+{
+    if (array_key_exists('ntp_method', $input)) {
+        $input['method'] = $input['ntp_method'];
+        unset($input['ntp_method']);
+    }
+    return $input;
+}
+
 function icct_nms_ntp_validate($input)
 {
+    $input = icct_nms_ntp_form_values($input);
     foreach (icct_nms_ntp_fields() as $field) {
         if (!array_key_exists($field, $input) || !is_scalar($input[$field])) {
             throw new InvalidArgumentException('Missing or invalid NTP field: ' . $field);
@@ -78,9 +89,11 @@ function icct_nms_ntp_local_device($device)
     if (in_array($hostname, ['localhost', '127.0.0.1', '::1'], true)) {
         return true;
     }
-    if (!filter_var($hostname, FILTER_VALIDATE_IP) ||
+    if (
+        !filter_var($hostname, FILTER_VALIDATE_IP) ||
         !isset($device['poller_id']) ||
-        (int) $device['poller_id'] !== icct_backend_inventory_collector_id()) {
+        (int) $device['poller_id'] !== icct_backend_inventory_collector_id()
+    ) {
         return false;
     }
     $address = inet_pton($hostname);

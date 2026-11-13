@@ -886,7 +886,12 @@ if (deviceName && shortName && !shortName.disabled) {
 
 // Searchable dropdowns keep the native select as the source of the saved value.
 let searchableSelectId = 0;
-window.icctMakeSearchableSelect = (templateSelect, templateLabel, pluralLabel, requiredSelection = false) => {
+window.icctMakeSearchableSelect = (
+    templateSelect,
+    templateLabel,
+    pluralLabel,
+    requiredSelection = false,
+) => {
     const optionsId = `template-search-options-${++searchableSelectId}`;
     const field = templateSelect.closest('.field');
     const wrap = templateSelect.closest('.select-wrap');
@@ -942,8 +947,10 @@ window.icctMakeSearchableSelect = (templateSelect, templateLabel, pluralLabel, r
         Array.from(templateSelect.options)
             .filter((option) => {
                 const group = option.closest('optgroup')?.label || '';
-                return (!requiredSelection || !option.disabled) &&
-                    `${group} ${option.textContent}`.toLowerCase().includes(query);
+                return (
+                    (!requiredSelection || !option.disabled) &&
+                    `${group} ${option.textContent}`.toLowerCase().includes(query)
+                );
             })
             .forEach((option) => {
                 const group = option.closest('optgroup')?.label;
@@ -1030,20 +1037,43 @@ window.icctMakeSearchableSelect = (templateSelect, templateLabel, pluralLabel, r
     });
     const listeners = new AbortController();
     const options = { signal: listeners.signal };
+    templateSelect.addEventListener(
+        'change',
+        () => {
+            trigger.textContent = templateSelect.selectedOptions[0]?.textContent || 'None';
+            trigger.disabled = templateSelect.matches(':disabled');
+        },
+        options,
+    );
     if (requiredSelection) {
-        templateSelect.addEventListener('invalid', (event) => {
-            event.preventDefault();
-            if (templateSelect.form?.querySelector(':invalid:not(fieldset)') === templateSelect) {
-                queueMicrotask(() => trigger.focus());
-            }
-        }, options);
-        panel.addEventListener('focusout', () => queueMicrotask(() => {
-            if (!panel.contains(document.activeElement)) closeTemplates();
-        }), options);
+        templateSelect.addEventListener(
+            'invalid',
+            (event) => {
+                event.preventDefault();
+                if (
+                    templateSelect.form?.querySelector(':invalid:not(fieldset)') === templateSelect
+                ) {
+                    queueMicrotask(() => trigger.focus());
+                }
+            },
+            options,
+        );
+        panel.addEventListener(
+            'focusout',
+            () =>
+                queueMicrotask(() => {
+                    if (!panel.contains(document.activeElement)) closeTemplates();
+                }),
+            options,
+        );
     }
-    document.addEventListener('click', (event) => {
-        if (!panel.contains(event.target) && !trigger.contains(event.target)) closeTemplates();
-    }, options);
+    document.addEventListener(
+        'click',
+        (event) => {
+            if (!panel.contains(event.target) && !trigger.contains(event.target)) closeTemplates();
+        },
+        options,
+    );
     field
         .closest('.device-fields, .graphs-page')
         ?.addEventListener('scroll', () => closeTemplates(), options);
@@ -1054,10 +1084,15 @@ window.icctMakeSearchableSelect = (templateSelect, templateLabel, pluralLabel, r
         panel.remove();
     };
 };
-document.querySelectorAll('#device-form [name="host_template_id"], [data-searchable-template]')
+document
+    .querySelectorAll('#device-form [name="host_template_id"], [data-searchable-template]')
     .forEach((select) => {
         const label = select.dataset.searchableTemplate || 'Device Template';
-        window.icctMakeSearchableSelect(select, label, label === 'Data Query' ? 'Data Queries' : `${label}s`);
+        window.icctMakeSearchableSelect(
+            select,
+            label,
+            label === 'Data Query' ? 'Data Queries' : `${label}s`,
+        );
     });
 
 // Saved presets populate device type choices for the selected segment.
@@ -1474,13 +1509,18 @@ const syncDiscoveryTiming = (field) => {
 };
 document.querySelector('#device-wizard')?.addEventListener('input', (event) => {
     const field = event.target;
-    if (discoveryTimingNames.has(field.name) && field.form?.elements.action?.value === 'discovery') {
+    if (
+        discoveryTimingNames.has(field.name) &&
+        field.form?.elements.action?.value === 'discovery'
+    ) {
         let pending = false;
-        document.querySelectorAll('#protocol-workspace form[data-discovery-timing-source]').forEach((form) => {
-            pending ||= form.dataset.presetSyncPending === '1';
-            delete form.dataset.discoveryTimingSource;
-            delete form.dataset.presetSyncPending;
-        });
+        document
+            .querySelectorAll('#protocol-workspace form[data-discovery-timing-source]')
+            .forEach((form) => {
+                pending ||= form.dataset.presetSyncPending === '1';
+                delete form.dataset.discoveryTimingSource;
+                delete form.dataset.presetSyncPending;
+            });
         field.form.dataset.discoveryTimingSource = '1';
         if (pending) field.form.dataset.presetSyncPending = '1';
         syncDiscoveryTiming(field);
@@ -1504,7 +1544,9 @@ if (protocolDefaultData) {
     const sectionFor = (protocol) =>
         document.getElementById('protocol-' + (protocol === 'snmp_discovery' ? 'snmp' : protocol));
     const formFor = (protocol) =>
-        sectionFor(protocol)?.querySelector(protocol === 'snmp_discovery' ? '#snmp-discovery-policy' : 'form');
+        sectionFor(protocol)?.querySelector(
+            protocol === 'snmp_discovery' ? '#snmp-discovery-policy' : 'form',
+        );
     const controlsFor = (form, name) => [...form.elements].filter((field) => field.name === name);
     const controlValue = (controls) => {
         const first = controls[0];
@@ -1515,8 +1557,11 @@ if (protocolDefaultData) {
     };
     const matches = (current, preset, type) =>
         String(current) === String(preset) ||
-        (type === 'number' && current !== '' && preset !== '' &&
-            Number.isFinite(Number(current)) && Number(current) === Number(preset));
+        (type === 'number' &&
+            current !== '' &&
+            preset !== '' &&
+            Number.isFinite(Number(current)) &&
+            Number(current) === Number(preset));
     for (const protocol of Object.keys(defaults)) {
         const form = formFor(protocol);
         if (!form) continue;
@@ -1533,11 +1578,14 @@ if (protocolDefaultData) {
         const form = formFor(protocol);
         if (!form || (!switching && copied.has(protocol)) || !defaults[protocol]) return;
         const isDiscovery = discoveryPresets.has(protocol);
-        const saved = !newDevice && (isDiscovery ? !!inheritance.discoveryPreset : section.dataset.saved === '1');
+        const saved =
+            !newDevice &&
+            (isDiscovery ? !!inheritance.discoveryPreset : section.dataset.saved === '1');
         const variantField = inheritance.variants?.[protocol]?.field;
-        const variant = (saved || switching) && variantField
-            ? controlValue(controlsFor(form, variantField))
-            : 'default';
+        const variant =
+            (saved || switching) && variantField
+                ? controlValue(controlsFor(form, variantField))
+                : 'default';
         const profile = inheritance.profiles?.[protocol]?.[variant];
         // A selected version or authentication mode belongs to the device.
         if ((saved || switching) && variantField && !profile) return;
@@ -1547,19 +1595,27 @@ if (protocolDefaultData) {
         const priorProfile = inheritance.profiles?.[protocol]?.[priorVariant] || {};
         if (isDiscovery) form.dataset.discoveryTimingSource = '1';
         for (const [name, value] of Object.entries(values)) {
-            const deviceChoice = (protocol === 'ntp' && name === 'method') ||
+            const deviceChoice =
+                (protocol === 'ntp' && name === 'method') ||
                 (saved && protocol === 'serial' && name === 'serial_interface') ||
                 ((saved || switching) && name === variantField);
-            if (deviceChoice || overrides[protocol]?.includes(name) || dirty.get(protocol)?.has(name))
+            if (
+                deviceChoice ||
+                overrides[protocol]?.includes(name) ||
+                dirty.get(protocol)?.has(name)
+            )
                 continue;
             const controls = controlsFor(form, name);
             const previous = controlValue(controls);
             const type = controls[0]?.type;
             if (previous === undefined || matches(previous, value, type)) continue;
             // For legacy devices without an override record, require a match with the old preset.
-            if (saved && overrides[protocol] == null &&
+            if (
+                saved &&
+                overrides[protocol] == null &&
                 !matches(previous, baseline[name], type) &&
-                !(switching && matches(previous, priorProfile[name], type)))
+                !(switching && matches(previous, priorProfile[name], type))
+            )
                 continue;
             controls.forEach((field) => {
                 if (field.type === 'radio') field.checked = String(field.value) === String(value);
@@ -1571,7 +1627,8 @@ if (protocolDefaultData) {
             });
             if (saved) form.dataset.presetSyncPending = '1';
         }
-        if (variantField) previousVariants.set(protocol, controlValue(controlsFor(form, variantField)));
+        if (variantField)
+            previousVariants.set(protocol, controlValue(controlsFor(form, variantField)));
         copied.add(protocol);
         form.querySelector('[name=snmp_version]:checked')?.dispatchEvent(
             new Event('change', { bubbles: true }),
@@ -1586,12 +1643,15 @@ if (protocolDefaultData) {
     for (const protocol of Object.keys(defaults)) {
         if (!discoveryPresets.has(protocol)) copyDefaults(protocol);
         const variantField = inheritance.variants?.[protocol]?.field;
-        if (variantField) formFor(protocol)?.addEventListener('change', (event) => {
-            if (event.isTrusted && event.target.name === variantField) copyDefaults(protocol, true);
-        });
+        if (variantField)
+            formFor(protocol)?.addEventListener('change', (event) => {
+                if (event.isTrusted && event.target.name === variantField)
+                    copyDefaults(protocol, true);
+            });
     }
     if (!discoveryPreset) {
-        discoveryPreset = ['lldp', 'cdp'].find((protocol) => sectionFor(protocol)?.hidden === false) || '';
+        discoveryPreset =
+            ['lldp', 'cdp'].find((protocol) => sectionFor(protocol)?.hidden === false) || '';
     }
     if (discoveryPreset) copyDefaults(discoveryPreset);
     document.querySelector('#confirm-protocols')?.addEventListener('click', () => {
@@ -1602,7 +1662,8 @@ if (protocolDefaultData) {
             if (!discoveryPresets.has(protocol)) copyDefaults(protocol);
         }
         if (!discoveryPreset) {
-            discoveryPreset = selected.find((protocol) => discoveryPresets.has(protocol)) ||
+            discoveryPreset =
+                selected.find((protocol) => discoveryPresets.has(protocol)) ||
                 (selected.includes('snmp') ? 'snmp_discovery' : '');
             if (discoveryPreset) copyDefaults(discoveryPreset);
         }
@@ -2038,7 +2099,9 @@ document.querySelectorAll('.diagnostic-reading-tabs').forEach((tabList) => {
         });
         if (focus) selected.focus();
     }
-    tabList.closest('.diagnostic-reading')?.addEventListener('diagnostic-reset', () => selectTab(tabs[0], false));
+    tabList
+        .closest('.diagnostic-reading')
+        ?.addEventListener('diagnostic-reset', () => selectTab(tabs[0], false));
     tabs.forEach((tab, index) => {
         tab.addEventListener('click', () => selectTab(tab));
         tab.addEventListener('keydown', (event) => {

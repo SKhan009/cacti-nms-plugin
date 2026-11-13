@@ -32,12 +32,8 @@ function db_execute($sql)
 {
     return true;
 }
-function icct_backend_require_management()
-{
-}
-function icct_backend_require_device_access($id)
-{
-}
+function icct_backend_require_management() {}
+function icct_backend_require_device_access($id) {}
 function icct_backend_current_user_id()
 {
     return 1;
@@ -145,7 +141,8 @@ foreach (
             ['label' => 'X', 'offset' => '1', 'function' => '3', 'type' => 'uint16'],
             ['label' => 'Y', 'offset' => '1', 'function' => '3', 'type' => 'int16'],
         ],
-    ] as $bad
+    ]
+    as $bad
 ) {
     try {
         icct_nms_serial_register_fields($bad);

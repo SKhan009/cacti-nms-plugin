@@ -25,3 +25,15 @@ Anomaly rules evaluate a five-minute window: destination/port fan-out, SYN-only 
 ## Verification
 
 `tests/send_flows.py` constructs real UDP datagrams in all required versions. Run only against an isolated test collector/port, for example `python3 tests/send_flows.py --port 22055`. Run `sudo bash tests/run_wire_test.sh` from this directory for a reproducible loopback UDP capture followed by native connection-local database assertions. It verifies correct versions, timestamps, counters, retry idempotence, device permissions, filtering, configured/advertised sampling behavior and anomaly detection/recovery. It does not change saved device data. Set `NF_TEST_PORT` if the default test port 22065 is occupied.
+
+### Local RHEL device exporter
+
+`rhel/local_exporter.sh` and `rhel/icct-nms-local-exporter.service` provide the local lab host exporter using the already installed `nfpcapd` and `nfreplay` binaries. This deployment captures actual interface `enp0s8` traffic, expires flows at 30/10 seconds, and sends NetFlow v9 from `127.0.0.77` to `127.0.0.1:22066`. Those values match this device's existing assignment; adjust them explicitly for another machine. No fault rule is required. This measures this host's visible interface traffic, not the entire network.
+
+Install the script as `/usr/local/libexec/icct-nms-local-exporter.sh` and the unit under `/etc/systemd/system`, then enable the unit. Runtime flow files are deleted after export and discarded on service restart. Packet payload logging is not enabled. The existing receiver rotates/imports on its own interval, so allow roughly 1–2 minutes before readings appear. Stop/disable `icct-nms-local-exporter` to stop local capture without disabling the collector.
+
+### Capture replay protection
+
+Capture-file hashes provide a quick retry check. A unique `payload_key` also identifies the complete decoded capture, independent of filename, file headers, record order, and application/service enrichment. Identity includes host, direction, protocol, interfaces, counters, timestamps, sampling and record multiplicity. Opposite-direction and later observations remain separate records.
+
+For an existing installation, back up `plugin_icct_nms_netflow_flows`, `plugin_icct_nms_netflow_files`, `plugin_icct_nms_netflow_buckets` and `plugin_icct_nms_netflow_state`; stop the collector and run `php protocols/netflow/cli/deduplicate_captures.php` from the plugin directory before restarting it. The CLI adds the unique payload index, removes only complete repeated captures, adjusts counters transactionally, and retains file receipts to prevent replay. Re-running it is safe. Incomplete/partially expired captures are left untouched. This does not merge individual similar records from different captures.

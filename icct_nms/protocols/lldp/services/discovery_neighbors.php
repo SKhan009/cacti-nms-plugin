@@ -10,7 +10,6 @@ function icct_backend_nd_lldp_identity($subtype, $id)
     return (int) $subtype . ':' . bin2hex($id);
 }
 
-/** Reused Inventory service: nd lldp ifindex. */
 function icct_backend_nd_lldp_ifindex($subtype, $hex, $interfaces)
 {
     $fields = [
@@ -35,7 +34,6 @@ function icct_backend_nd_lldp_ifindex($subtype, $hex, $interfaces)
     return count($matches) === 1 ? (int) array_key_first($matches) : 0;
 }
 
-/** Reused Inventory service: nd lldp label. */
 function icct_backend_nd_lldp_label($subtype, $bytes, $macSubtype)
 {
     return (int) $subtype === $macSubtype && strlen($bytes) === 6
@@ -43,7 +41,6 @@ function icct_backend_nd_lldp_label($subtype, $bytes, $macSubtype)
         : icct_backend_nd_octets($bytes);
 }
 
-/** Reused Inventory service: nd observation history. */
 function icct_backend_nd_parse_lldp($values, $interfaces)
 {
     $management = icct_backend_nd_lldp_management_addresses($values);
@@ -116,5 +113,3 @@ function icct_backend_nd_parse_lldp($values, $interfaces)
         'neighbors' => $neighbors,
     ];
 }
-
-/** Reused Inventory service: nd table indices. */

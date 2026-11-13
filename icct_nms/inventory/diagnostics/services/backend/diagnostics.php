@@ -3,7 +3,6 @@
 require_once __DIR__ . '/../../../../protocols/ping/services/command.php';
 /** ICCT-owned diagnostics services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: diag arguments. */
 function icct_backend_diag_arguments($row, $tool, $name)
 {
     $target = icct_backend_diag_target($row['hostname']);
@@ -113,7 +112,6 @@ function icct_backend_diag_arguments($row, $tool, $name)
     return [$args, $timeout];
 }
 
-/** Reused Inventory service: diag assignment. */
 function icct_backend_diag_assignment($host_id, $tool)
 {
     if (!isset(icct_backend_diag_labels()[$tool])) {
@@ -150,7 +148,6 @@ function icct_backend_diag_assignment($host_id, $tool)
     return $row;
 }
 
-/** Reused Inventory service: diag available labels. */
 function icct_backend_diag_available_labels()
 {
     return icct_backend_diag_labels();
@@ -175,7 +172,6 @@ function icct_backend_diag_selected_labels($host_id)
     );
 }
 
-/** Reused Inventory service: diag command. */
 function icct_backend_diag_command($row, $tool)
 {
     [$name, $binary] = icct_backend_diag_executable($tool);
@@ -196,7 +192,6 @@ function icct_backend_diag_command($row, $tool)
     return [array_merge([$binary], $args), $timeout];
 }
 
-/** Reused Inventory service: diag drain. */
 function icct_backend_diag_drain($pipe, &$buffer, &$truncated, $limit)
 {
     // Bound work per iteration too: a noisy child must not starve the timeout check.
@@ -211,7 +206,6 @@ function icct_backend_diag_drain($pipe, &$buffer, &$truncated, $limit)
     }
 }
 
-/** Reused Inventory service: diag executable. */
 function icct_backend_diag_executable($tool, $lookup = null)
 {
     if (!isset(icct_backend_diag_labels()[$tool])) {
@@ -232,7 +226,6 @@ function icct_backend_diag_executable($tool, $lookup = null)
     return [$name, $binary];
 }
 
-/** Reused Inventory service: diag execute. */
 function icct_backend_diag_execute($row, $tool)
 {
     if (PHP_SAPI !== 'cli') {
@@ -247,7 +240,10 @@ function icct_backend_diag_execute($row, $tool)
     }
     [$command, $timeout] = icct_backend_diag_command($row, $tool);
 
-    if (in_array($tool, ['iperf3', 'iperf3_udp'], true) && icct_backend_diag_collector_address($row['hostname'])) {
+    if (
+        in_array($tool, ['iperf3', 'iperf3_udp'], true) &&
+        icct_backend_diag_collector_address($row['hostname'])
+    ) {
         [$command, $result] = icct_backend_diag_iperf_self_test($command, $timeout);
     } elseif ($tool === 'netperf' && icct_backend_diag_collector_address($row['hostname'])) {
         [$command, $result] = icct_backend_diag_netperf_self_test($command, $timeout);
@@ -260,7 +256,6 @@ function icct_backend_diag_execute($row, $tool)
     return icct_backend_diag_result($row, $tool, $command, $result);
 }
 
-/** Reused Inventory service: diag labels. */
 function icct_backend_diag_labels()
 {
     return [
@@ -278,7 +273,6 @@ function icct_backend_diag_labels()
     ];
 }
 
-/** Reused Inventory service: diag profile validate. */
 function icct_backend_diag_profile_validate($input)
 {
     $name = trim((string) ($input['diagnostic_profile_name'] ?? ''));
@@ -351,11 +345,11 @@ function icct_backend_diag_profile_validate($input)
     ];
 }
 
-/** Reused Inventory service: diag program. */
 function icct_backend_diag_program($name)
 {
     foreach (
-        ['/usr/bin/', '/usr/sbin/', '/usr/local/bin/', '/usr/local/sbin/', '/bin/', '/sbin/'] as $directory
+        ['/usr/bin/', '/usr/sbin/', '/usr/local/bin/', '/usr/local/sbin/', '/bin/', '/sbin/']
+        as $directory
     ) {
         $candidate = $directory . $name;
         if (is_file($candidate) && is_executable($candidate)) {
@@ -364,26 +358,28 @@ function icct_backend_diag_program($name)
     }
 
     $bundled = '/opt/icct-nms/native/pchar-1.5/sbin/pchar';
-    return $name === 'pchar' && is_file($bundled) && is_executable($bundled)
-        ? $bundled
-        : '';
+    return $name === 'pchar' && is_file($bundled) && is_executable($bundled) ? $bundled : '';
 }
 
-/** Reused Inventory service: diag result. */
 function icct_backend_diag_result($row, $tool, $command, $result)
 {
     if ($tool === 'iperf3_udp' && $result['exit'] === 0 && empty($result['truncated'])) {
         $metrics = icct_backend_diag_udp_metrics($result['stdout']);
         if ($metrics === null) {
             $result['protocol_error'] = true;
-            $result['output'] .= "\nThe client returned no complete iPerf3 UDP receiver measurement.";
+            $result['output'] .=
+                "\nThe client returned no complete iPerf3 UDP receiver measurement.";
         } else {
             $result['udp_metrics'] = $metrics;
-            $result['output'] = sprintf(
-                "Receiver throughput: %s Mbit/s\nReceiver jitter: %s ms\nReceiver packet loss: %.6g%% (%d/%d datagrams)\n\n",
-                $metrics['throughput'], $metrics['jitter'], $metrics['loss'],
-                $metrics['lost'], $metrics['total'],
-            ) . $result['output'];
+            $result['output'] =
+                sprintf(
+                    "Receiver throughput: %s Mbit/s\nReceiver jitter: %s ms\nReceiver packet loss: %.6g%% (%d/%d datagrams)\n\n",
+                    $metrics['throughput'],
+                    $metrics['jitter'],
+                    $metrics['loss'],
+                    $metrics['lost'],
+                    $metrics['total'],
+                ) . $result['output'];
         }
     }
     if (in_array($tool, ['iperf3', 'iperf3_udp'], true) && !empty($result['truncated'])) {
@@ -422,7 +418,10 @@ function icct_backend_diag_result($row, $tool, $command, $result)
     ) {
         $result['output'] = 'No IPv4 or IPv6 neighbours are cached by this collector.';
     }
-    if (in_array($tool, ['iperf3', 'iperf3_udp', 'netperf'], true) && !empty($result['self_test'])) {
+    if (
+        in_array($tool, ['iperf3', 'iperf3_udp', 'netperf'], true) &&
+        !empty($result['self_test'])
+    ) {
         $result['output'] =
             "Collector local-address self-test — this is not network-link bandwidth.\nTemporary local server stopped after the test.\n\n" .
             $result['output'];
@@ -447,13 +446,15 @@ function icct_backend_diag_result($row, $tool, $command, $result)
 /** Read the final UDP receiver row, using datagram counts for accurate loss thresholds. */
 function icct_backend_diag_udp_metrics($stdout)
 {
-    if (!preg_match(
-        '/^\[\s*\d+\]\s+[\d.]+\s*-\s*[\d.]+\s+sec\s+[\d.]+\s+[KMGT]?Bytes\s+' .
-            '(\d+(?:\.\d+)?)\s+([KMGT]?)bits\/sec\s+(\d+(?:\.\d+)?)\s+ms\s+' .
-            '(\d+)\s*\/\s*(\d+)\s+\([\d.]+%\)\s+receiver[ \t]*\r?$/m',
-        $stdout,
-        $row,
-    )) {
+    if (
+        !preg_match(
+            '/^\[\s*\d+\]\s+[\d.]+\s*-\s*[\d.]+\s+sec\s+[\d.]+\s+[KMGT]?Bytes\s+' .
+                '(\d+(?:\.\d+)?)\s+([KMGT]?)bits\/sec\s+(\d+(?:\.\d+)?)\s+ms\s+' .
+                '(\d+)\s*\/\s*(\d+)\s+\([\d.]+%\)\s+receiver[ \t]*\r?$/m',
+            $stdout,
+            $row,
+        )
+    ) {
         return null;
     }
     $lost = (int) $row[4];
@@ -465,13 +466,12 @@ function icct_backend_diag_udp_metrics($stdout)
     return [
         'throughput' => (float) $row[1] * $scale[$row[2]],
         'jitter' => (float) $row[3],
-        'loss' => 100 * $lost / $total,
+        'loss' => (100 * $lost) / $total,
         'lost' => $lost,
         'total' => $total,
     ];
 }
 
-/** Reused Inventory service: diag run command. */
 function icct_backend_diag_run_command($command, $timeout = 40, ?callable $heartbeat = null)
 {
     if (!is_array($command) || !$command || !is_string($command[0]) || $command[0] === '') {
@@ -576,7 +576,6 @@ function icct_backend_diag_run_command($command, $timeout = 40, ?callable $heart
     ];
 }
 
-/** Reused Inventory service: diag signature. */
 function icct_backend_diag_signature($row)
 {
     return hash(
@@ -607,7 +606,6 @@ function icct_backend_diag_signature($row)
     );
 }
 
-/** Reused Inventory service: diag target. */
 function icct_backend_diag_target($value)
 {
     $target = trim((string) $value);
@@ -636,7 +634,6 @@ function icct_backend_diag_target($value)
     return $target;
 }
 
-/** Reused Inventory service: diag tools. */
 function icct_backend_diag_tools($value)
 {
     $parts = is_array($value) ? $value : explode(',', (string) $value);

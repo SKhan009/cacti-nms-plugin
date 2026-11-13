@@ -4,7 +4,6 @@
 
 // Jobs and results have one authoritative store: the Cacti database.
 
-/** Reused Inventory service: diag authorize job. */
 function icct_backend_diag_authorize_job($job)
 {
     $user = (int) $job['user_id'];
@@ -29,7 +28,6 @@ function icct_backend_diag_authorize_job($job)
     }
 }
 
-/** Reused Inventory service: diag dispatch. */
 function icct_backend_diag_dispatch()
 {
     global $config;
@@ -53,7 +51,6 @@ function icct_backend_diag_dispatch()
     );
 }
 
-/** Reused Inventory service: diag execution context. */
 function icct_backend_diag_execution_context($job, $collector)
 {
     icct_backend_diag_authorize_job($job);
@@ -89,7 +86,6 @@ function icct_backend_diag_execution_context($job, $collector)
     return $row;
 }
 
-/** Reused Inventory service: diag job. */
 function icct_backend_diag_job($id)
 {
     $job = db_fetch_row_prepared(
@@ -120,7 +116,6 @@ function icct_backend_diag_job($id)
     return $job;
 }
 
-/** Reused Inventory service: diag poll. */
 function icct_backend_diag_poll()
 {
     global $config;
@@ -199,7 +194,6 @@ function icct_backend_diag_poll()
     }
 }
 
-/** Reused Inventory service: diag run. */
 function icct_backend_diag_run($host_id, $tool)
 {
     icct_backend_require_management(3);
@@ -301,7 +295,6 @@ function icct_backend_diag_run($host_id, $tool)
     }
 }
 
-/** Reused Inventory service: diag runner. */
 function icct_backend_diag_runner($collector)
 {
     $row = db_fetch_row_prepared(
@@ -315,17 +308,16 @@ function icct_backend_diag_runner($collector)
     return is_array($runner) ? array_merge($runner, ['heartbeat_at' => $row['updated_at']]) : null;
 }
 
-/** Reused Inventory service: diag worker database. */
 function icct_backend_diag_worker_database()
 {
     global $config,
-    $remote_db_cnn_id,
-    $database_hostname,
-    $database_port,
-    $database_default,
-    $rdatabase_hostname,
-    $rdatabase_port,
-    $rdatabase_default;
+        $remote_db_cnn_id,
+        $database_hostname,
+        $database_port,
+        $database_default,
+        $rdatabase_hostname,
+        $rdatabase_port,
+        $rdatabase_default;
     if (PHP_SAPI !== 'cli') {
         throw new RuntimeException('The diagnostic worker is CLI-only.');
     }
@@ -378,7 +370,8 @@ function icct_backend_mtr_monitor_once($collector)
         );
         foreach ($devices as $device) {
             foreach (
-                array_intersect(icct_backend_diag_tools($device['tools']), ['mtr_icmp', 'mtr_tcp']) as $tool
+                array_intersect(icct_backend_diag_tools($device['tools']), ['mtr_icmp', 'mtr_tcp'])
+                as $tool
             ) {
                 try {
                     $job = [

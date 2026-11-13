@@ -50,5 +50,3 @@ function icct_backend_nd_lldp_management_addresses($values)
     unset($row);
     return ['rows' => $rows, 'errors' => array_keys($errors)];
 }
-
-/** Reused Inventory service: nd management address. */

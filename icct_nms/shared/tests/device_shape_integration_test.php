@@ -59,7 +59,8 @@ try {
             $mapped = array_merge($mapped, $site['devices']);
         }
         foreach (
-            ['map' => $mapped, 'topology' => $network['devices'], 'rack' => $rack['devices']] as $view => $rows
+            ['map' => $mapped, 'topology' => $network['devices'], 'rack' => $rack['devices']]
+            as $view => $rows
         ) {
             $rows = array_column($rows, null, 'id');
             if (($rows[$host['id']]['shape'] ?? null) !== $shape) {

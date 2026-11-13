@@ -1,0 +1,22 @@
+[Unit]
+Description=ICCT NMS local RHEL interface traffic exporter
+After=network-online.target icct-nms-netflow.service
+Wants=network-online.target
+Requires=icct-nms-netflow.service
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /usr/local/libexec/icct-nms-local-exporter.sh
+RuntimeDirectory=icct-nms-local-exporter
+RuntimeDirectoryMode=0700
+Restart=on-failure
+RestartSec=5
+LimitMEMLOCK=infinity
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
+
+[Install]
+WantedBy=multi-user.target

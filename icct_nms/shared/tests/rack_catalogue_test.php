@@ -9,12 +9,8 @@ require __DIR__ . '/../services/schema.php';
 require __DIR__ . '/../../presets/services/rack_preset_service.php';
 require __DIR__ . '/../../dashboard/rack-view/services/rack_view_service.php';
 require __DIR__ . '/../../dashboard/topology/services/backend/topology_config.php';
-function icct_backend_require_management($realm)
-{
-}
-function icct_backend_require_device_access($id)
-{
-}
+function icct_backend_require_management($realm) {}
+function icct_backend_require_device_access($id) {}
 function icct_backend_current_user_id()
 {
     return 1;
@@ -36,7 +32,8 @@ function checkRack($yes, $message)
     }
 }
 foreach (
-    ['plugin_icct_nms_meta', 'plugin_icct_nms_racks', 'plugin_icct_nms_rack_devices', 'host'] as $table
+    ['plugin_icct_nms_meta', 'plugin_icct_nms_racks', 'plugin_icct_nms_rack_devices', 'host']
+    as $table
 ) {
     checkRack(db_execute('CREATE TEMPORARY TABLE qa_copy LIKE ' . $table), 'Copy failed');
     checkRack(db_execute('CREATE TEMPORARY TABLE ' . $table . ' LIKE qa_copy'), 'Isolation failed');

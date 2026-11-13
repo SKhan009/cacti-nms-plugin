@@ -13,7 +13,9 @@ $trapHelp = static function (string $headingHelpText): void {
 ?>
 <section class="protocol-content trap-receiver-settings" id="trap-receiver-settings" aria-labelledby="snmp-notifications-heading">
     <hr />
-    <h3 class="device-help-heading" id="snmp-notifications-heading">
+    <h3
+        class="device-help-heading"
+        id="snmp-notifications-heading">
         SNMP notifications
         <?php $trapHelp('Receive SNMP traps and informs sent by the device. Notification reception is configured separately from SNMP polling.'); ?>
     </h3>
@@ -21,7 +23,10 @@ $trapHelp = static function (string $headingHelpText): void {
         <?php icct_nms_token(); ?>
         <?php if ($presetMode): ?>
             <input type="hidden" name="action" value="save_protocol_defaults">
-            <input type="hidden" name="preset_protocol" value="snmp_notifications">
+            <input
+                type="hidden"
+                name="preset_protocol"
+                value="snmp_notifications">
             <div class="protocol-grid cols-2">
                 <label class="field">
                     <span class="field-label">Collect notifications by default
@@ -29,8 +34,12 @@ $trapHelp = static function (string $headingHelpText): void {
                     </span>
                     <span class="select-wrap">
                         <select name="trap_enabled">
-                            <option value="0" <?= !$trapEnabled ? 'selected' : '' ?>>Off</option>
-                            <option value="1" <?= $trapEnabled ? 'selected' : '' ?>>On</option>
+                            <option
+                                value="0"
+                                <?= !$trapEnabled ? 'selected' : '' ?>>Off</option>
+                            <option
+                                value="1"
+                                <?= $trapEnabled ? 'selected' : '' ?>>On</option>
                         </select>
                     </span>
                 </label>
@@ -40,8 +49,12 @@ $trapHelp = static function (string $headingHelpText): void {
                     </span>
                     <span class="select-wrap">
                         <select name="trap_source_mode">
-                            <option value="device" <?= $trapSourceMode === 'device' ? 'selected' : '' ?>>Use the device IP address</option>
-                            <option value="manual" <?= $trapSourceMode === 'manual' ? 'selected' : '' ?>>Enter manually per device</option>
+                            <option
+                                value="device"
+                                <?= $trapSourceMode === 'device' ? 'selected' : '' ?>>Use the device IP address</option>
+                            <option
+                                value="manual"
+                                <?= $trapSourceMode === 'manual' ? 'selected' : '' ?>>Enter manually per device</option>
                         </select>
                     </span>
                 </label>
@@ -53,20 +66,29 @@ $trapHelp = static function (string $headingHelpText): void {
             <?php endif; ?>
             <div class="protocol-grid cols-2">
                 <label class="check-row">
-                    <input type="checkbox" name="trap_enabled" value="1" <?= $trapEnabled ? 'checked' : '' ?>>
+                    <input
+                        type="checkbox"
+                        name="trap_enabled"
+                        value="1"
+                        <?= $trapEnabled ? 'checked' : '' ?>>
                     Collect SNMP notifications
                 </label>
                 <label class="field">
                     <span class="field-label">Trap sender IP address
                         <?php $trapHelp('Enter the IPv4 or IPv6 source address the collector sees. This can differ from the device’s polling address.'); ?>
                     </span>
-                    <input name="trap_source_address" maxlength="45" value="<?= icct_nms_h($trapSourceAddress) ?>"
+                    <input
+                        name="trap_source_address"
+                        maxlength="45"
+                        value="<?= icct_nms_h($trapSourceAddress) ?>"
                         <?= $trapUseDeviceIp ? 'placeholder="Uses the device IP if blank"' : '' ?>>
                 </label>
             </div>
         <?php endif; ?>
         <div class="protocol-actions">
-            <button class="button primary" type="submit"><?= $presetMode ? 'Save notification defaults' : 'Save notifications' ?></button>
+            <button
+                class="button primary"
+                type="submit"><?= $presetMode ? 'Save notification defaults' : 'Save notifications' ?></button>
         </div>
     </form>
 </section>

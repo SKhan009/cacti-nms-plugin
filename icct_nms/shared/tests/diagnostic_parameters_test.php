@@ -38,7 +38,8 @@ foreach (
         ['pathchar_hops' => 31],
         ['pathchar_timeout' => 121],
         ['pathchar_timeout' => 9],
-    ] as $bad
+    ]
+    as $bad
 ) {
     try {
         icct_backend_diag_profile_validate(array_replace($input, $bad));

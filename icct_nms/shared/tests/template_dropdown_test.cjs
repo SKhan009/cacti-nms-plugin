@@ -7,7 +7,7 @@ const source = fs.readFileSync(
     'utf8',
 );
 const code = source.slice(
-    sourceIndex(source, '// Search the installed core templates'),
+    sourceIndex(source, 'let searchableSelectId = 0;'),
     sourceIndex(source, 'const typeProfileData'),
 );
 for (const mode of ['legacy', 'modern', 'broken-api']) {
@@ -93,6 +93,9 @@ for (const mode of ['legacy', 'modern', 'broken-api']) {
         { textContent: 'Local Linux Machine', value: '21', selected: false },
         { textContent: 'Net-SNMP Device', value: '8', selected: false },
     ];
+    select.options.forEach((option) => {
+        option.closest = () => null;
+    });
     select.selectedOptions = [select.options[0]];
     document = {
         body: new Element('body'),
@@ -104,7 +107,14 @@ for (const mode of ['legacy', 'modern', 'broken-api']) {
         },
     };
     const window = { addEventListener() {} };
-    vm.runInNewContext(code, { document, window, innerHeight: 700, innerWidth: 1000, Event });
+    vm.runInNewContext(code, {
+        document,
+        window,
+        innerHeight: 700,
+        innerWidth: 1000,
+        Event,
+        AbortController,
+    });
     const trigger = field.children[0],
         panel = document.body.children[0],
         search = panel.children[0],

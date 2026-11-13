@@ -291,9 +291,10 @@ document.querySelectorAll('[data-delete-connection]').forEach((form) =>
 const siteEditor = document.querySelector('#site-editor');
 function openSiteEditor(site = {}) {
     siteEditor.reset();
-    siteEditor.elements.site_id.value = site.id ?? '';
+    siteEditor.elements.site_id.value = site.id ?? '0';
     for (const field of siteEditor.querySelectorAll('input:not([type=hidden]),select,textarea'))
         field.value = site[field.name] ?? (field.name === 'zoom' ? '12' : '');
+    siteEditor.elements.timezone.dispatchEvent(new Event('change', { bubbles: true }));
     document.querySelector('#site-editor-title').textContent = site.id ? 'Edit Site' : 'Add Site';
     siteEditor.hidden = false;
     document.querySelector('#site-list').hidden = true;
@@ -378,3 +379,12 @@ document.querySelectorAll('[data-delete-rack-profile]').forEach((form) =>
         }
     }),
 );
+
+// Use Inventory's page-size/page controls without changing device-type sort or tab.
+const typePager = document.getElementById('device-type-pagination');
+if (typePager) {
+    typePager.addEventListener('change', (event) => {
+        if (event.target.name === 'per_page') typePager.elements.page.value = '1';
+        if (['per_page', 'page'].includes(event.target.name)) typePager.requestSubmit();
+    });
+}

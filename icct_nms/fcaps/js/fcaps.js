@@ -36,13 +36,11 @@
             document.querySelector('#fault-mib-preset-values')?.textContent || '[]',
         );
 
-    const udpParameters = JSON.parse(
-        document.querySelector('#fault-udp-parameters')?.textContent || '{}',
-    );
-    const measurementParameters = { ntp: ntpParameters, iperf3_udp: udpParameters };
-    const udpHelp = document.querySelector('#fault-udp-help');
+    const measurementParameters = { ntp: ntpParameters };
+    // Preserve existing UDP rules when saving other fault sources.
+    const hiddenUdpRules = saved.filter((rule) => rule.source === 'iperf3_udp');
 
-    let selectedSource = saved[0]?.source || 'rrd',
+    let selectedSource = saved.find((rule) => rule.source !== 'iperf3_udp')?.source || 'rrd',
         selectedRow = null;
     let discardTrapDraft = () => {};
     const graphSection = document.querySelector('#fault-graph-section');
@@ -71,7 +69,8 @@
         if (!container) return;
         container.replaceChildren();
         for (const row of entries) {
-            const field = (key) => row.querySelector(passive ? `[data-field="${key}"]` : `[data-${key}]`);
+            const field = (key) =>
+                row.querySelector(passive ? `[data-field="${key}"]` : `[data-${key}]`);
             const name = field('name').value.trim() || 'Untitled alarm';
             const entry = document.createElement('li');
             const text = document.createElement('div');
@@ -83,12 +82,15 @@
                 row.dataset.presetKey ? 'MIB preset' : '',
                 field('severity').value,
                 field('enabled').checked ? 'Enabled' : 'Disabled',
-            ].filter(Boolean).join(' · ');
+            ]
+                .filter(Boolean)
+                .join(' · ');
             text.append(title, detail);
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'icon-button fault-alarm-edit';
-            button.innerHTML = '<svg class="icct-edit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5L8 21l-5 1 1-5ZM14 5l5 5"/></svg>';
+            button.innerHTML =
+                '<svg class="icct-edit-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m16 3 5 5L8 21l-5 1 1-5ZM14 5l5 5"/></svg>';
             button.setAttribute('aria-label', `Edit ${name}`);
             button.title = `Edit ${name}`;
             button.addEventListener('click', () => {
@@ -109,7 +111,9 @@
     const netflowForm = document.querySelector('#netflow-fault-form');
     if (netflowForm) {
         const choices = [...netflowForm.querySelectorAll('[data-netflow-metric]')];
-        const labels = new Map(choices.map((choice) => [choice.dataset.netflowMetric, choice.dataset.metricLabel]));
+        const labels = new Map(
+            choices.map((choice) => [choice.dataset.netflowMetric, choice.dataset.metricLabel]),
+        );
         const editors = netflowForm.querySelector('[data-netflow-rule-editors]');
         const template = netflowForm.querySelector('[data-netflow-rule-template]');
         const list = netflowForm.querySelector('[data-netflow-rule-list]');
@@ -125,7 +129,9 @@
             choices.forEach((choice) => {
                 const key = choice.dataset.netflowMetric;
                 choice.setAttribute('aria-pressed', String(key === metric));
-                const count = rows.filter((row) => row.dataset.alarmSaved && row.dataset.ruleMetric === key).length;
+                const count = rows.filter(
+                    (row) => row.dataset.alarmSaved && row.dataset.ruleMetric === key,
+                ).length;
                 const detail = choice.querySelector('[data-netflow-rule-count]');
                 detail.textContent = `${detail.dataset.unit} · ${count} saved`;
             });
@@ -140,13 +146,18 @@
             });
         }
         function sync() {
-            stored.value = JSON.stringify([...editors.children].map((row) => ({
-                id: row.dataset.ruleId,
-                metric: row.dataset.ruleMetric,
-                ...Object.fromEntries(fields(row).map((input) => [
-                    input.dataset.field, input.type === 'checkbox' ? input.checked : input.value,
-                ])),
-            })));
+            stored.value = JSON.stringify(
+                [...editors.children].map((row) => ({
+                    id: row.dataset.ruleId,
+                    metric: row.dataset.ruleMetric,
+                    ...Object.fromEntries(
+                        fields(row).map((input) => [
+                            input.dataset.field,
+                            input.type === 'checkbox' ? input.checked : input.value,
+                        ]),
+                    ),
+                })),
+            );
         }
         function append(rule, saved) {
             const row = template.content.firstElementChild.cloneNode(true);
@@ -162,22 +173,27 @@
             if (rule.metric === 'distributed_syn_rate') {
                 field(row, 'src_addr').closest('label').hidden = true;
                 field(row, 'dst_addr').setAttribute('aria-required', 'true');
-                row.querySelector('[data-netflow-destination-label]').textContent = 'Destination IP (required)';
+                row.querySelector('[data-netflow-destination-label]').textContent =
+                    'Destination IP (required)';
                 row.querySelector('[data-netflow-distributed-help]').hidden = false;
             }
             editors.append(row);
             return row;
         }
         JSON.parse(stored.value).forEach((rule) => append(rule, true));
-        choices.forEach((choice) => choice.addEventListener('click', () => {
-            metric = choice.dataset.netflowMetric;
-            selected = [...editors.children].find((row) => row.dataset.ruleMetric === metric) || null;
-            render();
-        }));
+        choices.forEach((choice) =>
+            choice.addEventListener('click', () => {
+                metric = choice.dataset.netflowMetric;
+                selected =
+                    [...editors.children].find((row) => row.dataset.ruleMetric === metric) || null;
+                render();
+            }),
+        );
         addNetflowRule = () => {
             if (!canAddNetflowRule()) return;
             const id = Array.from(crypto.getRandomValues(new Uint8Array(12)), (byte) =>
-                byte.toString(16).padStart(2, '0')).join('');
+                byte.toString(16).padStart(2, '0'),
+            ).join('');
             selected = append({ id, metric, severity: 'Major', enabled: true }, false);
             sync();
             render();
@@ -228,6 +244,7 @@
             : row === target;
     }
     function renderMeasurements(preferred = null) {
+        form.dataset.faultSource = selectedSource;
         const rows = [...list.children],
             matching = rows.filter(
                 (row) => row.querySelector('[data-source]').value === selectedSource,
@@ -332,9 +349,6 @@
         ntpSection.hidden = !choices;
         ntpNavigation.replaceChildren();
         if (!choices) return;
-        const udp = selectedSource === 'iperf3_udp';
-        ntpSection.querySelector('h3').textContent = udp ? 'iPerf3 UDP Measurements' : 'NTP Parameters';
-        if (udpHelp) udpHelp.hidden = !udp;
         for (const [parameter, item] of Object.entries(choices)) {
             const button = document.createElement('button');
             button.type = 'button';
@@ -435,7 +449,7 @@
             renderMeasurements(row);
             return;
         }
-        if (list.children.length >= 100) return;
+        if (list.children.length + hiddenUdpRules.length >= 100) return;
         addRule({
             source: item.source,
             name: item.label || item.parameter || item.data_source_name || '',
@@ -462,7 +476,10 @@
         form.hidden = passive || netflow;
         if (netflowSummary) netflowSummary.hidden = !netflow;
         activeFaultSource = source;
-        saveFaultButton?.setAttribute('form', passive ? 'passive-fault-form' : netflow ? 'netflow-fault-form' : 'fault-form');
+        saveFaultButton?.setAttribute(
+            'form',
+            passive ? 'passive-fault-form' : netflow ? 'netflow-fault-form' : 'fault-form',
+        );
         addFaultButton.disabled = netflow && !canAddNetflowRule();
         if (passiveForm) {
             if (source !== 'trap') discardTrapDraft();
@@ -476,15 +493,19 @@
             renderMeasurements();
         }
     }
-    sourceRadios.forEach((radio) => radio.addEventListener('change', () => {
-        if (radio.checked) {
-            const snmpView = snmpRuleRadios.find((option) => option.checked)?.value;
-            showFaultSource(radio.value === 'snmp' ? snmpView || 'snmp' : radio.value);
-        }
-    }));
-    snmpRuleRadios.forEach((radio) => radio.addEventListener('change', () => {
-        if (radio.checked) showFaultSource(radio.value);
-    }));
+    sourceRadios.forEach((radio) =>
+        radio.addEventListener('change', () => {
+            if (radio.checked) {
+                const snmpView = snmpRuleRadios.find((option) => option.checked)?.value;
+                showFaultSource(radio.value === 'snmp' ? snmpView || 'snmp' : radio.value);
+            }
+        }),
+    );
+    snmpRuleRadios.forEach((radio) =>
+        radio.addEventListener('change', () => {
+            if (radio.checked) showFaultSource(radio.value);
+        }),
+    );
     if (passiveForm) {
         passiveForm.addEventListener('click', (event) => {
             if (event.target.closest('label .field-info')) event.preventDefault();
@@ -492,16 +513,24 @@
         const panes = [...passiveForm.querySelectorAll('[data-passive-panel]')];
         const trapPane = panes.find((pane) => pane.dataset.passivePanel === 'trap');
         const trapChoices = [...trapPane.querySelectorAll('[data-trap-choice]')];
-        const savedPassiveRules = JSON.parse(document.querySelector('#saved-passive-rules').textContent);
+        const savedPassiveRules = JSON.parse(
+            document.querySelector('#saved-passive-rules').textContent,
+        );
         // The trap editor must retain rules belonging to the hidden Syslog source.
         const syslogRules = savedPassiveRules.filter((rule) => rule.source === 'syslog');
         function updateTrapRuleCounts(rules) {
             const counts = countRulesByOid(rules, 'trap');
             for (const choice of trapChoices) {
-                showOidRuleCount(choice.closest('label').querySelector('[data-trap-rule-count]'), counts, choice.value);
+                showOidRuleCount(
+                    choice.closest('label').querySelector('[data-trap-rule-count]'),
+                    counts,
+                    choice.value,
+                );
             }
         }
-        const payloadOids = JSON.parse(document.querySelector('#passive-trap-payload-oids').textContent);
+        const payloadOids = JSON.parse(
+            document.querySelector('#passive-trap-payload-oids').textContent,
+        );
         const fields = (row) => [...row.querySelectorAll('[data-field]')];
         const rows = (pane) => [...pane.querySelector('[data-passive-rules]').children];
         const trapOid = (row) => row.querySelector('[data-field="oid"]').value;
@@ -510,24 +539,36 @@
         let untouchedTrapDraft = null;
         function syncPassive() {
             trapChoices.forEach((choice) => (choice.checked = choice.value === selectedTrapOid));
-            passiveForm.elements.passive_rules.value = JSON.stringify([...syslogRules, ...panes.flatMap((pane) => {
-                const entries = rows(pane);
-                if (pane === trapPane) {
-                    entries.forEach((row) => (row.hidden = trapOid(row) !== selectedTrapOid));
-                }
-                pane.querySelector('[data-passive-empty]').hidden = entries.some((row) => !row.hidden);
-                renderAlarmList(pane.querySelector('[data-passive-alarm-list]'), entries, true, (row) => {
-                    if (pane === trapPane) selectedTrapOid = trapOid(row);
-                    syncPassive();
-                });
-                return entries.map((row) => ({
-                    source: pane.dataset.passivePanel,
-                    ...Object.fromEntries(fields(row).map((field) => [
-                        field.dataset.field,
-                        field.type === 'checkbox' ? field.checked : field.value,
-                    ])),
-                }));
-            })]);
+            passiveForm.elements.passive_rules.value = JSON.stringify([
+                ...syslogRules,
+                ...panes.flatMap((pane) => {
+                    const entries = rows(pane);
+                    if (pane === trapPane) {
+                        entries.forEach((row) => (row.hidden = trapOid(row) !== selectedTrapOid));
+                    }
+                    pane.querySelector('[data-passive-empty]').hidden = entries.some(
+                        (row) => !row.hidden,
+                    );
+                    renderAlarmList(
+                        pane.querySelector('[data-passive-alarm-list]'),
+                        entries,
+                        true,
+                        (row) => {
+                            if (pane === trapPane) selectedTrapOid = trapOid(row);
+                            syncPassive();
+                        },
+                    );
+                    return entries.map((row) => ({
+                        source: pane.dataset.passivePanel,
+                        ...Object.fromEntries(
+                            fields(row).map((field) => [
+                                field.dataset.field,
+                                field.type === 'checkbox' ? field.checked : field.value,
+                            ]),
+                        ),
+                    }));
+                }),
+            ]);
         }
         function updateTrapPayload(row, selectedOid) {
             const oid = row.querySelector('[data-field="oid"]')?.value;
@@ -537,7 +578,9 @@
             for (const fieldOid of payloadOids[oid] || []) {
                 varbind.add(new Option(fieldOid, fieldOid));
             }
-            varbind.value = [...varbind.options].some((option) => option.value === selectedOid) ? selectedOid : '';
+            varbind.value = [...varbind.options].some((option) => option.value === selectedOid)
+                ? selectedOid
+                : '';
             expected.disabled = varbind.value === '';
             expected.required = !expected.disabled;
             if (expected.disabled) expected.value = '';
@@ -566,7 +609,10 @@
 
         function addTrapDraft(choice) {
             const symbol = choice.closest('label').querySelector('[data-trap-name]').textContent;
-            return addPassive(trapPane, { oid: choice.value, name: symbol.split('::').pop().slice(0, 160) });
+            return addPassive(trapPane, {
+                oid: choice.value,
+                name: symbol.split('::').pop().slice(0, 160),
+            });
         }
         discardTrapDraft = () => {
             if (!untouchedTrapDraft) return;
@@ -602,21 +648,27 @@
                 trapChoices[0]?.focus();
                 return;
             }
-            const row = untouchedTrapDraft && trapOid(untouchedTrapDraft) === choice.value
-                ? untouchedTrapDraft : addTrapDraft(choice);
+            const row =
+                untouchedTrapDraft && trapOid(untouchedTrapDraft) === choice.value
+                    ? untouchedTrapDraft
+                    : addTrapDraft(choice);
             syncPassive();
             row.querySelector('[data-field="name"]').focus();
         };
-        passiveForm.addEventListener('invalid', (event) => {
-            // Keep the first invalid rule visible when the wizard checks multiple source panels.
-            if (event.target !== passiveForm.querySelector(':invalid:not(fieldset)')) return;
-            const source = event.target.closest('[data-passive-panel]')?.dataset.passivePanel;
-            if (source === 'trap') {
-                selectedTrapOid = trapOid(event.target.closest('.passive-rule'));
-                syncPassive();
-            }
-            if (source) showFaultSource(source);
-        }, true);
+        passiveForm.addEventListener(
+            'invalid',
+            (event) => {
+                // Keep the first invalid rule visible when the wizard checks multiple source panels.
+                if (event.target !== passiveForm.querySelector(':invalid:not(fieldset)')) return;
+                const source = event.target.closest('[data-passive-panel]')?.dataset.passivePanel;
+                if (source === 'trap') {
+                    selectedTrapOid = trapOid(event.target.closest('.passive-rule'));
+                    syncPassive();
+                }
+                if (source) showFaultSource(source);
+            },
+            true,
+        );
         passiveForm.addEventListener('icct-fault-saved', (event) => {
             updateTrapRuleCounts(JSON.parse(event.detail));
             if (passiveForm.elements.passive_rules.value !== event.detail) return;
@@ -662,9 +714,10 @@
         const repository = parameters.filter((item) => item.repository);
         if (repositoryEdit) {
             const selectedOid = selectedRow?.querySelector('[data-oid]').value;
-            const item = selectedRepositoryItem?.oid === selectedOid
-                ? selectedRepositoryItem
-                : repository.find((candidate) => candidate.oid === selectedOid);
+            const item =
+                selectedRepositoryItem?.oid === selectedOid
+                    ? selectedRepositoryItem
+                    : repository.find((candidate) => candidate.oid === selectedOid);
             if (item) {
                 repositoryEdit.href = item.repository_url;
                 repositoryEdit.hidden = false;
@@ -676,8 +729,15 @@
         for (const row of list.children)
             if (row.querySelector('[data-source]').value === 'snmp') {
                 const oid = row.querySelector('[data-oid]').value;
-                if (oid && !available.some((item) => item.oid === oid) && !repository.some((item) => item.oid === oid))
-                    available.push({ oid, parameter: row.querySelector('[data-parameter]').value || oid });
+                if (
+                    oid &&
+                    !available.some((item) => item.oid === oid) &&
+                    !repository.some((item) => item.oid === oid)
+                )
+                    available.push({
+                        oid,
+                        parameter: row.querySelector('[data-parameter]').value || oid,
+                    });
             }
         for (const [navigation, items, emptyText] of [
             [oidNavigation, available, 'No known OIDs for this device.'],
@@ -717,7 +777,9 @@
                 }
                 const status = document.createElement('small');
                 const presets = item.repository_faults || [];
-                status.textContent = presets.length ? `MIB presets · ${presets.join(', ')}` : 'No MIB preset';
+                status.textContent = presets.length
+                    ? `MIB presets · ${presets.join(', ')}`
+                    : 'No MIB preset';
                 button.append(status);
                 navigation.append(button);
             }
@@ -734,28 +796,31 @@
         ?.addEventListener('change', () => renderMeasurements());
     function sync() {
         hidden.value = JSON.stringify(
-            [...list.children].map((row) => ({
-                preset_key: row.dataset.presetKey || '',
-                description: row.querySelector('[data-description]').value,
-                source: row.querySelector('[data-source]').value,
-                parameter: row.querySelector('[data-parameter]').value,
-                oid: row.querySelector('[data-oid]').value,
-                expected_source: row.querySelector('[data-expected-source]')?.value || '',
-                units: row.querySelector('[data-units]').value,
-                scale: row.querySelector('[data-scale]').value,
-                condition: row.querySelector('[data-condition]').value,
-                template_id: row.querySelector('[data-template]').value,
-                metric_id: row.querySelector('[data-metric]').value,
-                minimum: row.querySelector('[data-minimum]').value,
-                maximum: row.querySelector('[data-maximum]').value,
-                name: row.querySelector('[data-name]').value,
-                corrective_action: row.querySelector('[data-corrective-action]').value,
-                email_recipients: row.querySelector('[data-email-recipients]').value,
-                email: row.querySelector('[data-email]').checked,
-                audio: row.querySelector('[data-audio]').checked,
-                severity: row.querySelector('[data-severity]').value,
-                enabled: row.querySelector('[data-enabled]').checked,
-            })),
+            [...list.children]
+                .map((row) => ({
+                    preset_key: row.dataset.presetKey || '',
+                    description: row.querySelector('[data-description]').value,
+                    source: row.querySelector('[data-source]').value,
+                    parameter: row.querySelector('[data-parameter]').value,
+                    oid: row.querySelector('[data-oid]').value,
+                    expected_source: row.querySelector('[data-expected-source]')?.value || '',
+                    units: row.querySelector('[data-units]').value,
+                    scale: row.querySelector('[data-scale]').value,
+                    condition: row.querySelector('[data-condition]').value,
+                    template_id: row.querySelector('[data-template]').value,
+                    metric_id: row.querySelector('[data-metric]').value,
+                    minimum: row.querySelector('[data-minimum]').value,
+                    maximum: row.querySelector('[data-maximum]').value,
+                    name: row.querySelector('[data-name]').value,
+                    corrective_action: row.querySelector('[data-corrective-action]').value,
+                    email_recipients: row.querySelector('[data-email-recipients]').value,
+                    email: row.querySelector('[data-email]').checked,
+                    audio: row.querySelector('[data-audio]').checked,
+                    severity: row.querySelector('[data-severity]').value,
+                    enabled: row.querySelector('[data-enabled]').checked,
+                }))
+                .concat(hiddenUdpRules)
+                .sort((a, b) => a.source.localeCompare(b.source)),
         );
     }
     function option(select, value, label) {
@@ -840,7 +905,6 @@
         option(source, 'rrd', 'Cacti Data Source');
         option(source, 'snmp', 'SNMP OID');
         option(source, 'ntp', 'NTP');
-        option(source, 'iperf3_udp', 'iPerf3 UDP');
         source.value = rule.source || 'rrd';
         wrapper(source).hidden = true;
         const picker = field(row, 'SNMP Parameter', 'select', 'parameter-choice');
@@ -861,15 +925,14 @@
         const units = field(row, 'Stored Units', 'hidden', 'units');
         units.value = rule.units || '';
         wrapper(units).hidden = true;
-        const initialParameter =
-            measurementParameters[source.value]
-                ? measurementParameters[source.value][rule.parameter]
-                : parameters.find((item) =>
-                      source.value === 'snmp'
-                          ? item.oid === String(rule.oid || '').replace(/^\./, '')
-                          : Number(item.metric_id) === Number(rule.metric_id) &&
-                            Number(item.template_id) === Number(rule.template_id),
-                  );
+        const initialParameter = measurementParameters[source.value]
+            ? measurementParameters[source.value][rule.parameter]
+            : parameters.find((item) =>
+                  source.value === 'snmp'
+                      ? item.oid === String(rule.oid || '').replace(/^\./, '')
+                      : Number(item.metric_id) === Number(rule.metric_id) &&
+                        Number(item.template_id) === Number(rule.template_id),
+              );
         if (initialParameter) units.value = initialParameter.units;
         const scale = field(row, 'Scale Multiplier', 'hidden', 'scale');
         scale.value = rule.scale ?? 1;
@@ -987,7 +1050,12 @@
             picker.replaceChildren();
             option(picker, '', 'Manual OID');
             parameters.forEach((item, i) => {
-                if (item.repository || !item.type_id || String(item.type_id) === type || item.oid === oid.value) {
+                if (
+                    item.repository ||
+                    !item.type_id ||
+                    String(item.type_id) === type ||
+                    item.oid === oid.value
+                ) {
                     option(picker, i, item.label);
                 }
             });
@@ -996,7 +1064,9 @@
         let readGeneration = 0;
         async function readParameter() {
             const generation = ++readGeneration;
-            if (source.value !== 'snmp' || !oid.value) return;
+            const native = source.value === 'rrd';
+            if (native ? !template.value || !metric.value : source.value !== 'snmp' || !oid.value)
+                return;
             const id = document.querySelector('#device-wizard')?.dataset.deviceId;
             if (!id || id === '0') {
                 reading.value = 'Save device and SNMP setup first';
@@ -1005,6 +1075,9 @@
             reading.value = 'Reading…';
             const data = new FormData();
             data.set('action', 'fault_parameter_read');
+            data.set('source', source.value);
+            data.set('template_id', template.value);
+            data.set('metric_id', metric.value);
             data.set('oid', oid.value);
             const token = form.querySelector('input[name="__csrf_magic"]');
             if (!token?.value) {
@@ -1030,6 +1103,17 @@
                 const result = await response.json();
                 if (generation !== readGeneration) return;
                 if (!response.ok) throw new Error(result.error || 'Reading unavailable');
+                if (native) {
+                    if (!Array.isArray(result.readings)) throw new Error('Reading unavailable');
+                    reading.value = result.readings
+                        .map((item) =>
+                            item.value === null
+                                ? item.reason
+                                : String(item.value) + (units.value ? ' ' + units.value : ''),
+                        )
+                        .join(' / ');
+                    return;
+                }
                 if (!Object.prototype.hasOwnProperty.call(result, 'value'))
                     throw new Error('Session expired. Reload the page and sign in.');
                 reading.value =
@@ -1084,21 +1168,20 @@
             ++readGeneration;
             const direct = source.value === 'snmp',
                 ntp = source.value === 'ntp',
-                udp = source.value === 'iperf3_udp',
-                measured = ntp || udp;
-            const pickerLabel = udp ? 'iPerf3 UDP Measurement' : ntp ? 'NTP Parameter' : 'SNMP Parameter';
+                measured = ntp;
+            const pickerLabel = ntp ? 'NTP Parameter' : 'SNMP Parameter';
             choices();
             wrapper(picker).querySelector('.field-title').textContent = pickerLabel;
             picker.setAttribute('aria-label', pickerLabel);
-            wrapper(picker).querySelector('.field-info')
+            wrapper(picker)
+                .querySelector('.field-info')
                 .setAttribute('aria-label', 'Information about ' + pickerLabel);
             wrapper(picker).querySelector('.field-info').dataset.tooltip = ntp
                 ? 'Choose an actual chrony measurement or collection status. Offsets and delay use milliseconds; age uses seconds; synchronization and source-match flags use 1=yes and 0=no.'
-                : udp ? 'Choose receiver throughput, jitter, or packet loss.' : fieldHelp['parameter-choice'];
+                : fieldHelp['parameter-choice'];
             wrapper(source).hidden = true;
             wrapper(reading).querySelector('.field-info').dataset.tooltip = ntp
                 ? 'Actual tracking observation from Protocol Config collection. Missing clock measurements remain Unknown; status flags use 1=yes and 0=no. Age is seconds since the last attempt.'
-                : udp ? 'Latest completed remote iPerf3 UDP test for the assigned profile.'
                 : direct
                   ? 'Read-only SNMP value after automatic unit conversion. Selecting a parameter fetches a reading using saved SNMP settings.'
                   : 'Read-only latest completed AVERAGE sample from this data source, before graph transformations. Enter thresholds in its stored units.';
@@ -1152,6 +1235,7 @@
         template.addEventListener('change', () => {
             metrics(true);
             reading.value = 'Awaiting collection';
+            readParameter();
             sync();
         });
         metric.addEventListener('change', () => {
@@ -1167,6 +1251,7 @@
                 scale.value = item.scale || 1;
             }
             reading.value = 'Awaiting collection';
+            readParameter();
             sync();
         });
         source.addEventListener('change', () => {
@@ -1233,10 +1318,21 @@
         });
         list.append(row);
         conditionFields();
-        if (source.value === 'snmp' && oid.value) readParameter();
+        if (source.value === 'rrd' || (source.value === 'snmp' && oid.value)) readParameter();
     }
-    saved.forEach((rule, index) => addRule(rule, index));
+    saved.forEach((rule, index) => {
+        if (rule.source !== 'iperf3_udp') addRule(rule, index);
+    });
     form.addEventListener('icct-fault-saved', (event) => {
+        if (typeof event.detail === 'object') {
+            const { source, rules } = event.detail;
+            if (source === 'snmp') savedPollingCounts = countRulesByOid(rules, 'snmp');
+            [...list.children]
+                .filter((row) => row.querySelector('[data-source]').value === source)
+                .forEach((row) => (row.dataset.alarmSaved = '1'));
+            renderMeasurements();
+            return;
+        }
         savedPollingCounts = countRulesByOid(JSON.parse(event.detail), 'snmp');
         if (hidden.value !== event.detail) {
             renderOids();
@@ -1256,7 +1352,7 @@
             addNetflowRule?.();
             return;
         }
-        if (list.children.length < 100) {
+        if (list.children.length + hiddenUdpRules.length < 100) {
             const rule = { source: selectedSource };
             if (selectedRow)
                 for (const key of [

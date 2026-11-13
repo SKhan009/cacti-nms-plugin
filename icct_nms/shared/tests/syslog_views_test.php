@@ -22,7 +22,8 @@ $events = [
         'facility_code' => 16,
         'facility' => 'local0',
         'program' => 'sshd-session',
-        'message' => 'pam_unix(sshd:session): session opened for user <script>unsafe</script>(uid=1000)',
+        'message' =>
+            'pam_unix(sshd:session): session opened for user <script>unsafe</script>(uid=1000)',
         'timestamp_kind' => 'device',
         'alarm_key' => 'linked-alarm',
         'repeat_count' => 1,
@@ -38,7 +39,8 @@ $events = [
         'program' => 'systemd',
         'event_origin' => 'syslog',
         'fingerprint' => 'restart-attempt-fingerprint',
-        'message' => 'nms-diagnostic-runner.service: Scheduled restart job, restart counter is at 5938.',
+        'message' =>
+            'nms-diagnostic-runner.service: Scheduled restart job, restart counter is at 5938.',
         'timestamp_kind' => 'device',
         'repeat_count' => 1,
         'last_seen' => '2026-10-29 19:31:01',
@@ -47,7 +49,11 @@ $events = [
 function db_fetch_row_prepared($sql, $args)
 {
     if (str_contains($sql, 'AS event_types')) {
-        return ['event_types' => count($GLOBALS['events']), 'messages' => count($GLOBALS['events']), 'repeated' => 0];
+        return [
+            'event_types' => count($GLOBALS['events']),
+            'messages' => count($GLOBALS['events']),
+            'repeated' => 0,
+        ];
     }
     return $GLOBALS['binding'];
 }
@@ -160,7 +166,10 @@ syslog_view_check(
     'History shows an expandable event explanation and keeps the active search',
 );
 syslog_view_check(
-    str_contains($html, 'scheduled automatic restart attempt 5938 for the older NMS diagnostics listener') &&
+    str_contains(
+        $html,
+        'scheduled automatic restart attempt 5938 for the older NMS diagnostics listener',
+    ) &&
         str_contains($html, 'The outcome of that attempt is unknown from this entry.') &&
         !str_contains($html, 'Fix or recovery status') &&
         str_contains($html, 'Scheduled restart job, restart counter is at 5938.'),
@@ -210,13 +219,24 @@ syslog_view_check(
 );
 echo "Syslog preset, device setup and read-only view rendering passed.\n";
 
-$event = static fn ($id, $time, $source, $message, $matches = 1, $repeats = 1) => [
-    'id' => $id, 'event_time' => '2026-11-12 ' . $time, 'source_ip' => $source,
-    'message' => $message, 'matches_filter' => $matches, 'repeat_count' => $repeats,
+$event = static fn($id, $time, $source, $message, $matches = 1, $repeats = 1) => [
+    'id' => $id,
+    'event_time' => '2026-11-12 ' . $time,
+    'source_ip' => $source,
+    'message' => $message,
+    'matches_filter' => $matches,
+    'repeat_count' => $repeats,
 ];
 $incidents = icct_nms_syslog_link_incidents([
     $event(1, '09:00:00', '192.0.2.1', 'Interface Gi1/0/24 changed state to down'),
-    $event(2, '09:00:10', '192.0.2.1', '%LINK-3-UPDOWN: Interface Gi1/0/24, changed state to down', 1, 2),
+    $event(
+        2,
+        '09:00:10',
+        '192.0.2.1',
+        '%LINK-3-UPDOWN: Interface Gi1/0/24, changed state to down',
+        1,
+        2,
+    ),
     $event(3, '09:00:20', '192.0.2.2', 'Interface Gi1/0/24 changed state to up', 0),
     $event(4, '09:00:30', '192.0.2.1', 'Interface Gi1/0/25 changed state to up', 0),
     $event(5, '09:02:00', '192.0.2.1', 'Interface Gi1/0/24 changed state to up', 0),
@@ -224,37 +244,56 @@ $incidents = icct_nms_syslog_link_incidents([
     $event(7, '09:03:10', '192.0.2.1', 'The remote link went down'),
 ]);
 syslog_view_check(
-    count($incidents) === 2 && $incidents[0]['recovery'] === null &&
-        $incidents[1]['seconds'] === 120 && $incidents[1]['occurrences'] === 3,
+    count($incidents) === 2 &&
+        $incidents[0]['recovery'] === null &&
+        $incidents[1]['seconds'] === 120 &&
+        $incidents[1]['occurrences'] === 3,
     'Incident correlation matches sender and interface, counts repeated downs once and preserves open incidents',
 );
 
 [$parsedFilters, $parsedTab] = icct_nms_syslog_history_request(85, [
-    'syslog_tab' => 'incidents', 'syslog_search' => ' icctqa ',
-    'syslog_severity' => ['4'], 'syslog_facility' => '22',
-    'syslog_since' => '2026-11-12T19:56', 'syslog_until' => '2026-11-12T19:57',
+    'syslog_tab' => 'incidents',
+    'syslog_search' => ' icctqa ',
+    'syslog_severity' => ['4'],
+    'syslog_facility' => '22',
+    'syslog_since' => '2026-11-12T19:56',
+    'syslog_until' => '2026-11-12T19:57',
 ]);
 syslog_view_check(
-    $parsedTab === 'incidents' && $parsedFilters === [
-        'host_id' => 85, 'search' => 'icctqa', 'severity_codes' => [4], 'facility_codes' => [22],
-        'since' => '2026-11-12 19:56:00', 'until' => '2026-11-12 19:57:59',
-    ],
+    $parsedTab === 'incidents' &&
+        $parsedFilters === [
+            'host_id' => 85,
+            'search' => 'icctqa',
+            'severity_codes' => [4],
+            'facility_codes' => [22],
+            'since' => '2026-11-12 19:56:00',
+            'until' => '2026-11-12 19:57:59',
+        ],
     'History and CSV share normalized filters and include the selected end minute',
 );
 
 $restartEvent = [
-    'event_origin' => 'syslog', 'program' => 'systemd', 'source_ip' => '192.0.2.85',
-    'facility_code' => 3, 'severity_code' => 6, 'fingerprint' => 'original',
+    'event_origin' => 'syslog',
+    'program' => 'systemd',
+    'source_ip' => '192.0.2.85',
+    'facility_code' => 3,
+    'severity_code' => 6,
+    'fingerprint' => 'original',
     'message' => 'my-service.service: Scheduled restart job, restart counter is at 1.',
 ];
 $restartKey = icct_nms_syslog_history_key($restartEvent);
 syslog_view_check(
-    icct_nms_syslog_history_key(array_replace($restartEvent, [
-        'message' => 'my-service.service: Scheduled restart job, restart counter is at 2.',
-        'fingerprint' => 'different',
-    ])) === $restartKey &&
-        icct_nms_syslog_history_key(array_replace($restartEvent, ['severity_code' => 4])) !== $restartKey &&
-        icct_nms_syslog_history_key(array_replace($restartEvent, ['source_ip' => '192.0.2.86'])) !== $restartKey &&
-        icct_nms_syslog_history_key(array_replace($restartEvent, ['program' => 'other'])) === 'original',
+    icct_nms_syslog_history_key(
+        array_replace($restartEvent, [
+            'message' => 'my-service.service: Scheduled restart job, restart counter is at 2.',
+            'fingerprint' => 'different',
+        ]),
+    ) === $restartKey &&
+        icct_nms_syslog_history_key(array_replace($restartEvent, ['severity_code' => 4])) !==
+            $restartKey &&
+        icct_nms_syslog_history_key(array_replace($restartEvent, ['source_ip' => '192.0.2.86'])) !==
+            $restartKey &&
+        icct_nms_syslog_history_key(array_replace($restartEvent, ['program' => 'other'])) ===
+            'original',
     'Restart attempts group by service and retain sender and severity boundaries',
 );

@@ -83,7 +83,8 @@ foreach (
         'cycle' => str_replace('root 1', 'reading 1', $child),
         'oversized arc' => str_replace('root 1', 'root 4294967296', $child),
         'unresolved' => str_replace('root 1', 'missing 1', $child),
-    ] as $name => $invalid
+    ]
+    as $name => $invalid
 ) {
     try {
         (new IcctMibOfflineParser(['QA-BASE' => $base, 'QA-CHILD' => $invalid]))->records([
@@ -103,7 +104,8 @@ foreach (glob(__DIR__ . '/../../shared/assets/mibs/*.txt') as $file) {
 }
 $parser = new IcctMibOfflineParser($texts);
 foreach (
-    ['IF-MIB', 'IP-MIB', 'BRIDGE-MIB', 'CISCO-ENTITY-SENSOR-MIB', 'ENTITY-MIB', 'SNMPv2-MIB'] as $module
+    ['IF-MIB', 'IP-MIB', 'BRIDGE-MIB', 'CISCO-ENTITY-SENSOR-MIB', 'ENTITY-MIB', 'SNMPv2-MIB']
+    as $module
 ) {
     $objects = $parser->records([$module]);
     offline_check(
@@ -113,7 +115,7 @@ foreach (
     offline_check(
         !array_filter(
             $objects,
-            fn ($object) => !preg_match('/^[012](?:\.[0-9]+)+$/D', $object['base_oid']),
+            fn($object) => !preg_match('/^[012](?:\.[0-9]+)+$/D', $object['base_oid']),
         ),
         $module . ' object OIDs are numeric',
     );

@@ -167,6 +167,11 @@ vm.runInNewContext(code.slice(0, sourceIndex(code, '  const basic=')) + '})();',
     Event,
     queueMicrotask,
     fetch: async (url, opts) => {
+        if (opts.body.get('source') === 'rrd') {
+            assert.ok(opts.body.get('template_id'));
+            assert.ok(opts.body.get('metric_id'));
+            return {ok:true, redirected:false, headers:{get:()=> 'application/json'}, json:async()=>({readings:[{value:0,reason:''}]})};
+        }
         reads++;
         assert.equal(opts.body.get('__csrf_magic'), 'valid-first-token');
         return {
@@ -179,6 +184,7 @@ vm.runInNewContext(code.slice(0, sourceIndex(code, '  const basic=')) + '})();',
 });
 
 setTimeout(() => {
+    assert.equal(nodes['#fault-rule-list'].children[0].querySelector('[data-reading]').value, '0 %', 'Native zero must remain a numeric current reading');
     const row = nodes['#fault-rule-list'].children[1];
     assert.equal(
         reads,

@@ -19,7 +19,8 @@ if (!is_file(__DIR__ . '/vendor/autoload.php')) {
 }
 require_once __DIR__ . '/vendor/autoload.php';
 foreach (
-    PHP_OS_FAMILY === 'Windows' ? ['openssl', 'sockets'] : ['openssl', 'posix', 'pcntl', 'sockets'] as $extension
+    PHP_OS_FAMILY === 'Windows' ? ['openssl', 'sockets'] : ['openssl', 'posix', 'pcntl', 'sockets']
+    as $extension
 ) {
     if (!extension_loaded($extension)) {
         throw new RuntimeException('Missing SSH extension: ' . $extension);

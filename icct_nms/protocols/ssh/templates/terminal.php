@@ -25,24 +25,47 @@
             <div class="ssh-terminal-details">
                 <p><?= icct_nms_h($device['endpoint']) ?> · <?= icct_nms_h($device['username']) ?> · <?= icct_nms_h($device['auth_method']) ?> authentication</p>
                 <p>Host key: <?= icct_nms_h(icct_backend_ssh_fingerprint($device['host_key'])) ?> · Monitoring <?= !empty($device['monitoring']) ? 'on' : 'off' ?></p>
-                <p id="ssh-terminal-status" role="status" aria-live="polite">Disconnected</p>
+                <p
+                    id="ssh-terminal-status"
+                    role="status"
+                    aria-live="polite">Disconnected</p>
             </div>
             <div class="ssh-terminal-actions">
-                <button type="button" class="button" id="ssh-test">Test saved credential</button>
-                <button type="button" class="button primary" id="ssh-connect">Connect</button>
-                <button type="button" class="button" id="ssh-disconnect" disabled>Disconnect</button>
+                <button
+                    type="button"
+                    class="button"
+                    id="ssh-test">Test saved credential</button>
+                <button
+                    type="button"
+                    class="button primary"
+                    id="ssh-connect">Connect</button>
+                <button
+                    type="button"
+                    class="button"
+                    id="ssh-disconnect"
+                    disabled>Disconnect</button>
             </div>
         </div>
-        <details id="ssh-change-audit" hidden>
+        <details
+            id="ssh-change-audit"
+            hidden>
             <summary>Record a configuration change</summary>
             <form id="ssh-change-form">
                 <label class="field">
                     <span>Setting changed</span>
-                    <input name="parameter" required maxlength="120" placeholder="Example: GigabitEthernet0/1 description">
+                    <input
+                        name="parameter"
+                        required
+                        maxlength="120"
+                        placeholder="Example: GigabitEthernet0/1 description">
                 </label>
                 <p>Enter the setting name only. Keep values and credentials out of the log.</p>
-                <button type="submit" class="button">Record change</button>
-                <p id="ssh-change-status" role="status"></p>
+                <button
+                    type="submit"
+                    class="button">Record change</button>
+                <p
+                    id="ssh-change-status"
+                    role="status"></p>
             </form>
         </details>
         <div

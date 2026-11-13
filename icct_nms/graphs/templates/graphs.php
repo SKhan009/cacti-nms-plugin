@@ -21,7 +21,9 @@
                     name="action"
                     value="add_graph_template" />
                 <label class="field">
-                    <span class="field-label">Add Graph Template</span>
+                    <span
+                        class="field-label"
+                        data-field-help="Choose an installed Cacti graph template to associate with this device.">Add Graph Template</span>
                     <span class="select-wrap">
                         <select
                             name="graph_template_id"

@@ -2,7 +2,6 @@
 
 /** ICCT-owned discovery neighbors services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: nd column. */
 function icct_backend_nd_column($values, $root, $column, $parts, $type)
 {
     $out = [];
@@ -19,7 +18,6 @@ function icct_backend_nd_column($values, $root, $column, $parts, $type)
     return $out;
 }
 
-/** Reused Inventory service: nd interfaces. */
 function icct_backend_nd_interfaces($values)
 {
     $root = '1.3.6.1.2.1.2.2.1';
@@ -77,7 +75,6 @@ function icct_backend_nd_interfaces($values)
     return $ports;
 }
 
-/** Reused Inventory service: nd lldp identity. */
 function icct_backend_nd_observation_history($previous, $current, $now)
 {
     $merged = [];
@@ -96,7 +93,6 @@ function icct_backend_nd_observation_history($previous, $current, $now)
     return $merged;
 }
 
-/** Reused Inventory service: nd octets. */
 function icct_backend_nd_octets($value)
 {
     if ($value === null) {
@@ -107,7 +103,6 @@ function icct_backend_nd_octets($value)
         : 'hex:' . bin2hex($value);
 }
 
-/** Reused Inventory service: nd parse cdp. */
 function icct_backend_nd_table_indices($values, $root, $parts)
 {
     $indices = [];
@@ -130,7 +125,6 @@ function icct_backend_nd_table_indices($values, $root, $parts)
     return array_keys($indices);
 }
 
-/** Reused Inventory service: nd value. */
 function icct_backend_nd_value($values, $oid, $type, $required = true)
 {
     if (!isset($values[$oid])) {

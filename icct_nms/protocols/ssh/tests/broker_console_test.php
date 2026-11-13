@@ -23,7 +23,11 @@ try {
         throw new RuntimeException('Broker credential test failed.');
     }
     session_start();
-    $open = icct_nms_ssh_console_operation(2, ['action' => 'open', 'width' => 800, 'height' => 600]);
+    $open = icct_nms_ssh_console_operation(2, [
+        'action' => 'open',
+        'width' => 800,
+        'height' => 600,
+    ]);
     $id = $open['id'];
     session_start();
     $result = icct_nms_ssh_console_operation(2, ['action' => 'read', 'session_id' => $id]);
@@ -40,19 +44,35 @@ try {
         throw new RuntimeException('Measured Guacamole ready frame missing.');
     }
     session_start();
-    icct_nms_ssh_console_operation(2, ['action' => 'write', 'session_id' => $id, 'data' => base64_encode('3.nop;')]);
+    icct_nms_ssh_console_operation(2, [
+        'action' => 'write',
+        'session_id' => $id,
+        'data' => base64_encode('3.nop;'),
+    ]);
     session_start();
     icct_nms_ssh_console_operation(2, ['action' => 'close', 'session_id' => $id]);
     for ($i = 0; $i < 30; $i++) {
-        if (db_fetch_cell_prepared('SELECT status FROM plugin_icct_nms_ssh_sessions WHERE id=?', [$id]) === 'closed') {
+        if (
+            db_fetch_cell_prepared('SELECT status FROM plugin_icct_nms_ssh_sessions WHERE id=?', [
+                $id,
+            ]) === 'closed'
+        ) {
             break;
         }
         usleep(100000);
     }
-    if (db_fetch_cell_prepared('SELECT status FROM plugin_icct_nms_ssh_sessions WHERE id=?', [$id]) !== 'closed') {
+    if (
+        db_fetch_cell_prepared('SELECT status FROM plugin_icct_nms_ssh_sessions WHERE id=?', [
+            $id,
+        ]) !== 'closed'
+    ) {
         throw new RuntimeException('Console authorization did not close.');
     }
-    if ((int) db_fetch_cell('SELECT monitoring FROM plugin_icct_nms_ssh_devices WHERE host_id=2') !== 0) {
+    if (
+        (int) db_fetch_cell(
+            'SELECT monitoring FROM plugin_icct_nms_ssh_devices WHERE host_id=2',
+        ) !== 0
+    ) {
         throw new RuntimeException('Monitoring was changed by a console.');
     }
     echo "PASS: actual broker credential authentication, cookie-bound ticket consumption, Guacamole ready/output, input relay, explicit disconnect and monitoring off.\n";

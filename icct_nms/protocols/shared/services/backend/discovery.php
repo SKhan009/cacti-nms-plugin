@@ -2,7 +2,6 @@
 
 /** ICCT-owned discovery services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: nd assignment write. */
 function icct_backend_nd_assignment_write($host_id, $assignment)
 {
     icct_backend_require_management();
@@ -28,7 +27,6 @@ function icct_backend_nd_assignment_write($host_id, $assignment)
     );
 }
 
-/** Reused Inventory service: nd hash. */
 function icct_backend_nd_hash($host)
 {
     $fields = [
@@ -61,7 +59,6 @@ function icct_backend_nd_hash($host)
     return hash('sha256', json_encode($values, JSON_THROW_ON_ERROR));
 }
 
-/** Reused Inventory service: nd host methods. */
 function icct_backend_nd_host_methods($host, $active_only = true)
 {
     $preset = icct_backend_nd_protocols($host['protocol']);
@@ -82,7 +79,6 @@ function icct_backend_nd_host_methods($host, $active_only = true)
     );
 }
 
-/** Reused Inventory service: nd hosts. */
 function icct_backend_nd_hosts($include_disabled = false)
 {
     return db_fetch_assoc(
@@ -94,7 +90,6 @@ function icct_backend_nd_hosts($include_disabled = false)
     );
 }
 
-/** Reused Inventory service: nd method labels. */
 function icct_backend_nd_method_labels()
 {
     return [
@@ -105,7 +100,6 @@ function icct_backend_nd_method_labels()
     ];
 }
 
-/** Reused Inventory service: nd methods validate. */
 function icct_backend_nd_methods_validate($methods)
 {
     if (!is_array($methods) || !$methods || count($methods) > 4) {
@@ -119,7 +113,6 @@ function icct_backend_nd_methods_validate($methods)
     return array_values(array_intersect(array_keys(icct_backend_nd_method_labels()), $methods));
 }
 
-/** Reused Inventory service: nd poll. */
 function icct_backend_nd_poll()
 {
     global $config;
@@ -294,7 +287,6 @@ function icct_backend_nd_poll()
     }
 }
 
-/** Reused Inventory service: nd preset validate. */
 function icct_backend_nd_preset_validate($input)
 {
     if (
@@ -327,7 +319,8 @@ function icct_backend_nd_preset_validate($input)
             'interval_seconds' => [300, 86400],
             'stale_seconds' => [600, 604800],
             'refresh_seconds' => [10, 300],
-        ] as $key => $range
+        ]
+        as $key => $range
     ) {
         $v = $input[$key] ?? '';
         if (
@@ -350,7 +343,6 @@ function icct_backend_nd_preset_validate($input)
     return $out;
 }
 
-/** Reused Inventory service: nd protocols. */
 function icct_backend_nd_protocols($protocol)
 {
     if ($protocol === 'both') {
@@ -365,7 +357,6 @@ function icct_backend_nd_protocols($protocol)
         : array_values(array_unique($parts));
 }
 
-/** Reused Inventory service: nd test queue. */
 function icct_backend_nd_test_queue($host_id, $site_id)
 {
     icct_backend_require_management();

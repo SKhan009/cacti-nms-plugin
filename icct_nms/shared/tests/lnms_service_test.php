@@ -38,7 +38,7 @@ function db_fetch_assoc($sql)
 }
 function icct_nms_inventory()
 {
-    return [['id' => 55, 'hostname' => 'ordinary-device', 'site_id' => 99]];
+    return [['id' => 55, 'hostname' => 'ordinary-device', 'site_id' => 99, 'poller_id' => 0]];
 }
 function icct_nms_map_coordinates($lat, $lng)
 {
@@ -200,3 +200,26 @@ check(
     icct_nms_lnms_links($pollers, [$linkHosts[0]], $connections) === [],
     'Inaccessible device cannot produce a poller link',
 );
+
+$saved = json_encode([1 => 7, 2 => 999, 999 => 8]);
+check(
+    icct_nms_lnms_site_assignments() === [1 => 7],
+    'Deleted core pollers and sites cannot retain active extension assignments',
+);
+$d = icct_nms_lnms_data([], 0, 2);
+check(
+    count($d['nodes']) === 1 && $d['nodes'][0]['id'] === 2,
+    'Collector scope also applies to LNMS widgets',
+);
+
+foreach ([0, 12, 23] as $zoom) {
+    $sites[0]['zoom'] = (string) $zoom;
+    $d = icct_nms_lnms_data([], 7);
+    check(
+        $d['site_view']['zoom'] === $zoom && $d['nodes'][0]['zoom'] === $zoom,
+        'Native site zoom ' . $zoom . ' reaches selected site and collector',
+    );
+}
+foreach ([null, '', -1, 24, 'invalid'] as $zoom) {
+    check(icct_nms_lnms_site_zoom($zoom) === null, 'Invalid native zoom uses map fallback');
+}

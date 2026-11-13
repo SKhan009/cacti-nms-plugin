@@ -11,7 +11,9 @@
                 placeholder="Graph title">
         </label>
         <label class="field">
-            <span class="field-label">Graphs per page</span>
+            <span
+                class="field-label"
+                data-field-help="Maximum graphs displayed on each page. All displays every matching graph.">Graphs per page</span>
             <select id="device-graph-limit">
                 <?php foreach (
                     [10, 25, 50, 100] as $size
@@ -22,7 +24,9 @@
             </select>
         </label>
         <label class="field">
-            <span class="field-label">Columns</span>
+            <span
+                class="field-label"
+                data-field-help="Number of graph columns in this device view.">Columns</span>
             <select id="device-graph-columns">
                 <?php foreach (
                     range(1, 6) as $col
@@ -49,7 +53,9 @@
     </div>
     <div class="device-graph-filter-row">
         <label class="field">
-            <span class="field-label">Time preset</span>
+            <span
+                class="field-label"
+                data-field-help="Time range used for the displayed graphs. Choose Custom to enter From and To.">Time preset</span>
             <select id="device-graph-preset">
                 <option value="3600">Last hour</option>
                 <option value="21600">Last 6 hours</option>
@@ -62,13 +68,17 @@
             </select>
         </label>
         <label class="field">
-            <span class="field-label">From</span>
+            <span
+                class="field-label"
+                data-field-help="Start of the graph time range in your browser’s local time. Must be earlier than To.">From</span>
             <input
                 type="datetime-local"
                 id="device-graph-from">
         </label>
         <label class="field">
-            <span class="field-label">To</span>
+            <span
+                class="field-label"
+                data-field-help="End of the graph time range in your browser’s local time. Must be later than From.">To</span>
             <input
                 type="datetime-local"
                 id="device-graph-to">

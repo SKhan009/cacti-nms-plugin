@@ -46,7 +46,7 @@ $severityColors = icct_nms_severity_colors(); ?>
         </div>
         <div>
             <dt>Device Name</dt>
-            <dd>
+            <dd class="alarm-device-value">
                 <a href="inventory/controllers/device.php?id=<?= (int) $alarm['host_id'] ?>&amp;view=1">
                     <span
                         id="alarm-device-dot"
@@ -95,14 +95,14 @@ $severityColors = icct_nms_severity_colors(); ?>
             </div>
         <?php endforeach; ?>
     </dl>
-    <?php if (($alarm['source'] ?? '') === 'NetFlow' || !empty($alarmDetail['event_origins'])): ?>
+    <?php if (($alarm['source'] ?? '') === 'NetFlow' || in_array('syslog', $alarmDetail['event_origins'] ?? [], true)): ?>
         <div class="fcaps-form-actions">
             <?php if (($alarm['source'] ?? '') === 'NetFlow'): ?>
                 <a class="button" href="inventory/controllers/device.php?id=<?= (int) $alarm['host_id'] ?>&amp;view=1&amp;netflow_alarm=<?= icct_nms_h($alarm['alarm_key']) ?>#view-netflow">View NetFlow finding</a>
             <?php endif; ?>
-            <?php foreach (['syslog' => ['syslog', 'View Syslog history'], 'trap' => ['traps', 'View SNMP traps']] as $origin => [$tab, $label]): ?>
+            <?php foreach (['syslog' => ['syslog', 'View Syslog history']] as $origin => [$tab, $label]): ?>
                 <?php if (in_array($origin, $alarmDetail['event_origins'] ?? [], true)): ?>
-                    <a class="button" href="inventory/controllers/device.php?id=<?= (int) $alarm['host_id'] ?>&amp;view=1<?= $origin === 'trap' ? '&amp;event_alarm=' . icct_nms_h($alarm['alarm_key']) : '' ?>#view-<?= $tab ?>"><?= $label ?></a>
+                    <a class="button" href="inventory/controllers/device.php?id=<?= (int) $alarm['host_id'] ?>&amp;view=1#view-<?= $tab ?>"><?= $label ?></a>
                 <?php endif; ?>
             <?php endforeach; ?>
         </div>
@@ -216,14 +216,13 @@ $severityColors = icct_nms_severity_colors(); ?>
                     count($alarmDetail['history']) .
                     ' items'
                 : '0 items' ?></span>
-            <div>
+            <div class="page-controls">
                 <select
                     id="alarm-history-page"
                     aria-label="Alarm history page">
                     <option>1</option>
                 </select>
                 <span id="alarm-history-pages">of <?= max(1, (int) ceil(count($alarmDetail['history']) / 100)) ?> pages</span>
-            </div>
             <button
                 type="button"
                 id="alarm-history-prev"
@@ -253,6 +252,7 @@ $severityColors = icct_nms_severity_colors(); ?>
                     <path d="M9 5 17 12 9 19Z" />
                 </svg>
             </button>
+            </div>
         </footer>
     </section>
     <section

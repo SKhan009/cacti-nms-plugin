@@ -91,11 +91,19 @@ foreach ([2 => '127.0.0.1', 1 => '::1'] as $id => $address) {
     icct_nms_save_syslog($id, [], $base + ['source_address' => $address]);
 }
 foreach ([2 => ['ICCT_DUP', 'ICCT_OUTBOX'], 1 => ['ICCT_V6']] as $id => $programs) {
-    $rules = array_map(static fn ($program) => [
-        'source' => 'syslog', 'name' => $program, 'program' => $program,
-        'severity' => 'Critical', 'enabled' => true,
-    ], $programs);
-    icct_nms_save_passive_faults($id, ['passive_rules' => json_encode($rules, JSON_THROW_ON_ERROR)]);
+    $rules = array_map(
+        static fn($program) => [
+            'source' => 'syslog',
+            'name' => $program,
+            'program' => $program,
+            'severity' => 'Critical',
+            'enabled' => true,
+        ],
+        $programs,
+    );
+    icct_nms_save_passive_faults($id, [
+        'passive_rules' => json_encode($rules, JSON_THROW_ON_ERROR),
+    ]);
 }
 $stamp = gmdate('Y-m-d\TH:i:s\Z');
 $duplicate = '<0>1 ' . $stamp . ' claimed-other-device ICCT_DUP - - - emergency wire event';

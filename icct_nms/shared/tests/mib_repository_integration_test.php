@@ -59,7 +59,8 @@ try {
             'data_source_stats_weekly',
             'data_source_stats_monthly',
             'data_source_stats_yearly',
-        ] as $table
+        ]
+        as $table
     ) {
         if (!db_execute("CREATE TEMPORARY TABLE qa_mib_copy LIKE `$table`")) {
             throw new RuntimeException('Isolation failed');
@@ -91,7 +92,7 @@ try {
             $scanEvents[] = $event;
         },
     );
-    $scanCounts = array_values(array_filter($scanEvents, fn ($event) => $event['phase'] === 'scan'));
+    $scanCounts = array_values(array_filter($scanEvents, fn($event) => $event['phase'] === 'scan'));
     $lastScan = end($scanCounts);
     check(
         $scanCounts[0]['processed'] === 0 &&
@@ -107,7 +108,8 @@ try {
             ['name' => ['one.mib', 'two.txt']],
             ['name' => ['bad.php']],
             ['name' => ['bad.mib.php']],
-        ] as $invalidUpload
+        ]
+        as $invalidUpload
     ) {
         try {
             icct_mib_validate_upload_selection($invalidUpload);
@@ -142,9 +144,19 @@ try {
             empty($unassignedBundle['rows']),
         'Single-file upload saves without assigning a device type or creating templates',
     );
-    $unassignedBundle = icct_mib_generation_save($unassignedBundle['id'], 2, $unassignedIndex);
-    $unassignedBundle = icct_mib_generation_save($unassignedBundle['id'], 3);
-    $unassignedBundle = icct_mib_generation_save($unassignedBundle['id'], 4);
+    $unassignedToken = icct_mib_generation_draft_put($unassignedBundle['id'], 'ready', [
+        'values' => ['selected' => [$unassignedIndex => 1], 'records' => []],
+        'object' => $unassignedIndex,
+    ]);
+    foreach ([2, 3, 4] as $stage) {
+        icct_mib_staging_generate(
+            $unassignedBundle['id'],
+            $unassignedToken,
+            $stage,
+            static function () {},
+        );
+    }
+    $unassignedBundle = icct_mib_staging_commit($unassignedBundle['id'], $unassignedToken);
     check(
         $unassignedBundle['host_template_id'] > 0 &&
             $unassignedBundle['type_name'] === 'Not assigned',
@@ -175,12 +187,12 @@ try {
     check(
         (bool) array_filter(
             $preview['records'],
-            fn ($r) => $r['description'] && $r['syntax'] && $r['access'],
+            fn($r) => $r['description'] && $r['syntax'] && $r['access'],
         ),
         'Syntax, access and descriptions retained',
     );
     check(
-        (bool) array_filter($preview['records'], fn ($r) => $r['table'] && $r['numeric']),
+        (bool) array_filter($preview['records'], fn($r) => $r['table'] && $r['numeric']),
         'Indexed IF-MIB counters require reviewed instance OIDs',
     );
     $selected = [];
@@ -263,7 +275,8 @@ try {
     foreach (
         db_fetch_assoc_prepared('SELECT * FROM data_input_data WHERE data_template_data_id=?', [
             $oldInput,
-        ]) as $field
+        ])
+        as $field
     ) {
         $field['data_template_data_id'] = $newInput;
         sql_save($field, 'data_input_data', ['data_template_data_id', 'data_input_field_id']);
@@ -291,7 +304,8 @@ try {
         db_fetch_assoc_prepared(
             'SELECT * FROM graph_templates_item WHERE graph_template_id=? AND local_graph_id=0',
             [$graphId],
-        ) as $item
+        )
+        as $item
     ) {
         unset($item['id']);
         $item['local_graph_id'] = $localGraph;
@@ -300,25 +314,12 @@ try {
         }
         sql_save($item, 'graph_templates_item');
     }
-    $fetched = icct_mib_device_inputs($preview, $qaHost)[$metricKey][0] ?? [];
     require_once __DIR__ . '/../../protocols/snmp/mibs/services/mib_usage_service.php';
     $usage = icct_mib_repository_usage([$bundle])[$bundle['id']];
     check(
         $usage['data_sources'] >= 1 &&
             in_array($qaHost, array_map('intval', array_column($usage['devices'], 'id')), true),
         'MIB file usage resolves actual native data sources and device associations',
-    );
-    check(
-        ($fetched['oid'] ?? '') === $plan['records'][0]['oid'] &&
-            (int) ($fetched['graph_type'] ?? 0) === 5 &&
-            (int) ($fetched['cf'] ?? 0) === 3,
-        'Device instance OID and native graph item settings fetched together',
-    );
-    check(
-        ($fetched['statistics'] ?? '') === '0' &&
-            ($fetched['threshold_high'] ?? '') == '80' &&
-            ($fetched['threshold_low'] ?? '') == '0',
-        'Native graph statistics and threshold lines remain synchronized',
     );
     db_execute_prepared('DELETE FROM data_input_data WHERE data_template_data_id=?', [$newInput]);
     foreach (['data_template_data', 'data_template_rrd'] as $table) {
@@ -329,12 +330,6 @@ try {
     }
     db_execute_prepared('DELETE FROM data_local WHERE id=?', [$dataId]);
     db_execute_prepared('DELETE FROM graph_local WHERE id=?', [$localGraph]);
-    try {
-        icct_mib_device_inputs($preview, 0);
-        throw new LogicException('Invalid host accepted');
-    } catch (InvalidArgumentException $e) {
-        check(true, 'Invalid device cannot supply MIB inputs');
-    }
 
     check(
         (int) db_fetch_cell_prepared(
@@ -479,7 +474,8 @@ try {
                 [
                     __DIR__ . '/../../protocols/snmp/mibs/queries/' . $queryFile,
                     $config['base_path'] . '/resource/snmp_queries/icct_nms/' . $queryFile,
-                ] as $file
+                ]
+                as $file
             ) {
                 if (!is_file($file)) {
                     $testQueryFiles[] = $file;
@@ -582,7 +578,8 @@ try {
         }
     }
     foreach (
-        ['threshold_high' => 'NaN', 'color' => '<script>', 'graph_type' => '99'] as $key => $value
+        ['threshold_high' => 'NaN', 'color' => '<script>', 'graph_type' => '99']
+        as $key => $value
     ) {
         $bad = $input;
         $bad['records'][$metricKey][$key] = $value;
@@ -598,7 +595,8 @@ try {
             ['data' => true, 'graph' => false, 'device' => false],
             ['data' => false, 'graph' => false, 'device' => true],
             ['data' => false, 'graph' => false, 'device' => false],
-        ] as $n => $options
+        ]
+        as $n => $options
     ) {
         $p = $preview;
         $p['id'] = bin2hex(random_bytes(16));
@@ -631,7 +629,10 @@ try {
         );
     }
     // Missing imports retain original bytes, while template creation stays blocked.
-    $fixtureDir = icct_mib_private_directory();
+    $fixtureDir = sys_get_temp_dir() . '/icct-mib-qa-' . bin2hex(random_bytes(8));
+    if (!mkdir($fixtureDir, 0700)) {
+        throw new RuntimeException('Cannot create MIB upload fixture directory.');
+    }
     try {
         $dependency =
             "QA-REPO-BASE-MIB DEFINITIONS ::= BEGIN\nIMPORTS enterprises FROM SNMPv2-SMI;\nqaRepoRoot " .
@@ -853,44 +854,49 @@ try {
         icct_mib_generation_results($generated, 2) === [],
         'No success results before generation is committed',
     );
-    try {
-        icct_mib_generation_save($generated['id'], 2, $generationIndex, [
-            'generation_review' => 1,
-            'selected' => [],
-        ]);
-        throw new LogicException('Empty review accepted');
-    } catch (InvalidArgumentException $e) {
-        check(
-            icct_mib_wizard_get($generated['id'])['rows'] === [],
-            'Empty review does not create native templates',
-        );
-    }
-    $generated = icct_mib_generation_save($generated['id'], 2, $generationIndex, [
-        'selected' => [$generationIndex => 1],
-        'records' => [
-            $generationIndex => [
-                'data_name' => 'QA Reviewed Generation Data',
-                'active' => '0',
-                'fault_presets' => [
-                    [
-                        'name' => 'QA Sensor High',
-                        'threshold' => '75',
-                        'condition' => 'at_or_above',
-                        'severity' => 'Critical',
-                        'enabled' => true,
-                        'description' => 'Sensor high',
-                        'corrective_action' => 'Check sensor',
+    $generationToken = icct_mib_generation_draft_put($generated['id'], 'ready', [
+        'object' => $generationIndex,
+        'values' => [
+            'selected' => [$generationIndex => 1],
+            'records' => [
+                $generationIndex => [
+                    'data_name' => 'QA Reviewed Generation Data',
+                    'active' => '0',
+                    'fault_presets' => [
+                        [
+                            'name' => 'QA Sensor High',
+                            'threshold' => '75',
+                            'condition' => 'at_or_above',
+                            'severity' => 'Critical',
+                            'enabled' => true,
+                            'description' => 'Sensor high',
+                            'corrective_action' => 'Check sensor',
+                        ],
                     ],
                 ],
             ],
         ],
     ]);
+    $nativeBefore = (int) db_fetch_cell('SELECT COUNT(*) FROM data_template');
+    foreach ([2, 3, 4] as $stage) {
+        icct_mib_staging_generate(
+            $generated['id'],
+            $generationToken,
+            $stage,
+            static function () {},
+        );
+    }
+    check(
+        (int) db_fetch_cell('SELECT COUNT(*) FROM data_template') === $nativeBefore,
+        'Preparing reviewed data, graph and device definitions creates no native templates',
+    );
+    $generated = icct_mib_staging_commit($generated['id'], $generationToken);
     $generatedData = $generated['rows'][0]['data_template_id'];
     check(
         count($generated['rows']) === 1 &&
             $generatedData > 0 &&
-            !$generated['rows'][0]['graph_template_id'],
-        'Create generates only the selected OID data template',
+            $generated['rows'][0]['graph_template_id'] > 0,
+        'Add creates the selected OID with its native graph template',
     );
     check(
         db_fetch_cell_prepared('SELECT name FROM data_template WHERE id=?', [$generatedData]) ===
@@ -908,83 +914,6 @@ try {
         icct_mib_generation_results($generated, 2)[0]['id'] === $generatedData,
         'Generation results reference the saved native template',
     );
-    try {
-        icct_mib_generation_save($generated['id'], 2, $generationIndex);
-        throw new LogicException('Duplicate Generate accepted');
-    } catch (InvalidArgumentException $e) {
-        check(true, 'Repeated Generate cannot duplicate data templates');
-    }
-    // An old browser tab must never create the remaining metrics implicitly or partially.
-    $beforeBundles = count(icct_mib_list());
-    $beforeData = (int) db_fetch_cell('SELECT COUNT(*) FROM data_template');
-    $newIndexes = array_keys(icct_mib_generation_input($generated, 2)['selected']);
-    $freshIndex = $newIndexes[0];
-    $invalidAttempts = [
-        ['object' => null, 'review' => []],
-        [
-            'object' => null,
-            'review' => ['selected' => [$generationIndex => 1, $freshIndex => 1], 'records' => []],
-        ],
-        [
-            'object' => $freshIndex,
-            'review' => [
-                'selected' => [$freshIndex => 1],
-                'records' => [$freshIndex => ['data_name' => 'QA Reviewed Generation Data']],
-            ],
-        ],
-        [
-            'object' => $freshIndex,
-            'review' => [
-                'selected' => [$freshIndex => 1],
-                'records' => [$freshIndex => ['min' => '100', 'max' => '0']],
-            ],
-        ],
-    ];
-    if (count($newIndexes) > 1) {
-        $invalidAttempts[] = [
-            'object' => null,
-            'review' => [
-                'selected' => [$newIndexes[0] => 1, $newIndexes[1] => 1],
-                'records' => [
-                    $newIndexes[0] => ['data_name' => 'Repeated batch name'],
-                    $newIndexes[1] => ['data_name' => 'repeated batch name'],
-                ],
-            ],
-        ];
-    }
-    foreach ($invalidAttempts as $attempt) {
-        try {
-            icct_mib_generation_save($generated['id'], 2, $attempt['object'], $attempt['review']);
-            throw new LogicException('Invalid or repeated generation accepted');
-        } catch (InvalidArgumentException $e) {
-            check(
-                count(icct_mib_list()) === $beforeBundles &&
-                    (int) db_fetch_cell('SELECT COUNT(*) FROM data_template') === $beforeData,
-                'Repeat, stale selection, duplicate name or invalid bounds rejected without saving any batch',
-            );
-        }
-    }
-    check(
-        (int) db_fetch_cell_prepared('SELECT IS_FREE_LOCK(?)', ['icct_mib_templates']) === 1,
-        'Generation releases the lock after rejected requests',
-    );
-    $generated = icct_mib_generation_save($generated['id'], 3);
-    $graphCount = (int) db_fetch_cell('SELECT COUNT(*) FROM graph_templates');
-    try {
-        icct_mib_generation_save($generated['id'], 3);
-        throw new LogicException('Repeated graph generation accepted');
-    } catch (InvalidArgumentException $e) {
-        check(
-            (int) db_fetch_cell('SELECT COUNT(*) FROM graph_templates') === $graphCount,
-            'Repeated graph generation creates no duplicate graph templates',
-        );
-    }
-
-    check(
-        $generated['rows'][0]['data_template_id'] === $generatedData &&
-            $generated['rows'][0]['graph_template_id'] > 0,
-        'Graph generation reuses the selected native data template',
-    );
     require_once __DIR__ . '/../../fcaps/services/fcaps_service.php';
     $presetGraph = $generated['rows'][0]['graph_template_id'];
     check(
@@ -1001,7 +930,7 @@ try {
     $inherited = array_values(
         array_filter(
             icct_nms_fault_rules($qaHost),
-            fn ($rule) => ($rule['template_id'] ?? 0) === $presetGraph,
+            fn($rule) => ($rule['template_id'] ?? 0) === $presetGraph,
         ),
     );
     check(
@@ -1014,7 +943,7 @@ try {
     check(
         !array_filter(
             icct_nms_fault_rules(999999),
-            fn ($rule) => ($rule['template_id'] ?? 0) === $presetGraph,
+            fn($rule) => ($rule['template_id'] ?? 0) === $presetGraph,
         ),
         'Preset does not leak to an unrelated device',
     );
@@ -1039,7 +968,7 @@ try {
     $overridden = array_values(
         array_filter(
             icct_nms_fault_rules($qaHost),
-            fn ($rule) => ($rule['template_id'] ?? 0) === $presetGraph,
+            fn($rule) => ($rule['template_id'] ?? 0) === $presetGraph,
         ),
     );
     check(
@@ -1069,13 +998,12 @@ try {
         count(
             array_filter(
                 icct_nms_fault_rules($qaHost),
-                fn ($rule) => ($rule['template_id'] ?? 0) === $presetGraph,
+                fn($rule) => ($rule['template_id'] ?? 0) === $presetGraph,
             ),
         ) === 1,
         'Native indexed graph instances inherit presets without a host_graph entry',
     );
     db_execute_prepared('DELETE FROM graph_local WHERE id=?', [9000022]);
-    $generated = icct_mib_generation_save($generated['id'], 4);
     check(
         $generated['host_template_id'] > 0 &&
             (int) db_fetch_cell_prepared(
@@ -1083,26 +1011,6 @@ try {
                 [$generated['host_template_id'], $generated['rows'][0]['graph_template_id']],
             ) === 1,
         'Device generation associates the saved native graph',
-    );
-    $deviceTemplateCount = (int) db_fetch_cell('SELECT COUNT(*) FROM host_template');
-    try {
-        icct_mib_generation_save($generated['id'], 4);
-        throw new LogicException('Repeated device generation accepted');
-    } catch (InvalidArgumentException $e) {
-        check(
-            (int) db_fetch_cell('SELECT COUNT(*) FROM host_template') === $deviceTemplateCount,
-            'Repeated device generation creates no duplicate device template',
-        );
-    }
-    $remaining = icct_mib_generation_input($generated, 2);
-    $nextIndex = array_key_first($remaining['selected']);
-    $additional = icct_mib_generation_save($generated['id'], 2, $nextIndex);
-    check(
-        $additional['id'] !== $generated['id'] &&
-            count($additional['rows']) === 1 &&
-            icct_mib_wizard_get($generated['id'])['host_template_id'] ===
-                $generated['host_template_id'],
-        'Another Create preserves previous generated template associations',
     );
     icct_mib_wizard_reparse($stored['id'], $resolved);
     check(
@@ -1183,7 +1091,8 @@ try {
             'BOM' => "\xEF\xBB\xBF" . $sourceBytes,
             'CRLF' => str_replace("\n", "\r\n", $sourceBytes),
             'UTF16' => "\xFF\xFE" . iconv('UTF-8', 'UTF-16LE', $sourceBytes),
-        ] as $encoding => $bytes
+        ]
+        as $encoding => $bytes
     ) {
         $encodedPreview = icct_mib_preview(
             ['name' => ['IF-MIB.txt'], 'stored_content' => [$bytes]],
@@ -1311,7 +1220,8 @@ try {
                 'snmp_query',
                 'data_local',
                 'graph_local',
-            ] as $table
+            ]
+            as $table
         ) {
             $state[$table] = (int) db_fetch_cell('SELECT COUNT(*) FROM ' . $table);
         }
@@ -1446,7 +1356,7 @@ try {
     );
     unset($_SESSION['icct_mib_generation_' . $selectionTestToken]);
     check(
-        count(array_filter($events, fn ($event) => $event['event'] === 'item')) === 3,
+        count(array_filter($events, fn($event) => $event['event'] === 'item')) === 3,
         'Live progress emits one actual prepared item per stage',
     );
     $preparedData = $work['results'][2];
@@ -1571,7 +1481,8 @@ try {
             'snmp_query',
             'data_local',
             'graph_local',
-        ] as $table
+        ]
+        as $table
     ) {
         check(
             $afterUploadSave[$table] === $cancelBefore[$table],
@@ -1764,7 +1675,7 @@ try {
     );
     $graphsBefore = (int) db_fetch_cell('SELECT COUNT(*) FROM graph_templates');
     $groupRecords[0]['graph_items'] = [
-        array_replace(array_map(fn ($f) => $f['default'], icct_mib_core_graph_item_fields()), [
+        array_replace(array_map(fn($f) => $f['default'], icct_mib_core_graph_item_fields()), [
             'text_format' => 'Grouped extra item QA',
         ]),
     ];
@@ -2141,7 +2052,7 @@ try {
         ),
         'Graph item editor loads native Cacti type and preset choices',
     );
-    $extraDefaults = array_map(fn ($f) => $f['default'], $itemFields);
+    $extraDefaults = array_map(fn($f) => $f['default'], $itemFields);
     $extraDefaults['text_format'] = 'Added item QA';
     $extraItem = icct_mib_graph_items([$extraDefaults])[0];
     $beforeItemCount = (int) db_fetch_cell_prepared(

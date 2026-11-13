@@ -95,8 +95,14 @@ icct_nms_save_protocol_preset([
     'source_address' => '192.0.2.10',
 ]);
 $syslog = icct_nms_protocol_presets()['syslog'];
-if (isset($syslog['source_address']) || $syslog['severity_codes'] !== '[3,4]' || $syslog['transport'] !== 'tcp') {
-    throw new RuntimeException('Syslog presets must save reusable settings and omit the sender address.');
+if (
+    isset($syslog['source_address']) ||
+    $syslog['severity_codes'] !== '[3,4]' ||
+    $syslog['transport'] !== 'tcp'
+) {
+    throw new RuntimeException(
+        'Syslog presets must save reusable settings and omit the sender address.',
+    );
 }
 try {
     icct_nms_protocol_preset_validate('syslog', [

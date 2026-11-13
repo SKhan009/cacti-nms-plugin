@@ -82,9 +82,7 @@ rejectFault(array_replace($notificationRule, ['corrective_action' => []]), $cata
 checkFault(!$validated['email'] && !$validated['audio'], 'Legacy rule unexpectedly enables alerts');
 echo "Fault thresholds, exact boundaries, unknown values, disabled rules, severity and graph ownership validation passed.\n";
 $writes = [];
-function icct_backend_require_management($realm)
-{
-}
+function icct_backend_require_management($realm) {}
 function icct_backend_require_device_access($id)
 {
     if ($id !== 5) {
@@ -149,3 +147,29 @@ checkFault(icct_nms_fault_numeric('INTEGER: 42') === 42.0, 'Numeric SNMP parsing
 checkFault(icct_nms_fault_numeric('onBattery(3)') === 3.0, 'Numeric enumeration parsing failed');
 checkFault(icct_nms_fault_numeric('No Such Instance') === null, 'SNMP failure became valid data');
 echo "Graph-free SNMP rules, OID validation, scales and numeric status conditions passed.\n";
+
+function db_fetch_cell_prepared($sql, $args)
+{
+    global $storedFaultRules;
+    checkFault(str_contains($sql, 'FOR UPDATE'), 'Scoped save must lock the stored rules');
+    return json_encode($storedFaultRules);
+}
+
+$otherRule = ['source' => 'ntp', 'enabled' => true, 'parameter' => 'legacy_parameter'];
+$storedFaultRules = [$otherRule];
+$writes = [];
+icct_nms_save_faults(5, ['fault_source' => 'rrd', 'fault_rules' => json_encode([$rule])]);
+$mergedRules = json_decode($writes[2][1], true);
+checkFault($mergedRules[0] === $otherRule, 'Scoped save changed or revalidated the saved NTP rule');
+checkFault($mergedRules[1]['source'] === 'rrd', 'Scoped save omitted the submitted rule');
+icct_nms_save_faults(5, ['fault_source' => 'rrd', 'fault_rules' => '[]']);
+checkFault(
+    json_decode($writes[6][1], true) === [$otherRule],
+    'Clearing one source removed other rules',
+);
+try {
+    icct_nms_save_faults(5, ['fault_source' => 'rrd', 'fault_rules' => json_encode([$otherRule])]);
+    throw new RuntimeException('Scoped save accepted a rule from another source');
+} catch (InvalidArgumentException $expected) {
+}
+echo "Scoped fault saves preserve other sources and reject mixed submissions.\n";

@@ -345,7 +345,8 @@ $portTone = static fn ($port) => !empty($port['placeholder']) || !$portView['fre
                                             <ul>
                                                 <?php foreach ($learned as $endpoint): ?>
                                                     <li>
-                                                        <a href="dashboard/topology/controllers/topology_configuration.php?tab=discovered&amp;mac=<?= rawurlencode($endpoint['mac']) ?>"
+                                                        <a
+                                                            href="dashboard/topology/controllers/topology_configuration.php?tab=discovered&amp;mac=<?= rawurlencode($endpoint['mac']) ?>"
                                                             title="Find this MAC in Discovered Devices"><?= icct_nms_h($endpoint['mac']) ?></a>
                                                         <?php if ($endpoint['ips']): ?>
                                                             <div>IP seen on this interface: <?= icct_nms_h(implode(', ', $endpoint['ips'])) ?></div>

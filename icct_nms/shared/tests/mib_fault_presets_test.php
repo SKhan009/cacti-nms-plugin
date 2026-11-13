@@ -23,7 +23,8 @@ foreach (
         [array_replace($base, ['severity' => 'wrong'])],
         [array_replace($base, ['condition' => 'wrong'])],
         [array_replace($base, ['name' => ''])],
-    ] as $bad
+    ]
+    as $bad
 ) {
     try {
         icct_mib_fault_presets($bad);
@@ -68,7 +69,7 @@ $status = [
 $suggested = icct_mib_mib_fault_presets($status);
 if (
     array_column($suggested, 'threshold') !== [12.0, 27.0] ||
-    array_filter($suggested, fn ($rule) => $rule['enabled']) ||
+    array_filter($suggested, fn($rule) => $rule['enabled']) ||
     array_unique(array_column($suggested, 'condition')) !== ['equals']
 ) {
     throw new RuntimeException('MIB status suggestions did not preserve declared states.');
@@ -84,7 +85,7 @@ $rangeRules = icct_mib_mib_fault_presets([
 if (
     array_column($rangeRules, 'threshold') !== [-40.0, 125.0] ||
     array_column($rangeRules, 'condition') !== ['below', 'above'] ||
-    array_filter($rangeRules, fn ($rule) => $rule['enabled'])
+    array_filter($rangeRules, fn($rule) => $rule['enabled'])
 ) {
     throw new RuntimeException('MIB range checks did not use explicit syntax bounds.');
 }
@@ -172,7 +173,7 @@ if (
 ) {
     throw new RuntimeException('Severity enum values or levels were not read dynamically.');
 }
-if (array_filter($severityRules, fn ($rule) => $rule['enabled'])) {
+if (array_filter($severityRules, fn($rule) => $rule['enabled'])) {
     throw new RuntimeException('Suggested severity rules were enabled without review.');
 }
 echo "PASS: declared severity enums create Minor/Major/Critical rules with original vendor values; unknown states remain unclassified.\n";

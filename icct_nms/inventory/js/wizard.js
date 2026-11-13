@@ -58,9 +58,8 @@
         });
     const dirtyForms = () => {
         const source = forms.find((form) => form.dataset.discoveryTimingSource === '1');
-        const withoutSharedTimings = (value) => JSON.stringify(
-            JSON.parse(value).filter(([name]) => !discoveryTimingNames.has(name)),
-        );
+        const withoutSharedTimings = (value) =>
+            JSON.stringify(JSON.parse(value).filter(([name]) => !discoveryTimingNames.has(name)));
         return [basic, ...forms].filter((form) => {
             const current = snapshot(form);
             const saved = baseline.get(form);
@@ -78,11 +77,13 @@
     const headerSave = basic.querySelector('[data-wizard-save]');
     const faultPanel = document.querySelector('#fcaps-fault');
     const syncHeaderSave = () => {
-        if (headerSave && faultPanel) headerSave.hidden = currentStep() === 'fcaps' && !faultPanel.hidden;
+        if (headerSave && faultPanel)
+            headerSave.hidden = currentStep() === 'fcaps' && !faultPanel.hidden;
     };
     if (faultPanel) {
         new MutationObserver(syncHeaderSave).observe(faultPanel, {
-            attributes: true, attributeFilter: ['hidden'],
+            attributes: true,
+            attributeFilter: ['hidden'],
         });
     }
     function showStep() {
@@ -186,15 +187,21 @@
     updateTemplateAssociations();
     async function readSaveResponse(response) {
         const sessionError = 'Cacti blocked the save. Check your session before retrying.';
-        if (response.type === 'opaqueredirect' || response.redirected ||
-            response.status === 401 || response.status === 403) {
+        if (
+            response.type === 'opaqueredirect' ||
+            response.redirected ||
+            response.status === 401 ||
+            response.status === 403
+        ) {
             throw new Error(sessionError);
         }
         const payload = response.headers.get('content-type')?.includes('application/json')
             ? await response.json().catch(() => null)
             : null;
         if (!payload || typeof payload !== 'object') {
-            throw new Error(`Cacti returned an unexpected response (HTTP ${response.status}). Check your session and retry.`);
+            throw new Error(
+                `Cacti returned an unexpected response (HTTP ${response.status}). Check your session and retry.`,
+            );
         }
         if (!response.ok || payload.ok !== true) {
             throw new Error(payload.error || payload.responseText || 'Changes could not be saved.');
@@ -241,6 +248,21 @@
         form.reportValidity();
         return false;
     }
+    function validFaultSource(form, source) {
+        const controls = [
+            ...form.querySelectorAll('.fault-rule input, .fault-rule select, .fault-rule textarea'),
+        ].filter(
+            (field) =>
+                !field.disabled &&
+                field.closest('.fault-rule').querySelector('[data-source]').value !== source,
+        );
+        controls.forEach((field) => (field.disabled = true));
+        try {
+            return valid(form);
+        } finally {
+            controls.forEach((field) => (field.disabled = false));
+        }
+    }
     async function save(onlyForm = null) {
         if (busy) return false;
         wizard.querySelectorAll('.inline-feedback.error').forEach((node) => node.remove());
@@ -248,6 +270,9 @@
             .querySelectorAll('[aria-invalid]')
             .forEach((node) => node.removeAttribute('aria-invalid'));
         const onlyPanel = onlyForm?.closest('.protocol-item');
+        const faultSource =
+            onlyForm?.elements.action?.value === 'faults' ? onlyForm.dataset.faultSource : '';
+        const scopedFaultSave = Boolean(faultSource);
         const changed = (onlyForm ? [onlyForm] : dirtyForms()).filter(
             (f) => f === basic || !f.closest('.protocol-item')?.hidden,
         );
@@ -256,7 +281,9 @@
             if (
                 panel &&
                 !panel.hidden &&
-                (form.dataset.presetSyncPending === '1' || !id || protocolInitial.get(panel.id)?.hidden) &&
+                (form.dataset.presetSyncPending === '1' ||
+                    !id ||
+                    protocolInitial.get(panel.id)?.hidden) &&
                 !changed.includes(form)
             )
                 changed.push(form);
@@ -270,7 +297,8 @@
                 f.closest('.protocol-item').querySelector('.protocol-enable input')?.checked,
         );
         if (onlyForm && !active.includes(onlyForm)) return false;
-        if (active.some((f) => !valid(f))) return false;
+        if (active.some((f) => !(scopedFaultSave ? validFaultSource(f, faultSource) : valid(f))))
+            return false;
         busy = true;
         wizard.inert = true;
         document.querySelectorAll('[data-wizard-save]').forEach((b) => (b.disabled = true));
@@ -285,7 +313,7 @@
                 baseline.set(basic, snapshot(basic));
                 saved++;
             }
-            for (const [name, state] of protocolChanges()) {
+            for (const [name, state] of onlyForm && !onlyPanel ? [] : protocolChanges()) {
                 if (onlyPanel && name !== onlyPanel.id) continue;
                 const p = document.getElementById(name),
                     enabled = p.querySelector('.protocol-enable input')?.checked;
@@ -301,10 +329,16 @@
                 protocolInitial.set(name, { hidden: p.hidden, enabled });
                 saved++;
             }
-            const isFaultForm = (form) => ['faults', 'passive_faults', 'netflow_faults'].includes(form.elements.action?.value);
-            const discoverySource = forms.find(
-                (form) => form.dataset.discoveryTimingSource === '1' && !form.closest('.protocol-item')?.hidden,
-            ) || active.find((form) => form.elements.action?.value === 'discovery');
+            const isFaultForm = (form) =>
+                ['faults', 'passive_faults', 'netflow_faults'].includes(
+                    form.elements.action?.value,
+                );
+            const discoverySource =
+                forms.find(
+                    (form) =>
+                        form.dataset.discoveryTimingSource === '1' &&
+                        !form.closest('.protocol-item')?.hidden,
+                ) || active.find((form) => form.elements.action?.value === 'discovery');
             for (const form of active.filter((form) => form !== basic && !isFaultForm(form))) {
                 errorContext = form;
                 const data = new FormData(form);
@@ -327,19 +361,45 @@
             for (const form of active.filter(isFaultForm)) {
                 errorContext = form;
                 const data = new FormData(form);
+                if (scopedFaultSave) {
+                    const rules = JSON.parse(data.get('fault_rules'));
+                    data.set('fault_source', faultSource);
+                    data.set(
+                        'fault_rules',
+                        JSON.stringify(rules.filter((rule) => rule.source === faultSource)),
+                    );
+                }
                 const result = await post(data);
                 if (result.netflow_revision && form.elements.netflow_revision) {
                     form.elements.netflow_revision.value = result.netflow_revision;
                 }
-                form.dispatchEvent(new CustomEvent('icct-fault-saved', {
-                    detail: data.get('fault_rules') ?? data.get('passive_rules') ?? data.get('netflow_rules'),
-                }));
-                baseline.set(form, snapshot(form));
+                form.dispatchEvent(
+                    new CustomEvent('icct-fault-saved', {
+                        detail: scopedFaultSave
+                            ? { source: faultSource, rules: JSON.parse(data.get('fault_rules')) }
+                            : (data.get('fault_rules') ??
+                              data.get('passive_rules') ??
+                              data.get('netflow_rules')),
+                    }),
+                );
+                if (scopedFaultSave) {
+                    const previous = new Map(JSON.parse(baseline.get(form)));
+                    const oldRules = JSON.parse(previous.get('fault_rules') || '[]');
+                    const currentRules = JSON.parse(form.elements.fault_rules.value);
+                    const merged = oldRules
+                        .filter((rule) => rule.source !== faultSource)
+                        .concat(currentRules.filter((rule) => rule.source === faultSource))
+                        .sort((a, b) => a.source.localeCompare(b.source));
+                    previous.set('fault_rules', JSON.stringify(merged));
+                    baseline.set(form, JSON.stringify([...previous]));
+                } else {
+                    baseline.set(form, snapshot(form));
+                }
                 saved++;
             }
             // Hidden/disabled draft edits are discarded after a successful explicit save.
-            for (const form of changed) baseline.set(form, snapshot(form));
-            for (const [name] of protocolInitial) {
+            for (const form of scopedFaultSave ? [] : changed) baseline.set(form, snapshot(form));
+            for (const [name] of onlyForm && !onlyPanel ? [] : protocolInitial) {
                 if (onlyPanel && name !== onlyPanel.id) continue;
                 const p = document.getElementById(name);
                 protocolInitial.set(name, {
@@ -494,7 +554,12 @@
                     'trap_sender',
                 ].includes(action)
             ) {
-                explicitSave(false, action === 'ntp' ? form : null);
+                explicitSave(
+                    false,
+                    ['ntp', 'faults', 'passive_faults', 'netflow_faults'].includes(action)
+                        ? form
+                        : null,
+                );
                 return;
             }
             const data = new FormData(form);

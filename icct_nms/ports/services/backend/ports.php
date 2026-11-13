@@ -572,7 +572,10 @@ function icct_nms_port_connections($id, $ports, $includeEndpoints = false)
         }
     }
     if ($includeEndpoints) {
-        $learned = icct_nms_learned_port_endpoints($endpoints['fdb'] ?? [], $endpoints['arp'] ?? []);
+        $learned = icct_nms_learned_port_endpoints(
+            $endpoints['fdb'] ?? [],
+            $endpoints['arp'] ?? [],
+        );
         foreach ($learned as $index => $rows) {
             $connections[$index]['endpoints'] = $rows;
         }

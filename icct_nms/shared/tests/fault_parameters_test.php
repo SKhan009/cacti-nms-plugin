@@ -88,7 +88,8 @@ foreach (
         '0.1 degrees Celsius' => 0.1,
         '%' => 1,
         'degrees Celsius' => 1,
-    ] as $units => $factor
+    ]
+    as $units => $factor
 ) {
     $parsed = icct_nms_fault_unit_scale($units);
     if ($parsed['scale'] != $factor) {

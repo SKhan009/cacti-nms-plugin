@@ -1,7 +1,6 @@
 <?php
 
-const ICCT_NMS_SYSLOG_RESTART_PATTERN =
-    '^([A-Za-z0-9_.@:-]+[.]service): Scheduled restart job, restart counter is at ([0-9]+)[.]$';
+const ICCT_NMS_SYSLOG_RESTART_PATTERN = '^([A-Za-z0-9_.@:-]+[.]service): Scheduled restart job, restart counter is at ([0-9]+)[.]$';
 
 function icct_nms_syslog_restart(string $message): ?array
 {
@@ -25,21 +24,31 @@ function icct_nms_syslog_systemd_event(string $message): ?array
     if ($restart = icct_nms_syslog_restart($message)) {
         return [
             'Automatic restart scheduled for ' . $unit,
-            'The system service manager (systemd) scheduled automatic restart attempt ' . $restart['attempt'] .
-                ' for ' . $service . '. The outcome of that attempt is unknown from this entry.',
+            'The system service manager (systemd) scheduled automatic restart attempt ' .
+            $restart['attempt'] .
+            ' for ' .
+            $service .
+            '. The outcome of that attempt is unknown from this entry.',
         ];
     }
-    if (preg_match('/^Main process exited, code=exited, status=(\d+)\/FAILURE$/D', $detail, $exit)) {
+    if (
+        preg_match('/^Main process exited, code=exited, status=(\d+)\/FAILURE$/D', $detail, $exit)
+    ) {
         return [
             'Service process exited with an error',
-            'The main process for ' . $service . ' stopped with exit code ' . $exit[1] .
-                '. The cause of the error is unknown from this entry.',
+            'The main process for ' .
+            $service .
+            ' stopped with exit code ' .
+            $exit[1] .
+            '. The cause of the error is unknown from this entry.',
         ];
     }
     if ($detail === "Failed with result 'exit-code'.") {
         return [
             'Systemd recorded a service failure',
-            'The system service manager marked ' . $service . ' as failed after its process exited with an error.',
+            'The system service manager marked ' .
+            $service .
+            ' as failed after its process exited with an error.',
         ];
     }
     if ($detail === 'Deactivated successfully.') {

@@ -61,9 +61,7 @@ function icct_nms_h($value)
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
-function icct_nms_token()
-{
-}
+function icct_nms_token() {}
 function icct_mib_staging_pending($id)
 {
     return null;

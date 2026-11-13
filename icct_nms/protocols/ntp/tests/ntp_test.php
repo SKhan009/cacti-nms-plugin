@@ -30,6 +30,22 @@ $values = [
     'stale_seconds' => 180,
 ];
 checkNtp(icct_nms_ntp_validate($values)['timeout'] === 5, 'Collection settings conversion failed.');
+$posted = array_diff_key($values, ['method' => true]) + ['ntp_method' => 'udp'];
+require_once __DIR__ . '/../../shared/services/protocol_preset_service.php';
+checkNtp(
+    icct_nms_protocol_preset_validate('ntp', $posted)['method'] === 'udp',
+    'Protocol presets must accept the safe NTP form field.',
+);
+checkNtp(
+    icct_nms_ntp_validate($posted)['method'] === 'udp',
+    'NTP form alias must retain the native stored field.',
+);
+rejectsNtp(fn() => icct_nms_ntp_validate(array_replace($posted, ['ntp_method' => []])));
+checkNtp(
+    icct_nms_ntp_form_values($posted)['method'] === 'udp',
+    'Failed form redisplay must retain collection method.',
+);
+
 foreach (
     [
         'method' => 'invalid',
@@ -50,25 +66,48 @@ checkNtp(
 );
 
 foreach (['auto', 'udp'] as $method) {
-    checkNtp(icct_nms_ntp_validate(array_replace($values, ['method' => $method]))['method'] === $method,
-        'Direct monitoring method was rejected.');
+    checkNtp(
+        icct_nms_ntp_validate(array_replace($values, ['method' => $method]))['method'] === $method,
+        'Direct monitoring method was rejected.',
+    );
 }
 $sent = 2085978495.875; // The response crosses the 2036 NTP timestamp rollover.
 $origin = icct_nms_ntp_timestamp($sent);
-$reply = "\x24\x02" . str_repeat("\0", 10) . "GPS\0" .
-    icct_nms_ntp_timestamp($sent - 1) . $origin .
-    icct_nms_ntp_timestamp($sent + 0.25) . icct_nms_ntp_timestamp($sent + 0.375);
+$reply =
+    "\x24\x02" .
+    str_repeat("\0", 10) .
+    "GPS\0" .
+    icct_nms_ntp_timestamp($sent - 1) .
+    $origin .
+    icct_nms_ntp_timestamp($sent + 0.25) .
+    icct_nms_ntp_timestamp($sent + 0.375);
 $direct = icct_nms_ntp_udp_sample($reply, $origin, $sent, $sent + 0.5, 'ntp.lan');
 checkNtp(
-    $direct['synchronized'] && $direct['offset_ms'] === 62.5 &&
-        $direct['peer_delay_ms'] === 375.0 && $direct['server_address'] === 'ntp.lan' &&
-        $direct['source_address'] === null && $direct['jitter_ms'] === null,
+    $direct['synchronized'] &&
+        $direct['offset_ms'] === 62.5 &&
+        $direct['peer_delay_ms'] === 375.0 &&
+        $direct['server_address'] === 'ntp.lan' &&
+        $direct['source_address'] === null &&
+        $direct['jitter_ms'] === null,
     'Direct NTP timestamps or source semantics are incorrect.',
 );
-$unsynced = icct_nms_ntp_udp_sample("\xe4" . substr($reply, 1), $origin, $sent, $sent + 0.5, 'ntp.lan');
-checkNtp(!$unsynced['synchronized'] && $unsynced['offset_ms'] === null, 'Unsynchronized reply produced a clock offset.');
-rejectsNtp(fn() => icct_nms_ntp_udp_sample($reply, str_repeat("\0", 8), $sent, $sent + 0.5, 'ntp.lan'));
-rejectsNtp(fn() => icct_nms_ntp_udp_sample(substr($reply, 0, 47), $origin, $sent, $sent + 0.5, 'ntp.lan'));
+$unsynced = icct_nms_ntp_udp_sample(
+    "\xe4" . substr($reply, 1),
+    $origin,
+    $sent,
+    $sent + 0.5,
+    'ntp.lan',
+);
+checkNtp(
+    !$unsynced['synchronized'] && $unsynced['offset_ms'] === null,
+    'Unsynchronized reply produced a clock offset.',
+);
+rejectsNtp(
+    fn() => icct_nms_ntp_udp_sample($reply, str_repeat("\0", 8), $sent, $sent + 0.5, 'ntp.lan'),
+);
+rejectsNtp(
+    fn() => icct_nms_ntp_udp_sample(substr($reply, 0, 47), $origin, $sent, $sent + 0.5, 'ntp.lan'),
+);
 
 $csv = 'C0000201,192.0.2.1,2,1793799702.492115327,0.0001,-0.002,0.003,1,0,2,0.004,0.005,64,Normal';
 $sample = icct_nms_ntp_parse($csv);
@@ -134,8 +173,13 @@ checkNtp(
     'History filter must include the whole selected day.',
 );
 rejectsNtp(fn() => icct_nms_ntp_history_filter(2, ['ntp_from' => '2026-02-29']));
-rejectsNtp(fn() => icct_nms_ntp_history_filter(2, ['ntp_from' => '2026-11-05', 'ntp_to' => '2026-11-04']));
-$statusFilter = icct_nms_ntp_history_filter(2, ['ntp_from' => '2026-11-04', 'ntp_status' => 'Unavailable']);
+rejectsNtp(
+    fn() => icct_nms_ntp_history_filter(2, ['ntp_from' => '2026-11-05', 'ntp_to' => '2026-11-04']),
+);
+$statusFilter = icct_nms_ntp_history_filter(2, [
+    'ntp_from' => '2026-11-04',
+    'ntp_status' => 'Unavailable',
+]);
 checkNtp(
     $statusFilter['where'] === 'host_id=? AND observed_at>=? AND status=?' &&
         $statusFilter['args'] === [2, '2026-11-04 00:00:00', 'Unavailable'] &&

@@ -105,9 +105,12 @@ function icct_backend_ssh_session_live($id)
     global $user_auth_realm_filenames;
     $realm = $user_auth_realm_filenames['protocol.php'] ?? null;
     // Workers recheck current permissions; an already-open terminal does not retain revoked access.
-    if ($realm === null || !is_realm_allowed((int) $realm, (int) $s['user_id']) ||
+    if (
+        $realm === null ||
+        !is_realm_allowed((int) $realm, (int) $s['user_id']) ||
         !is_realm_allowed(3, (int) $s['user_id']) ||
-        !is_device_allowed((int) $s['host_id'], (int) $s['user_id'])) {
+        !is_device_allowed((int) $s['host_id'], (int) $s['user_id'])
+    ) {
         return false;
     }
     try {
@@ -301,14 +304,9 @@ function icct_backend_ssh_collect($host_id)
                 'status=\'collecting\',last_attempt=NOW(),last_error=\'\'',
             [$host_id],
         );
-        if (
-            $d['profile_id'] !== 'linux-health-v1' ||
-            db_fetch_cell_prepared(
-                'SELECT definition_hash FROM plugin_icct_nms_ssh_profiles WHERE id=?',
-                [$d['profile_id']],
-            ) !== hash('sha256', icct_backend_ssh_linux_command())
-        ) {
-            throw new RuntimeException('Unsupported or mismatched SSH command profile.');
+        // Profiles execute the fixed command shipped with this plugin, never database-supplied commands.
+        if ($d['profile_id'] !== 'linux-health-v1') {
+            throw new RuntimeException('Unsupported SSH command profile.');
         }
         $ssh = icct_backend_ssh_connect($d);
         $output = '';

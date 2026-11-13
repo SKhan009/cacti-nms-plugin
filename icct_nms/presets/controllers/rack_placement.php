@@ -23,7 +23,8 @@ try {
             icct_nms_rack_save_draft(
                 $moves,
                 json_decode($_POST['reservations'] ?? '[]', true, 512, JSON_THROW_ON_ERROR),
-            ) as $id
+            )
+            as $id
         ) {
             icct_nms_configuration_record($id, 'Rack placement changed');
         }

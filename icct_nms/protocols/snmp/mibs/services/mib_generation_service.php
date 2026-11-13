@@ -31,78 +31,7 @@ function icct_mib_generation_input($bundle, $stage, $object = null)
     }
     return $input;
 }
-function icct_mib_generation_save($id, $stage, $object = null, $review = [])
-{
-    icct_backend_require_management(3);
-    if ((int) db_fetch_cell_prepared('SELECT GET_LOCK(?,10)', ['icct_mib_templates']) !== 1) {
-        throw new RuntimeException('Template creation is busy. Retry shortly.');
-    }
-    try {
-        $bundle = icct_mib_wizard_get($id);
-        if (
-            $stage === 2 &&
-            !empty($bundle['rows']) &&
-            $object === null &&
-            !array_key_exists('selected', $review)
-        ) {
-            throw new InvalidArgumentException(
-                'Data sources were already generated. Select new OIDs explicitly to create another batch.',
-            );
-        }
-        $input = icct_mib_generation_input($bundle, $stage, $object);
-        if (
-            $stage === 2 &&
-            (array_key_exists('selected', $review) || !empty($review['generation_review']))
-        ) {
-            if (!is_array($review['selected'] ?? []) || !is_array($review['records'] ?? [])) {
-                throw new InvalidArgumentException('Invalid OID review.');
-            }
-            $checked = icct_mib_generation_prepare($input['selected'], $review, true);
-            $input['selected'] = $checked['selected'];
-            $input['records'] = $checked['records'];
-        }
-        if ($stage === 2) {
-            // Validate the entire batch before saving even a new repository entry.
-            $values = $input;
-            $values['create_data'] = 1;
-            $plan = icct_mib_plan(
-                [
-                    'records' => icct_mib_objects($bundle),
-                    'parse_error' => $bundle['parse_error'] ?? '',
-                ],
-                $values,
-            );
-            icct_mib_validate_template_names(
-                array_column($plan['records'], 'data_name'),
-                'data_template',
-            );
-            icct_mib_validate_duplicates($plan['records']);
-        }
-        // A later Create starts a new batch while preserving earlier template associations.
-        if ($stage === 2 && !empty($bundle['rows'])) {
-            $upload = ['name' => [], 'stored_content' => []];
-            foreach ($bundle['files'] as $i => $file) {
-                $upload['name'][] = $file['name'];
-                $upload['stored_content'][] = icct_mib_file($bundle, $i);
-            }
-            $preview = icct_mib_preview($upload, $bundle['type_id'], true);
-            $objects = icct_mib_objects($bundle);
-            $label = $object !== null ? $objects[$object]['label'] : 'Additional OIDs';
-            $bundle = icct_mib_save(
-                $preview,
-                icct_mib_plan($preview, [
-                    'type_id' => $bundle['type_id'],
-                    'template_name' => $bundle['name'] . ' - ' . $label,
-                ]),
-            );
-            $input['template_name'] = $bundle['name'];
-            $id = $bundle['id'];
-        }
-        return icct_mib_wizard_save($id, $input);
-    } finally {
-        db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)', ['icct_mib_templates']);
-    }
-}
+
 function icct_mib_generation_results($bundle, $stage)
 {
     $labels = [2 => 'Data Source', 3 => 'Graph Template', 4 => 'Device Template'];

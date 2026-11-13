@@ -26,7 +26,7 @@ final class IcctMibOfflineParser
         // Comments end at a closing -- or the end of the line; quoted text is preserved.
         $cleaned = preg_replace_callback(
             '/"[^"]*+(?:""[^"]*+)*+"|--[^\r\n]*?(?:--|(?=\r?$))/m',
-            fn ($m) => str_starts_with($m[0], '--') ? ' ' : $m[0],
+            fn($m) => str_starts_with($m[0], '--') ? ' ' : $m[0],
             $text,
         );
         // Parser failure must be explicit; never feed missing text into template generation.

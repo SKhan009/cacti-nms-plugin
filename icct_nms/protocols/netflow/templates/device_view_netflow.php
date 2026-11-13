@@ -38,13 +38,19 @@
             <?= $key === 'overview' ? '' : 'hidden' ?>>
             <?php if ($key === 'overview'): ?>
                 <section aria-labelledby="netflow-live-title">
-                    <h3 id="netflow-live-title" data-field-help="Calculated from stored flows with observation times in the last five minutes. The time and traffic filters below apply to the historical totals and chart.">Latest Traffic Readings</h3>
-                    <p id="netflow-live-status" role="status">Loading the last five minutes of traffic…</p>
+                    <h3
+                        id="netflow-live-title"
+                        data-field-help="Traffic measurements do not require alarm rules. Shows the last five minutes, or a clearly dated historical window when no recent flows are available. Filters below apply to historical totals and chart.">Latest Traffic Readings</h3>
+                    <p
+                        id="netflow-live-status"
+                        role="status">Loading the last five minutes of traffic…</p>
                     <div class="netflow-summary netflow-live-summary">
                         <?php foreach (icct_nms_netflow_rule_metrics() as $metric => [$metricLabel, $unit]): ?>
                             <div>
                                 <span><?= icct_nms_h($metric === 'distributed_syn_rate' ? 'Peak distributed TCP SYN rate' : $metricLabel) ?></span>
-                                <strong data-netflow-live="<?= icct_nms_h($metric) ?>" data-unit="<?= icct_nms_h($unit) ?>">—</strong>
+                                <strong
+                                    data-netflow-live="<?= icct_nms_h($metric) ?>"
+                                    data-unit="<?= icct_nms_h($unit) ?>">—</strong>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -57,20 +63,34 @@
                     <span class="select-wrap">
                         <select name="hours">
                             <option value="1">Last hour</option>
-                            <option value="24" selected>Last 24 hours</option>
+                            <option
+                                value="24"
+                                selected>Last 24 hours</option>
                             <option value="168">Last 7 days</option>
                             <option value="720">Last 30 days</option>
                             <option value="custom">Custom range</option>
                         </select>
                     </span>
                 </label>
-                <label class="field" data-netflow-custom-date hidden>
+                <label
+                    class="field"
+                    data-netflow-custom-date
+                    hidden>
                     <span data-field-help="The beginning of the custom time range in India Standard Time.">Start (IST)</span>
-                    <input type="datetime-local" name="start" disabled>
+                    <input
+                        type="datetime-local"
+                        name="start"
+                        disabled>
                 </label>
-                <label class="field" data-netflow-custom-date hidden>
+                <label
+                    class="field"
+                    data-netflow-custom-date
+                    hidden>
                     <span data-field-help="The end of the custom time range in India Standard Time.">End (IST)</span>
-                    <input type="datetime-local" name="end" disabled>
+                    <input
+                        type="datetime-local"
+                        name="end"
+                        disabled>
                 </label>
                 <?php if ($key === 'anomalies'): ?>
                     <label class="field">
@@ -119,40 +139,22 @@
                                 </select>
                             </span>
                         </label>
+                    <?php if ($key === 'breakdown'): ?>
                         <label class="field">
                             <span data-field-help="Search application names or identifiers available in the stored flow records.">Application</span>
-                            <input name="application" maxlength="120" placeholder="Name or application ID">
+                            <input
+                                name="application"
+                                maxlength="120"
+                                placeholder="Name or application ID">
                         </label>
                     <?php endif; ?>
-                    <?php if ($key === 'records'): ?>
-                        <label class="field">
-                            <span data-field-help="Enter the exact IPv4 or IPv6 address that sent the traffic.">Source IP</span>
-                            <input name="src_addr" placeholder="Exact IP address">
-                        </label>
-                        <label class="field">
-                            <span data-field-help="Enter the exact IPv4 or IPv6 address that received the traffic.">Destination IP</span>
-                            <input name="dst_addr" placeholder="Exact IP address">
-                        </label>
-                        <label class="field">
-                            <span data-field-help="Enter the exact destination port, from 0 to 65535.">Destination port</span>
-                            <input name="dst_port" type="number" min="0" max="65535">
-                        </label>
-                        <label class="field">
-                            <span data-field-help="Choose the format the device used to send these records to the collector.">Export version</span>
-                            <span class="select-wrap">
-                                <select name="version">
-                                    <option value="">All versions</option>
-                                    <option value="5">v5</option>
-                                    <option value="7">v7</option>
-                                    <option value="9">v9</option>
-                                    <option value="10">IPFIX</option>
-                                </select>
-                            </span>
-                        </label>
                     <?php endif; ?>
+
                 <?php endif; ?>
                 <div class="device-history-actions">
-                    <button class="button" type="reset">Clear All</button>
+                    <button
+                        class="button"
+                        type="reset">Clear All</button>
                     <?php if ($key === 'breakdown'): ?>
                         <a class="button" id="netflow-breakdown-export"
                             href="protocols/netflow/controllers/netflow.php?id=<?= (int) $id ?>&amp;export=breakdown">Export Breakdown CSV</a>
@@ -252,7 +254,10 @@
                 </footer>
             <?php else: ?>
                 <h3 data-field-help="Rules flag unusual traffic patterns such as scans or high bandwidth use. Each finding describes the pattern that triggered it.">Traffic Anomalies</h3>
-                <p id="netflow-linked-finding" hidden>Showing the finding linked to this alarm. Clear All restores the time range filter.</p>
+                <p id="netflow-anomaly-status" role="status"></p>
+                <p
+                    id="netflow-linked-finding"
+                    hidden>Showing the finding linked to this alarm. Clear All restores the time range filter.</p>
                 <div class="site-table-wrap">
                     <table class="site-table">
                         <thead>

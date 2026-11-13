@@ -4,12 +4,8 @@ require __DIR__ . '/../../inventory/diagnostics/services/backend/diagnostics_que
 $config = ['base_path' => 'queue-test'];
 $pending = null;
 $inserts = 0;
-function icct_backend_require_management($realm)
-{
-}
-function icct_backend_require_device_access($host)
-{
-}
+function icct_backend_require_management($realm) {}
+function icct_backend_require_device_access($host) {}
 function icct_backend_diag_available_labels()
 {
     return ['ping' => 'Ping', 'arp' => 'ARP'];

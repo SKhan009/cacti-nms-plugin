@@ -16,7 +16,7 @@ $directories = [
     'shared',
 ];
 $actual = array_values(
-    array_filter(scandir($root), fn ($name) => $name[0] !== '.' && is_dir($root . '/' . $name)),
+    array_filter(scandir($root), fn($name) => $name[0] !== '.' && is_dir($root . '/' . $name)),
 );
 sort($actual);
 if ($actual !== $directories) {
@@ -64,7 +64,8 @@ foreach (
         'protocols/syslog/cli/syslog_worker.php',
         'shared/database/schema.sql',
         'protocols/snmp/mibs/storage/.htaccess',
-    ] as $path
+    ]
+    as $path
 ) {
     if (!is_file($root . '/' . $path)) {
         throw new RuntimeException('Missing runtime dependency: ' . $path);
@@ -103,9 +104,7 @@ function db_fetch_cell_prepared($sql, $args)
     }
     return 1;
 }
-function api_plugin_register_hook(...$args)
-{
-}
+function api_plugin_register_hook(...$args) {}
 function api_plugin_register_realm($plugin, $files, $description, $id)
 {
     if ($plugin !== 'icct_nms' || $id !== 1) {
@@ -113,9 +112,7 @@ function api_plugin_register_realm($plugin, $files, $description, $id)
     }
     $GLOBALS['registeredRealm'] = $files;
 }
-function api_plugin_enable_hooks($plugin)
-{
-}
+function api_plugin_enable_hooks($plugin) {}
 function api_plugin_disable_hooks($plugin)
 {
     throw new RuntimeException('An enabled plugin must retain its hooks.');
@@ -142,8 +139,13 @@ foreach ($routes as $route) {
     }
 }
 foreach (['ssh_terminal.php', 'ssh_console.php'] as $file) {
-    if (!in_array($file, $realmFiles, true) || !is_file($root . '/protocols/ssh/controllers/' . $file)) {
-        throw new RuntimeException('SSH controller is missing its existing Inventory permission realm: ' . $file);
+    if (
+        !in_array($file, $realmFiles, true) ||
+        !is_file($root . '/protocols/ssh/controllers/' . $file)
+    ) {
+        throw new RuntimeException(
+            'SSH controller is missing its existing Inventory permission realm: ' . $file,
+        );
     }
 }
 echo "PASS: all HTTP controllers use basename permission registration.\n";

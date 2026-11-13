@@ -151,7 +151,7 @@
                         value="automatic"
                         checked>
                     <span>
-                        <strong>Configure Automatically</strong>
+                        <strong>Recommended - Option 1: Configure Automatically</strong>
                         <small>Prepare data sources, graphs and a device template from the MIB
                             definitions.</small>
                     </span>
@@ -165,12 +165,7 @@
                                 r="8" />
                             <path d="M10 9v5M10 5.5v.5" />
                         </svg>
-                        <span
-                            class="field-info section-help"
-                            tabindex="0"
-                            role="img"
-                            aria-label="Existing Data Sources will not be duplicated. You can modify their settings after adding them to a device."
-                            data-tooltip="Existing Data Sources will not be duplicated. You can modify their settings after adding them to a device.">ⓘ</span>
+                        <span>Existing Data Sources will not be duplicated. You can modify their settings after adding them to a device.</span>
                     </div>
                 </label>
                 <label class="mib-upload-choice">
@@ -179,7 +174,7 @@
                         name="upload_next"
                         value="repository">
                     <span>
-                        <strong>Repository Only</strong>
+                        <strong>Option 2: Add to Repository Only</strong>
                         <small>Save the file to the repository and configure monitoring later.
                         </small>
                     </span>

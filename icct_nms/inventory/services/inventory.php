@@ -102,35 +102,52 @@ function icct_nms_uptime($ticks)
 }
 
 /** Present Cacti's stored SNMP readings without implying a new probe succeeded. */
-function icct_nms_device_snmp_information(array $host, string $status, bool $enabled, array $discovery = []): array
-{
+function icct_nms_device_snmp_information(
+    array $host,
+    string $status,
+    bool $enabled,
+    array $discovery = [],
+): array {
     $saved = !empty($host['id']);
     $scanned = !$saved && !empty($discovery['snmp']);
     $fields = [];
-    foreach ([
-        'System' => ['snmp_sysDescr', 'sysDescr'],
-        'Uptime' => ['snmp_sysUpTimeInstance', 'sysUptime'],
-        'Location' => ['snmp_sysLocation', 'sysLocation'],
-        'Contact' => ['snmp_sysContact', 'sysContact'],
-    ] as $label => [$column, $key]) {
-        $value = $scanned ? ($discovery[$key] ?? '') : ($host[$column] ?? '');
+    foreach (
+        [
+            'System' => ['snmp_sysDescr', 'sysDescr'],
+            'Uptime' => ['snmp_sysUpTimeInstance', 'sysUptime'],
+            'Location' => ['snmp_sysLocation', 'sysLocation'],
+            'Contact' => ['snmp_sysContact', 'sysContact'],
+        ]
+        as $label => [$column, $key]
+    ) {
+        $value = $scanned ? $discovery[$key] ?? '' : $host[$column] ?? '';
         $value = is_scalar($value) ? trim((string) $value) : '';
-        if ($value === 'U' || ($label === 'Uptime' && (!ctype_digit($value) || (float) $value <= 0))) {
+        if (
+            $value === 'U' ||
+            ($label === 'Uptime' && (!ctype_digit($value) || (float) $value <= 0))
+        ) {
             $value = '';
         }
-        $fields[$label] = $label === 'Uptime' && $value !== ''
-            ? $value . ' (' . icct_nms_uptime($value) . ')'
-            : $value;
+        $fields[$label] =
+            $label === 'Uptime' && $value !== ''
+                ? $value . ' (' . icct_nms_uptime($value) . ')'
+                : $value;
     }
-    $hasReadings = (bool) array_filter($fields, static fn ($value) => $value !== '');
+    $hasReadings = (bool) array_filter($fields, static fn($value) => $value !== '');
     if ($scanned) {
         $message = 'Read during device discovery.';
     } elseif (!$saved) {
-        $message = 'Save the device and its SNMP settings. Cacti will report the result after polling.';
+        $message =
+            'Save the device and its SNMP settings. Cacti will report the result after polling.';
     } elseif (!$enabled || $status === 'Disabled') {
-        $message = $status === 'Disabled' ? 'Device polling is disabled.' : 'SNMP is disabled for this device.';
+        $message =
+            $status === 'Disabled'
+                ? 'Device polling is disabled.'
+                : 'SNMP is disabled for this device.';
     } elseif ($status === 'Up') {
-        $message = $hasReadings ? 'SNMP readings stored by Cacti.' : 'Cacti has no SNMP readings for this device yet.';
+        $message = $hasReadings
+            ? 'SNMP readings stored by Cacti.'
+            : 'Cacti has no SNMP readings for this device yet.';
     } else {
         $message = 'Cacti device status: ' . $status . '.';
     }

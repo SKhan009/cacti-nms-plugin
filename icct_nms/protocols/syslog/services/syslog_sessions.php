@@ -10,7 +10,13 @@ function icct_nms_syslog_session(array $event): ?array
     if (preg_match('/^New session ([a-zA-Z0-9]{1,32}) of user (\S+)\.$/D', $message, $matches)) {
         return ['session' => $matches[1], 'state' => 'opened', 'account' => $matches[2]];
     }
-    if (preg_match('/^Session ([a-zA-Z0-9]{1,32}) logged out\.(?: Waiting for processes to exit\.)?$/D', $message, $matches)) {
+    if (
+        preg_match(
+            '/^Session ([a-zA-Z0-9]{1,32}) logged out\.(?: Waiting for processes to exit\.)?$/D',
+            $message,
+            $matches,
+        )
+    ) {
         return ['session' => $matches[1], 'state' => 'logged_out'];
     }
     if (preg_match('/^Removed session ([a-zA-Z0-9]{1,32})\.$/D', $message, $matches)) {
@@ -39,7 +45,9 @@ function icct_nms_syslog_session_evidence(int $hostId, array $events, array $ses
     $rows = db_fetch_assoc_prepared(
         'SELECT e.id, s.message AS opening_message, s.event_time AS opening_time,
             l.message AS logout_message, l.event_time AS logout_time
-        FROM (' . implode(' UNION ALL ', $requests) . ') AS wanted
+        FROM (' .
+            implode(' UNION ALL ', $requests) .
+            ') AS wanted
         JOIN plugin_icct_nms_syslog_events e ON e.id=wanted.event_id AND e.host_id=?
         JOIN plugin_icct_nms_syslog_events s ON s.id=(
             SELECT p.id FROM plugin_icct_nms_syslog_events p

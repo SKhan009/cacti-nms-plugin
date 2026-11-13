@@ -1,5 +1,14 @@
 <?php
 
+// Cacti owns the timezone catalog; this unit fixture supplies its native query result.
+function db_fetch_assoc($sql)
+{
+    if ($sql !== 'SELECT Name AS name FROM mysql.time_zone_name ORDER BY Name') {
+        throw new LogicException('Unexpected timezone query');
+    }
+    return [['name' => 'Asia/Kolkata'], ['name' => 'UTC']];
+}
+
 require __DIR__ . '/../../presets/services/site_service.php';
 $valid = [
     'name' => 'Demo site',
@@ -21,7 +30,8 @@ foreach (
         ['name' => ''],
         ['state' => str_repeat('x', 21)],
         ['latitude' => ['bad']],
-    ] as $invalid
+    ]
+    as $invalid
 ) {
     try {
         icct_nms_site_values(array_replace($valid, $invalid));
@@ -34,7 +44,8 @@ foreach (
     [
         ['latitude' => '-90', 'longitude' => '180', 'zoom' => '23'],
         ['latitude' => '', 'longitude' => '', 'zoom' => '', 'timezone' => ''],
-    ] as $boundary
+    ]
+    as $boundary
 ) {
     icct_nms_site_values(array_replace($valid, $boundary));
 }

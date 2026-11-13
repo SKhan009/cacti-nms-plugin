@@ -33,7 +33,8 @@ function icct_nms_connections()
             ['Logical', '#c830dd', 'dash-dot', 'circle'],
             ['Optical Fiber Link', '#ff7e99', 'dash-dot', 'arrow'],
             ['VSAT, Leased Line Link', '#ba9b80', 'fine-dotted', 'arrow'],
-        ] as $row
+        ]
+        as $row
     ) {
         $profiles[substr(sha1($row[0]), 0, 16)] = array_combine(
             ['name', 'color', 'line_style', 'symbol'],

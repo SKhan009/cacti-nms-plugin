@@ -18,9 +18,9 @@
         zoomControl: false,
         attributionControl: false,
         maxBoundsViscosity: 1,
-        minZoom: 2,
+        minZoom: 0,
         zoomSnap: 0,
-        maxZoom: 18,
+        maxZoom: 23,
         zoomAnimation: false,
         markerZoomAnimation: false,
     });
@@ -113,7 +113,15 @@
     const nodeDialog = document.querySelector('#lnmsNodeDialog');
     function showLnms(node) {
         document.querySelector('#lnmsNodeTitle').textContent = node.name;
-        document.querySelector('#lnmsNodeAddress').textContent = node.address;
+        document.querySelector('#lnmsNodeAddress').textContent = node.coordinates
+            ? Math.abs(node.coordinates[0]).toFixed(4) +
+              '° ' +
+              (node.coordinates[0] < 0 ? 'S' : 'N') +
+              ', ' +
+              Math.abs(node.coordinates[1]).toFixed(4) +
+              '° ' +
+              (node.coordinates[1] < 0 ? 'W' : 'E')
+            : 'Location unavailable';
         const badge = document.querySelector('#lnmsNodeStatus');
         badge.textContent = node.status;
         badge.className =
@@ -122,7 +130,13 @@
                 'other');
         const details = document.querySelector('#lnmsNodeDetails');
         details.replaceChildren();
-        const fields = { 'Last heartbeat': node.last_seen || 'Not received' };
+        const counts = node.device_counts || {};
+        const fields = {
+            'Total Devices': counts.total ?? 0,
+            Online: counts.online ?? 0,
+            Offline: counts.offline ?? 0,
+            Disabled: counts.disabled ?? 0,
+        };
         Object.entries(fields).forEach(([name, value]) => {
             const row = document.createElement('div'),
                 label = document.createElement('dt'),
@@ -132,9 +146,22 @@
             row.append(label, content);
             details.append(row);
         });
-        const link = document.querySelector('#lnmsCollectorLink');
-        link.hidden = !node.collector_url;
-        if (node.collector_url) link.href = node.collector_url;
+        const alarms = document.querySelector('#lnmsNodeAlarms');
+        alarms.replaceChildren();
+        Object.entries(icctSeverityColors).forEach(([severity, color]) => {
+            const pill = document.createElement('span');
+            const dot = document.createElement('i');
+            dot.style.background = color;
+            dot.setAttribute('aria-hidden', 'true');
+            const label = { Warning: 'Warn', Information: 'Info' }[severity] || severity;
+            pill.append(
+                dot,
+                document.createTextNode(label + ': ' + (node.alarm_counts?.[severity] || 0)),
+            );
+            alarms.append(pill);
+        });
+        document.querySelector('#lnmsTopologyLink').href = node.topology_url;
+        nodeDialog.dataset.collectorId = node.id;
         if (!nodeDialog.open) nodeDialog.showModal();
     }
     document.addEventListener('icct:show-lnms', (event) => {
@@ -159,6 +186,20 @@
             span.textContent = label + ': ' + (counts[key] || 0);
             target.append(span);
         }
+    }
+    function labelSiteMarker(marker, label) {
+        const element = marker.getElement();
+        if (!element) return;
+        element.setAttribute('role', 'button');
+        element.setAttribute('tabindex', '0');
+        element.setAttribute('aria-label', label);
+        element.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                event.stopPropagation();
+                marker.fire('click');
+            }
+        });
     }
     function drawLnms() {
         Object.values(markers).forEach((marker) => marker.remove());
@@ -188,7 +229,10 @@
                     className: 'icct-map-site-label',
                     offset: [0, -5],
                 })
-                .on('click', () => showLnms(node));
+                .on('click', () => {
+                    openSiteView(node);
+                    showLnms(node);
+                });
             labelSiteMarker(
                 markers[node.id],
                 node.name + ' · ' + node.address + ' · ' + node.status,
@@ -214,11 +258,24 @@
         });
         statusTotals();
     }
+    function openSiteView(site) {
+        if (!site?.coordinates || !Number.isInteger(site.zoom) || site.zoom < 0 || site.zoom > 23)
+            return false;
+        map.setMinZoom(0);
+        map.setView(site.coordinates, site.zoom, { animate: false });
+        return true;
+    }
     function fitLnms() {
+        // A selected native site takes precedence, including sites without collectors.
+        // The overview fits the country; opening a site applies its saved zoom.
+        if (openSiteView(lnms.site_view)) {
+            countryView = true;
+            return;
+        }
         const points = lnms.nodes
             .filter((node) => node.coordinates)
             .map((node) => node.coordinates);
-        if (points.length) {
+        if (points.length && !points.every((point) => indiaBounds.contains(point))) {
             map.setMinZoom(2);
             map.fitBounds(L.latLngBounds(points), {
                 padding: [36, 36],
@@ -235,6 +292,13 @@
     document.addEventListener('icct:lnms-readings', (event) => {
         lnms = event.detail;
         drawLnms();
+        if (nodeDialog.open) {
+            const current = lnms.nodes.find(
+                (node) => String(node.id) === nodeDialog.dataset.collectorId,
+            );
+            if (current) showLnms(current);
+            else nodeDialog.close();
+        }
     });
     drawLnms();
     document.getElementById('icctMapZoomIn').addEventListener('click', function () {
@@ -270,12 +334,6 @@
             return;
         const destination = new URL(window.location.href);
         destination.searchParams.set('view', tab.dataset.view);
-        // Map View is the overview of every authorized site, even after a site drill-down.
-        if (destination.searchParams.has('site_id') && tab.dataset.view === 'map') {
-            destination.searchParams.delete('site_id');
-            window.location.assign(destination.href);
-            return;
-        }
         if (updateUrl && destination.href !== window.location.href)
             history.pushState(null, '', destination.href);
         tabs.forEach(function (item) {

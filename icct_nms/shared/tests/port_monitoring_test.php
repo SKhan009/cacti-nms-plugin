@@ -25,9 +25,15 @@ if ($settings['ports'][2] !== $rule) {
 }
 $withoutCnms = $rule;
 unset($withoutCnms['cnms']);
-$settings = icct_nms_port_monitor_validate(['enabled' => true, 'ports' => [2 => $withoutCnms]], [2 => 'eth0']);
-if ($settings['ports'][2]['cnms'] || !$settings['ports'][2]['alarm'] ||
-    $settings['ports'][2]['oper_severity'] !== 'Major') {
+$settings = icct_nms_port_monitor_validate(
+    ['enabled' => true, 'ports' => [2 => $withoutCnms]],
+    [2 => 'eth0'],
+);
+if (
+    $settings['ports'][2]['cnms'] ||
+    !$settings['ports'][2]['alarm'] ||
+    $settings['ports'][2]['oper_severity'] !== 'Major'
+) {
     throw new Exception('CNMS must be optional for local port alarms');
 }
 foreach (
@@ -38,14 +44,16 @@ foreach (
         ['admin' => 1, 'oper' => 1, 'fresh' => true, 'state' => 'Normal'],
         ['admin' => 1, 'oper' => 1, 'fresh' => false, 'state' => 'Unknown'],
         ['admin' => 1, 'oper' => 4, 'fresh' => true, 'state' => 'Unknown'],
-    ] as $case
+    ]
+    as $case
 ) {
     if (icct_nms_port_fault_state($case, $rule, $case['fresh']) !== $case['state']) {
         throw new Exception('Incorrect port alarm state');
     }
 }
 foreach (
-    [['name' => 'renamed'], ['oper_severity' => ''], ['admin_severity' => 'Bogus']] as $change
+    [['name' => 'renamed'], ['oper_severity' => ''], ['admin_severity' => 'Bogus']]
+    as $change
 ) {
     try {
         icct_nms_port_monitor_validate(

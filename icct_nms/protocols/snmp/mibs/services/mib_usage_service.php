@@ -56,7 +56,8 @@ function icct_mib_repository_usage($bundles)
                 'host_template ht ON ht.id=h.host_template_id WHERE h.deleted=\'\' ORDER BY ' .
                 'h.description,h.id',
         ) ?:
-        [] as $host
+        []
+        as $host
     ) {
         $id = (int) $host['id'];
         if (!is_device_allowed($id, icct_backend_current_user_id())) {
@@ -114,7 +115,7 @@ function icct_mib_repository_usage($bundles)
         }
     }
     foreach ($usage as &$row) {
-        uasort($row['devices'], fn ($a, $b) => strnatcasecmp($a['description'], $b['description']));
+        uasort($row['devices'], fn($a, $b) => strnatcasecmp($a['description'], $b['description']));
         $row['devices'] = array_values($row['devices']);
     }
     unset($row);

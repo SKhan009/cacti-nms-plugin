@@ -2,7 +2,6 @@
 
 /** ICCT-owned diagnostic bandwidth services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: diag address in interfaces. */
 function icct_backend_diag_address_in_interfaces($target, array $interfaces)
 {
     $packed = @inet_pton($target);
@@ -22,7 +21,6 @@ function icct_backend_diag_address_in_interfaces($target, array $interfaces)
     return false;
 }
 
-/** Reused Inventory service: diag collector address. */
 function icct_backend_diag_collector_address($target)
 {
     if (icct_backend_diag_iperf_loopback($target)) {
@@ -45,7 +43,6 @@ function icct_backend_diag_collector_address($target)
     );
 }
 
-/** Reused Inventory service: diag iperf loopback. */
 function icct_backend_diag_iperf_loopback($target)
 {
     $ip = @inet_pton((string) $target);
@@ -59,7 +56,6 @@ function icct_backend_diag_iperf_loopback($target)
                     ord($ip[12]) === 127)));
 }
 
-/** Reused Inventory service: diag iperf self test. */
 function icct_backend_diag_iperf_self_test($command, $timeout)
 {
     $target = $command[2];
@@ -147,7 +143,6 @@ function icct_backend_diag_iperf_self_test($command, $timeout)
     }
 }
 
-/** Reused Inventory service: diag netperf self test. */
 function icct_backend_diag_netperf_self_test($command, $timeout)
 {
     $target = $command[2];

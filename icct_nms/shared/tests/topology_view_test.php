@@ -1,6 +1,24 @@
 <?php
 
 require __DIR__ . '/../../dashboard/topology/services/topology_view_service.php';
+require __DIR__ . '/../../dashboard/map/services/map_service.php';
+function icct_nms_alarm_rows()
+{
+    return array_map(
+        static fn($severity) => [
+            'host_id' => 1,
+            'state' => 'Active',
+            'severity' => $severity,
+            'name' => $severity . ' fixture',
+            'source' => 'Fault',
+            'occurred_epoch' => 100,
+            'description' => '',
+            'alarm_key' => $severity,
+            'fix' => '',
+        ],
+        ['Critical', 'Minor'],
+    );
+}
 require __DIR__ . '/../../inventory/services/backend/device_metadata.php';
 $stored = [];
 $allowed = true;
@@ -53,10 +71,10 @@ icct_nms_topology_save([1 => [0.2, 0.3]], $rev);
 if ($stored[1] !== [0.5, 0.5]) {
     throw new LogicException('Central switch can be moved');
 }
-reject(fn () => icct_nms_topology_save([1 => [0.5, 0.5]], $rev));
+reject(fn() => icct_nms_topology_save([1 => [0.5, 0.5]], $rev));
 $rev = hash('sha256', json_encode($stored));
 foreach ([[-1, 0.2], [0.2, 2], [0.2], [0.2, 'bad'], [INF, 0.2]] as $point) {
-    reject(fn () => icct_nms_topology_save([1 => $point], $rev));
+    reject(fn() => icct_nms_topology_save([1 => $point], $rev));
 }
 try {
     icct_nms_topology_save([6 => [0.2, 0.2]], $rev);
@@ -155,10 +173,12 @@ $diagram = icct_nms_topology_data([
     'sites' => [],
 ]);
 if (
-    $diagram['devices'][0]['summary']['Flow Records'] !== 12 ||
+    array_key_exists('Flow Records', $diagram['devices'][0]['summary']) ||
     $diagram['devices'][0]['netflow']['exporter'] !== '192.0.2.1'
 ) {
-    throw new LogicException('NetFlow summary lost device mapping');
+    throw new LogicException(
+        'Device popup must omit NetFlow fields while retaining the separate flow mapping',
+    );
 }
 if (count($diagram['links']) !== 1 || $diagram['links'][0]['target'] !== 2) {
     throw new LogicException('Ambiguous or absent neighbour linked');
@@ -179,7 +199,7 @@ echo "Topology neighbour resolution and actual fault counts passed.\n";
 function icct_backend_nd_hosts()
 {
     return array_map(
-        fn ($id) => ['id' => $id, 'enabled' => 1, 'collection_enabled' => 1, 'stale_seconds' => 900],
+        fn($id) => ['id' => $id, 'enabled' => 1, 'collection_enabled' => 1, 'stale_seconds' => 900],
         [1, 2, 3],
     );
 }
@@ -227,7 +247,7 @@ if (
 echo "Manual connections appear in dashboard topology with their port labels.\n";
 
 $manual = [];
-$makeSnapshot = fn ($data, $hash = 'test') => [
+$makeSnapshot = fn($data, $hash = 'test') => [
     'protocol' => 'lldp',
     'status' => 'success',
     'config_hash' => $hash,

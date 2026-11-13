@@ -14,8 +14,10 @@ function icct_nms_ssh_terminal_url($id)
 {
     global $config;
     $service = icct_backend_ssh_config();
-    return $service['origin'] . $config['url_path'] .
-        'plugins/icct_nms/protocols/ssh/controllers/ssh_terminal.php?host_id=' . (int) $id;
+    return $service['origin'] .
+        $config['url_path'] .
+        'plugins/icct_nms/protocols/ssh/controllers/ssh_terminal.php?host_id=' .
+        (int) $id;
 }
 
 /** A console ID alone grants nothing: every operation requires the same user, browser and device. */
@@ -28,14 +30,21 @@ function icct_nms_ssh_console_session($id, $hostId, $device, $closing = false)
         "SELECT *,lease_until>NOW() AS lease_valid FROM plugin_icct_nms_ssh_sessions WHERE id=? AND kind='console'",
         [$id],
     );
-    if (!$session || (int) $session['host_id'] !== $hostId ||
+    if (
+        !$session ||
+        (int) $session['host_id'] !== $hostId ||
         (int) $session['user_id'] !== icct_backend_current_user_id() ||
-        !hash_equals($session['session_hash'], hash('sha256', session_id()))) {
+        !hash_equals($session['session_hash'], hash('sha256', session_id()))
+    ) {
         throw new RuntimeException('SSH console belongs to another browser or device.');
     }
-    if (!$closing && ($session['status'] !== 'active' || !(int) $session['lease_valid'] ||
-        (int) $session['device_revision'] !== (int) $device['device_revision'] ||
-        (int) $session['preset_revision'] !== (int) $device['preset_revision'])) {
+    if (
+        !$closing &&
+        ($session['status'] !== 'active' ||
+            !(int) $session['lease_valid'] ||
+            (int) $session['device_revision'] !== (int) $device['device_revision'] ||
+            (int) $session['preset_revision'] !== (int) $device['preset_revision'])
+    ) {
         throw new RuntimeException('SSH console expired or its settings changed.');
     }
     return $session;
@@ -61,7 +70,10 @@ function icct_nms_ssh_console_operation($hostId, $input)
     if (!in_array($action, ['open', 'read', 'write', 'close', 'test', 'audit'], true)) {
         throw new InvalidArgumentException('Unsupported SSH console action.');
     }
-    $identity = ['user_id' => icct_backend_current_user_id(), 'browser_hash' => hash('sha256', session_id())];
+    $identity = [
+        'user_id' => icct_backend_current_user_id(),
+        'browser_hash' => hash('sha256', session_id()),
+    ];
     if ($action === 'test') {
         $ticket = icct_backend_ssh_ticket('test', $hostId);
         return icct_nms_ssh_ticket_request($ticket);
@@ -81,15 +93,22 @@ function icct_nms_ssh_console_operation($hostId, $input)
         $ticket = icct_backend_ssh_ticket('console', $hostId);
         // The worker receives only this session cookie, never unrelated browser cookies or credentials.
         $cookie = session_name() . '=' . rawurlencode(session_id());
-        return icct_nms_ssh_ticket_request($ticket, $identity + $size + ['console_action' => 'open', 'cookie' => $cookie]);
+        return icct_nms_ssh_ticket_request(
+            $ticket,
+            $identity + $size + ['console_action' => 'open', 'cookie' => $cookie],
+        );
     }
     $id = $input['session_id'] ?? '';
     icct_nms_ssh_console_session($id, $hostId, $device, $action === 'close');
     if ($action === 'audit') {
         $parameter = $input['parameter'] ?? '';
         $requestId = $input['request_id'] ?? '';
-        if (!is_string($parameter) || !preg_match('~^[\p{L}\p{N}][\p{L}\p{N} ._:/()\[\]-]{0,119}$~uD', trim($parameter)) ||
-            !is_string($requestId) || !preg_match('/^[a-f0-9]{32}$/D', $requestId)) {
+        if (
+            !is_string($parameter) ||
+            !preg_match('~^[\p{L}\p{N}][\p{L}\p{N} ._:/()\[\]-]{0,119}$~uD', trim($parameter)) ||
+            !is_string($requestId) ||
+            !preg_match('/^[a-f0-9]{32}$/D', $requestId)
+        ) {
             throw new InvalidArgumentException('Enter a setting name of up to 120 characters.');
         }
         icct_backend_require_management(3);
@@ -98,16 +117,21 @@ function icct_nms_ssh_console_operation($hostId, $input)
         $record = [
             'host_id' => (int) $hostId,
             'user_id' => $actor,
-            'user' => (string) db_fetch_cell_prepared('SELECT username FROM user_auth WHERE id=?', [$actor]),
+            'user' => (string) db_fetch_cell_prepared('SELECT username FROM user_auth WHERE id=?', [
+                $actor,
+            ]),
             'parameter' => trim($parameter),
             'time' => date(DATE_ATOM),
             'source_ip' => $source ?: '',
         ];
         icct_backend_category_execute(
             'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ' .
-            'ON DUPLICATE KEY UPDATE meta_key=VALUES(meta_key)',
-            [icct_nms_ssh_audit_prefix($hostId) . substr(hash('sha256', $id . $requestId), 0, 32),
-                json_encode($record, JSON_THROW_ON_ERROR)],
+                'ON DUPLICATE KEY UPDATE meta_key=VALUES(meta_key)',
+            [
+                icct_nms_ssh_audit_prefix($hostId) .
+                substr(hash('sha256', $id . $requestId), 0, 32),
+                json_encode($record, JSON_THROW_ON_ERROR),
+            ],
         );
         return ['recorded' => true];
     }
@@ -124,11 +148,13 @@ function icct_nms_ssh_console_operation($hostId, $input)
         }
         $request['data'] = $data;
     }
-    if (!db_execute_prepared(
-        "UPDATE plugin_icct_nms_ssh_sessions SET lease_until=DATE_ADD(NOW(),INTERVAL 30 SECOND) " .
-        "WHERE id=? AND status='active' AND lease_until>NOW()",
-        [$id],
-    )) {
+    if (
+        !db_execute_prepared(
+            'UPDATE plugin_icct_nms_ssh_sessions SET lease_until=DATE_ADD(NOW(),INTERVAL 30 SECOND) ' .
+                "WHERE id=? AND status='active' AND lease_until>NOW()",
+            [$id],
+        )
+    ) {
         throw new RuntimeException('Cannot renew terminal authorization.');
     }
     // Long polling must not hold PHP's browser-session lock and block keyboard or disconnect requests.

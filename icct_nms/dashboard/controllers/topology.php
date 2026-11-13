@@ -164,6 +164,10 @@ try {
         ? icct_backend_topology_integer($_GET['site_id'], 0, 4294967295, 'Site ID')
         : $savedSite;
     $mapData = icct_nms_dashboard_scope($mapData, $dashboardSiteId);
+    $dashboardPollerId = isset($_GET['poller_id'])
+        ? icct_backend_topology_integer($_GET['poller_id'], 1, 4294967295, 'Collector ID')
+        : 0;
+    $mapData = icct_nms_dashboard_poller_scope($mapData, $dashboardPollerId);
     $dashboardPreferences['dashboards'][$dashboardPreferences['selected']][
         'site_id'
     ] = $dashboardSiteId;
@@ -173,18 +177,26 @@ try {
         echo json_encode(icct_nms_topology_data($mapData), JSON_THROW_ON_ERROR);
         exit();
     }
-    $includeNtp = isset($_GET['ntp_widget']) || in_array(
-        'ntp',
-        $dashboardPreferences['dashboards'][$dashboardPreferences['selected']]['widgets'],
-        true,
-    );
-    $includeNetflowTalkers = isset($_GET['netflow_talkers_widget']) || in_array(
-        'netflow_talkers',
-        $dashboardPreferences['dashboards'][$dashboardPreferences['selected']]['widgets'],
-        true,
-    );
+    $includeNtp =
+        isset($_GET['ntp_widget']) ||
+        in_array(
+            'ntp',
+            $dashboardPreferences['dashboards'][$dashboardPreferences['selected']]['widgets'],
+            true,
+        );
+    $includeNetflowTalkers =
+        isset($_GET['netflow_talkers_widget']) ||
+        in_array(
+            'netflow_talkers',
+            $dashboardPreferences['dashboards'][$dashboardPreferences['selected']]['widgets'],
+            true,
+        );
     $dashboardReadings = icct_nms_dashboard_readings($mapData, $includeNtp, $includeNetflowTalkers);
-    $dashboardReadings['lnms'] = icct_nms_lnms_data(icct_nms_topology_data($mapData)['links']);
+    $dashboardReadings['lnms'] = icct_nms_lnms_data(
+        icct_nms_topology_data($mapData)['links'],
+        $dashboardSiteId,
+        $dashboardPollerId,
+    );
     $dashboardReadings['center'] = $dashboardReadings['lnms']['center'];
     $mapData['lnms'] = $dashboardReadings['lnms'];
     if (isset($_GET['dashboard_readings'])) {

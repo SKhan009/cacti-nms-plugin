@@ -40,7 +40,8 @@ try {
             'managed_objects',
             'device_metadata',
             'rack_devices',
-        ] as $suffix
+        ]
+        as $suffix
     ) {
         $table = 'plugin_icct_nms_' . $suffix;
         if (in_array($suffix, ['scan_jobs', 'scan_results', 'inventory_events'], true)) {
@@ -187,7 +188,8 @@ try {
             'automation_networks',
             'data_template_data',
             'graph_templates_graph',
-        ] as $table
+        ]
+        as $table
     ) {
         scanCheck(
             db_execute('CREATE TEMPORARY TABLE qa_scan_core LIKE ' . $table),
@@ -359,8 +361,7 @@ try {
     icct_nms_scan_native_runs((int) $config['poller_id']);
     icct_nms_scan_native_runs((int) $config['poller_id']);
     scanCheck(
-        (int) db_fetch_cell('SELECT COUNT(*) FROM plugin_icct_nms_scan_jobs') ===
-            $beforeJobs + 1,
+        (int) db_fetch_cell('SELECT COUNT(*) FROM plugin_icct_nms_scan_jobs') === $beforeJobs + 1,
         'Native run mirroring missed or duplicated a job.',
     );
     scanCheck(

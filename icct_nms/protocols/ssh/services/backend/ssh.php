@@ -2,7 +2,6 @@
 
 /** ICCT-owned ssh services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: ssh config. */
 function icct_backend_ssh_config()
 {
     global $config;
@@ -106,7 +105,6 @@ function icct_backend_ssh_config()
     return $c;
 }
 
-/** Reused Inventory service: ssh device. */
 function icct_backend_ssh_device($id, $require_enabled = true)
 {
     $row = db_fetch_row_prepared(
@@ -137,7 +135,6 @@ function icct_backend_ssh_device($id, $require_enabled = true)
     return $row;
 }
 
-/** Reused Inventory service: ssh https. */
 function icct_backend_ssh_https()
 {
     $c = icct_backend_ssh_config();
@@ -150,7 +147,6 @@ function icct_backend_ssh_https()
     }
 }
 
-/** Reused Inventory service: ssh manage. */
 function icct_backend_ssh_manage()
 {
     icct_backend_require_management(3);
@@ -159,7 +155,6 @@ function icct_backend_ssh_manage()
     }
 }
 
-/** Reused Inventory service: ssh rpc. */
 function icct_backend_ssh_rpc($request)
 {
     $c = icct_backend_ssh_config();
@@ -211,7 +206,6 @@ function icct_backend_ssh_rpc($request)
     }
 }
 
-/** Reused Inventory service: ssh ticket. */
 function icct_backend_ssh_ticket($kind, $host_id = 0)
 {
     icct_backend_ssh_https();
@@ -293,10 +287,12 @@ function icct_backend_ssh_ticket($kind, $host_id = 0)
  */
 function icct_backend_ssh_close_session($id, $outcome)
 {
-    if (!db_execute_prepared(
-        "UPDATE plugin_icct_nms_ssh_sessions SET status='closed',ended_at=NOW(),outcome=? WHERE id=? AND status IN ('issued','active')",
-        [substr($outcome, 0, 250), $id],
-    )) {
+    if (
+        !db_execute_prepared(
+            "UPDATE plugin_icct_nms_ssh_sessions SET status='closed',ended_at=NOW(),outcome=? WHERE id=? AND status IN ('issued','active')",
+            [substr($outcome, 0, 250), $id],
+        )
+    ) {
         throw new RuntimeException('SSH session authorization could not be closed.');
     }
 }

@@ -149,7 +149,7 @@
         progress.hidden = true;
         nextStep.hidden = false;
         dialog.classList.add('mib-upload-next-step');
-        title.textContent = 'Choose Next Step';
+        title.textContent = 'MIB Upload Successful – Choose Next Step';
         proceed.focus();
     });
     function choice() {
@@ -210,7 +210,7 @@
             saving = false;
             working(false);
             proceed.disabled = false;
-            title.textContent = 'Choose Next Step';
+            title.textContent = 'MIB Upload Successful – Choose Next Step';
             showError(failure.message);
             choice();
         }

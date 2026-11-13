@@ -2,7 +2,6 @@
 
 /** ICCT-owned device manager services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: device activate imported templates. */
 function icct_backend_device_activate_imported_templates(
     $device_id,
     $host_template_id,
@@ -46,7 +45,8 @@ function icct_backend_device_activate_imported_templates(
         db_fetch_assoc_prepared(
             "SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key LIKE 'mib_repository_%' OR meta_key=?",
             ['mib_bundle_' . $host_template_id],
-        ) as $stored
+        )
+        as $stored
     ) {
         $bundle = json_decode($stored['meta_value'], true);
         if (!is_array($bundle)) {
@@ -85,7 +85,7 @@ function icct_backend_device_activate_imported_templates(
         $templates = array_values(
             array_filter(
                 $templates,
-                fn ($row) => (int) $row['graph_template_id'] === (int) $selected_graph_id,
+                fn($row) => (int) $row['graph_template_id'] === (int) $selected_graph_id,
             ),
         );
     }
@@ -110,7 +110,8 @@ function icct_backend_device_activate_imported_templates(
                 db_fetch_assoc_prepared(
                     "SELECT DISTINCT snmp_index FROM host_snmp_cache WHERE host_id=? AND snmp_query_id=? AND field_name='oidIndex'",
                     [$device_id, $queryId],
-                ) as $instance
+                )
+                as $instance
             ) {
                 if (
                     db_fetch_cell_prepared(
@@ -198,7 +199,6 @@ function icct_backend_device_activate_imported_templates(
     return $created;
 }
 
-/** Reused Inventory service: device reindex. */
 function icct_backend_device_reindex($device_id)
 {
     $device_id = icct_backend_device_require($device_id);
@@ -220,7 +220,6 @@ function icct_backend_device_reindex($device_id)
     ];
 }
 
-/** Reused Inventory service: device require. */
 function icct_backend_device_require($device_id)
 {
     $device_id = (int) $device_id;
@@ -235,15 +234,14 @@ function icct_backend_device_require($device_id)
     return $device_id;
 }
 
-/** Reused Inventory service: device save. */
 function icct_backend_device_save($device_id, $input)
 {
     global $snmp_versions,
-    $snmp_auth_protocols,
-    $snmp_priv_protocols,
-    $availability_options,
-    $ping_methods,
-    $fields_host_edit;
+        $snmp_auth_protocols,
+        $snmp_priv_protocols,
+        $availability_options,
+        $ping_methods,
+        $fields_host_edit;
     $device_id = (int) $device_id;
     $is_new_device = $device_id === 0;
     $description = trim((string) $input['description']);

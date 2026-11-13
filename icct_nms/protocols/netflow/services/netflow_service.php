@@ -50,7 +50,8 @@ function icct_nms_netflow_validate($input)
             'bandwidth_limit_mbps' => [1, 1000000],
             'scan_threshold' => [2, 1000000],
             'syn_pps_threshold' => [1, 100000000],
-        ] as $key => $range
+        ]
+        as $key => $range
     ) {
         $value = filter_var($out[$key], FILTER_VALIDATE_INT);
         if ($value === false || $value < $range[0] || $value > $range[1]) {
@@ -235,7 +236,27 @@ function icct_nms_netflow_application($record)
             return ['name' => 'Application ' . $record[$key], 'basis' => 'exporter'];
         }
     }
-    // Ports describe transport endpoints, not application identity.
+    // A transport service is an inference, never an exporter-reported application.
+    $protocol = (int) ($record['proto'] ?? $record['protocol'] ?? 0);
+    $transport = [6 => 'tcp', 17 => 'udp'][$protocol] ?? null;
+    if ($transport !== null) {
+        $services = [];
+        foreach (['src_port', 'dst_port'] as $key) {
+            $port = (int) ($record[$key] ?? 0);
+            // Avoid assigning names to ephemeral or private application ports.
+            if ($port > 0 && $port < 1024) {
+                $service = getservbyport($port, $transport);
+                if ($service !== false) $services[$service] = true;
+            }
+        }
+        // DHCP uses a server/client pair of well-known service ports.
+        if ($protocol === 17 && isset($services['bootps'], $services['bootpc'])) {
+            return ['name' => 'DHCP', 'basis' => 'port-based service'];
+        }
+        if (count($services) === 1) {
+            return ['name' => strtoupper(array_key_first($services)), 'basis' => 'port-based service'];
+        }
+    }
     return ['name' => 'Not reported', 'basis' => 'unreported'];
 }
 function icct_nms_netflow_normalize($r, $version, $config)
@@ -308,7 +329,8 @@ function icct_nms_netflow_filter($id, $input)
             'netflow_alarm',
             'page',
             'size',
-        ] as $key
+        ]
+        as $key
     ) {
         if (isset($input[$key]) && !is_scalar($input[$key])) {
             throw new InvalidArgumentException('Use a single value for each flow filter.');
@@ -387,7 +409,8 @@ function icct_nms_netflow_rankings($filter)
             'applications' => "CONCAT(application,' (',application_basis,')')",
             'conversations' =>
                 "CONCAT(src_addr,':',src_port,' → ',dst_addr,':',dst_port,' / ',protocol)",
-        ] as $name => $expression
+        ]
+        as $name => $expression
     ) {
         $rankings[$name] = db_fetch_assoc_prepared(
             'SELECT ' .
@@ -462,10 +485,13 @@ function icct_nms_netflow_read($id, $input)
         $eventArgs[] = date('Y-m-d H:i:s', $filter['start']);
         $eventArgs[] = date('Y-m-d H:i:s', $filter['end']);
     }
-    foreach ([
-        'severity' => ['Critical', 'Major', 'Minor', 'Warning', 'Information'],
-        'state' => ['Active', 'Resolved'],
-    ] as $column => $choices) {
+    foreach (
+        [
+            'severity' => ['Critical', 'Major', 'Minor', 'Warning', 'Information'],
+            'state' => ['Active', 'Resolved'],
+        ]
+        as $column => $choices
+    ) {
         $value = $input['event_' . $column] ?? '';
         if ($value === '') {
             continue;
@@ -480,7 +506,8 @@ function icct_nms_netflow_read($id, $input)
         'SELECT e.*,a.alarm_key,UNIX_TIMESTAMP(e.opened_at) AS opened_epoch,' .
             'UNIX_TIMESTAMP(e.updated_at) AS updated_epoch FROM plugin_icct_nms_netflow_events e ' .
             "LEFT JOIN plugin_icct_nms_alarms a ON a.alarm_key=SHA2(CONCAT('netflow:',e.id),256) " .
-            'AND a.host_id=e.host_id WHERE ' . implode(' AND ', $eventWhere) .
+            'AND a.host_id=e.host_id WHERE ' .
+            implode(' AND ', $eventWhere) .
             ' ORDER BY e.updated_at DESC LIMIT 100',
         $eventArgs,
     );
@@ -529,18 +556,26 @@ function icct_nms_netflow_read($id, $input)
                             : 'Waiting for flows')))));
     return [
         'totals' => $totals,
-        'live_readings' => ($input['live'] ?? '') === '1' ? icct_nms_netflow_live_readings($id) : null,
+        'live_readings' =>
+            ($input['live'] ?? '') === '1' ? icct_nms_netflow_live_readings($id) : null,
+        'historical_readings' => ($input['live'] ?? '') === '1'
+            ? icct_nms_netflow_last_readings($id) : null,
         'rankings' => $rankings,
         'chart' => $chart,
         'chart_interval' => $chartInterval,
         'rows' => $rows,
         'events' => $events,
+        'anomaly_check' => json_decode((string) db_fetch_cell_prepared(
+            'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
+            ['netflow_anomaly_check_' . (int) $id],
+        ), true),
         'page' => $page,
         'pages' => $pages,
         'size' => $size,
         'range' => [$filter['start'], $filter['end']],
         'health' => $health,
-        'loopback_exporter' => $assignment && icct_nms_netflow_is_loopback($assignment['exporter_address']),
+        'loopback_exporter' =>
+            $assignment && icct_nms_netflow_is_loopback($assignment['exporter_address']),
         'last_data_epoch' => (int) ($state['last_data_epoch'] ?? 0),
         'error' => $state['last_error'] ?? '',
         'assignment' => $assignment
@@ -583,4 +618,15 @@ function icct_nms_netflow_topology($id)
             [(int) $id],
         ),
     ];
+}
+
+/** Historical fallback is separate from live values and never feeds alarm evaluation. */
+function icct_nms_netflow_last_readings($id)
+{
+    $latest = (int) db_fetch_cell_prepared(
+        'SELECT UNIX_TIMESTAMP(MAX(last_seen)) FROM plugin_icct_nms_netflow_flows WHERE host_id=?',
+        [(int) $id]
+    );
+    return $latest > 0 && $latest < time() - 300
+        ? icct_nms_netflow_live_readings($id, $latest) : null;
 }

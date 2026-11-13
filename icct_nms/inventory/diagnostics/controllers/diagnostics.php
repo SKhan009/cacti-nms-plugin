@@ -114,7 +114,7 @@ try {
     $id = icct_nms_id($_GET['host_id'] ?? 0);
     icct_nms_device($id);
     $labels = icct_backend_diag_selected_labels($id);
-    $tool = (string) ($_POST['tool'] ?? $_GET['tool'] ?? array_key_first($labels) ?? '');
+    $tool = (string) ($_POST['tool'] ?? ($_GET['tool'] ?? (array_key_first($labels) ?? '')));
     if ($tool !== '' && !isset($labels[$tool])) {
         throw new InvalidArgumentException(
             'This diagnostic is not selected for the device. Select it in Device Diagnostics first.',

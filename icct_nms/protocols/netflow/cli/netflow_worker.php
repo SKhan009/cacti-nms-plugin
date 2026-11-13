@@ -76,9 +76,14 @@ try {
                     $loopbackOnly = $loopbackOnly && icct_nms_netflow_is_loopback($address);
                 }
                 // A port used solely by same-family local exporters needs no network-facing listener.
-                $bind = $loopbackOnly && !($ipv4 && $ipv6)
-                    ? ($ipv6 ? '::1' : '127.0.0.1')
-                    : ($ipv6 ? '::' : '0.0.0.0');
+                $bind =
+                    $loopbackOnly && !($ipv4 && $ipv6)
+                        ? ($ipv6
+                            ? '::1'
+                            : '127.0.0.1')
+                        : ($ipv6
+                            ? '::'
+                            : '0.0.0.0');
                 $args = [
                     '/usr/bin/nfcapd',
                     $ipv6 ? '-6' : '-4',

@@ -9,9 +9,15 @@
             <a class="button" href="<?= $installationUrl ?>">Refresh checks</a>
         <?php endif; ?>
     </div>
-    <nav class="installation-tabs" aria-label="Installation">
-        <a href="<?= $installationUrl ?>" <?= !$packagesTab ? 'aria-current="page"' : '' ?>>Checks</a>
-        <a href="<?= $installationUrl ?>?tab=packages" <?= $packagesTab ? 'aria-current="page"' : '' ?>>Offline Packages</a>
+    <nav
+        class="installation-tabs"
+        aria-label="Installation">
+        <a
+            href="<?= $installationUrl ?>"
+            <?= !$packagesTab ? 'aria-current="page"' : '' ?>>Checks</a>
+        <a
+            href="<?= $installationUrl ?>?tab=packages"
+            <?= $packagesTab ? 'aria-current="page"' : '' ?>>Offline Packages</a>
     </nav>
 
     <?php if ($packagesTab): ?>

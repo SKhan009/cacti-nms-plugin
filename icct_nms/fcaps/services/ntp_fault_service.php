@@ -140,9 +140,15 @@ function icct_nms_ntp_fault_starters($limit = 100, $expected = '')
 /** Called inside the new assignment's transaction. Editing collection never recreates deleted rules. */
 function icct_nms_ntp_fault_assign_defaults($id)
 {
+    $key = 'fault_rules_' . $id;
+    icct_backend_category_execute(
+        'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ' .
+            'ON DUPLICATE KEY UPDATE meta_key=meta_key',
+        [$key, '[]'],
+    );
     $stored = db_fetch_cell_prepared(
-        'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
-        ['fault_rules_' . $id],
+        'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=? FOR UPDATE',
+        [$key],
     );
     $rules = $stored ? json_decode($stored, true, 64, JSON_THROW_ON_ERROR) : [];
     if (array_filter($rules, fn($rule) => ($rule['source'] ?? '') === 'ntp')) {

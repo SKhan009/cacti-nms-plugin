@@ -2,14 +2,12 @@
 
 /** ICCT-owned discovery identity services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: nd address key. */
 function icct_backend_nd_address_key($address)
 {
     $packed = @inet_pton((string) $address);
     return $packed === false ? '' : inet_ntop($packed);
 }
 
-/** Reused Inventory service: nd own addresses. */
 function icct_backend_nd_own_addresses($values)
 {
     $rows = [];

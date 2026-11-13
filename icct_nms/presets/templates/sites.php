@@ -13,7 +13,7 @@
         <input
             type="hidden"
             name="site_id"
-            value="<?= icct_nms_h($siteValues['site_id'] ?? '') ?>">
+            value="<?= icct_nms_h($siteValues['site_id'] ?? '0') ?>">
         <div class="type-editor-heading">
             <h2 id="site-editor-title"><?= empty($siteValues['site_id']) ? 'Add' : 'Edit' ?> Site</h2>
             <div>
@@ -43,15 +43,19 @@
                         <label class="field <?= $field === 'notes' ? 'site-notes' : '' ?>">
                             <span class="field-label"><?= $label ?><?= $field === 'name' ? ' *' : '' ?></span>
                             <?php if ($field === 'timezone'): ?>
-                                <select name="timezone">
+                                <span class="select-wrap">
+                                <select
+                                    name="timezone"
+                                    data-searchable-template="Timezone">
                                     <option value="">Select timezone</option>
-                                    <?php foreach (DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC) as $zone): ?>
+                                    <?php foreach (icct_nms_site_timezones() as $zone): ?>
                                         <option
                                             <?= $value === $zone ? 'selected' : '' ?>
 
                                             value="<?= icct_nms_h($zone) ?>"><?= icct_nms_h($zone) ?></option>
                                     <?php endforeach; ?>
                                 </select>
+                                </span>
                             <?php elseif ($field === 'notes'): ?>
                                 <textarea
                                     name="notes"

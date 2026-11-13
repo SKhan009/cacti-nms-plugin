@@ -30,7 +30,9 @@
         </div>
         <div class="site-fields">
             <label class="field">
-                <span class="field-label">Rack Name *</span>
+                <span
+                    class="field-label"
+                    data-field-help="Name used to identify this rack in inventory and Rack View.">Rack Name *</span>
                 <input
                     name="rack_name"
                     required
@@ -39,7 +41,9 @@
                     value="<?= icct_nms_h(is_string($rackValues['rack_name'] ?? '') ? $rackValues['rack_name'] ?? '' : '') ?>">
             </label>
             <label class="field">
-                <span class="field-label">Units per Rack *</span>
+                <span
+                    class="field-label"
+                    data-field-help="Total number of rack units available for device placement.">Units per Rack *</span>
                 <input
                     type="number"
                     name="unit_count"

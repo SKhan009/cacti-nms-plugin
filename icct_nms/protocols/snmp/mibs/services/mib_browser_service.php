@@ -41,7 +41,7 @@ function icct_mib_browser_tree($records)
         unset($node);
     }
     $compress = function ($node) use (&$compress) {
-        uksort($node['children'], fn ($a, $b) => (int) $a <=> (int) $b);
+        uksort($node['children'], fn($a, $b) => (int) $a <=> (int) $b);
         foreach ($node['children'] as &$child) {
             while (!$child['records'] && count($child['children']) === 1) {
                 $next = reset($child['children']);
@@ -257,7 +257,7 @@ function icct_mib_existing_source_indexes($records)
 function icct_mib_upload_summary($preview)
 {
     $records = $preview['records'];
-    $supported = count(array_filter($records, fn ($record) => !empty($record['numeric'])));
+    $supported = count(array_filter($records, fn($record) => !empty($record['numeric'])));
     $existing = icct_mib_existing_source_indexes($records);
     return [
         'name' => implode(', ', array_column($preview['files'], 'module')),

@@ -6,10 +6,9 @@ if (PHP_SAPI !== 'cli') {
     exit();
 }
 require_once __DIR__ . '/../../../../include/cli_check.php';
-require_once __DIR__ . '/../../shared/services/backend/functions.php';
-require_once __DIR__ . '/../../shared/services/backend/database.php';
-require_once __DIR__ . '/../../protocols/ssh/services/backend/ssh.php';
+require_once __DIR__ . '/../../shared/services/bootstrap.php';
 try {
+    icct_nms_backend();
     $id = filter_var($argv[1] ?? null, FILTER_VALIDATE_INT);
     $metric = $argv[2] ?? '';
     if (

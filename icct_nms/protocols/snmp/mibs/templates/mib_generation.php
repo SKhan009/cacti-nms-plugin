@@ -179,6 +179,7 @@ if (!$generationDone && !$generationError) {
         id="mibGenerationProgress"
         class="<?= $generationDone ? 'complete' : '' ?>"
         <?= $generationDone && !$generationReview ? '' : 'hidden' ?>
+
         aria-label="Generation results"
         aria-busy="false">
         <p
@@ -204,6 +205,7 @@ if (!$generationDone && !$generationError) {
             id="mibGenerationBar"
             max="100"
             <?= $generationDone ? 'value="100"' : '' ?>
+
             aria-label="Template generation progress"></progress>
         <p
             id="mibGenerationCount"

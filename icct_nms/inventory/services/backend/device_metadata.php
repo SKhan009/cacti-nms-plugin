@@ -2,7 +2,6 @@
 
 /** ICCT-owned device metadata services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: identity manual save. */
 function icct_backend_identity_manual_save($host_id, $values)
 {
     $values = icct_backend_identity_manual_validate($values);
@@ -30,7 +29,6 @@ function icct_backend_identity_manual_save($host_id, $values)
     }
 }
 
-/** Reused Inventory service: identity manual validate. */
 function icct_backend_identity_manual_validate($input)
 {
     $out = [];
@@ -64,7 +62,6 @@ function icct_backend_identity_manual_validate($input)
     return $out;
 }
 
-/** Reused Inventory service: manual serial save. */
 function icct_backend_manual_serial_save($host_id, $value)
 {
     $value = icct_backend_manual_serial_validate($value);
@@ -100,7 +97,6 @@ function icct_backend_manual_serial_save($host_id, $value)
     return $value;
 }
 
-/** Reused Inventory service: manual serial validate. */
 function icct_backend_manual_serial_validate($value)
 {
     if (
@@ -117,7 +113,6 @@ function icct_backend_manual_serial_validate($value)
     return $value;
 }
 
-/** Reused Inventory service: short name get. */
 function icct_backend_short_name_get($id)
 {
     return substr(
@@ -130,7 +125,6 @@ function icct_backend_short_name_get($id)
     );
 }
 
-/** Reused Inventory service: short name save. */
 function icct_backend_short_name_save($id, $value)
 {
     icct_backend_require_device_access((int) $id);
@@ -141,7 +135,6 @@ function icct_backend_short_name_save($id, $value)
     );
 }
 
-/** Reused Inventory service: short name validate. */
 function icct_backend_short_name_validate($value)
 {
     if (
@@ -155,15 +148,6 @@ function icct_backend_short_name_validate($value)
         );
     }
     return trim($value);
-}
-
-/** Reused Inventory service: single topology site. */
-function icct_backend_single_topology_site()
-{
-    return (int) db_fetch_cell_prepared(
-        'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
-        ['topology_site_id'],
-    );
 }
 
 /** Derive an editable, eight-character ASCII short name from the device's words. */

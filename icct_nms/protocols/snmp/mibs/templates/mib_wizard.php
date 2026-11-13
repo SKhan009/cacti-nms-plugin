@@ -75,7 +75,9 @@ $stages = [1 => 'Data Sources', 2 => 'Graph Templates', 3 => 'Device Template'];
             <?php if ($step === 1 || $step === 3): ?>
                 <div class="protocol-grid cols-2 mib-wizard-base">
                     <label class="field">
-                        <span class="field-label">Device Type *</span>
+                        <span
+                            class="field-label"
+                            data-field-help="Device type associated with the uploaded MIB in this repository.">Device Type *</span>
                         <select
                             name="type_id"
                             required>

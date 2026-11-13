@@ -136,7 +136,10 @@ function icct_nms_scan_snmp_attempt($address, $item, $deadline)
     }
     // Credentials travel only through a private pipe, never command arguments, logs or result evidence.
     $input = json_encode(['address' => $address, 'credential' => $item], JSON_THROW_ON_ERROR);
-    $limit = microtime(true) + 5 + ((int) $item['snmp_timeout'] * ((int) $item['snmp_retries'] + 1)) / 1000;
+    $limit =
+        microtime(true) +
+        5 +
+        ((int) $item['snmp_timeout'] * ((int) $item['snmp_retries'] + 1)) / 1000;
     if ($deadline !== null) {
         $limit = min($limit, $deadline);
     }
@@ -173,8 +176,12 @@ function icct_nms_scan_snmp_attempt($address, $item, $deadline)
             throw new RuntimeException('Native SNMP authentication process failed.');
         }
         $result = json_decode($output, true, 32, JSON_THROW_ON_ERROR);
-        if (!is_array($result) || !isset($result['ok']) || !is_bool($result['ok']) ||
-            ($result['ok'] && !is_array($result['device'] ?? null))) {
+        if (
+            !is_array($result) ||
+            !isset($result['ok']) ||
+            !is_bool($result['ok']) ||
+            ($result['ok'] && !is_array($result['device'] ?? null))
+        ) {
             throw new RuntimeException('Native SNMP authentication returned an invalid response.');
         }
         return $result;
@@ -236,7 +243,8 @@ function icct_nms_scan_probe($row, $v, $deadline)
                 json_encode($s['credential'], JSON_THROW_ON_ERROR),
             );
             foreach (
-                ['sysName', 'sysDescr', 'sysObjectID', 'sysLocation', 'sysContact', 'sysUptime'] as $field
+                ['sysName', 'sysDescr', 'sysObjectID', 'sysLocation', 'sysContact', 'sysUptime']
+                as $field
             ) {
                 $e[$field] = $d['snmp_' . $field] ?? '';
             }
@@ -260,7 +268,8 @@ function icct_nms_scan_probe($row, $v, $deadline)
                     $e['neighbors'][$method] = $data['neighbors'] ?? [];
                     // Empty neighbor lists must retain the collector's explanation of missing tables.
                     if (!empty($data['warning'])) {
-                        $e['method_errors'][$method] = strtoupper($method) . ': ' . $data['warning'];
+                        $e['method_errors'][$method] =
+                            strtoupper($method) . ': ' . $data['warning'];
                     }
                 } catch (Throwable $error) {
                     $e['method_errors'][$method] = 'Neighbour tables unavailable or timed out.';
@@ -386,7 +395,8 @@ function icct_nms_scan_native_runs($poller)
             db_fetch_assoc_prepared(
                 "SELECT id,last_started FROM automation_networks WHERE poller_id=? AND enabled='on' AND last_started>'1970-01-01'",
                 [(int) $poller],
-            ) as $n
+            )
+            as $n
         ) {
             $key = 'discovery_native_run_' . (int) $n['id'];
             $seen = (string) db_fetch_cell_prepared(

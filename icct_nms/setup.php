@@ -15,10 +15,7 @@ function plugin_icct_nms_version()
         'compat' => '1.2.0',
     ];
 }
-function icct_nms_check_dependencies()
-{
-    return !icct_nms_dependency_issues();
-}
+
 function icct_nms_dependency_issues()
 {
     $issues = icct_nms_php_requirement_issues();

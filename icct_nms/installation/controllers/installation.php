@@ -17,19 +17,24 @@ try {
         header('Cache-Control: no-store');
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             icct_nms_post();
-            $id = icct_nms_package_submit($config['base_path'], $_POST['action'] ?? '', $_POST['target'] ?? '', $_POST['preview'] ?? '');
+            $id = icct_nms_package_submit(
+                $config['base_path'],
+                $_POST['action'] ?? '',
+                $_POST['target'] ?? '',
+                $_POST['preview'] ?? '',
+            );
             http_response_code(202);
             echo json_encode(['id' => $id], JSON_THROW_ON_ERROR);
         } else {
             echo json_encode(icct_nms_package_status($config['base_path']), JSON_THROW_ON_ERROR);
         }
-        exit;
+        exit();
     }
     if (($_GET['guide'] ?? '') === 'ssh') {
         header('Content-Type: text/plain; charset=UTF-8');
         header('X-Content-Type-Options: nosniff');
         readfile(dirname(__DIR__, 2) . '/protocols/ssh/README.md');
-        exit;
+        exit();
     }
 
     $installationPage = true;
@@ -37,7 +42,9 @@ try {
     $packagesTab = ($_GET['tab'] ?? '') === 'packages';
     if ($packagesTab) {
         $manifest = icct_nms_installation_manifest();
-        $packages = ['base' => ['label' => 'Core and collector tools', 'packages' => $manifest['packages']]];
+        $packages = [
+            'base' => ['label' => 'Core and collector tools', 'packages' => $manifest['packages']],
+        ];
         foreach ($manifest['rhel_package_groups'] ?? [] as $id => $group) {
             $packages[$id] = [
                 'label' => $group['label'],
@@ -58,7 +65,7 @@ try {
     if ($isApi) {
         http_response_code(400);
         echo json_encode(['error' => $error->getMessage()]);
-        exit;
+        exit();
     }
     icct_nms_failure($error);
 }

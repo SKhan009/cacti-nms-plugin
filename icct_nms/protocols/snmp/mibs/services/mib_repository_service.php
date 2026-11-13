@@ -61,83 +61,7 @@ function icct_mib_upload_path($upload, $index)
     }
     return $path;
 }
-function icct_mib_command($args)
-{
-    $pipes = [];
-    $p = proc_open(
-        $args,
-        [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
-        $pipes,
-        null,
-        null,
-        [
-            'bypass_shell' => true,
-        ],
-    );
-    if (!is_resource($p)) {
-        throw new RuntimeException(
-            'Net-SNMP snmptranslate is required locally. On offline RHEL, install net-snmp-utils and ' .
-                'its dependencies from matching RHEL installation media or an offline RPM repository.',
-        );
-    }
-    fclose($pipes[0]);
-    stream_set_blocking($pipes[1], false);
-    stream_set_blocking($pipes[2], false);
-    $out = '';
-    $err = '';
-    $deadline = microtime(true) + 10;
-    $exit = -1;
-    try {
-        while (true) {
-            $out .= stream_get_contents($pipes[1]);
-            $err .= stream_get_contents($pipes[2]);
-            $state = proc_get_status($p);
-            if (strlen($out) + strlen($err) > 2097152 || microtime(true) > $deadline) {
-                proc_terminate($p);
-                throw new RuntimeException('MIB parsing exceeded its time or output limit.');
-            }
-            if (!$state['running']) {
-                $exit = $state['exitcode'];
-                break;
-            }
-            usleep(10000);
-        }
-        $out .= stream_get_contents($pipes[1]);
-        $err .= stream_get_contents($pipes[2]);
-    } finally {
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-        proc_close($p);
-    }
-    if ($exit === 127) {
-        throw new RuntimeException(
-            'Cannot run snmptranslate. Install net-snmp-utils locally on RHEL and check the ' .
-                'configured executable path. Offline installation can use matching RHEL media or an ' .
-                'offline RPM repository.',
-        );
-    }
-    if (preg_match_all('/Cannot find module \(([^)]+)\)/', $err, $missing)) {
-        throw new RuntimeException(
-            'Missing MIB dependencies: ' .
-                implode(', ', array_unique($missing[1])) .
-                ('. Upload these modules to the MIB Repository. Saved modules and bundled dependencies ' .
-                    'are loaded from the plugin folder. Internet access is not required.'),
-        );
-    }
-    if (
-        $exit !== 0 ||
-        preg_match(
-            '/Cannot find module|Unlinked OID|Undefined identifier|Bad operator|Cannot adopt OID|Error in parsing/i',
-            $err,
-        )
-    ) {
-        throw new RuntimeException(
-            'MIB parsing failed locally. Check the MIB syntax and its imported dependencies. ' .
-                substr($err, 0, 500),
-        );
-    }
-    return $out;
-}
+
 function icct_mib_name($value, $max = 150)
 {
     if (
@@ -152,80 +76,7 @@ function icct_mib_name($value, $max = 150)
     }
     return trim($value);
 }
-/** Private runtime files stay in the plugin; only this directory is writable. */
-function icct_mib_private_directory()
-{
-    $root = __DIR__ . '/../storage';
-    if (!is_dir($root) || !is_writable($root)) {
-        throw new RuntimeException(
-            'The plugin protocols/snmp/mibs/storage directory must be writable by the web-server account.',
-        );
-    }
-    $dir = $root . '/review-' . bin2hex(random_bytes(16));
-    if (!mkdir($dir, 0700)) {
-        throw new RuntimeException('Cannot create private MIB parsing directory.');
-    }
-    return $dir;
-}
-/** Resolve only imported repository modules, newest saved version first. */
-function icct_mib_repository_dependencies($dir, $files)
-{
-    $catalog = [];
-    foreach (icct_mib_list() as $bundle) {
-        foreach ($bundle['files'] as $i => $file) {
-            $module = $file['module'] ?? '';
-            if (preg_match('/^[A-Za-z][A-Za-z0-9-]*$/D', $module) && !isset($catalog[$module])) {
-                $catalog[$module] = [$bundle, $i];
-            }
-        }
-    }
-    $seen = array_fill_keys(array_keys($files), true);
-    $queue = array_column($files, 'content');
-    $bytes = 0;
-    $used = [];
-    while ($queue) {
-        $content = array_shift($queue);
-        if (
-            !preg_match(
-                '/\bIMPORTS\b(.*?);/s',
-                preg_replace('/--[^\r\n]*/', '', $content),
-                $imports,
-            )
-        ) {
-            continue;
-        }
-        preg_match_all('/\bFROM\s+([A-Za-z][A-Za-z0-9-]*)/', $imports[1], $matches);
-        foreach ($matches[1] as $module) {
-            if (isset($seen[$module])) {
-                continue;
-            }
-            $seen[$module] = true;
-            if (!isset($catalog[$module])) {
-                continue;
-            }
-            [$bundle, $index] = $catalog[$module];
-            $text = icct_mib_file($bundle, $index);
-            $bytes += strlen($text);
-            if (count($used) >= 128 || $bytes > 8388608) {
-                throw new RuntimeException('Repository dependency limit exceeded.');
-            }
-            if (
-                !preg_match(
-                    '/\b' . preg_quote($module, '/') . '\s+DEFINITIONS\s*::=\s*BEGIN\b/',
-                    $text,
-                )
-            ) {
-                throw new RuntimeException('Stored MIB module header does not match.');
-            }
-            if (file_put_contents($dir . '/' . $module . '.txt', $text) !== strlen($text)) {
-                throw new RuntimeException('Cannot write repository dependency.');
-            }
-            $used[] = $module;
-            $queue[] = $text;
-        }
-    }
-    return $used;
-}
+
 /** Bounds declared by the MIB, not thresholds inferred from descriptions. */
 function icct_mib_bounds($syntax)
 {
@@ -285,111 +136,7 @@ function icct_mib_set_deleted($id, $deleted, $checkRepository = false)
         db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)', [$lock]);
     }
 }
-/** Read native device inputs and graph settings; never guess an instance index. */
-function icct_mib_device_inputs($preview, $hostId)
-{
-    icct_backend_require_management(3);
-    $hostId = icct_backend_device_require($hostId);
-    if (!is_device_allowed($hostId, icct_backend_current_user_id())) {
-        throw new InvalidArgumentException('Device access denied.');
-    }
-    $host = db_fetch_row_prepared("SELECT * FROM host WHERE id=? AND deleted=''", [$hostId]);
-    if (
-        !$host ||
-        $host['disabled'] !== '' ||
-        (int) $host['snmp_version'] < 1 ||
-        !icct_backend_protocol_enabled($hostId, 'snmp')
-    ) {
-        throw new InvalidArgumentException(
-            'Choose an enabled device with SNMP selected in Protocol Config.',
-        );
-    }
-    $inputs = db_fetch_assoc_prepared(
-        'SELECT DISTINCT dl.id AS local_data_id,dl.data_template_id,dtd.id AS input_id,did.value ' .
-            'AS oid,dt.name AS data_name,r.data_source_name,r.data_source_type_id AS ds_type,' .
-            "r.rrd_minimum AS min,r.rrd_maximum AS max,r.id AS rrd_id\n        FROM data_local dl JOIN " .
-            "data_template_data dtd ON dtd.local_data_id=dl.id\n        JOIN data_template dt ON " .
-            "dt.id=dl.data_template_id\n        JOIN data_input_data did ON " .
-            "did.data_template_data_id=dtd.id\n        JOIN data_input_fields f ON " .
-            "f.id=did.data_input_field_id AND f.data_name='oid'\n        JOIN data_template_rrd r ON " .
-            'r.local_data_id=dl.id WHERE dl.host_id=? ORDER BY dl.id',
-        [$hostId],
-    );
-    // Indexed data queries keep their resolved OIDs in the device poller cache.
-    $indexed = db_fetch_assoc_prepared(
-        'SELECT DISTINCT dl.id AS local_data_id,dl.data_template_id,dtd.id AS input_id,pi.arg1 AS ' .
-            'oid,dt.name AS data_name,r.data_source_name,r.data_source_type_id AS ds_type,' .
-            "r.rrd_minimum AS min,r.rrd_maximum AS max,r.id AS rrd_id\n        FROM poller_item pi " .
-            "JOIN data_local dl ON dl.id=pi.local_data_id\n        JOIN data_template_data dtd ON " .
-            "dtd.local_data_id=dl.id JOIN data_template dt ON dt.id=dl.data_template_id\n        JOIN " .
-            "data_template_rrd r ON r.local_data_id=dl.id AND r.data_source_name=pi.rrd_name\n        " .
-            'WHERE dl.host_id=? AND pi.action=0 ORDER BY dl.id',
-        [$hostId],
-    );
-    $inputs = array_merge($inputs ?: [], $indexed ?: []);
-    $result = [];
-    $seen = [];
-    foreach ($preview['records'] as $i => $record) {
-        if (!$record['numeric']) {
-            continue;
-        }
-        foreach ($inputs as $input) {
-            $oid = ltrim(trim($input['oid']), '.');
-            $prefix = $record['base_oid'] . '.';
-            if (
-                !str_starts_with($oid, $prefix) ||
-                !preg_match('/^\d+(?:\.\d+)*$/D', substr($oid, strlen($prefix)))
-            ) {
-                continue;
-            }
-            if (!$record['table'] && $oid !== $prefix . '0') {
-                continue;
-            }
-            $graph = db_fetch_row_prepared(
-                'SELECT gt.name AS graph_name,gg.vertical_label AS units,i.graph_type_id AS graph_type,' .
-                    'i.consolidation_function_id AS cf,c.hex AS color,i.text_format AS legend,' .
-                    "i.graph_template_id,i.local_graph_id\n                FROM graph_templates_item i JOIN " .
-                    "graph_local gl ON gl.id=i.local_graph_id\n                JOIN graph_templates gt ON " .
-                    "gt.id=i.graph_template_id JOIN graph_templates_graph gg ON gg.local_graph_id=gl.id\n      " .
-                    '          LEFT JOIN colors c ON c.id=i.color_id WHERE gl.host_id=? AND i.task_item_id=? ' .
-                    'AND i.graph_type_id IN (4,5,6,7) ORDER BY i.sequence LIMIT 1',
-                [$hostId, $input['rrd_id']],
-            );
-            if (isset($seen[$i][$oid])) {
-                continue;
-            }
-            $seen[$i][$oid] = true;
-            $values = array_intersect_key($input, array_flip(['ds_type', 'min', 'max']));
-            $values['oid'] = $oid;
-            $values['instance_index'] = $record['table'] ? substr($oid, strlen($prefix)) : '';
-            if ($graph) {
-                foreach (['units', 'graph_type', 'cf', 'color', 'legend'] as $key) {
-                    $values[$key] = $graph[$key];
-                }
-                $values['statistics'] = db_fetch_cell_prepared(
-                    'SELECT COUNT(*) FROM graph_templates_item WHERE local_graph_id=? AND graph_type_id=9',
-                    [$graph['local_graph_id']],
-                )
-                    ? '1'
-                    : '0';
-                $lines = db_fetch_assoc_prepared(
-                    'SELECT text_format,value FROM graph_templates_item WHERE local_graph_id=? AND graph_type_id=2 ORDER BY sequence',
-                    [$graph['local_graph_id']],
-                );
-                foreach ($lines as $line) {
-                    if ($line['text_format'] === 'Lower threshold') {
-                        $values['threshold_low'] = $line['value'];
-                    }
-                    if ($line['text_format'] === 'Upper threshold') {
-                        $values['threshold_high'] = $line['value'];
-                    }
-                }
-            }
-            $result[$i][] = $values;
-        }
-    }
-    return $result;
-}
+
 /** Plugin-local upload reader. Original bytes are stored; parsing never contacts a device. */
 function icct_mib_text($text)
 {
@@ -536,165 +283,7 @@ function icct_mib_preview($upload, $typeId, $allowUnresolved = false, $progress 
         'owner' => icct_backend_current_user_id(),
     ];
 }
-function icct_mib_preview_native($upload, $typeId, $allowUnresolved = false)
-{
-    $types = icct_mib_device_types();
-    if (!is_string($typeId) || !isset($types[$typeId])) {
-        throw new InvalidArgumentException('Select a device type.');
-    }
-    $names = $upload['name'] ?? [];
-    if (!is_array($names) || !count($names) || count($names) > 8) {
-        throw new InvalidArgumentException('Upload 1–8 MIB files including dependencies.');
-    }
-    $dir = icct_mib_private_directory();
-    $files = [];
-    $symbols = [];
-    $total = 0;
-    try {
-        foreach ($names as $i => $name) {
-            $path = icct_mib_upload_path($upload, $i);
-            $size = filesize($path);
-            $total += $size;
-            if ($size < 1 || $size > 1048576 || $total > 4194304) {
-                throw new InvalidArgumentException('Limit: 1 MiB per file, 4 MiB total.');
-            }
-            $text = file_get_contents($path);
-            if (
-                str_contains($text, "\0") ||
-                !preg_match('/\b([A-Za-z][A-Za-z0-9-]*)\s+DEFINITIONS\s*::=\s*BEGIN\b/', $text, $m)
-            ) {
-                throw new InvalidArgumentException('Invalid MIB module header.');
-            }
-            $module = $m[1];
-            if (isset($files[$module])) {
-                throw new InvalidArgumentException('Duplicate MIB module.');
-            }
-            $files[$module] = [
-                'name' => basename($name),
-                'module' => $module,
-                'bytes' => $size,
-                'sha256' => hash('sha256', $text),
-                'content' => $text,
-            ];
-            if (file_put_contents($dir . '/' . $module . '.txt', $text) !== strlen($text)) {
-                throw new RuntimeException('Cannot write private parsing file.');
-            }
-            preg_match_all(
-                '/^\s*([A-Za-z][A-Za-z0-9-]*)\s+(OBJECT-TYPE|NOTIFICATION-TYPE|TRAP-TYPE|TEXTUAL-CONVENTION)\b/m',
-                preg_replace('/\bIMPORTS\b.*?;/s', '', $text),
-                $matches,
-                PREG_SET_ORDER,
-            );
-            foreach ($matches as $match) {
-                $symbols[$module . '::' . $match[1]] = $match[2];
-            }
-        }
-        if (count($symbols) > 512) {
-            throw new InvalidArgumentException(
-                'Limit: 512 object definitions per upload. Split larger modules.',
-            );
-        }
-        $dependencies = icct_mib_repository_dependencies($dir, $files);
-        $parseError = '';
-        $args = [
-            read_config_option('path_snmptranslate') ?: 'snmptranslate',
-            '-M',
-            $dir . ':' . __DIR__ . '/../../../../shared/assets/mibs',
-            '-m',
-            implode(':', array_keys($files)),
-        ];
-        try {
-            icct_mib_command(array_merge($args, ['-Tz']));
-        } catch (RuntimeException $e) {
-            if (
-                !$allowUnresolved ||
-                !str_starts_with($e->getMessage(), 'Missing MIB dependencies:')
-            ) {
-                throw $e;
-            }
-            $parseError = $e->getMessage();
-        }
-        $records = [];
-        $deadline = microtime(true) + 60;
-        foreach ($parseError ? [] : $symbols as $symbol => $kind) {
-            if (microtime(true) > $deadline) {
-                throw new RuntimeException(
-                    'MIB review exceeded its time limit. Upload fewer modules.',
-                );
-            }
-            if ($kind === 'TEXTUAL-CONVENTION') {
-                continue;
-            }
-            $definition = icct_mib_command(array_merge($args, ['-Td', '-On', $symbol]));
-            preg_match('/^\.?([0-9]+(?:\.[0-9]+)+)\s*$/m', $definition, $oid);
-            preg_match('/(?:MAX-ACCESS|ACCESS)\s+(\S+)/', $definition, $access);
-            preg_match('/SYNTAX\s+([^\n]+)/', $definition, $syntax);
-            preg_match('/DESCRIPTION\s+"(.*?)"/s', $definition, $description);
-            preg_match('/UNITS\s+"([^"]*)"/', $definition, $units);
-            $base = $oid[1] ?? '';
-            $table = false;
-            if ($base && $kind === 'OBJECT-TYPE') {
-                $parent = icct_mib_command(
-                    array_merge($args, ['-Td', '-On', preg_replace('/\.[0-9]+$/', '', $base)]),
-                );
-                $table = (bool) preg_match(
-                    '/\b(?:INDEX|AUGMENTS)\s*\{|SYNTAX\s+SEQUENCE\b/',
-                    $parent,
-                );
-            }
-            $numeric =
-                $kind === 'OBJECT-TYPE' &&
-                in_array($access[1] ?? '', ['read-only', 'read-write', 'read-create']) &&
-                preg_match(
-                    '/^(Integer32|INTEGER|Unsigned32|Gauge32|Counter32|Counter64|TimeTicks)\b/',
-                    $syntax[1] ?? '',
-                );
-            $counter = (bool) preg_match('/^Counter(?:32|64)\b/', $syntax[1] ?? '');
-            $enum = str_contains($syntax[1] ?? '', '{');
-            $records[] = [
-                'symbol' => $symbol,
-                'kind' => $kind,
-                'base_oid' => $base,
-                'oid' => $base ? ($table ? $base : $base . '.0') : '',
-                'syntax' => $syntax[1] ?? '',
-                'access' => $access[1] ?? '',
-                'description' => trim(preg_replace('/\s+/', ' ', $description[1] ?? '')),
-                'units' => $units[1] ?? '',
-                'table' => $table,
-                'numeric' => (bool) $numeric,
-                'enum' => $enum,
-                'ds_type' => $counter ? 2 : 1,
-                'label' => explode('::', $symbol)[1],
-                'min' => icct_mib_bounds($syntax[1] ?? '')['min'],
-                'max' => icct_mib_bounds($syntax[1] ?? '')['max'],
-                'reason' => !$numeric
-                    ? 'Metadata / nonnumeric object'
-                    : ($table
-                        ? 'Table object'
-                        : ($enum
-                            ? 'Numeric enumeration: review state mapping'
-                            : 'Readable numeric scalar')),
-            ];
-        }
-        return [
-            'id' => bin2hex(random_bytes(16)),
-            'type_id' => $typeId,
-            'type_name' => $types[$typeId]['name'],
-            'category_id' => $types[$typeId]['category_id'],
-            'files' => array_values($files),
-            'records' => $records,
-            'parse_error' => $parseError,
-            'dependencies' => $dependencies,
-            'created' => time(),
-            'owner' => icct_backend_current_user_id(),
-        ];
-    } finally {
-        foreach (glob($dir . '/*') ?: [] as $file) {
-            unlink($file);
-        }
-        rmdir($dir);
-    }
-}
+
 function icct_mib_list()
 {
     $rows = db_fetch_assoc(
@@ -702,7 +291,7 @@ function icct_mib_list()
     );
     $bundles = array_values(
         array_filter(
-            array_map(fn ($r) => json_decode($r['meta_value'], true), $rows ?: []),
+            array_map(fn($r) => json_decode($r['meta_value'], true), $rows ?: []),
             'is_array',
         ),
     );
@@ -779,7 +368,11 @@ function icct_mib_collection($record, $values)
 /** Use the same installed Data Input Method catalog as Cacti's Data Source form. */
 function icct_mib_collection_names()
 {
-    $catalog = array_column(db_fetch_assoc('SELECT id, name FROM data_input ORDER BY name') ?: [], 'name', 'id');
+    $catalog = array_column(
+        db_fetch_assoc('SELECT id, name FROM data_input ORDER BY name') ?: [],
+        'name',
+        'id',
+    );
     $get = (int) db_fetch_cell(
         'SELECT di.id FROM data_input di JOIN data_template_data dtd ON ' .
             'dtd.data_input_id=di.id JOIN data_template dt ON dt.id=dtd.data_template_id WHERE ' .
@@ -1008,7 +601,7 @@ function icct_mib_plan($preview, $input)
     }
     if (
         count(
-            array_unique(array_map(fn ($r) => $r['resolved_method'] . ':' . $r['oid'], $records)),
+            array_unique(array_map(fn($r) => $r['resolved_method'] . ':' . $r['oid'], $records)),
         ) !== count($records)
     ) {
         throw new InvalidArgumentException('Each instance OID must be unique.');
@@ -1031,7 +624,7 @@ function icct_mib_write($sql, $args = [])
 /** Native Cacti data query: discover complete OID suffixes, including composite indexes. */
 function icct_mib_query_xml($record)
 {
-    $escape = fn ($v) => htmlspecialchars((string) $v, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+    $escape = fn($v) => htmlspecialchars((string) $v, ENT_XML1 | ENT_QUOTES, 'UTF-8');
     $oid = $escape($record['base_oid']);
     $name = $escape($record['label']);
     $regex = $escape('^\\.?' . preg_quote($record['base_oid'], '/') . '\\.([0-9]+(?:\\.[0-9]+)*)$');
@@ -1277,7 +870,8 @@ function icct_mib_native_metric($record, $options, $existing = [])
                 db_fetch_assoc_prepared(
                     "SELECT id,type_code FROM data_input_fields WHERE data_input_id=? AND input_output='in'",
                     [$inputId],
-                ) as $f
+                )
+                as $f
             ) {
                 $instance = in_array(
                     $f['type_code'],
@@ -1342,7 +936,8 @@ function icct_mib_native_metric($record, $options, $existing = [])
         [$record['graph_type'], $record['cf'], $colorId, $record['legend'], $graphId],
     );
     foreach (
-        icct_mib_deleted_graph_items($record['graph_deleted_items'] ?? []) as $deletedSequence
+        icct_mib_deleted_graph_items($record['graph_deleted_items'] ?? [])
+        as $deletedSequence
     ) {
         icct_mib_write(
             'DELETE d FROM graph_template_input_defs d JOIN graph_templates_item i ON ' .
@@ -1372,7 +967,8 @@ function icct_mib_native_metric($record, $options, $existing = [])
         [$graphId],
     );
     foreach (
-        ['threshold_low' => 'Lower threshold', 'threshold_high' => 'Upper threshold'] as $key => $label
+        ['threshold_low' => 'Lower threshold', 'threshold_high' => 'Upper threshold']
+        as $key => $label
     ) {
         if ($record[$key] === '') {
             continue;
@@ -1723,7 +1319,8 @@ function icct_mib_wizard_save($id, $input)
                             'threshold_low',
                             'threshold_high',
                             'units',
-                        ] as $field
+                        ]
+                        as $field
                     ) {
                         if (isset($input['records'][$i][$field])) {
                             $values['records'][$i][$field] = $input['records'][$i][$field];

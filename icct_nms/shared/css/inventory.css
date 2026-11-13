@@ -82,13 +82,6 @@ textarea:focus-visible {
     outline: 2px solid var(--blue);
     outline-offset: 2px;
 }
-
-.icon-library {
-    position: absolute;
-    width: 0;
-    height: 0;
-    overflow: hidden;
-}
 svg {
     width: 24px;
     height: 24px;
@@ -121,14 +114,6 @@ svg {
     color: var(--text);
     width: 24px;
     height: 28px;
-}
-.menu-button {
-    width: 32px;
-    border-right: 1px solid #e1e1e1;
-    padding-right: 16px;
-}
-.menu-button svg {
-    width: 18px;
 }
 
 .brand {
@@ -216,22 +201,6 @@ svg {
 .topbar .cacti-backend-button:focus-visible {
     outline: 2px solid #0f62fe;
     outline-offset: 3px;
-}
-.network-status {
-    display: grid;
-    grid-template-columns: repeat(2, 49px);
-    gap: 2px 4px;
-    border-left: 1px solid #ddd;
-    border-right: 1px solid #ddd;
-    padding: 0 9px;
-}
-.network-status span {
-    background: #a9eebc;
-    color: #3f8a55;
-    text-align: center;
-    border-radius: 12px;
-    font-size: 12px;
-    line-height: 17px;
 }
 .header-actions {
     display: flex;
@@ -486,14 +455,21 @@ h1 {
     transform: rotate(45deg);
     pointer-events: none;
 }
-/* Unwrapped selects retain their native arrow; wrapped selects already draw one. */
+/* Local SVG gives unwrapped single selects the same chevron as select-wrap. */
+.field select:not([multiple]):not([size]) {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M1 2.5 5 6.5 9 2.5' fill='none' stroke='%23222' stroke-width='1'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 20px center;
+}
 .field select {
-    appearance: auto;
     padding-right: 42px;
     text-overflow: ellipsis;
     cursor: pointer;
 }
-.select-wrap select {
+.select-wrap select,
+.field .select-wrap select:not([multiple]):not([size]) {
+    background-image: none;
     appearance: none;
 }
 .notes {
@@ -571,9 +547,6 @@ h1 {
         min-width: 190px;
         gap: 8px;
     }
-    .network-status {
-        grid-template-columns: repeat(2, 40px);
-    }
     .station {
         min-width: 157px;
     }
@@ -595,9 +568,6 @@ h1 {
     }
     .system-metrics {
         display: none;
-    }
-    .network-status {
-        margin-left: auto;
     }
     .profile {
         min-width: 0;
@@ -645,9 +615,6 @@ h1 {
     }
     .station {
         min-width: 0;
-    }
-    .network-status {
-        display: none;
     }
     .header-actions {
         margin-left: auto;
@@ -720,9 +687,6 @@ h1 {
 /* Connected Inventory frames and protocol states. */
 [hidden] {
     display: none !important;
-}
-.wizard-page {
-    flex: 1;
 }
 .steps li {
     white-space: normal;
@@ -842,10 +806,6 @@ h1 {
 .primary:hover:not(:disabled) {
     background: #0043ce;
 }
-.save-status {
-    font-size: 12px;
-    color: #23783c;
-}
 .radio-group {
     border: 0;
     padding: 12px 0;
@@ -911,27 +871,6 @@ input[type='radio'] {
     height: 100%;
     cursor: pointer;
 }
-.file-result {
-    background: #f4f4f4;
-    padding: 6px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.file-result > span {
-    overflow-wrap: anywhere;
-}
-.text-button {
-    border: 0;
-    background: none;
-    color: inherit;
-    font-size: 22px;
-    cursor: pointer;
-    padding: 4px 8px;
-}
-.file-error {
-    color: #b42318 !important;
-}
 .multi-select {
     position: relative;
     background: #f4f4f4;
@@ -940,28 +879,6 @@ input[type='radio'] {
     padding: 8px 16px;
     cursor: pointer;
     min-height: 40px;
-}
-.selection-count {
-    background: #393939;
-    color: #fff;
-    border-radius: 16px;
-    display: inline-block;
-    padding: 4px 12px;
-    margin-right: 6px;
-    font-size: 12px;
-}
-.multi-options {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #ccc;
-    box-shadow: 0 4px 8px #0002;
-    max-height: 240px;
-    overflow: auto;
-    padding: 12px;
-    z-index: 5;
 }
 .keyword-box {
     background: #f4f4f4;
@@ -984,40 +901,6 @@ input[type='radio'] {
     margin-top: 12px;
     font-size: 12px;
 }
-.navigation-drawer {
-    position: fixed;
-    top: 48px;
-    bottom: 0;
-    left: 0;
-    width: min(340px, 90vw);
-    background: #fff;
-    border-right: 1px solid #ddd;
-    box-shadow: 4px 0 16px #0002;
-    z-index: 20;
-    overflow: auto;
-}
-.drawer-heading {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px;
-    border-bottom: 1px solid #ddd;
-}
-.navigation-drawer a {
-    display: block;
-    padding: 14px 20px;
-    text-decoration: none;
-    color: #262626;
-    border-bottom: 1px solid #eee;
-}
-.navigation-drawer a:hover {
-    background: #edf3ff;
-    color: #0f62fe;
-}
-.navigation-drawer .sub-link {
-    padding-left: 34px;
-    font-size: 13px;
-}
 dialog {
     border: 0;
     padding: 24px;
@@ -1028,22 +911,6 @@ dialog {
 }
 dialog::backdrop {
     background: #0006;
-}
-.dialog-heading,
-.dialog-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 16px;
-}
-.dialog-heading h2 {
-    font-size: 20px;
-    font-weight: 400;
-    margin: 0;
-}
-.dialog-footer {
-    justify-content: flex-end;
-    margin-top: 24px;
 }
 dialog p {
     color: var(--muted);
@@ -1062,9 +929,6 @@ dialog p {
     }
     .protocol-content {
         padding-left: 28px;
-    }
-    .navigation-drawer {
-        top: 56px;
     }
 }
 
@@ -1110,9 +974,6 @@ dialog p {
     }
     .form-footer .button {
         min-height: 44px;
-    }
-    .navigation-drawer {
-        max-height: calc(100dvh - 56px);
     }
 }
 
@@ -1184,9 +1045,6 @@ dialog p {
 .upload-zone > span {
     color: #fff;
 }
-.ssh-password {
-    display: contents;
-}
 .password-wrap {
     position: relative;
     display: block;
@@ -1245,15 +1103,8 @@ dialog p {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-@media (max-width: 980px) {
-    .ssh-fields.cols-5 {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-
 @media (max-width: 600px) {
-    .protocol-grid.cols-3,
-    .ssh-fields.cols-5 {
+    .protocol-grid.cols-3 {
         grid-template-columns: 1fr;
     }
     .radio-group label {
@@ -1645,22 +1496,6 @@ body.navigation-menu-open main {
 .steps li[aria-disabled='true'] {
     color: #888;
 }
-.form-help {
-    color: #666;
-    font-size: 13px;
-    line-height: 1.6;
-}
-.check-options {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-    padding: 12px 0;
-}
-.check-options label {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
 .protocol-option {
     display: block;
     border: 0;
@@ -1681,19 +1516,6 @@ body.navigation-menu-open main {
 .diagnostics-page h2 {
     font-size: 18px;
     font-weight: 400;
-}
-.saved-evidence {
-    padding: 16px;
-}
-.saved-evidence dl {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 8px 16px;
-    font-size: 12px;
-}
-.saved-evidence dd {
-    margin: 0;
-    overflow-wrap: anywhere;
 }
 #inventory-tree {
     padding: 16px;
@@ -1816,9 +1638,6 @@ dialog button[data-close-dialog] {
     .title-actions .button {
         padding: 0 12px;
         gap: 8px;
-    }
-    .saved-evidence dl {
-        grid-template-columns: 1fr;
     }
     .steps ol {
         min-width: 1000px;
@@ -2257,17 +2076,6 @@ body:has(#inventory-table) .table-scroll {
 .graphs-page {
     padding: 16px;
 }
-.graphs-heading,
-.graph-card-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-}
-.graphs-heading h2 {
-    font-size: 18px;
-    font-weight: 400;
-}
 .graph-controls {
     display: grid;
     grid-template-columns: minmax(180px, 1fr) 180px auto;
@@ -2279,36 +2087,9 @@ body:has(#inventory-table) .table-scroll {
 .graph-controls .field {
     margin: 0;
 }
-.graph-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr));
-    gap: 16px;
-}
-.graph-card {
-    border: 1px solid var(--border);
-    padding: 16px;
-    min-width: 0;
-}
-.graph-card h3 {
-    font-size: 14px;
-    font-weight: 600;
-    margin: 0;
-}
-.graph-card img {
-    display: block;
-    width: 100%;
-    height: auto;
-}
-.graph-image-error {
-    font-size: 13px;
-    color: var(--muted);
-}
 @media (max-width: 560px) {
     .graph-controls {
         grid-template-columns: 1fr;
-    }
-    .graph-card {
-        padding: 12px;
     }
 }
 
@@ -2411,9 +2192,6 @@ body:has(#diagnostics:not([hidden])) .protocol-form {
 .graph-association-content h3 {
     font-size: 16px;
     font-weight: 400;
-}
-.graph-parameter-grid input[readonly] {
-    color: var(--text);
 }
 .graph-items {
     font-size: 13px;
@@ -2843,13 +2621,6 @@ body.icct-inventory:has(.protocol-form) {
     background: #fff;
 }
 
-.graph-origin-footnote {
-    margin: 12px 0;
-    color: var(--muted);
-    font-size: 12px;
-    line-height: 1.5;
-}
-
 /* Presets: compact segment cards matching the shared screen. */
 .presets-heading {
     display: flex;
@@ -3254,11 +3025,8 @@ body.icct-inventory:has(.protocol-form) {
     display: flex;
     gap: 8px;
     align-items: center;
-    padding: 10px 16px;
+    padding: 10px 42px 10px 16px;
     font: inherit;
-}
-#icon-picker-toggle > span:last-child {
-    margin-left: auto;
 }
 #device-type-icon-preview {
     width: 22px;
@@ -3395,6 +3163,7 @@ body.icct-inventory:has(.protocol-form) {
     position: relative;
 }
 .connection-choice summary {
+    position: relative;
     min-height: 40px;
     padding: 10px 28px 10px 12px;
     border-bottom: 1px solid #aaa;
@@ -3404,11 +3173,18 @@ body.icct-inventory:has(.protocol-form) {
 .connection-choice summary::-webkit-details-marker {
     display: none;
 }
-.connection-choice summary::after {
-    content: '⌄';
+.connection-choice summary::after,
+.connection-picker-toggle::after {
+    content: '';
     position: absolute;
-    right: 10px;
-    top: 10px;
+    right: 21px;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-right: 1px solid currentColor;
+    border-bottom: 1px solid currentColor;
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
 }
 .connection-choice [data-choice-label] {
     display: flex;
@@ -3787,19 +3563,6 @@ body.icct-inventory:has(.protocol-form) {
     gap: 12px;
     margin-top: 16px;
 }
-.discovery-methods {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 18px;
-    margin: 18px 0;
-    border: 1px solid #ddd;
-    padding: 16px;
-}
-.discovery-methods label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
 .topology-inline-form {
     display: inline-block;
     margin-left: 8px;
@@ -3902,6 +3665,7 @@ body.icct-inventory:has(.protocol-form) {
     position: relative;
 }
 .connection-picker-toggle {
+    position: relative;
     width: 100%;
     min-height: 48px;
     text-align: left;
@@ -3913,11 +3677,7 @@ body.icct-inventory:has(.protocol-form) {
     font: inherit;
     cursor: pointer;
 }
-.connection-picker-toggle::after {
-    content: '⌄';
-    position: absolute;
-    right: 16px;
-}
+
 .connection-picker-panel {
     position: absolute;
     z-index: 30;
@@ -4012,11 +3772,6 @@ body.icct-inventory:has(.protocol-form) {
     align-items: center;
     gap: 10px;
 }
-.device-type-shape-preview {
-    margin-top: 8px;
-    font-size: 12px;
-    color: #525252;
-}
 .rack-device .device-shape-symbol {
     width: 16px;
     height: 12px;
@@ -4034,9 +3789,6 @@ body.icct-inventory:has(.protocol-form) {
 .rack-device .device-shape-symbol.shape-tall {
     width: 10px;
     height: 18px;
-}
-.icct-map-device-name .device-shape-symbol {
-    margin-right: 8px;
 }
 
 .topology-discovery-filters.connection-filters {
@@ -4613,31 +4365,6 @@ body.icct-inventory:has(.protocol-form) {
 }
 
 /* MIB list actions share aligned, compact buttons and table-edge spacing. */
-.mib-row-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    min-width: 210px;
-    max-width: 360px;
-}
-.mib-row-actions form {
-    margin: 0;
-}
-.mib-row-actions .button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 36px;
-    min-width: 0;
-    padding: 8px 12px;
-    margin: 0;
-    font-size: 13px;
-    white-space: nowrap;
-    text-decoration: none;
-    box-sizing: border-box;
-    color: #fff;
-}
 .device-panel:has(#mibFiles) > .mib-filters {
     padding: 0 16px;
     box-sizing: border-box;
@@ -4675,17 +4402,6 @@ body.icct-inventory:has(.protocol-form) {
 .device-diagnostic-menu[open] > .device-tool {
     background: #155cff;
 }
-
-.device-graph-filters {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 180px;
-    gap: 24px;
-    align-items: end;
-    margin-bottom: 16px;
-}
-.device-graph-filters .field {
-    margin: 0;
-}
 .device-view-graphs[data-columns='2'] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -4711,9 +4427,6 @@ body.icct-inventory:has(.protocol-form) {
     }
 }
 @media (max-width: 550px) {
-    .device-graph-filters {
-        grid-template-columns: 1fr;
-    }
     .device-view-graphs[data-columns] {
         grid-template-columns: 1fr;
     }
@@ -4845,7 +4558,9 @@ body.icct-inventory:has(.protocol-form) {
 .device-record-item + .device-record-item {
     border-top: 1px solid #ddd;
 }
-:is(#view-records, #view-diagnostics, #view-ports, #view-syslog, #view-traps) .device-record-item > summary {
+:is(#view-records, #view-diagnostics, #view-ports, #view-syslog, #view-traps)
+    .device-record-item
+    > summary {
     display: grid;
     grid-template-columns: var(--device-record-columns, 1.4fr 0.8fr 1.4fr 1fr);
     gap: 20px;
@@ -4878,7 +4593,9 @@ body.icct-inventory:has(.protocol-form) {
 .device-record-item[open] > summary:after {
     transform: rotate(180deg);
 }
-:is(#view-records, #view-diagnostics, #view-ports, #view-syslog, #view-traps) .device-record-item[open] > summary {
+:is(#view-records, #view-diagnostics, #view-ports, #view-syslog, #view-traps)
+    .device-record-item[open]
+    > summary {
     background: #e8f0ff;
     border-bottom: 1px solid #ddd;
 }
@@ -4901,13 +4618,6 @@ body.icct-inventory:has(.protocol-form) {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }
-.device-record-snapshot {
-    margin-top: 20px;
-}
-.device-record-snapshot > summary {
-    padding: 12px;
-    background: #f4f4f4;
-}
 .device-record-body .device-record-output {
     max-width: none;
     max-height: 480px;
@@ -4918,7 +4628,9 @@ body.icct-inventory:has(.protocol-form) {
     margin: 0;
 }
 @media (max-width: 650px) {
-    :is(#view-records, #view-diagnostics, #view-ports, #view-syslog, #view-traps) .device-record-item > summary {
+    :is(#view-records, #view-diagnostics, #view-ports, #view-syslog, #view-traps)
+        .device-record-item
+        > summary {
         grid-template-columns: 1fr 1fr;
         gap: 12px;
     }
@@ -4928,21 +4640,12 @@ body.icct-inventory:has(.protocol-form) {
 }
 
 /* Snapshot content always occupies the complete expanded record. */
-:is(#view-records, #view-diagnostics) .device-record-body,
-:is(#view-records, #view-diagnostics) .device-record-snapshot,
-:is(#view-records, #view-diagnostics) .device-record-snapshot > .site-table-wrap {
+:is(#view-records, #view-diagnostics) .device-record-body {
     display: block;
     width: 100%;
     max-width: none;
     min-width: 0;
     box-sizing: border-box;
-}
-:is(#view-records, #view-diagnostics) .device-record-snapshot .site-table {
-    width: 100%;
-    max-width: none;
-}
-:is(#view-records, #view-diagnostics) .device-record-snapshot .site-table th:first-child {
-    width: 38%;
 }
 :is(#view-records, #view-diagnostics) .device-record-body .device-record-output {
     width: 100%;
@@ -5262,11 +4965,6 @@ h6 {
 }
 .device-port-pair .device-port-jack:nth-child(2) svg {
     transform: rotate(180deg);
-}
-.device-port-observation {
-    font-size: 12px;
-    color: #777;
-    margin: 12px 0;
 }
 .device-port-toolbar {
     display: flex;
@@ -5675,28 +5373,6 @@ h6 {
 #fault-ntp-navigation {
     max-height: 520px;
     overflow: auto;
-}
-.fault-alarm-link {
-    display: block;
-    width: 100%;
-    padding: 14px 16px;
-    border: 0;
-    border-bottom: 1px solid #eee;
-    text-align: left;
-    font: inherit;
-    background: #fff;
-    color: #333;
-    cursor: pointer;
-    overflow-wrap: anywhere;
-}
-.fault-alarm-link[aria-pressed='true'] {
-    background: #e8f0ff;
-    color: #0f62fe;
-    box-shadow: inset 3px 0 #0f62fe;
-    font-weight: 600;
-}
-.fault-alarm-link:hover {
-    background: #f4f7fc;
 }
 .fault-alarm-sidebar #add-fault-rule {
     margin: 16px;
@@ -6556,17 +6232,6 @@ h6 {
     cursor: default;
     color: #aaa;
 }
-.device-port-capacity {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    margin: 8px 0 18px;
-    color: #666;
-    font-size: 12px;
-}
-.device-port-capacity span {
-    margin-left: auto;
-}
 
 .device-port-table {
     min-width: 1360px;
@@ -6585,84 +6250,6 @@ h6 {
     white-space: nowrap;
 }
 
-.device-port-group-title {
-    font-size: 13px;
-    font-weight: 600;
-    margin: 0 0 10px;
-}
-.device-logical-ports {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin: 14px 0;
-}
-.device-logical-ports .device-port-group-title {
-    margin: 0;
-}
-.device-logical-port {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    background: white;
-    padding: 8px 12px;
-    font-size: 13px;
-    cursor: pointer;
-}
-.interface-status-dot {
-    width: 9px;
-    height: 9px;
-    background: #888;
-    border-radius: 50%;
-}
-.device-logical-port.up .interface-status-dot {
-    background: #26974d;
-}
-.device-logical-port.down .interface-status-dot {
-    background: #e6353e;
-}
-.device-logical-port > span:last-child {
-    font-size: 11px;
-    color: #666;
-}
-.device-preset-slots {
-    margin: 16px 0 20px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background: #fafafa;
-    padding: 12px 14px;
-}
-.device-preset-slots summary {
-    cursor: pointer;
-    font-size: 13px;
-    color: #666;
-}
-.device-preset-slots p {
-    font-size: 12px;
-    color: #777;
-    margin: 12px 0;
-}
-.device-preset-slot-list {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-.device-preset-slot-list > span {
-    display: flex;
-    gap: 10px;
-    padding: 8px 12px;
-    background: #eee;
-    color: #777;
-    border: 1px dashed #ccc;
-    border-radius: 3px;
-    font-size: 12px;
-}
-.device-preset-slot-list small {
-    font-size: 11px;
-}
-
 .device-port-legend {
     display: flex;
     gap: 18px;
@@ -6678,26 +6265,6 @@ h6 {
 }
 .device-port-legend .unknown {
     color: #777;
-}
-
-.device-port-all-groups {
-    align-items: flex-start;
-    gap: 28px;
-    margin-bottom: 20px;
-}
-.device-port-diagram-group {
-    flex: none;
-}
-.device-port-diagram-group h3 {
-    font-size: 12px;
-    font-weight: 500;
-    color: #eee;
-    margin: 0 0 8px;
-    text-align: center;
-}
-.device-port-diagram-banks {
-    display: flex;
-    gap: 12px;
 }
 .device-port-jack.logical svg {
     transform: none;
@@ -6829,11 +6396,13 @@ h6 {
     color: #fff;
 }
 .syslog-select-chevron {
-    width: 9px;
-    height: 9px;
+    width: 7px;
+    height: 7px;
+    margin-right: 5px;
+    flex-shrink: 0;
     margin-left: auto;
-    border-right: 1.5px solid #393939;
-    border-bottom: 1.5px solid #393939;
+    border-right: 1px solid #393939;
+    border-bottom: 1px solid #393939;
     transform: rotate(45deg);
 }
 .syslog-select-menu[open] .syslog-select-chevron {
@@ -7017,59 +6586,10 @@ h6 {
     width: 210px;
     margin: 0;
 }
-.diagnostic-monitor-report {
-    margin: 12px 0;
-}
-.diagnostic-monitor-report pre {
-    overflow: auto;
-    max-height: 300px;
-}
 @media (max-width: 700px) {
     .diagnostic-monitor {
         grid-column: 1 / -1;
     }
-}
-
-#mibFiles .mib-row-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(140px, 1fr)) 36px;
-    gap: 8px;
-    max-width: none;
-    min-width: 350px;
-    align-items: stretch;
-}
-#mibFiles .mib-row-actions > a:nth-of-type(1) {
-    grid-column: 1;
-}
-#mibFiles .mib-row-actions > a:nth-of-type(2) {
-    grid-column: 2;
-}
-#mibFiles .mib-row-actions > a:nth-of-type(3) {
-    grid-column: 1;
-    grid-row: 2;
-}
-#mibFiles .mib-row-actions form {
-    display: flex;
-    align-items: stretch;
-    margin: 0;
-}
-#mibFiles .mib-row-actions form:first-of-type {
-    grid-column: 2;
-    grid-row: 2;
-}
-#mibFiles .mib-row-actions form:last-of-type {
-    grid-column: 3;
-    grid-row: 2;
-    align-items: center;
-}
-#mibFiles .mib-row-actions .button {
-    width: 100%;
-    min-height: 36px;
-}
-#mibFiles .mib-row-actions .icon-button {
-    margin: 0;
-    width: 36px;
-    height: 36px;
 }
 
 /* Compact, flat inventory actions; tool selection stays in Diagnostics. */
@@ -7589,15 +7109,6 @@ h6 {
 #alarm-detail dt {
     color: #777;
 }
-.alarm-history-event {
-    padding: 14px 0;
-    border-bottom: 1px solid #ddd;
-}
-.alarm-history-event small {
-    display: block;
-    color: #777;
-    margin-top: 6px;
-}
 #alarm-action-dialog {
     width: 460px;
     max-width: calc(100vw - 40px);
@@ -7759,6 +7270,20 @@ h6 {
     color: #252525;
     text-decoration: none;
 }
+/* Keep formatted HTML whitespace out of the device identity row. */
+.alarm-detail-page .alarm-device-value {
+    white-space: normal;
+}
+.alarm-device-value a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+}
+.alarm-device-value #alarm-device-dot {
+    flex: 0 0 10px;
+    margin: 0;
+}
 .alarm-detail-summary a:hover {
     text-decoration: underline;
 }
@@ -7872,18 +7397,6 @@ h6 {
 .alarm-history-table .alarm-legacy-note {
     font-style: italic;
     color: #888;
-}
-.alarm-escalation-table th:nth-child(3) {
-    width: auto;
-}
-.alarm-escalation-table th:nth-child(1) {
-    width: 170px;
-}
-.alarm-escalation-table th:nth-child(2) {
-    width: 170px;
-}
-.alarm-escalation-table th:nth-child(4) {
-    width: 150px;
 }
 #alarm-detail-feedback {
     margin: 10px;
@@ -8457,6 +7970,10 @@ h6 {
 }
 
 #netflow-chart {
+    display: block;
+    stroke: none;
+    stroke-width: 0;
+    fill: none;
     height: 240px;
     min-height: 200px;
 }
@@ -8833,7 +8350,10 @@ h6 {
 }
 .diagnostic-summary-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(150px, calc((100% - 36px) / 4))), 1fr));
+    grid-template-columns: repeat(
+        auto-fit,
+        minmax(min(100%, max(150px, calc((100% - 36px) / 4))), 1fr)
+    );
     gap: 12px;
     margin: 0;
     padding: 12px;
@@ -8927,4 +8447,74 @@ h6 {
     .diagnostic-pagination {
         flex-wrap: wrap;
     }
+}
+
+/* Pagination surfaces share Inventory's dimensions; retain each page's outer margins. */
+.type-pagination,
+.alarm-pagination,
+.alarm-history-pagination {
+    min-height: 48px;
+    padding-top: 0;
+    padding-bottom: 0;
+    gap: 0;
+    border-top: 1px solid #ddd;
+    border-bottom: 0;
+    background: #f4f4f4;
+    font-size: 13px;
+}
+.alarm-pagination > label {
+    padding: 14px;
+}
+.alarm-pagination > span {
+    padding: 0 16px;
+}
+.alarm-pagination > .page-controls {
+    gap: 10px;
+}
+:is(.inventory-pagination, .type-pagination, .alarm-pagination, .alarm-history-pagination)
+    .pagination-control {
+    min-height: 48px;
+    width: 44px;
+    border-left: 1px solid #ddd;
+    padding: 0;
+}
+
+/* Keep history and graph navigation in the same right-hand group as Inventory. */
+.alarm-history-pagination > .page-controls {
+    gap: 10px;
+    padding: 0;
+    border-left: 0;
+}
+.alarm-history-pagination > label {
+    padding: 14px;
+}
+.alarm-history-pagination > span {
+    padding: 0 16px;
+}
+.type-pagination > .page-controls > span {
+    padding-left: 16px;
+}
+
+/* Device fault links retain the application colour after visiting an alarm. */
+#view-fcaps .fault-alarm-link,
+#view-fcaps .fault-alarm-link:visited {
+    color: #000;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+#view-fcaps .fault-alarm-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+#view-fcaps .fault-alarm-link:focus-visible {
+    outline: 2px solid #155cff;
+    outline-offset: 3px;
+    text-decoration: underline;
+}
+
+/* Chart labels are text, not stroked interface icons. */
+#netflow-chart text {
+    stroke: none;
+    font-family: inherit;
+    font-weight: 400;
 }

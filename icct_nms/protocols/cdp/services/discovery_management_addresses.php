@@ -7,7 +7,8 @@ function icct_backend_nd_cdp_management_addresses($values, $root, $index)
     $addresses = [];
     $errors = [];
     foreach (
-        [[19, 20, 'CDP primary management address'], [3, 4, 'CDP advertised network address']] as [$typeColumn, $addressColumn, $source]
+        [[19, 20, 'CDP primary management address'], [3, 4, 'CDP advertised network address']]
+        as [$typeColumn, $addressColumn, $source]
     ) {
         try {
             $type = icct_backend_nd_value(
@@ -42,5 +43,3 @@ function icct_backend_nd_cdp_management_addresses($values, $root, $index)
         'errors' => array_values(array_unique($errors)),
     ];
 }
-
-/** Reused Inventory service: nd lldp management addresses. */

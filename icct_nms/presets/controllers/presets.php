@@ -61,7 +61,6 @@ try {
     if ($canManageSyslogPort) {
         require_once dirname(__DIR__, 2) . '/installation/services/package_jobs.php';
         $syslogPortStatus = icct_nms_package_status($config['base_path']);
-
     }
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $segmentName = is_string($_POST['segment_name'] ?? null) ? $_POST['segment_name'] : '';
@@ -96,15 +95,24 @@ try {
                     $redirect .= '&protocol=syslog';
                     if (array_key_exists('receiver_port', $_POST)) {
                         if (!$canManageSyslogPort || !isset($syslogPortStatus['syslog_port'])) {
-                            throw new RuntimeException('The offline runner is unavailable for Syslog port changes.');
+                            throw new RuntimeException(
+                                'The offline runner is unavailable for Syslog port changes.',
+                            );
                         }
                         $requestedPort = $_POST['receiver_port'];
                         if (!icct_nms_valid_syslog_port($requestedPort)) {
-                            throw new InvalidArgumentException('Enter a receiver port from 1 to 65535.');
+                            throw new InvalidArgumentException(
+                                'Enter a receiver port from 1 to 65535.',
+                            );
                         }
                         if ((int) $requestedPort !== $syslogPortStatus['syslog_port']) {
-                            if (!$syslogPortStatus['available'] || ($syslogPortStatus['job']['status'] ?? '') === 'running') {
-                                throw new RuntimeException('The offline runner is busy or unavailable. Try saving again shortly.');
+                            if (
+                                !$syslogPortStatus['available'] ||
+                                ($syslogPortStatus['job']['status'] ?? '') === 'running'
+                            ) {
+                                throw new RuntimeException(
+                                    'The offline runner is busy or unavailable. Try saving again shortly.',
+                                );
                             }
                             $port = $requestedPort;
                         }
@@ -117,7 +125,10 @@ try {
                         $redirect .= '&port_job=' . $job;
                         $message .= ' Receiver port change queued.';
                     } catch (Throwable $failure) {
-                        throw new RuntimeException('Syslog presets saved. The port change could not be queued. ' . $failure->getMessage());
+                        throw new RuntimeException(
+                            'Syslog presets saved. The port change could not be queued. ' .
+                                $failure->getMessage(),
+                        );
                     }
                 }
             } elseif (($_POST['action'] ?? '') === 'save_gnss') {

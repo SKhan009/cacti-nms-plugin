@@ -2,14 +2,12 @@
 
 /** ICCT-owned functions services, derived from the existing ICCT NMS implementation. */
 
-/** Reused Inventory service: current user id. */
 function icct_backend_current_user_id()
 {
     $user_id = isset($_SESSION['sess_user_id']) ? (int) $_SESSION['sess_user_id'] : 0;
     return $user_id > 0 ? $user_id : 0;
 }
 
-/** Reused Inventory service: device status name. */
 function icct_backend_device_status_name($device)
 {
     if (($device['disabled'] ?? '') !== '') {
@@ -57,7 +55,6 @@ function icct_backend_device_is_fresh($device)
     return $now - $seen <= max(120, max($interval, $cadence) * 2);
 }
 
-/** Reused Inventory service: host status name. */
 function icct_backend_host_status_name($status)
 {
     $map = [
@@ -70,14 +67,12 @@ function icct_backend_host_status_name($status)
     return isset($map[$status]) ? $map[$status] : 'Invalid state ' . $status;
 }
 
-/** Reused Inventory service: inventory display name. */
 function icct_backend_inventory_display_name($inventory_key)
 {
     $labels = ['serial_number' => 'Chassis serial number'];
     return $labels[$inventory_key] ?? ucwords(str_replace('_', ' ', (string) $inventory_key));
 }
 
-/** Reused Inventory service: managed object record. */
 function icct_backend_managed_object_record($type, $object_id, $user_id = null)
 {
     $type = (string) $type;
@@ -111,13 +106,11 @@ function icct_backend_managed_object_record($type, $object_id, $user_id = null)
     );
 }
 
-/** Reused Inventory service: now. */
 function icct_backend_now()
 {
     return date('Y-m-d H:i:s');
 }
 
-/** Reused Inventory service: parameter is fresh. */
 function icct_backend_parameter_is_fresh($last_seen)
 {
     $timestamp = strtotime((string) $last_seen);
@@ -126,7 +119,6 @@ function icct_backend_parameter_is_fresh($last_seen)
         time() - $timestamp <= max(120, icct_backend_poller_interval() * 2);
 }
 
-/** Reused Inventory service: poller interval. */
 function icct_backend_poller_interval()
 {
     $interval = (int) read_config_option('poller_interval');
@@ -138,7 +130,6 @@ function icct_backend_poller_interval()
     return $interval;
 }
 
-/** Reused Inventory service: require device access. */
 function icct_backend_require_device_access($host_id)
 {
     if (function_exists('is_device_allowed') && is_device_allowed((int) $host_id)) {
@@ -176,7 +167,6 @@ function icct_backend_require_device_access($host_id)
     throw new RuntimeException('Your Cacti account cannot access this device.');
 }
 
-/** Reused Inventory service: require management. */
 function icct_backend_require_management($realm = 3)
 {
     if (!function_exists('is_realm_allowed') || !is_realm_allowed((int) $realm)) {

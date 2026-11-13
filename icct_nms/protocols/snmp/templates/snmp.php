@@ -10,6 +10,7 @@
                 name="snmp_version"
                 value="<?= $version ?>"
                 <?= max(1, (int) $values['snmp_version']) === $version ? 'checked' : '' ?>
+
                 required /><?= $label ?>
         </label>
     <?php endforeach; ?>
