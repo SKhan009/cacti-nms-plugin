@@ -19,7 +19,7 @@
                     <h2 id="dashboardSavedTitle">Saved Dashboards</h2>
                     <span id="dashboardSavedCount"></span>
                 </div>
-                <button type="button" class="button primary" id="dashboardConfigAdd">Add Dashboard (Max 5)</button>
+                <button type="button" class="button primary" id="dashboardConfigAdd" aria-label="Add Dashboard">Add</button>
             </div>
             <p id="dashboardSavedMessage" role="status" aria-live="polite" hidden></p>
             <div class="dashboard-saved-scroll">
