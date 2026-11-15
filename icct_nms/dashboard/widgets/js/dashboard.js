@@ -311,42 +311,32 @@
             viewButton.addEventListener('click', () => open('view'));
             editButton.addEventListener('click', () => open('edit'));
             deleteButton.disabled = preferences.dashboards.length === 1;
-            deleteButton.addEventListener('click', () => {
-                buttons.hidden = true;
-                const confirmation = element('div');
-                confirmation.className = 'dashboard-delete-confirmation';
-                confirmation.append(element('span', 'Delete this dashboard?'));
-                const confirm = element('button', 'Delete');
-                confirm.type = 'button';
-                confirm.className = 'is-danger';
-                const cancel = element('button', 'Cancel');
-                cancel.type = 'button';
-                cancel.addEventListener('click', () => {
-                    confirmation.remove();
-                    buttons.hidden = false;
-                });
-                confirm.addEventListener('click', async () => {
-                    confirm.disabled = true;
-                    const removed = preferences.dashboards.splice(index, 1)[0];
-                    const oldSelected = preferences.selected;
-                    preferences.selected = Math.min(
-                        oldSelected > index ? oldSelected - 1 : oldSelected,
-                        preferences.dashboards.length - 1,
-                    );
-                    if (await save()) {
-                        editorDashboardIndex = preferences.selected;
-                        layout();
-                        showConfigurationList('Dashboard deleted successfully.');
-                    } else {
-                        preferences.dashboards.splice(index, 0, removed);
-                        preferences.selected = oldSelected;
-                        layout();
-                        renderSavedDashboards();
-                        showSavedMessage('Dashboard could not be deleted.', true);
-                    }
-                });
-                confirmation.append(confirm, cancel);
-                action.append(confirmation);
+            deleteButton.addEventListener('click', async () => {
+                if (deleteButton.disabled || !await icctShowMessage({
+                    title: 'Delete dashboard',
+                    text: `Delete ${dashboard.name || `Dashboard #${index + 1}`}?`,
+                    confirm: true,
+                    danger: true,
+                    accept: 'Delete',
+                })) return;
+                deleteButton.disabled = true;
+                const removed = preferences.dashboards.splice(index, 1)[0];
+                const oldSelected = preferences.selected;
+                preferences.selected = Math.min(
+                    oldSelected > index ? oldSelected - 1 : oldSelected,
+                    preferences.dashboards.length - 1,
+                );
+                if (await save()) {
+                    editorDashboardIndex = preferences.selected;
+                    layout();
+                    showConfigurationList('Dashboard deleted successfully.');
+                } else {
+                    preferences.dashboards.splice(index, 0, removed);
+                    preferences.selected = oldSelected;
+                    layout();
+                    renderSavedDashboards();
+                    showSavedMessage('Dashboard could not be deleted.', true);
+                }
             });
             buttons.append(viewButton, editButton, deleteButton);
             action.append(buttons);

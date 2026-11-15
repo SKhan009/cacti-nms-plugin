@@ -1397,30 +1397,6 @@
     stroke-linecap: round;
     stroke-linejoin: round;
 }
-.dashboard-delete-confirmation {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    z-index: 3;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 7px;
-    width: 180px;
-    padding: 12px;
-    border: 1px solid #bbb;
-    background: #fff;
-    box-shadow: 0 5px 14px #0002;
-    font-size: 13px;
-}
-.dashboard-delete-confirmation span {
-    flex-basis: 100%;
-}
-.dashboard-delete-confirmation button {
-    padding: 6px 10px;
-}
-.dashboard-delete-confirmation .is-danger {
-    background: #c82f35;
-}
 #dashboardSavedMessage {
     margin: 0 0 12px;
     padding: 10px 12px;
