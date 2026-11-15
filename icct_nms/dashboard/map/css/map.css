@@ -1400,20 +1400,15 @@
 #dashboardSavedMessage {
     margin: 0 0 12px;
     padding: 10px 12px;
-    border-left: 3px solid #208451;
-    background: #e9f6ee;
-    color: #187441;
+    border-left: 3px solid #777;
+    background: #f2f2f2;
+    color: #555;
     font-size: 13px;
 }
 #dashboardSavedMessage.is-error {
     border-left-color: #b42318;
     background: #fff0ee;
     color: #b42318;
-}
-#dashboardSavedMessage.is-neutral {
-    border-left-color: #777;
-    background: #f2f2f2;
-    color: #555;
 }
 #dashboardSavedMessage[hidden] {
     display: none;

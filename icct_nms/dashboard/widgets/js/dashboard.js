@@ -255,10 +255,16 @@
     function showSavedMessage(message, error = false) {
         const field = document.querySelector('#dashboardSavedMessage');
         if (!field) return;
+        if (message && !error && message !== 'No changes to save.') {
+            field.textContent = '';
+            field.hidden = true;
+            field.classList.remove('is-error');
+            icctToast({ title: 'Saved', text: message });
+            return;
+        }
         field.textContent = message;
         field.hidden = !message;
         field.classList.toggle('is-error', error);
-        field.classList.toggle('is-neutral', message === 'No changes to save.');
     }
     function showConfigurationList(message = '') {
         widgetEditor.hidden = true;
