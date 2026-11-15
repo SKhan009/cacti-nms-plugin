@@ -4,13 +4,13 @@
 (() => {
     const fieldHelp = {
         source_address:
-            'IP address of the sender as seen by the receiver, or the hostname in its Syslog header. Use the sender IP when available.',
+            'Leave blank to use the saved Cacti device IP. Override only when the device sends from a different IP. A hostname requires an explicit numeric sender IP; no internet lookup is used.',
         transport: 'Accept UDP, TCP, or both on the collector’s Syslog port 514.',
         max_severity:
             'Store this severity and all more urgent levels. Informational includes levels 0–6; Debug includes all levels.',
         segment_name: 'Name used to group related device types and devices.',
         tool: 'Diagnostic method to run for the selected device.',
-        description: 'Name used to identify this device in inventory.',
+        description: 'Name used to identify this device in Device Mgmt.',
         short_name:
             'Created automatically from the device name. You can enter your own short name, up to 8 characters.',
         hostname: 'Hostname or IP address used by the configured protocols to contact this device.',
@@ -221,17 +221,39 @@
     tooltip.className = 'help-tooltip';
     tooltip.id = 'icct-help-tooltip';
     tooltip.setAttribute('role', 'tooltip');
+    // A popover enters the browser top layer, so field help stays above modal dialogs.
+    const usePopover = typeof tooltip.showPopover === 'function' && typeof tooltip.hidePopover === 'function';
+    if (usePopover) tooltip.setAttribute('popover', 'manual');
     tooltip.hidden = true;
     document.body.append(tooltip);
     let activeHelp = null;
     const hideHelp = () => {
         if (activeHelp) activeHelp.removeAttribute('aria-describedby');
         activeHelp = null;
+        if (usePopover && tooltip.matches(':popover-open')) tooltip.hidePopover();
         tooltip.hidden = true;
+        if (tooltip.parentElement !== document.body) document.body.append(tooltip);
     };
     const positionHelp = (target) => {
         const box = target.getBoundingClientRect();
         const size = tooltip.getBoundingClientRect();
+        const dialog = target.closest('dialog[open]');
+        if (dialog) {
+            const bounds = dialog.getBoundingClientRect();
+            const right = box.right + 8;
+            const left = box.left - size.width - 8;
+            const centered = box.left + box.width / 2 - size.width / 2;
+            tooltip.style.left = `${right + size.width <= bounds.right - 8
+                ? right
+                : left >= bounds.left + 8
+                  ? left
+                  : Math.max(8, Math.min(centered, window.innerWidth - size.width - 8))}px`;
+            tooltip.style.top = `${Math.max(
+                8,
+                Math.min(box.top + box.height / 2 - size.height / 2, window.innerHeight - size.height - 8),
+            )}px`;
+            return;
+        }
         const left = target.classList.contains('heading-help')
             ? box.left
             : box.left + box.width / 2 - size.width / 2;
@@ -245,7 +267,12 @@
         tooltip.textContent = target.classList.contains('field-info')
             ? target.dataset.tooltip
             : target.getAttribute('aria-label') || target.dataset.tooltip;
+        if (!usePopover) {
+            const dialog = target.closest('dialog[open]');
+            if (dialog) dialog.append(tooltip);
+        }
         tooltip.hidden = false;
+        if (usePopover) tooltip.showPopover();
         target.setAttribute('aria-describedby', tooltip.id);
         positionHelp(target);
     };
@@ -262,6 +289,7 @@
         else hideHelp();
     });
     document.addEventListener('focusout', hideHelp);
+    document.addEventListener('close', hideHelp, true);
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') hideHelp();
     });

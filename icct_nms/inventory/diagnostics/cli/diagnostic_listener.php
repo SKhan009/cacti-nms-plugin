@@ -31,7 +31,7 @@ try {
         icct_backend_category_execute(
             'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
                 'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
-            [$key, json_encode(['tools' => $tools])],
+            [$key, json_encode(['tools' => $tools, 'interfaces' => array_keys(icct_backend_diag_local_interfaces()), 'arp_interfaces' => icct_backend_diag_arp_interfaces()])],
         );
     };
     // A loopback-only authenticated request channel executes without a stored queue job.

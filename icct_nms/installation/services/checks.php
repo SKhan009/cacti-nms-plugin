@@ -231,7 +231,7 @@ function icct_nms_installation_checks()
             $observed = '';
             if ($state === 'Not checked' && isset($saved['services'][$unit])) {
                 $state = $saved['services'][$unit];
-                $observed = ' · collector check ' . date('Y-m-d H:i:s', (int) $saved['time']);
+                $observed = ' · collector check ' . icct_nms_display_time((int) $saved['time']);
             }
             $add(
                 $feature,

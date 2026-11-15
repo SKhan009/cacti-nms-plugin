@@ -1,10 +1,24 @@
 <?php
 
+/** Use reported metadata; names alone cannot distinguish virtual NICs from Ethernet. */
+function icct_nms_port_type_label(array $port)
+{
+    if (!empty($port['interface_type'])) {
+        return $port['interface_type'];
+    }
+    return [6 => 'Ethernet (copper or fiber)', 24 => 'Loopback', 53 => 'Virtual interface',
+        71 => 'Wi-Fi', 131 => 'Tunnel', 135 => 'VLAN', 136 => 'VLAN',
+        161 => 'Bond', 209 => 'Bridge'][$port['type'] ?? 0] ?? 'Unclassified';
+}
+
 /** Classify reported interfaces without guessing from their names. */
 function icct_nms_port_kind(array $port)
 {
+    if (!empty($port['interface_kind'])) {
+        return $port['interface_kind'];
+    }
     if (
-        in_array($port['type'] ?? null, [24, 53, 131, 135, 136, 161], true) ||
+        in_array($port['type'] ?? null, [24, 53, 131, 135, 136, 161, 209], true) ||
         ($port['connector'] ?? null) === 2
     ) {
         return 'Software';
@@ -63,16 +77,22 @@ function icct_nms_port_evidence(
                     ? 'The device reports a lower-layer interface DOWN. The underlying link has not become operational.'
                     : 'The interface is enabled but reports its operational link DOWN. The device does not report the physical root cause.');
     }
+    if ($fresh && $active && !empty($port['hardware'])) {
+        $issue = 'Hardware is absent from the current OS inventory or its connector reports disconnected.';
+    }
     $recovery = $transition['event'] === 'Raised' ? null : $old['recovery'] ?? null;
     if (
         $fresh &&
         $transition['event'] === 'Cleared' &&
-        ($port['admin'] ?? null) === 1 &&
+        (!empty($port['hardware']) || ($port['admin'] ?? null) === 1) &&
         ($port['oper'] ?? null) === 1
     ) {
         $end = $sample;
         $recovery =
             'Automatic recovery detection: the collector observed administrative and operational status return to UP. No repair command was issued; the actual repair actor is not reported.';
+    }
+    if ($fresh && !empty($port['hardware']) && $transition['event'] === 'Cleared') {
+        $recovery = 'The collector detected the hardware again or the connector reported connected.';
     }
     $last = $sample ?? ($old['last_sample'] ?? null);
     $duration =

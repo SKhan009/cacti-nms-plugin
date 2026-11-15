@@ -142,7 +142,7 @@ $ntpNumber = static function ($value): string {
                     </div>
                     <div>
                         <dt data-field-help="When the collector last tried to read the device clock status.">Last attempt</dt>
-                        <dd><?= $display($ntpCurrent['last_attempt']) ?></dd>
+                        <dd><?= icct_nms_h(icct_nms_display_time($ntpCurrent['last_attempt'])) ?></dd>
                     </div>
                     <div>
                         <dt data-field-help="Identifier reported by the device for the time reference it is using.">Observed reference ID</dt>
@@ -234,7 +234,7 @@ $ntpNumber = static function ($value): string {
                             <?php foreach ($ntpHistory as $observation):
                                 $sample = $observation['sample']; ?>
                                 <tr>
-                                    <td><?= icct_nms_h($observation['observed_at']) ?></td>
+                                    <td><?= icct_nms_time_cell($observation['observed_at']) ?></td>
                                     <td>
                                         <span
                                             class="device-status"

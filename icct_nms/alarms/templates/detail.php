@@ -11,10 +11,16 @@ if (!empty($ack['actor_email'])) {
     $actorLabel .= ' (' . $ack['actor_email'] . ')';
 }
 $severityColors = icct_nms_severity_colors(); ?>
+<?php $alarmSuccess = $_SESSION['icct_nms_alarm_action_success'] ?? '';
+unset($_SESSION['icct_nms_alarm_action_success']); ?>
 <section
     class="alarm-detail-page"
     id="alarm-detail-page"
-    data-alarm-key="<?= icct_nms_h($alarm['alarm_key']) ?>">
+    data-alarm-key="<?= icct_nms_h($alarm['alarm_key']) ?>"
+    data-report-site="<?= icct_nms_h($serverStatus['hostname'] ?? 'ICCT NMS') ?>"
+    data-report-user="<?= icct_nms_h($user['username'] ?? 'Cacti user') ?>"
+    data-success="<?= icct_nms_h($alarmSuccess) ?>"
+    data-management="<?= $management ? '1' : '0' ?>">
     <header class="alarm-detail-heading">
         <a
             href="alarms/controllers/alarms.php"
@@ -22,11 +28,40 @@ $severityColors = icct_nms_severity_colors(); ?>
             aria-label="Back to Alarms">←</a>
         <h1 data-detail="name"><?= $detailValue($alarm['name']) ?></h1>
         <div class="alarm-detail-actions">
+            <?php if ($management): ?>
+                <button
+                    type="button"
+                    class="alarm-detail-ack"
+                    id="alarm-detail-ack"
+                    aria-label="Acknowledge alarm"
+                    title="Acknowledge alarm"
+                    <?= !empty($alarm['acknowledged']) || $alarm['state'] === 'Closed' ? 'disabled' : '' ?>>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M7 10H3v11h4m0-11 5-8c3 0 3 4 1 7h6c2 0 2 2 1 4l-2 8H7V10Z" />
+                    </svg>
+                </button>
+                <details
+                    class="row-menu alarm-detail-ticket-menu">
+                    <summary aria-label="Alarm actions" title="Alarm actions">⋮</summary>
+                    <div class="row-menu-panel">
+                        <button type="button" data-ticket-action="escalate" aria-label="Escalate Alarm" <?= !empty($alarm['escalated']) ? 'hidden' : '' ?>>Escalate Alarm</button>
+                        <button type="button" data-ticket-action="ticket_progress">In progress Ticket</button>
+                        <button type="button" data-ticket-action="ticket_resolve">Resolve Ticket</button>
+                        <button type="button" data-ticket-action="ticket_reopen">Re-Open Ticket</button>
+                        <button type="button" class="alarm-close-action" data-ticket-action="ticket_close">Close Ticket
+                            <svg class="alarm-close-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M9 4h12v16H9l-6-7v-2l6-7Zm3 5 6 6m0-6-6 6" />
+                            </svg>
+                        </button>
+                    </div>
+                </details>
+            <?php endif; ?>
             <button
                 type="button"
                 class="icon-button alarm-detail-export"
                 id="alarm-detail-export"
-                aria-label="Export alarm details">
+                aria-label="Export alarm report (PDF)"
+                title="Export alarm report (PDF)">
                 <svg
                     viewBox="0 0 24 24"
                     aria-hidden="true">
@@ -42,7 +77,7 @@ $severityColors = icct_nms_severity_colors(); ?>
     <dl class="alarm-detail-summary">
         <div>
             <dt>Alarm Occurred</dt>
-            <dd data-detail="occurred"><?= icct_nms_alarm_format_time($alarm['occurred_epoch']) ?></dd>
+            <dd data-detail="occurred"><?= str_replace(' ', "\n", icct_nms_alarm_format_time($alarm['occurred_epoch'])) ?></dd>
         </div>
         <div>
             <dt>Device Name</dt>
@@ -95,18 +130,6 @@ $severityColors = icct_nms_severity_colors(); ?>
             </div>
         <?php endforeach; ?>
     </dl>
-    <?php if (($alarm['source'] ?? '') === 'NetFlow' || in_array('syslog', $alarmDetail['event_origins'] ?? [], true)): ?>
-        <div class="fcaps-form-actions">
-            <?php if (($alarm['source'] ?? '') === 'NetFlow'): ?>
-                <a class="button" href="inventory/controllers/device.php?id=<?= (int) $alarm['host_id'] ?>&amp;view=1&amp;netflow_alarm=<?= icct_nms_h($alarm['alarm_key']) ?>#view-netflow">View NetFlow finding</a>
-            <?php endif; ?>
-            <?php foreach (['syslog' => ['syslog', 'View Syslog history']] as $origin => [$tab, $label]): ?>
-                <?php if (in_array($origin, $alarmDetail['event_origins'] ?? [], true)): ?>
-                    <a class="button" href="inventory/controllers/device.php?id=<?= (int) $alarm['host_id'] ?>&amp;view=1#view-<?= $tab ?>"><?= $label ?></a>
-                <?php endif; ?>
-            <?php endforeach; ?>
-        </div>
-    <?php endif; ?>
     <section class="alarm-acknowledgement">
         <h2>Acknowledgement &amp; Remarks</h2>
         <dl>
@@ -160,13 +183,13 @@ $severityColors = icct_nms_severity_colors(); ?>
                     </tr>
                 </thead>
                 <tbody id="alarm-detail-history">
-                    <?php foreach (array_slice($alarmDetail['history'], 0, 100) as $event):
+                    <?php foreach (array_slice($alarmDetail['occurrence_history'], 0, 100) as $event):
                         $snapshot = $event['snapshot'];
                         $severity =
                             $snapshot['severity'] ?? (isset($severityColors[$event['note']]) ? $event['note'] : '');
                         ?>
                         <tr title="<?= $tableValue($event['event']) ?>">
-                            <td><?= !empty($event['created_epoch']) ? icct_nms_alarm_format_time($event['created_epoch']) : '' ?></td>
+                            <td><?= icct_nms_time_cell($event['created_epoch'] ?? null) ?></td>
                             <td>
                                 <?php if (
                                     isset($severityColors[$severity])
@@ -209,11 +232,11 @@ $severityColors = icct_nms_severity_colors(); ?>
                     <option selected>100</option>
                 </select>
             </label>
-            <span id="alarm-history-range"><?= count($alarmDetail['history'])
+            <span id="alarm-history-range"><?= count($alarmDetail['occurrence_history'])
                 ? '1–' .
-                    min(100, count($alarmDetail['history'])) .
+                    min(100, count($alarmDetail['occurrence_history'])) .
                     ' of ' .
-                    count($alarmDetail['history']) .
+                    count($alarmDetail['occurrence_history']) .
                     ' items'
                 : '0 items' ?></span>
             <div class="page-controls">
@@ -222,7 +245,7 @@ $severityColors = icct_nms_severity_colors(); ?>
                     aria-label="Alarm history page">
                     <option>1</option>
                 </select>
-                <span id="alarm-history-pages">of <?= max(1, (int) ceil(count($alarmDetail['history']) / 100)) ?> pages</span>
+                <span id="alarm-history-pages">of <?= max(1, (int) ceil(count($alarmDetail['occurrence_history']) / 100)) ?> pages</span>
             <button
                 type="button"
                 id="alarm-history-prev"
@@ -241,7 +264,7 @@ $severityColors = icct_nms_severity_colors(); ?>
                 type="button"
                 id="alarm-history-next"
                 aria-label="Next alarm history page"
-                <?= count($alarmDetail['history']) <= 100 ? 'disabled' : '' ?>
+                <?= count($alarmDetail['occurrence_history']) <= 100 ? 'disabled' : '' ?>
 
                 class="pagination-control">
                 <svg
@@ -284,7 +307,7 @@ foreach (
                 ): ?>
                     <li class="alarm-ticket-event <?= $event['kind'] ?>">
                         <h3><?= $event['label'] ?></h3>
-                        <time><?= icct_nms_alarm_format_time($event['created_epoch']) ?></time>
+                        <time><?= str_replace(' ', "\n", icct_nms_alarm_format_time($event['created_epoch'])) ?></time>
                         <p><?= $tableValue($event['note']) ?></p>
                     </li>
                 <?php endforeach; ?>

@@ -116,7 +116,7 @@ $filterLabels = ['type' => 'Device Type', 'module' => 'MIB Module']; ?>
                             <?php endif;
                     ?>
                         </td>
-                        <td><?= icct_nms_h($bundle['created_at']) ?></td>
+                        <td><?= icct_nms_time_cell($bundle['created_at']) ?></td>
                         <td>
                             <div class="row-actions">
                                 <?php if ($management):

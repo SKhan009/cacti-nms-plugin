@@ -30,18 +30,18 @@
                     ?>
                     <tr>
                         <?php if ($showIncidents): ?>
-                            <td><?= icct_nms_h($event['event_time']) ?></td>
+                            <td><?= icct_nms_time_cell($event['event_time']) ?></td>
                             <td><?= icct_nms_h($row['port']) ?></td>
                         <?php else: ?>
-                            <td><?= icct_nms_h($row['first_time']) ?></td>
-                            <td><?= icct_nms_h($row['last_time']) ?></td>
+                            <td><?= icct_nms_time_cell($row['first_time']) ?></td>
+                            <td><?= icct_nms_time_cell($row['last_time']) ?></td>
                         <?php endif; ?>
                         <td class="syslog-event-text"><?= icct_nms_h($restart ? 'Automatic restart scheduled for ' . $restart['unit'] : $event['message']) ?></td>
                         <td><?= icct_nms_h($event['source_ip']) ?></td>
                         <td><span class="device-syslog-severity severity-<?= icct_nms_h(icct_backend_syslog_nms_severity($severity)) ?>"><?= icct_nms_h($syslogSeverityNames[$severity] ?? 'Unknown') ?></span></td>
                         <td><?= number_format((int) $row['occurrences']) ?></td>
                         <?php if ($showIncidents): ?>
-                            <td><?= icct_nms_h($row['recovery'] ?? '—') ?></td>
+                            <td><?= icct_nms_time_cell($row['recovery'] ?? null) ?></td>
                             <td><?= $row['seconds'] === null ? '—' : icct_nms_h(icct_nms_syslog_duration($row['seconds'])) ?></td>
                             <td><?= $row['recovery'] === null ? 'Open' : 'Recovered' ?></td>
                         <?php endif; ?>

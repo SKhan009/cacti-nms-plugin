@@ -1,6 +1,6 @@
 <?php
 
-/** Imported Syslog assignment changes must preserve exact filters and reject duplicate active mappings. */
+/** Imported Syslog assignment changes must preserve exact filters and allow shared-IP mappings. */
 $GLOBALS['duplicate'] = [];
 $GLOBALS['writes'] = [];
 function icct_backend_require_management($realm) {}
@@ -59,14 +59,6 @@ $GLOBALS['duplicate'] = [
     'description' => 'Existing router',
     'hostname' => '192.0.2.2',
 ];
-try {
-    icct_nms_save_syslog(85, [], $input);
-    throw new RuntimeException('Duplicate was accepted');
-} catch (InvalidArgumentException $error) {
-    check(
-        str_contains($error->getMessage(), 'Existing router'),
-        'Duplicate mapping gives a useful device conflict',
-    );
-}
-check(count($GLOBALS['writes']) === 1, 'Rejected duplicate creates no write');
-echo "Syslog assignment compatibility tests passed.\n";
+icct_nms_save_syslog(85, [], $input);
+check(count($GLOBALS['writes']) === 2, 'Shared IP assignments are accepted for distinct Cacti devices');
+echo "Syslog shared-IP assignment tests passed.\n";

@@ -117,7 +117,7 @@ if (!$canReadDiagnostics): ?>
                         name="diagnostic-records">
                         <summary>
                             <span>
-                                <small>Requested</small><?= $display($run['requested_at']) ?>
+                                <small>Requested</small><?= icct_nms_time_cell($run['requested_at']) ?>
 
                             </span>
                             <span>
@@ -131,7 +131,7 @@ if (!$canReadDiagnostics): ?>
                                     data-log-status="<?= icct_nms_h($run['status']) ?>"><?= $display(ucfirst($run['status'])) ?></span>
                             </span>
                             <span>
-                                <small>Finished</small><?= $display($run['finished_at']) ?>
+                                <small>Finished</small><?= icct_nms_time_cell($run['finished_at']) ?>
 
                             </span>
                         </summary>

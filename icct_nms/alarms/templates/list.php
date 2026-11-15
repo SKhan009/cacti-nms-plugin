@@ -1,8 +1,14 @@
 <!-- Alarm rows expose acknowledgement actions only when the current user can manage alarms. -->
+<?php $alarmSuccess = $_SESSION['icct_nms_alarm_action_success'] ??
+    (!empty($_SESSION['icct_nms_alarm_ack_success']) ? 'Alarm acknowledged successfully.' : '');
+unset($_SESSION['icct_nms_alarm_action_success'], $_SESSION['icct_nms_alarm_ack_success']); ?>
 <section
     class="device-panel alarm-page"
     id="alarm-page"
-    data-management="<?= $management ? '1' : '0' ?>">
+    data-management="<?= $management ? '1' : '0' ?>"
+    data-report-site="<?= icct_nms_h($serverStatus['hostname'] ?? 'ICCT NMS') ?>"
+    data-report-user="<?= icct_nms_h($user['username'] ?? 'Cacti user') ?>"
+    data-success="<?= icct_nms_h($alarmSuccess) ?>">
     <header class="alarm-page-heading">
         <div>
             <p>
@@ -10,29 +16,39 @@
             </p>
             <h1>Alarms</h1>
         </div>
-        <button
-            type="button"
-            class="icon-button"
-            id="alarm-export"
-            aria-label="Export alarms">
-            <svg
-                viewBox="0 0 24 24"
-                aria-hidden="true">
-                <path d="M12 16V3m-4 4 4-4 4 4M5 10H3v11h18V10h-2" />
-            </svg>
-        </button>
+        <div class="alarm-page-heading-actions">
+            <div class="alarm-view-switch" role="group" aria-label="Event view">
+                <button type="button" class="is-active" data-alarm-view="alarms" aria-pressed="true">Alarms (Faults &amp; Traps)</button>
+                <button type="button" data-alarm-view="syslog" aria-pressed="false">Syslog</button>
+            </div>
+            <span class="alarm-heading-divider" aria-hidden="true"></span>
+            <button
+                type="button"
+                class="icon-button"
+                id="alarm-export"
+                aria-label="Export alarm report (PDF)"
+                title="Export alarm report (PDF)">
+                <svg
+                    viewBox="0 0 24 24"
+                    aria-hidden="true">
+                    <path d="M12 16V3m-4 4 4-4 4 4M5 10H3v11h18V10h-2" />
+                </svg>
+            </button>
+        </div>
     </header>
     <form
         id="alarm-filters"
         class="alarm-filters">
-        <label class="field">
+        <div class="field alarm-device-field">
             <span>Device</span>
-            <select
-                name="device"
-                aria-label="Device sources">
-                <option value="">All</option>
-            </select>
-        </label>
+            <details class="alarm-device-picker" id="alarm-device-picker">
+                <summary id="alarm-device-summary">All devices</summary>
+                <div class="alarm-device-menu">
+                    <input type="search" id="alarm-device-search" aria-label="Search devices" placeholder="Search devices">
+                    <div id="alarm-device-options" class="alarm-device-options" role="group" aria-label="Select devices"></div>
+                </div>
+            </details>
+        </div>
         <label class="field">
             <span>Severity</span>
             <select
@@ -46,22 +62,23 @@
                 <?php endforeach; ?>
             </select>
         </label>
-        <label class="field">
-            <span>Ack Status</span>
-            <select name="ack">
+        <label class="field alarm-source-field">
+            <span>Fault &amp; Trap Type</span>
+            <select name="source" aria-label="Fault and trap type">
                 <option value="">All</option>
-                <option value="1">Ack</option>
-                <option value="0">Not Ack</option>
+                <?php foreach (['SNMP Traps', 'Passive events', 'SNMP', 'NTP', 'NetFlow', 'Cacti', 'Port', 'Availability'] as $source): ?>
+                    <option><?= $source ?></option>
+                <?php endforeach; ?>
             </select>
         </label>
-        <label class="field">
-            <span>Escalation Status</span>
-            <select name="esc">
-                <option value="">All</option>
-                <option value="1">Esc</option>
-                <option value="0">Not Esc</option>
-            </select>
-        </label>
+        <div class="field alarm-date-range">
+            <span>Date Range</span>
+            <div class="alarm-date-range-inputs">
+                <input type="datetime-local" name="since" aria-label="From">
+                <span aria-hidden="true">–</span>
+                <input type="datetime-local" name="until" aria-label="Until">
+            </div>
+        </div>
         <button
             type="reset"
             class="button"
@@ -73,32 +90,6 @@
                 placeholder="Search With Device Name or IP Address or Alarm Name"
                 type="search">
         </label>
-        <details class="alarm-extra-filters">
-            <summary>More filters</summary>
-            <div class="alarm-extra-filter-fields">
-                <label class="field">
-                    <span>Event source</span>
-                    <select name="source">
-                        <option value="">All</option>
-                        <?php foreach (['Syslog', 'SNMP Traps', 'Passive events', 'SNMP', 'NTP', 'NetFlow', 'Cacti', 'Port', 'Availability'] as $source): ?>
-                            <option><?= $source ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-                <label class="field">
-                    <span>From</span>
-                    <input
-                        type="datetime-local"
-                        name="since">
-                </label>
-                <label class="field">
-                    <span>Until</span>
-                    <input
-                        type="datetime-local"
-                        name="until">
-                </label>
-            </div>
-        </details>
     </form>
     <p
         id="alarm-status"
@@ -109,21 +100,18 @@
             <thead>
                 <tr>
                     <th>
-                        <button
-                            type="button"
-                            id="alarm-sort">Alarm Occurred ↓</button>
+                        <span class="alarm-sort-heading">
+                            <span>Alarm Occurred</span>
+                            <button type="button" class="alarm-sort-button" data-alarm-sort="occurred" aria-label="Sort alarm time, newest first" title="Sort alarm time, newest first"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V4m-7 7 7-7 7 7"/></svg></button>
+                        </span>
                     </th>
-                    <th>Device Name &amp;
-                        <br> Short Name
+                    <th><span class="alarm-sort-heading"><span>Device Name &amp;<br>Short Name</span><button type="button" class="alarm-sort-button" data-alarm-sort="device" aria-label="Sort device name" title="Sort device name"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V4m-7 7 7-7 7 7"/></svg></button></span>
                     </th>
-                    <th>IP Address &amp; Type
-                        <br> of Network Element
+                    <th>Event Source
                     </th>
-                    <th>Severity &amp;
-                        <br> Ack Status
+                    <th><span class="alarm-sort-heading"><span>Severity &amp;<br>Ack Status</span><button type="button" class="alarm-sort-button" data-alarm-sort="severity" aria-label="Sort severity" title="Sort severity"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V4m-7 7 7-7 7 7"/></svg></button></span>
                     </th>
-                    <th>Escalation
-                        <br> &amp; Status
+                    <th><span class="alarm-sort-heading"><span>Escalation<br>&amp; Status</span><button type="button" class="alarm-sort-button" data-alarm-sort="escalation" aria-label="Sort escalation status" title="Sort escalation status"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V4m-7 7 7-7 7 7"/></svg></button></span></span>
                     </th>
                     <th>Alarm Name
                         <br> (Count)
@@ -174,51 +162,10 @@
             </button>
         </div>
     </footer>
-    <form
-        id="alarm-token"
-        hidden>
-        <?php icct_nms_token(); ?>
-    </form>
     <script
         type="application/json"
         id="alarm-data"><?= json_encode(
             $alarmRows,
             JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE,
         ) ?></script>
-    <dialog id="alarm-action-dialog">
-        <form id="alarm-action-form">
-            <h2 id="alarm-action-title"></h2>
-            <p id="alarm-action-help"></p>
-            <div
-                id="alarm-ticket-fields"
-                hidden>
-                <label class="field"><span class="field-label" data-field-help="Priority assigned to the escalation ticket: High, Medium, or Low.">Ticket Severity</span><select name="ticket_severity">
-                        <option>High</option>
-                        <option>Medium</option>
-                        <option>Low</option>
-                    </select>
-                </label>
-                <label class="field"><span class="field-label" data-field-help="Title used to identify this escalation ticket. Maximum 320 characters.">Ticket Name</span>
-                    <input
-                        name="ticket_name"
-                        maxlength="320">
-                </label>
-            </div>
-            <label class="field"><span class="field-label" data-field-help="Note saved with this alarm action. Maximum 1000 characters.">Remarks</span>
-                <textarea
-                    name="note"
-                    maxlength="1000"
-                    rows="3"></textarea>
-            </label>
-            <div class="message-actions">
-                <button
-                    type="button"
-                    class="button"
-                    id="alarm-action-cancel">Cancel</button>
-                <button
-                    class="button primary"
-                    type="submit">Save</button>
-            </div>
-        </form>
-    </dialog>
 </section>

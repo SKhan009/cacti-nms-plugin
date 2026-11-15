@@ -47,7 +47,7 @@
         type="application/json"
         id="port-observations"><?= json_encode(
             $id
-                ? icct_backend_ports_view($old)
+                ? icct_nms_config_ports_view($old)
                 : ['ports' => [], 'fresh' => false, 'collected' => 0, 'source' => '', 'message' => ''],
             JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE,
         ) ?></script>

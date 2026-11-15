@@ -1541,6 +1541,18 @@
     );
     configurationSummary();
     const backups = JSON.parse(document.querySelector('#configuration-backups').textContent);
+    const configurationTime = (value) => {
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) return null;
+        const parts = Object.fromEntries(
+            new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Asia/Kolkata',
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+            }).formatToParts(parsed).map((part) => [part.type, part.value]),
+        );
+        return [`${parts.day}-${parts.month}-${parts.year}`, `${parts.hour}:${parts.minute}:${parts.second}`];
+    };
     document.querySelector('#fcaps-configuration').addEventListener('click', (event) => {
         const button = event.target.closest('.configuration-download');
         if (!button) return;
@@ -1586,13 +1598,18 @@
             rows.replaceChildren();
             for (const backup of backups) {
                 const row = document.createElement('tr');
-                for (const value of [
+                for (const [index, value] of [
                     backup.time,
                     backup.user || 'User ' + backup.user_id,
                     backup.action,
-                ]) {
+                ].entries()) {
                     const cell = document.createElement('td');
-                    cell.textContent = value;
+                    if (index === 0) {
+                        const formatted = configurationTime(value);
+                        if (formatted) {
+                            cell.append(document.createTextNode(formatted[0]), document.createElement('br'), document.createTextNode(formatted[1]));
+                        } else cell.textContent = '—';
+                    } else cell.textContent = value;
                     row.append(cell);
                 }
                 const cell = document.createElement('td'),

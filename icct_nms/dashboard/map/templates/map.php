@@ -1,139 +1,77 @@
 <?php /** Same local Leaflet / GeoServer map stack as NMS; native Cacti locations. */ ?>
-<section class="icct-map-page">
-    <div class="dashboard-toolbar">
+<section class="icct-map-page" data-dashboard-config="<?= !empty($dashboardConfiguration) ? '1' : '0' ?>">
+    <?php if (!empty($dashboardConfiguration)): ?>
+        <header class="dashboard-config-title">
+            <div>
+                <nav class="dashboard-config-breadcrumb" aria-label="Breadcrumb">
+                    <a href="dashboard/controllers/topology.php">Dashboard</a>
+                    <span aria-hidden="true">/</span>
+                    <span>Configuration</span>
+                    <span aria-hidden="true">/</span>
+                    <span aria-current="page">Widget Configuration</span>
+                </nav>
+                <h1>Widget Configuration</h1>
+            </div>
+        </header>
+        <section id="dashboardSavedList" class="dashboard-saved-list" aria-labelledby="dashboardSavedTitle">
+            <div class="dashboard-saved-heading">
+                <div>
+                    <h2 id="dashboardSavedTitle">Saved Dashboards</h2>
+                    <span id="dashboardSavedCount"></span>
+                </div>
+                <button type="button" class="button primary" id="dashboardConfigAdd">Add Dashboard (Max 5)</button>
+            </div>
+            <p id="dashboardSavedMessage" role="status" aria-live="polite" hidden></p>
+            <div class="dashboard-saved-scroll">
+                <table class="dashboard-saved-table">
+                    <thead><tr><th scope="col">Dashboard</th><th scope="col">Views</th><th scope="col">Widgets</th><th scope="col">Actions</th></tr></thead>
+                    <tbody id="dashboardSavedRows"></tbody>
+                </table>
+            </div>
+        </section>
+    <?php endif; ?>
+    <div class="dashboard-toolbar" <?= !empty($dashboardConfiguration) ? 'hidden' : '' ?>>
         <label
             class="sr-only"
             for="dashboardSelect">Dashboard</label>
         <select id="dashboardSelect"></select>
-        <div class="dashboard-widget-picker">
-            <button
-                type="button"
-                class="dashboard-add-widget"
-                id="dashboardAddWidget"
-                aria-expanded="false"
-                aria-controls="dashboardWidgetChoices">+ Add Widget <span aria-hidden="true">▾</span>
-            </button>
-            <div
-                id="dashboardWidgetChoices"
-                aria-label="Available dashboard cards"
-                hidden></div>
-        </div>
-        <div
-            class="dashboard-actions"
-            aria-label="Dashboard actions">
-            <button
-                type="button"
-                class="dashboard-action"
-                id="dashboardSave"
-                aria-label="Save dashboard"
-                aria-describedby="dashboardSaveTip">
-                <svg
-                    viewBox="0 0 24 24"
-                    aria-hidden="true">
-                    <path d="M5 3h12l4 4v14H3V3z" />
-                    <path d="M7 3v6h10V3M7 21v-8h10v8" />
-                </svg>
-                <span
-                    class="dashboard-action-tip"
-                    id="dashboardSaveTip"
-                    role="tooltip">Save dashboard</span>
-            </button>
-            <button
-                type="button"
-                class="dashboard-action"
-                id="dashboardRename"
-                aria-label="Rename dashboard"
-                aria-describedby="dashboardRenameTip">
-                <svg
-                    class="icct-edit-icon"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true">
-                    <path d="m16 3 5 5L8 21l-5 1 1-5ZM14 5l5 5" />
-                </svg>
-                <span
-                    class="dashboard-action-tip"
-                    id="dashboardRenameTip"
-                    role="tooltip">Rename dashboard</span>
-            </button>
-            <button
-                type="button"
-                class="dashboard-action"
-                id="dashboardDelete"
-                aria-label="Delete dashboard"
-                aria-describedby="dashboardDeleteTip">
-                <svg
-                    viewBox="0 0 24 24"
-                    aria-hidden="true">
-                    <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7" />
-                </svg>
-                <span
-                    class="dashboard-action-tip"
-                    id="dashboardDeleteTip"
-                    role="tooltip">Delete dashboard</span>
-            </button>
-            <button
-                type="button"
-                class="dashboard-undo"
-                id="dashboardUndo"
-                hidden>Undo delete</button>
-        </div>
+        <button
+            type="button"
+            class="dashboard-add-widget"
+            id="dashboardAddWidget"
+            aria-controls="dashboardWidgetEditor">+ Add Widget</button>
         <p
             id="dashboardSaveStatus"
             role="status"
             hidden></p>
-        <button
-            type="button"
-            class="button primary"
-            id="dashboardAdd">Add Dashboard (Max 5)</button>
-    </div>
-    <dialog
-        id="dashboardNameDialog"
-        aria-labelledby="dashboardNameTitle">
-        <form id="dashboardNameForm">
-            <h2 id="dashboardNameTitle">Save dashboard view</h2>
-            <label for="dashboardName">Dashboard name</label>
-            <input
-                id="dashboardName"
-                name="name"
-                maxlength="60"
-                required
-                autocomplete="off">
-            <span
-                class="field-info section-help"
-                id="dashboardNameHelp"
-                tabindex="0"
-                role="img"
-                aria-label="Save the selected site, current cards, their order and column layout as a new dashboard."
-                data-tooltip="Save the selected site, current cards, their order and column layout as a new dashboard.">ⓘ</span>
-            <div>
-                <button
-                    type="button"
-                    class="button"
-                    id="dashboardNameCancel">Cancel</button>
-                <button
-                    type="submit"
-                    class="button primary"
-                    id="dashboardNameSubmit">Save Dashboard</button>
-            </div>
-        </form>
-    </dialog>
-    <dialog
-        id="dashboardDeleteDialog"
-        aria-labelledby="dashboardDeleteTitle">
-        <h2 id="dashboardDeleteTitle">Delete dashboard</h2>
-        <p id="dashboardDeleteMessage"></p>
-        <div class="message-actions">
+        <div class="dashboard-add-slot" <?= !empty($dashboardConfiguration) ? 'hidden' : '' ?>>
             <button
                 type="button"
-                class="button"
-                id="dashboardDeleteCancel">Cancel</button>
-            <button
-                type="button"
-                class="button primary"
-                id="dashboardDeleteConfirm">Delete</button>
+                class="button primary dashboard-add"
+                id="dashboardAdd">Add Dashboard (Max 5)</button>
         </div>
-    </dialog>
-    <div class="dashboard-grid">
+    </div>
+    <section
+        id="dashboardWidgetEditor"
+        hidden
+        aria-labelledby="dashboardWidgetTitle">
+        <div class="dashboard-widget-dialog-header">
+            <h2 id="dashboardWidgetTitle">Select Widgets</h2>
+            <div class="dashboard-widget-dialog-actions">
+                <button type="button" class="button" id="dashboardWidgetCancel">Cancel</button>
+                <button type="button" class="button primary" id="dashboardWidgetEdit" hidden>Edit</button>
+                <button type="button" class="button primary" id="dashboardWidgetSave">Save Widgets</button>
+            </div>
+        </div>
+        <div class="dashboard-widget-name" id="dashboardWidgetNameRow" hidden>
+            <label for="dashboardWidgetName">Name of Dashboard <span class="dashboard-widget-name-help" title="Give this dashboard a name">ⓘ</span></label>
+            <input id="dashboardWidgetName" maxlength="60" autocomplete="off" placeholder="Enter Name" required>
+        </div>
+        <p class="dashboard-widget-dialog-help" id="dashboardWidgetHelp">Choose the widgets to show on this dashboard.</p>
+        <p id="dashboardWidgetError" class="dashboard-widget-error" role="alert" hidden></p>
+        <div id="dashboardWidgetChoices" class="dashboard-widget-choices" aria-label="Available dashboard widgets"></div>
+    </section>
+    <div class="dashboard-grid" <?= !empty($dashboardConfiguration) ? 'hidden' : '' ?>>
         <section
             class="icct-map-panel"
             data-widget="topology">
@@ -169,6 +107,17 @@
                     <span class="offline">Offline: <?= $mapData['counts']['offline'] ?></span>
                     <span class="disabled">Disabled: <?= $mapData['counts']['disabled'] ?></span>
                 </div>
+                <button
+                    type="button"
+                    class="dashboard-topology-refresh"
+                    id="dashboardRefresh"
+                    aria-label="Refresh dashboard"
+                    title="Refresh dashboard">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M20 11a8 8 0 1 0 1 4" />
+                        <path d="M20 4v7h-7" />
+                    </svg>
+                </button>
             </div>
             <p
                 id="icctMapStatus"

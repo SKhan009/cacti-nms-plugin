@@ -255,9 +255,6 @@
             <?php else: ?>
                 <h3 data-field-help="Rules flag unusual traffic patterns such as scans or high bandwidth use. Each finding describes the pattern that triggered it.">Traffic Anomalies</h3>
                 <p id="netflow-anomaly-status" role="status"></p>
-                <p
-                    id="netflow-linked-finding"
-                    hidden>Showing the finding linked to this alarm. Clear All restores the time range filter.</p>
                 <div class="site-table-wrap">
                     <table class="site-table">
                         <thead>

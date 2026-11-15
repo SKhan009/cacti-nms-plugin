@@ -43,7 +43,7 @@ $nfHelp = [
     'syn_pps_threshold' =>
         'SYN-flood alert threshold: 1–100000000 SYN-without-ACK packets/sec, averaged over five minutes.',
     'exporter_address' =>
-        'Device source IP seen by the collector. One IPv4/IPv6 address; no hostname or port. Must uniquely identify this device.',
+        'Leave blank to use the saved Cacti device IP. Override only when the device sends from a different IP. A hostname requires an explicit numeric sender IP; no internet lookup is used.',
 ];
 $nfRanges = [
     'port' => [1, 65535],
@@ -127,9 +127,8 @@ $nfRanges = [
             </span>
             <input
                 name="exporter_address"
-                required
                 value="<?= icct_nms_h($netflow['exporter_address'] ?? ($host['hostname'] ?? '')) ?>"
-                placeholder="Source IP observed by the collector">
+                placeholder="Uses the saved device IP if blank">
         </label>
     <?php endif; ?>
 </div>

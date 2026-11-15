@@ -86,7 +86,7 @@ function icct_backend_collect_inventory_values($only_host_id = 0)
             $definition['snmp_port'],
             $definition['snmp_timeout'],
             $snmp_retries,
-            'ICCT NMS Inventory',
+            'ICCT NMS Device Mgmt',
             $definition['snmp_engine_id'],
             SNMP_STRING_OUTPUT_ASCII,
         );

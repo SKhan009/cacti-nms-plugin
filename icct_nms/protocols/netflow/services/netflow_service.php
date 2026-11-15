@@ -125,7 +125,10 @@ function icct_nms_netflow_save($id, $host, $input)
     icct_backend_require_management(3);
     icct_backend_require_device_access($id);
     $v = icct_nms_netflow_validate($input);
-    $source = trim((string) ($input['exporter_address'] ?? $host['hostname']));
+    $source = trim((string) ($input['exporter_address'] ?? ''));
+    if ($source === '') {
+        $source = trim((string) ($host['hostname'] ?? ''));
+    }
     if (!filter_var($source, FILTER_VALIDATE_IP)) {
         throw new InvalidArgumentException(
             'Enter the exporter source IP address actually seen by this collector.',
@@ -326,7 +329,6 @@ function icct_nms_netflow_filter($id, $input)
             'application',
             'event_severity',
             'event_state',
-            'netflow_alarm',
             'page',
             'size',
         ]
@@ -473,18 +475,9 @@ function icct_nms_netflow_read($id, $input)
     );
     $eventWhere = ['e.host_id=?'];
     $eventArgs = [(int) $id];
-    $linkedAlarm = (string) ($input['netflow_alarm'] ?? '');
-    if ($linkedAlarm !== '') {
-        if (!preg_match('/\A[a-f0-9]{64}\z/', $linkedAlarm)) {
-            throw new InvalidArgumentException('Choose a valid NetFlow alarm.');
-        }
-        $eventWhere[] = 'a.alarm_key=?';
-        $eventArgs[] = $linkedAlarm;
-    } else {
-        $eventWhere[] = 'e.updated_at BETWEEN ? AND ?';
-        $eventArgs[] = date('Y-m-d H:i:s', $filter['start']);
-        $eventArgs[] = date('Y-m-d H:i:s', $filter['end']);
-    }
+    $eventWhere[] = 'e.updated_at BETWEEN ? AND ?';
+    $eventArgs[] = date('Y-m-d H:i:s', $filter['start']);
+    $eventArgs[] = date('Y-m-d H:i:s', $filter['end']);
     foreach (
         [
             'severity' => ['Critical', 'Major', 'Minor', 'Warning', 'Information'],
@@ -505,7 +498,7 @@ function icct_nms_netflow_read($id, $input)
     $events = db_fetch_assoc_prepared(
         'SELECT e.*,a.alarm_key,UNIX_TIMESTAMP(e.opened_at) AS opened_epoch,' .
             'UNIX_TIMESTAMP(e.updated_at) AS updated_epoch FROM plugin_icct_nms_netflow_events e ' .
-            "LEFT JOIN plugin_icct_nms_alarms a ON a.alarm_key=SHA2(CONCAT('netflow:',e.id),256) " .
+            "LEFT JOIN plugin_icct_nms_alarms a ON a.alarm_key=SHA2(CONCAT('netflow:',e.host_id,':',e.event_key),256) " .
             'AND a.host_id=e.host_id WHERE ' .
             implode(' AND ', $eventWhere) .
             ' ORDER BY e.updated_at DESC LIMIT 100',

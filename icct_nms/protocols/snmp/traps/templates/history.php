@@ -77,7 +77,7 @@ $trapUrl = 'inventory/controllers/device.php?' . http_build_query(['id' => (int)
             ?>
             <details class="device-record-item" name="trap-event-records">
                 <summary>
-                    <span><small>Received</small><?= icct_nms_h($trapEvent['event_time']) ?></span>
+                    <span><small>Received</small><?= icct_nms_time_cell($trapEvent['event_time']) ?></span>
                     <span>
                         <small>Event</small>
                         <strong><?= icct_nms_h($explanation['title']) ?></strong>
@@ -112,8 +112,8 @@ $trapUrl = 'inventory/controllers/device.php?' . http_build_query(['id' => (int)
                             <?php foreach ([
                                 'Trap OID' => $trapOid,
                                 'Source IP' => $trapEvent['source_ip'],
-                                'Received at' => $trapEvent['event_time'],
-                                'Last stored at' => $trapEvent['last_seen'],
+                                'Received at' => icct_nms_display_time($trapEvent['event_time']),
+                                'Last stored at' => icct_nms_display_time($trapEvent['last_seen']),
                                 'Times received' => $trapCount,
                             ] as $label => $value): ?>
                                 <div><dt><?= icct_nms_h($label) ?></dt><dd><?= icct_nms_h($value) ?></dd></div>

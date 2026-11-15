@@ -75,12 +75,17 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
                     class="header-menu-panel"
                     aria-label="Main navigation">
                     <a href="dashboard/controllers/topology.php">Dashboard</a>
+                    <a href="inventory/controllers/inventory.php">Device Mgmt</a>
                     <a href="alarms/controllers/alarms.php">Alarms</a>
-                    <a href="inventory/controllers/inventory.php">Inventory</a>
-                    <a href="dashboard/topology/controllers/topology_configuration.php">Topology
-                        Configuration</a>
-                    <a href="protocols/snmp/mibs/controllers/mib_repository.php">MIB Repository</a>
+                    <div class="installation-settings-menu">
+                        <button type="button" class="settings-menu-trigger" aria-expanded="false" aria-controls="configuration-submenu">Configuration</button>
+                        <div class="settings-submenu" id="configuration-submenu" hidden>
+                            <a href="dashboard/controllers/topology.php?configure=1">Widget Configuration</a>
+                            <a href="dashboard/topology/controllers/topology_configuration.php">Topology Configuration</a>
+                        </div>
+                    </div>
                     <a href="presets/controllers/presets.php#segment">Presets</a>
+                    <a href="protocols/snmp/mibs/controllers/mib_repository.php">Templates</a>
                     <?php if (is_realm_allowed(26)): ?>
                         <div class="installation-settings-menu">
                             <button

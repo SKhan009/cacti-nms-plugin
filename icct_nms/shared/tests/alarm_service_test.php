@@ -75,13 +75,41 @@ ok(
     !isset($history[0]['snapshot']['ack_note']),
     'An unacknowledged recurrence must not inherit old remarks',
 );
+$carried = $events;
+$carried[0]['snapshot']['acknowledged'] = 1;
+$carried[1]['snapshot']['acknowledged'] = 1;
+$carried = icct_nms_alarm_history_remarks($carried);
+ok(
+    $carried[0]['snapshot']['ack_note'] === 'Investigating supply failure',
+    'The latest acknowledged occurrence must carry previous remarks',
+);
 ok(
     $events[2]['snapshot'] === ['acknowledged' => 1],
     'Read-time enrichment must not rewrite stored snapshots',
 );
-echo "PASS: acknowledgement remarks stay within their activation and preserve historical content.\n";
+echo "PASS: acknowledgement remarks carry forward when acknowledged and preserve historical content.\n";
+$occurrenceRows = icct_nms_alarm_occurrence_history([
+    ['event' => 'Acknowledged', 'created_epoch' => 60, 'snapshot' => ['occurrences' => 2, 'acknowledged' => 1, 'ack_note' => 'Reviewed']],
+    ['event' => 'Details updated', 'created_epoch' => 50, 'snapshot' => ['occurrences' => 2, 'acknowledged' => 0]],
+    ['event' => 'Raised', 'created_epoch' => 40, 'snapshot' => ['occurrences' => 2, 'acknowledged' => 0]],
+    ['event' => 'Resolved', 'created_epoch' => 30, 'snapshot' => ['occurrences' => 1, 'acknowledged' => 0]],
+    ['event' => 'Raised', 'created_epoch' => 20, 'snapshot' => ['occurrences' => 1, 'acknowledged' => 0]],
+]);
+ok(
+    count($occurrenceRows) === 2 &&
+    $occurrenceRows[0]['created_epoch'] === 40 &&
+    $occurrenceRows[0]['snapshot']['ack_note'] === 'Reviewed' &&
+    $occurrenceRows[1]['created_epoch'] === 20,
+    'The history table must show one row per occurrence with its latest acknowledgement',
+);
 
 $ticketAlarm = ['name' => 'Supply lost', 'device_name' => 'Core SW', 'severity' => 'Major'];
+foreach (['Critical' => 'High', 'Major' => 'High', 'Minor' => 'Medium', 'Warning' => 'Low', 'Information' => 'Low'] as $alarmSeverity => $expectedTicketSeverity) {
+    ok(
+        icct_nms_alarm_ticket_severity($alarmSeverity) === $expectedTicketSeverity,
+        'Ticket severity must follow alarm severity for ' . $alarmSeverity,
+    );
+}
 $ticketEvents = [
     [
         'event' => 'Ticket reopened',

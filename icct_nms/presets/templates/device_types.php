@@ -39,7 +39,7 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
             <label class="field">
                 <span
                     class="field-label"
-                    data-field-help="Name used to identify this device type in presets and inventory. Maximum 150 characters.">Device Type Name *</span>
+                    data-field-help="Name used to identify this device type in presets and Device Mgmt. Maximum 150 characters.">Device Type Name *</span>
                 <input
                     name="type_name"
                     maxlength="150"

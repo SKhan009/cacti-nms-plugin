@@ -7,8 +7,8 @@ function plugin_icct_nms_version()
 {
     return [
         'name' => 'icct_nms',
-        'version' => '1.4.20',
-        'longname' => 'ICCT NMS Inventory',
+        'version' => '1.4.21',
+        'longname' => 'ICCT NMS Device Mgmt',
         'author' => 'NMS Project',
         'homepage' => 'https://www.cacti.net/',
         'email' => 'admin@localhost',
@@ -83,7 +83,7 @@ function icct_nms_setup_registration()
             'topology_configuration.php,rack_placement.php,topology.php,inventory.php,device.php,' .
             'protocol.php,export.php,diagnostics.php,wizard_save.php,wizard_templates.php,presets.php,' .
             'ports.php,syslog.php,ssh_terminal.php,ssh_console.php',
-        'View ICCT NMS Inventory',
+        'View ICCT NMS Device Mgmt',
         1,
     );
     $enabled ? api_plugin_enable_hooks('icct_nms') : api_plugin_disable_hooks('icct_nms');

@@ -105,7 +105,7 @@ $renderViewDetails = function ($details) { ?>
                 <?php $renderViewDetails([
                     'MIB Module' => $file['module'] ?? '',
                     'Device Type' => $viewBundle['type_name'] ?? '',
-                    'Uploaded' => $viewBundle['created_at'] ?? ($viewBundle['created'] ?? ''),
+                    'Uploaded' => icct_nms_display_time($viewBundle['created_at'] ?? ($viewBundle['created'] ?? null)),
                 ]); ?>
             </article>
         <?php endforeach; ?>

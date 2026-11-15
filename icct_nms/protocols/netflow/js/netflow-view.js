@@ -11,12 +11,6 @@
                 new URLSearchParams(new FormData(form)),
             ]),
         );
-    const linkedFinding = section.querySelector('#netflow-linked-finding');
-    const linkedAlarm = new URLSearchParams(location.search).get('netflow_alarm');
-    if (/^[a-f0-9]{64}$/.test(linkedAlarm || '')) {
-        applied.get('anomalies').set('netflow_alarm', linkedAlarm);
-        linkedFinding.hidden = false;
-    }
     let page = 1,
         busy = false,
         pending = false,
@@ -51,17 +45,39 @@
             parsed /= 1000;
         }
     };
-    const date = (epoch) =>
-        Number(epoch)
-            ? new Date(Number(epoch) * 1000).toLocaleString('en-GB', {
-                  timeZone: 'Asia/Kolkata',
-                  hour12: false,
-              })
-            : '—';
+    const date = (epoch) => {
+        if (!Number(epoch)) return '—';
+        const parts = Object.fromEntries(
+            new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Asia/Kolkata',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hourCycle: 'h23',
+            })
+                .formatToParts(new Date(Number(epoch) * 1000))
+                .map((part) => [part.type, part.value]),
+        );
+        return `${parts.day}-${parts.month}-${parts.year} ${parts.hour}:${parts.minute}:${parts.second}`;
+    };
     const proto = (v) => ({ 1: 'ICMP', 6: 'TCP', 17: 'UDP', 58: 'ICMPv6' })[v] || String(v);
     function cell(text, small) {
         const td = make('td', text);
         if (small) td.append(make('small', small));
+        return td;
+    }
+    function timeCell(first, last) {
+        const td = make('td');
+        for (const epoch of [first, last]) {
+            const [day, clock] = date(epoch).split(' '),
+                pair = make('div', '', 'netflow-time-pair');
+            pair.append(make('div', day));
+            if (clock) pair.append(make('div', clock));
+            td.append(pair);
+        }
         return td;
     }
     let chartData = null;
@@ -268,7 +284,7 @@
         for (const r of data.rows) {
             const tr = make('tr');
             tr.append(
-                cell(date(r.first_epoch), date(r.last_epoch)),
+                timeCell(r.first_epoch, r.last_epoch),
                 cell(Number(r.version) === 10 ? 'IPFIX' : 'v' + r.version),
                 cell(r.src_addr, String(r.src_port)),
                 cell(r.dst_addr, String(r.dst_port)),
@@ -339,7 +355,7 @@
                 alarm.append(link);
             }
             tr.append(
-                cell(date(r.opened_epoch), date(r.updated_epoch)),
+                timeCell(r.opened_epoch, r.updated_epoch),
                 td,
                 cell(r.state),
                 cell(r.message),
@@ -349,14 +365,12 @@
         }
         if (!events.children.length) {
             let message = 'No anomaly events match the selected time range, severity and status.';
-            if (!applied.get('anomalies').has('netflow_alarm')) {
-                if (!data.assignment)
-                    message =
-                        'No exporter is configured for this device. Add one in Protocol Config to start checking for anomalies.';
-                else if (data.health === 'Waiting for flows' && !data.totals?.flows)
-                    message =
-                        'No recent flow records. Open Overview for the last available traffic readings. Readings do not require fault rules; anomalies appear when collected traffic exceeds detection thresholds.';
-            }
+            if (!data.assignment)
+                message =
+                    'No exporter is configured for this device. Add one in Protocol Config to start checking for anomalies.';
+            else if (data.health === 'Waiting for flows' && !data.totals?.flows)
+                message =
+                    'No recent flow records. Open Overview for the last available traffic readings. Readings do not require fault rules; anomalies appear when collected traffic exceeds detection thresholds.';
             const tr = make('tr'),
                 td = cell(message);
             td.colSpan = 5;
@@ -428,16 +442,6 @@
         const filters = new URLSearchParams(new FormData(form));
         if (filters.get('hours') === 'custom') filters.delete('hours');
         const previous = applied.get(view);
-        if (previous.has('netflow_alarm')) {
-            if (reset) {
-                const url = new URL(location.href);
-                url.searchParams.delete('netflow_alarm');
-                history.replaceState(history.state, '', url);
-                linkedFinding.hidden = true;
-            } else {
-                filters.set('netflow_alarm', previous.get('netflow_alarm'));
-            }
-        }
         if (!reset && filters.toString() === previous.toString()) return;
         applied.set(view, filters);
         if (view === 'records') {
@@ -526,11 +530,5 @@
     setInterval(() => {
         if (!section.hidden && !document.hidden) load();
     }, 30000);
-    if (location.hash === '#view-netflow') {
-        if (applied.get('anomalies').has('netflow_alarm')) {
-            tabs[forms.findIndex((form) => form.dataset.netflowView === 'anomalies')].click();
-        } else {
-            load();
-        }
-    }
+    if (location.hash === '#view-netflow') load();
 })();

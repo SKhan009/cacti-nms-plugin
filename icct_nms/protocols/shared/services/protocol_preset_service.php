@@ -331,7 +331,7 @@ function icct_nms_save_protocol_preset($input)
         $protocol
     ] ??
         strtoupper($protocol)) .
-        ' defaults saved. Inherited fields in Inventory use these values when the device is opened.';
+        ' defaults saved. Inherited fields in Device Mgmt use these values when the device is opened.';
 }
 
 /** Only names of overridden non-secret preset fields are stored here. */

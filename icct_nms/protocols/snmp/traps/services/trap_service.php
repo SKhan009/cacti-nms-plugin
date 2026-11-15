@@ -137,8 +137,8 @@ function icct_nms_save_trap_sender($id, $input)
         icct_backend_category_execute('DELETE FROM plugin_icct_nms_meta WHERE meta_key=?', [$key]);
         return;
     }
-    $source = $input['trap_source_address'] ?? '';
-    if ($source === '' && ($input['trap_use_device_ip'] ?? '') === '1') {
+    $source = trim((string) ($input['trap_source_address'] ?? ''));
+    if ($source === '') {
         $source = db_fetch_cell_prepared('SELECT hostname FROM host WHERE id=? AND deleted=\'\'', [
             (int) $id,
         ]);

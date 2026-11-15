@@ -94,22 +94,10 @@ try {
         ]);
     };
     try {
-        $act('escalate');
-        throw new LogicException('Escalation allowed before acknowledgement');
-    } catch (RuntimeException $e) {
-    }
-    try {
         $act('ticket_progress');
         throw new LogicException('Ticket action accepted before escalation');
     } catch (RuntimeException $e) {
     }
-    $act('ack');
-    $detail = icct_nms_alarm_detail($key);
-    assertAlarm(
-        $detail['acknowledgement']['note'] === 'QA note' &&
-            $detail['alarm']['device_name'] === $host['description'],
-        'Full detail lost linked device or acknowledgement remarks',
-    );
     try {
         icct_nms_alarm_action([
             'alarm_key' => $key,
@@ -120,18 +108,42 @@ try {
         throw new LogicException('Invalid ticket severity accepted');
     } catch (InvalidArgumentException $e) {
     }
+    $staleRevision = (int) $get()['revision'];
+    icct_nms_alarm_record($host, $rule, $o);
+    assertAlarm((int) $get()['revision'] > $staleRevision, 'Poller did not advance the alarm revision');
     icct_nms_alarm_action([
         'alarm_key' => $key,
         'alarm_action' => 'escalate',
-        'revision' => $get()['revision'],
+        'revision' => $staleRevision,
         'note' => 'QA note',
         'ticket_severity' => 'Medium',
         'ticket_name' => 'Custom supply incident',
     ]);
+    assertAlarm(
+        (int) $get()['escalated'] === 1 && (int) $get()['acknowledged'] === 0,
+        'Escalation must not require or implicitly create an acknowledgement',
+    );
     $detail = icct_nms_alarm_detail($key);
     assertAlarm(
-        count($detail['escalations']) === 1 && $detail['escalations'][0]['note'] === 'QA note',
-        'Escalation tab lost its saved record',
+        count($detail['escalations']) === 1 &&
+            $detail['escalations'][0]['note'] === 'QA note' &&
+            $detail['acknowledgement'] === null,
+        'Unacknowledged escalation lost its record or changed ACK status',
+    );
+    $staleRevision = (int) $get()['revision'];
+    icct_nms_alarm_record($host, $rule, $o);
+    icct_nms_alarm_action([
+        'alarm_key' => $key,
+        'alarm_action' => 'ack',
+        'revision' => $staleRevision,
+        'note' => 'QA note',
+    ]);
+    $detail = icct_nms_alarm_detail($key);
+    assertAlarm(
+        $detail['acknowledgement']['note'] === 'QA note' &&
+            $detail['alarm']['device_name'] === $host['description'] &&
+            (int) $get()['escalated'] === 1,
+        'Acknowledgement after escalation lost linked device, remarks, or ticket',
     );
     $ackSnapshot = json_decode(
         db_fetch_cell_prepared(
@@ -161,8 +173,26 @@ try {
     }
     db_execute_prepared('UPDATE plugin_icct_nms_alarms SET graph_id=0 WHERE alarm_key=?', [$key]);
     assertAlarm($get()['ticket_state'] === 'Open', 'Escalation must open a ticket');
-    $act('ticket_progress');
+    $staleRevision = (int) $get()['revision'];
+    icct_nms_alarm_record($host, $rule, $o);
+    icct_nms_alarm_action([
+        'alarm_key' => $key,
+        'alarm_action' => 'ticket_progress',
+        'revision' => $staleRevision,
+        'expected_ticket_state' => 'Open',
+        'note' => 'QA note',
+    ]);
     assertAlarm($get()['ticket_state'] === 'In Progress', 'Ticket progress did not save');
+    try {
+        icct_nms_alarm_action([
+            'alarm_key' => $key,
+            'alarm_action' => 'ticket_resolve',
+            'revision' => $get()['revision'],
+            'expected_ticket_state' => 'Open',
+        ]);
+        throw new LogicException('Outdated ticket status accepted');
+    } catch (RuntimeException $e) {
+    }
     $act('ticket_resolve');
     assertAlarm($get()['ticket_state'] === 'Resolved', 'Ticket resolution did not save');
     $act('ticket_reopen');
@@ -188,6 +218,14 @@ try {
     } catch (RuntimeException $e) {
     }
     $act('ticket_close');
+    assertAlarm($get()['ticket_state'] === 'Closed', 'Close Ticket did not save a closed ticket');
+    assertAlarm(
+        db_fetch_cell_prepared(
+            "SELECT event FROM plugin_icct_nms_alarm_history WHERE alarm_key=? ORDER BY id DESC LIMIT 1",
+            [$key],
+        ) === 'Ticket closed',
+        'Close Ticket did not record history',
+    );
     $act('ticket_reopen');
     $r = $get();
     assertAlarm(
@@ -195,24 +233,37 @@ try {
         'Workflow save failed',
     );
     try {
-        icct_nms_alarm_action(['alarm_key' => $key, 'alarm_action' => 'close', 'revision' => 0]);
+        icct_nms_alarm_action(['alarm_key' => $key, 'alarm_action' => 'ticket_progress', 'revision' => 0]);
         throw new LogicException('Stale revision accepted');
     } catch (RuntimeException $e) {
     }
-    $act('close');
-    icct_nms_alarm_record($host, $rule, $o);
-    assertAlarm($get()['state'] === 'Closed', 'Poller reopened a manually closed alarm');
+    try {
+        $act('close');
+        throw new LogicException('Manual alarm closure accepted');
+    } catch (InvalidArgumentException $e) {
+    }
     icct_nms_alarm_record($host, $rule, array_replace($o, ['state' => 'Normal']));
     assertAlarm($get()['state'] === 'Resolved', 'Recovery failed');
     icct_nms_alarm_record($host, $rule, $o);
     $r = $get();
     assertAlarm(
-        (int) $r['occurrences'] === 2 && !$r['acknowledged'] && !$r['escalated'],
-        'Recurrence must reset workflow and increment only once',
+        (int) $r['occurrences'] === 2 && $r['acknowledged'] && !$r['escalated'],
+        'Recurrence must retain acknowledgement and increment only once',
+    );
+    assertAlarm(
+        icct_nms_alarm_detail($key)['acknowledgement']['note'] === 'QA note',
+        'Recurrence lost the acknowledgement remarks',
     );
     assertAlarm(
         icct_nms_alarm_detail($key)['ticket']['timeline'] === [],
         'Recurrence exposed the previous ticket',
+    );
+    $act('escalate');
+    assertAlarm(
+        (int) $get()['acknowledged'] === 1 &&
+            (int) $get()['escalated'] === 1 &&
+            $get()['ticket_state'] === 'Open',
+        'An already acknowledged recurrence cannot be escalated',
     );
     icct_nms_alarm_record($host, $rule, array_replace($o, ['state' => 'Unknown']));
     assertAlarm($get()['state'] === 'Active', 'Missing data cleared an active alarm');

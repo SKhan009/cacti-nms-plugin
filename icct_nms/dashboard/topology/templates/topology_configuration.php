@@ -312,7 +312,7 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                             <td>
                                 <span class="device-status <?= $d['reachable'] ? 'online' : 'other' ?>"><?= $d['reachable'] ? 'Detected' : 'No response' ?></span>
                             </td>
-                            <td><?= icct_nms_h($d['observed_at']) ?></td>
+                            <td><?= icct_nms_time_cell($d['observed_at']) ?></td>
                             <td>
                                 <div class="topology-row-actions">
                                     <?php $scanResultAction($d); ?>
@@ -411,7 +411,7 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                                 <td><?= icct_nms_h($network['subnet_range']) ?></td>
                                 <td><?= $network['enabled'] === 'on' ? 'Enabled' : 'Disabled' ?></td>
                                 <td><?= (int) $network['total_ips'] ?> / <?= (int) $network['up_hosts'] ?> / <?= (int) $network['snmp_hosts'] ?></td>
-                                <td><?= icct_nms_h($network['last_started']) ?></td>
+                                <td><?= icct_nms_time_cell($network['last_started']) ?></td>
                                 <td>
                                     <?php $job = $scanJobs[$network['id']] ?? null;
                             $nativeBusy = in_array($network['id'], $nativeRunning); ?>
@@ -576,7 +576,7 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                             <td>
                                 <span class="device-status <?= $d['reachable'] ? 'online' : 'other' ?>"><?= $d['reachable'] ? 'Detected' : 'No response' ?></span>
                             </td>
-                            <td><?= icct_nms_h($d['observed_at']) ?></td>
+                            <td><?= icct_nms_time_cell($d['observed_at']) ?></td>
                             <td><?= icct_nms_h($d['detail']) ?><div class="topology-row-actions">
                                     <?php $scanResultAction($d); ?>
                                 </div>

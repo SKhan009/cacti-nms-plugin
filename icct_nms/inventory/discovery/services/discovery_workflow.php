@@ -432,7 +432,7 @@ function icct_nms_scan_wizard_save($input)
     $prefill = icct_nms_scan_wizard_values($resultId);
     if (($input['hostname'] ?? '') !== $prefill['hostname']) {
         throw new InvalidArgumentException(
-            'Use the discovered address for this result, or add a different device from Inventory.',
+            'Use the discovered address for this result, or add a different device from Device Mgmt.',
         );
     }
     $lock = 'icct_discovery_onboard';
@@ -456,7 +456,7 @@ function icct_nms_scan_wizard_save($input)
         $matches = icct_nms_scan_existing($r['address'], $e);
         if (count($matches) > 1) {
             throw new InvalidArgumentException(
-                'Multiple saved devices match this address. Review them in Inventory.',
+                'Multiple saved devices match this address. Review them in Device Mgmt.',
             );
         }
         $id = $matches ? $matches[0] : 0;

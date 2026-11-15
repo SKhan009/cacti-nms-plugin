@@ -227,6 +227,34 @@ expectPorts(
 );
 echo "Structured and legacy neighbour management addresses passed.\n";
 
+$evidence = [
+    'endpoints' => [
+        ['mac' => '00:11:22:33:44:55', 'ips' => ['192.0.2.7'], 'vlans' => [10, 20]],
+        ['mac' => '00:11:22:33:44:66', 'ips' => [], 'vlans' => [20]],
+    ],
+];
+expectPorts(
+    icct_nms_port_connection_cells([], $evidence, true) === [
+        '00:11:22:33:44:55, 00:11:22:33:44:66 (learned)', '192.0.2.7 (learned)', '10, 20 (learned)',
+    ],
+    'Learned evidence did not fill the existing connection columns',
+);
+$evidence += ['names' => ['Switch'], 'addresses' => ['192.0.2.1']];
+expectPorts(
+    icct_nms_port_connection_cells(['vlan_id' => 11], $evidence, true) === ['Switch', '192.0.2.1', '[11]'] &&
+        icct_nms_port_connection_cells([], $evidence, false) === array_fill(0, 3, 'Not reported'),
+    'Direct evidence should take precedence, and stale port evidence should be hidden',
+);
+expectPorts(
+    icct_nms_port_connection_cells(
+        ['hardware' => true, 'status' => 'connected', 'interface_type' => 'Display connector',
+            'description' => 'Graphics driver connector'],
+        [],
+        true,
+    ) === ['Not reported', '—', '—'],
+    'Display connector is not evidence of a named connected device',
+);
+
 $loop = icct_backend_ports_linux_parse(
     json_encode([
         [
@@ -270,3 +298,16 @@ expectPorts(
     'Unknown physical, unconfirmed loopback and down interfaces must not be fabricated as Up',
 );
 echo "Linux loopback carrier interpretation preserves unknown physical and down interface states.\n";
+
+// All reported links survive discovery; type metadata must not collapse virtual links into Ethernet.
+$typed = icct_backend_ports_linux_parse(json_encode(array_map(static function ($kind, $index) {
+    return ['ifindex' => $index + 1, 'ifname' => 'test' . $index, 'flags' => ['UP'],
+        'link_type' => 'ether', 'operstate' => 'UP', 'linkinfo' => ['info_kind' => $kind]];
+}, ['vlan', 'bridge', 'bond', 'veth', 'macvlan', 'vxlan'], range(0, 5))));
+expectPorts(count($typed) === 6, 'All detected virtual ports are retained');
+expectPorts(array_map('icct_nms_port_type_label', $typed) === ['VLAN', 'Bridge', 'Bond', 'Virtual Ethernet pair', 'MACVLAN', 'VXLAN'], 'Linux interface types');
+foreach ($typed as $port) {
+    expectPorts(icct_nms_port_kind($port) === 'Software', 'Virtual port grouping');
+}
+expectPorts(icct_nms_port_type_label(['type' => 71]) === 'Wi-Fi', 'SNMP Wi-Fi type');
+expectPorts(icct_nms_port_type_label(['type' => 999]) === 'Unclassified', 'Unknown types retained without guessing');

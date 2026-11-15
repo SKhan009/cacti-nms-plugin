@@ -11,10 +11,13 @@ $writes = [];
 $filters = [];
 function icct_backend_protocol_enabled($id, $protocol)
 {
-    return !$GLOBALS['disabled'];
+    return !$GLOBALS['disabled'] && !in_array($id, $GLOBALS['disabledIds'] ?? [], true);
 }
 function db_fetch_assoc_prepared($sql, $args)
 {
+    if (isset($GLOBALS['bindings'])) {
+        return $GLOBALS['bindings'];
+    }
     return [
         array_replace(
             [
@@ -129,6 +132,33 @@ check(
 );
 $presetJson = null;
 $filters = [];
+// Shared native Cacti addresses route to exactly one eligible owner.
+$base = ['source_address' => '192.0.2.10', 'transport' => 'both',
+    'severity_codes' => '[3]', 'facility_codes' => '[1]', 'match_strings' => '[]'];
+$bindings = [array_merge($base, ['host_id' => 91]), array_merge($base, ['host_id' => 2])];
+$writes = [];
+check(icct_backend_syslog_ingest($r, $reason) === 'inserted', 'Shared source accepted');
+check(count($writes) === 1 && $writes[0][1][0] === 2, 'Overlapping mappings produce one oldest-device event');
+$writes = [];
+check(icct_backend_syslog_ingest(array_replace($r, ['hostname' => 'device91']), $reason) === 'inserted', 'Sender hostname accepted as display data');
+check(count($writes) === 1 && $writes[0][1][0] === 2, 'Sender hostname cannot redirect ownership');
+$existing = true;
+$writes = [];
+check(icct_backend_syslog_ingest($r, $reason) === 'repeated', 'Shared-IP repeated message aggregates');
+check(count($writes) === 1 && str_starts_with($writes[0][0], 'UPDATE'), 'Repeat does not insert another event');
+$existing = false;
+$bindings[1]['match_strings'] = '["different keyword"]';
+$writes = [];
+check(icct_backend_syslog_ingest($r, $reason) === 'inserted' && $writes[0][1][0] === 91, 'Keyword filters select alternate device');
+$bindings[1] = array_merge($base, ['host_id' => 2, 'transport' => 'tcp']);
+$writes = [];
+check(icct_backend_syslog_ingest($r, $reason) === 'inserted' && $writes[0][1][0] === 91, 'Transport filters select alternate device');
+$bindings[1] = array_merge($base, ['host_id' => 2]);
+$disabledIds = [2];
+$writes = [];
+check(icct_backend_syslog_ingest($r, $reason) === 'inserted' && $writes[0][1][0] === 91, 'Disabled protocol cannot own event');
+$disabledIds = [];
+unset($bindings);
 $failWrite = true;
 try {
     icct_backend_syslog_ingest($r, $reason);

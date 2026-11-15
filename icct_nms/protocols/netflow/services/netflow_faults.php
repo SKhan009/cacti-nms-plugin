@@ -13,8 +13,8 @@ function icct_nms_netflow_sync_faults($limit = 200)
             ') AS desired_state FROM plugin_icct_nms_netflow_events e ' .
             'JOIN host h ON h.id=e.host_id LEFT JOIN plugin_icct_nms_netflow_devices d ON d.host_id=e.host_id ' .
             "LEFT JOIN plugin_icct_nms_meta p ON p.meta_key=CONCAT('protocol_disabled_netflow_',e.host_id) " .
-            "LEFT JOIN plugin_icct_nms_alarms a ON a.alarm_key=SHA2(CONCAT('netflow:',e.id),256) " .
-            "WHERE h.deleted='' AND h.poller_id=? AND ((a.alarm_key IS NULL AND e.state='Active' AND (" .
+            "LEFT JOIN plugin_icct_nms_alarms a ON a.alarm_key=SHA2(CONCAT('netflow:',e.host_id,':',e.event_key),256) " .
+            "WHERE h.deleted='' AND h.poller_id=? AND e.id=(SELECT MAX(newest.id) FROM plugin_icct_nms_netflow_events newest WHERE newest.host_id=e.host_id AND newest.event_key=e.event_key) AND ((a.alarm_key IS NULL AND e.state='Active' AND (" .
             $desired .
             ")='Active') OR " .
             '(a.alarm_key IS NOT NULL AND (a.sample_time<>UNIX_TIMESTAMP(e.updated_at) OR ' .
@@ -86,6 +86,7 @@ function icct_nms_netflow_sync_faults($limit = 200)
         ];
         $observation = [
             'event_id' => (int) $event['id'],
+            'event_key' => $event['event_key'],
             'rule' => 'netflow',
             'graph_id' => 0,
             'graph' => $rule['name'],

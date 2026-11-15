@@ -67,10 +67,17 @@ function icct_nms_dashboard_validate($value)
         if (!is_int($siteId) || $siteId < 0 || $siteId > 4294967295) {
             throw new InvalidArgumentException('Choose a valid site.');
         }
+        $views = $dashboard['views'] ?? ['topology', 'image', 'rack', 'map'];
+        if (!is_array($views) || !$views || count(array_filter($views, 'is_string')) !== count($views) ||
+            count(array_unique($views)) !== count($views) ||
+            array_diff($views, ['topology', 'image', 'rack', 'map'])) {
+            throw new InvalidArgumentException('Choose at least one valid dashboard view.');
+        }
         $clean['dashboards'][] = [
             'name' => trim($name),
             'columns' => $columns,
             'site_id' => $siteId,
+            'views' => array_values($views),
             'widgets' => array_merge(
                 ['topology'],
                 array_values(array_diff($widgets, ['topology'])),

@@ -36,8 +36,8 @@
             class="field-info section-help clone-instructions"
             tabindex="0"
             role="img"
-            aria-label="Enter a new hostname/IP address, then select Create Clone to add the device to Inventory."
-            data-tooltip="Enter a new hostname/IP address, then select Create Clone to add the device to Inventory.">ⓘ</span>
+            aria-label="Enter a new hostname/IP address, then select Create Clone to add the device to Device Mgmt."
+            data-tooltip="Enter a new hostname/IP address, then select Create Clone to add the device to Device Mgmt.">ⓘ</span>
     <?php endif; ?>
     <nav
         class="steps"

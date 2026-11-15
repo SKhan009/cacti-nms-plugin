@@ -784,6 +784,7 @@
     document.addEventListener('icct:refresh-interval', (event) =>
         scheduleTopologyRefresh(event.detail),
     );
+    document.addEventListener('icct:refresh-topology', refreshTopology);
     function selectTopologyView(next) {
         if (!['topology', 'image'].includes(next)) return;
         view = next;

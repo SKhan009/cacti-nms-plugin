@@ -75,13 +75,13 @@ $trapHelp = static function (string $headingHelpText): void {
                 </label>
                 <label class="field">
                     <span class="field-label">Trap sender IP address
-                        <?php $trapHelp('Enter the IPv4 or IPv6 source address the collector sees. This can differ from the device’s polling address.'); ?>
+                        <?php $trapHelp('Leave blank to use the saved Cacti device IP. Override only when the device sends from a different IP. A hostname requires an explicit numeric sender IP; no internet lookup is used.'); ?>
                     </span>
                     <input
                         name="trap_source_address"
                         maxlength="45"
                         value="<?= icct_nms_h($trapSourceAddress) ?>"
-                        <?= $trapUseDeviceIp ? 'placeholder="Uses the device IP if blank"' : '' ?>>
+                        placeholder="Uses the saved device IP if blank">
                 </label>
             </div>
         <?php endif; ?>

@@ -213,7 +213,8 @@ try {
 $dashboardView = in_array($_GET['view'] ?? '', ['topology', 'rack', 'image', 'map'], true)
     ? $_GET['view']
     : 'topology';
-$title = 'Dashboard';
+$dashboardConfiguration = isset($_GET['configure']) && $_GET['configure'] === '1';
+$title = $dashboardConfiguration ? 'Widget Configuration' : 'Dashboard';
 $mapPage = true;
 require dirname(__DIR__, 2) . '/shared/templates/header.php';
 require dirname(__DIR__, 2) . '/dashboard/map/templates/map.php';

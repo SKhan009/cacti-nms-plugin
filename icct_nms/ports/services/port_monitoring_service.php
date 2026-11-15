@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/port_evidence.php';
+require_once __DIR__ . '/backend/hardware.php';
 
 /** Device-owned alarm settings bound to a real interface index and name. */
 function icct_nms_port_monitoring($id)
@@ -55,7 +56,7 @@ function icct_nms_port_monitor_validate($settings, $known)
         }
         if (
             !empty($row['alarm']) &&
-            (($row['oper_severity'] ?? '') === '' || ($row['admin_severity'] ?? '') === '')
+            (($row['oper_severity'] ?? '') === '' || ((int) $key <= 2147483647 && ($row['admin_severity'] ?? '') === ''))
         ) {
             throw new InvalidArgumentException(
                 'Select both down-state severities for enabled port alarms.',
@@ -79,7 +80,7 @@ function icct_nms_save_port_monitoring($id, $input)
     if (!is_string($raw) || strlen($raw) > 1000000) {
         throw new InvalidArgumentException('Port settings exceeded limit.');
     }
-    $known = array_column(icct_backend_ports_view($host)['ports'], 'name', 'index');
+    $known = array_column(icct_nms_config_ports_view($host)['ports'], 'name', 'index');
     foreach (icct_nms_port_monitoring($id)['ports'] as $index => $row) {
         if (!isset($known[$index])) {
             $known[$index] = $row['name'];
@@ -106,6 +107,9 @@ function icct_nms_port_fault_state($port, $rule, $fresh)
     if (!$fresh) {
         return 'Unknown';
     }
+    if (!empty($port['hardware'])) {
+        return ($port['oper'] ?? null) === 1 ? 'Normal' : (($port['oper'] ?? null) === 2 ? ($rule['oper_severity'] ?: 'Unknown') : 'Unknown');
+    }
     if (($port['admin'] ?? null) === 2) {
         return $rule['admin_severity'] ?: 'Unknown';
     }
@@ -123,7 +127,7 @@ function icct_nms_port_faults($host)
     if (!$settings['enabled']) {
         return [];
     }
-    $view = icct_backend_ports_view($host);
+    $view = icct_nms_config_ports_view($host);
     $ports = array_column($view['ports'], null, 'index');
     $out = [];
     $saved = icct_nms_port_alarm_snapshot((int) $host['id']);
@@ -132,7 +136,7 @@ function icct_nms_port_faults($host)
             continue;
         }
         $port = $ports[$index] ?? [];
-        $fresh = $view['fresh'] && ($port['name'] ?? '') === $rule['name'];
+        $fresh = ($port['fresh'] ?? $view['fresh']) && ($port['name'] ?? '') === $rule['name'];
         $state = icct_nms_port_fault_state($port, $rule, $fresh);
         $previous = $saved['ports'][$index] ?? [];
         if (
@@ -149,7 +153,7 @@ function icct_nms_port_faults($host)
             'graph_id' => 0,
             'graph' => $rule['name'] . ' link status',
             'value' => $fresh ? $port['oper'] : null,
-            'sample_time' => $fresh ? $view['collected'] : 0,
+            'sample_time' => $fresh ? ($port['collected'] ?? $view['collected']) : 0,
             'state' => $state,
             'port_context' => $previous['details'] ?? [],
         ];
@@ -249,7 +253,8 @@ function icct_nms_record_port_alarms($host, $view, $settings)
             }
             $name = $rule['name'] ?? $previous['name'];
             $port = $ports[$index] ?? [];
-            $fresh = $view['fresh'] && ($port['name'] ?? '') === $name;
+            $observation = !empty($port['hardware']) ? array_replace($view, array_intersect_key($port, array_flip(['fresh', 'source', 'collected']))) : $view;
+            $fresh = $observation['fresh'] && ($port['name'] ?? '') === $name;
             $state = $enabled ? icct_nms_port_fault_state($port, $rule, $fresh) : 'Disabled';
             $changedContext =
                 $previous &&
@@ -268,7 +273,7 @@ function icct_nms_record_port_alarms($host, $view, $settings)
             if (
                 $fresh &&
                 isset($previous['details']['last_sample']) &&
-                (int) $view['collected'] < (int) $previous['details']['last_sample']
+                (int) $observation['collected'] < (int) $previous['details']['last_sample']
             ) {
                 $next['ports'][$index] = $previous;
                 continue;
@@ -280,7 +285,7 @@ function icct_nms_record_port_alarms($host, $view, $settings)
             $transition['details'] = icct_nms_port_evidence(
                 $previous,
                 $port,
-                $view,
+                $observation,
                 $transition,
                 $changedContext,
             );
@@ -316,7 +321,7 @@ function icct_nms_record_port_alarms($host, $view, $settings)
                         $transition['active'],
                         $admin,
                         $oper,
-                        $fresh ? date('Y-m-d H:i:s', (int) $view['collected']) : null,
+                        $fresh ? date('Y-m-d H:i:s', (int) $observation['collected']) : null,
                         $transition['details']['incident_key'],
                         json_encode($transition['details'], JSON_THROW_ON_ERROR),
                     ],
@@ -349,7 +354,7 @@ function icct_backend_collect_port_alarms()
         try {
             icct_nms_record_port_alarms(
                 $host,
-                icct_backend_ports_view($host),
+                icct_nms_config_ports_view($host),
                 icct_nms_port_monitoring((int) $host['id']),
             );
         } catch (Throwable $error) {

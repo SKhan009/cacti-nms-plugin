@@ -1,6 +1,6 @@
-# ICCT NMS Inventory
+# ICCT NMS Device Mgmt
 
-`icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Inventory designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
+`icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Device Mgmt designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
 ## Version 1.4.2
 
@@ -40,7 +40,7 @@ Installation and upgrades save portable starter presets for SNMP, CDP, LLDP, SSH
 
 ## Version 1.3.0
 
-NetFlow/IPFIX now integrates enabled Presets, per-device exporter mappings, and a read-only Inventory reporting tab linked from topology. The nfdump receiver decodes v5, v7, v9 and IPFIX with IPv4/IPv6 transport. Owned tables retain decoded flows, trends and anomaly history; capture imports are transactional and idempotent. Reports include time/IP/port/protocol/version/application/LAN-WAN filters, bandwidth charts, top source/destination hosts, protocols, exporter-reported application identities, conversations, pagination and CSV export. Per-device rules flag scans, SYN floods, worm-like SMB/RPC fan-out and bandwidth overuse; fresh normal observations resolve findings. Collectors are isolated by native Cacti poller ID and run offline after package installation. See [deployment and operating notes](protocols/netflow/README.md) for exporter setup, retention, classification and sampling.
+NetFlow/IPFIX now integrates enabled Presets, per-device exporter mappings, and a read-only Device Mgmt reporting tab linked from topology. The nfdump receiver decodes v5, v7, v9 and IPFIX with IPv4/IPv6 transport. Owned tables retain decoded flows, trends and anomaly history; capture imports are transactional and idempotent. Reports include time/IP/port/protocol/version/application/LAN-WAN filters, bandwidth charts, top source/destination hosts, protocols, exporter-reported application identities, conversations, pagination and CSV export. Per-device rules flag scans, SYN floods, worm-like SMB/RPC fan-out and bandwidth overuse; fresh normal observations resolve findings. Collectors are isolated by native Cacti poller ID and run offline after package installation. See [deployment and operating notes](protocols/netflow/README.md) for exporter setup, retention, classification and sampling.
 
 ## Version 1.2.19
 
@@ -48,7 +48,7 @@ Alarm History expands to fit all rows on the selected page without an internal v
 
 ## Version 1.2.18
 
-Pagination uses a shared solid triangle SVG for previous/next across Inventory, device graphs and records, device types, Syslog, topology connections/discovery, racks, MIB lists/objects and alarm lists/history. Accessible labels, disabled states and existing navigation are preserved.
+Pagination uses a shared solid triangle SVG for previous/next across Device Mgmt, device graphs and records, device types, Syslog, topology connections/discovery, racks, MIB lists/objects and alarm lists/history. Accessible labels, disabled states and existing navigation are preserved.
 
 ## Version 1.2.17
 
@@ -89,10 +89,10 @@ Upgrade through Cacti Plugin Management after copying the plugin so the additive
 ## Installation
 
 1. Copy this directory to `cacti/plugins/icct_nms`.
-2. Install or upgrade and enable **ICCT NMS Inventory** through native Plugin Management.
+2. Install or upgrade and enable **ICCT NMS Device Mgmt** through native Plugin Management.
    When replacing an older release, disable and re-enable ICCT NMS in Plugin Management to run its configuration upgrade. Version 1.2.5 repairs missing physical rack records for saved rack presets, including installations where the earlier catalogue migration already ran. Existing device placements are retained. Copying files alone does not run database upgrades; Cacti installs plugins in a disabled state until enabled.
-3. Grant the **View ICCT NMS Inventory** realm. Cacti's existing device-management permission and device ACLs remain authoritative.
-4. Open **ICCT NMS → Inventory**. On the configured VM: `http://127.0.0.1:8080/cacti/plugins/icct_nms/inventory/controllers/inventory.php`.
+3. Grant the **View ICCT NMS Device Mgmt** realm. Cacti's existing device-management permission and device ACLs remain authoritative.
+4. Open **ICCT NMS → Device Mgmt**. On the configured VM: `http://127.0.0.1:8080/cacti/plugins/icct_nms/inventory/controllers/inventory.php`.
 
 Lifecycle setup creates the 40 owned tables from `shared/database/schema.sql`. Normal requests never create, repair or populate tables. Uninstall retains ICCT settings and all Cacti devices for a later reinstall. New installations contain no sample equipment. Native numeric SNMP polling, devices, sites, collectors, templates, graphs and RRD data stay under Cacti's ownership.
 
@@ -115,7 +115,7 @@ Source uses four-space indentation, LF endings and a final newline. Controllers 
 
 ## Data and saves
 
-Inventory lists permitted, nondeleted Cacti hosts, including authorized disabled devices. Device status, uptime, polling interval and availability use real saved evidence. ICCT tables own segments, classification, manual identities, short names, rack placement, discovery presets, snapshots and protocol assignments. Manual identity and observed SNMP identity remain distinct. The assigned collector automatically reads identity through native Cacti SNMP credentials: IP-address/interface MAC, LLDP chassis identity (and an explicitly reported chassis MAC), and a unique ENTITY-MIB chassis serial, plus template-defined identity OIDs. Empty fields populate from current observations; manual values take precedence. Endpoint, collector, template or credential changes invalidate the identity snapshot. Auto-observed values are not silently saved as manual overrides. New devices must be saved and SNMP configured before polling; unsupported hardware fields stay blank. These reads do not use an arbitrary IP or another plugin’s collector. Empty or stale evidence is never replaced with imported samples.
+Device Mgmt lists permitted, nondeleted Cacti hosts, including authorized disabled devices. Device status, uptime, polling interval and availability use real saved evidence. ICCT tables own segments, classification, manual identities, short names, rack placement, discovery presets, snapshots and protocol assignments. Manual identity and observed SNMP identity remain distinct. The assigned collector automatically reads identity through native Cacti SNMP credentials: IP-address/interface MAC, LLDP chassis identity (and an explicitly reported chassis MAC), and a unique ENTITY-MIB chassis serial, plus template-defined identity OIDs. Empty fields populate from current observations; manual values take precedence. Endpoint, collector, template or credential changes invalidate the identity snapshot. Auto-observed values are not silently saved as manual overrides. New devices must be saved and SNMP configured before polling; unsupported hardware fields stay blank. These reads do not use an arbitrary IP or another plugin’s collector. Empty or stale evidence is never replaced with imported samples.
 
 Short Name is generated from Device Name (word initials, or the first eight characters of a single word) when empty, and remains editable. Manual values are retained; generated values persist on Save. The Basic Information screen does not display the saved-observations table.
 
@@ -125,15 +125,15 @@ CDP and LLDP have separate panels and checkbox entries in Add Protocol. Timing u
 
 The protocol/diagnostics navigation stays at the bottom-right while fields scroll above it. Search, combined filters, numeric name sorting, paging, tree view and CSV export use the same saved inventory. CSV formula prefixes are neutralized.
 
-## Inventory actions
+## Device Mgmt actions
 
-The eye opens read-only details; the pencil opens edit mode. The three-dot menu shows only the device’s saved diagnostic methods, followed by Cross Launch URL, Alarm Suppression, Re-Index Device, Modify Device, Clone Device, Disable/Enable Device and Delete Device. Ping, Trace Route and ARP start immediately on the assigned local collector and show real output in an Inventory popup, without creating queue jobs or navigating to a results page. They use saved diagnostic parameters, bounded execution, native permissions and CSRF validation. The existing collector accepts authenticated loopback requests; no system permissions are changed. Other diagnostic methods retain their saved-profile queue. Re-index calls the native Cacti service. Disable and Delete open Cacti's native confirmation page rather than executing on menu opening. Clone prepares an unsaved Add Device form with visible, non-secret settings and requires a new hostname/identity; it does not copy credentials, graphs, observations or protocol assignments.
+The eye opens read-only details; the pencil opens edit mode. The three-dot menu shows only the device’s saved diagnostic methods, followed by Cross Launch URL, Alarm Suppression, Re-Index Device, Modify Device, Clone Device, Disable/Enable Device and Delete Device. Ping, Trace Route and ARP start immediately on the assigned local collector and show real output in a Device Mgmt popup, without creating queue jobs or navigating to a results page. They use saved diagnostic parameters, bounded execution, native permissions and CSRF validation. The existing collector accepts authenticated loopback requests; no system permissions are changed. Other diagnostic methods retain their saved-profile queue. Re-index calls the native Cacti service. Disable and Delete open Cacti's native confirmation page rather than executing on menu opening. Clone prepares an unsaved Add Device form with visible, non-secret settings and requires a new hostname/identity; it does not copy credentials, graphs, observations or protocol assignments.
 
-A saved HTTP(S) Cross Launch URL opens directly. Without one, the item is disabled. Alarm Suppression is disabled because no matching backend service exists. The native Cacti sidebar Inventory entry opens the standalone layout in its own tab using Cacti’s external-link support, avoiding the core AJAX fragment loader. The header menu opens on hover or keyboard focus without a click toggle. Row menus stay within the viewport and close on outside click, Escape or table scroll.
+A saved HTTP(S) Cross Launch URL opens directly. Without one, the item is disabled. Alarm Suppression is disabled because no matching backend service exists. The native Cacti sidebar Device Mgmt entry opens the standalone layout in its own tab using Cacti’s external-link support, avoiding the core AJAX fragment loader. The header menu opens on hover or keyboard focus without a click toggle. Row menus stay within the viewport and close on outside click, Escape or table scroll.
 
 ## Limits
 
-Only the supplied Inventory screens are included. Port Config/FCAPS wizard steps remain disabled; the graph row action opens native Cacti graphs. Syslog, Netflow, NTP and TACACS+ report unavailable configuration instead of saving inert settings. The BEL wordmark is a text/CSS approximation.
+Only the supplied Device Mgmt screens are included. Port Config/FCAPS wizard steps remain disabled; the graph row action opens native Cacti graphs. Syslog, Netflow, NTP and TACACS+ report unavailable configuration instead of saving inert settings. The BEL wordmark is a text/CSS approximation.
 
 SSH retains HTTPS, host-key verification and encrypted broker requirements. An administrator must configure this plugin's own `ssh.config.local.json` and compatible broker before credential changes or SSH monitoring can run. Restored credential references do not recover missing encrypted secrets. The HTTP VM was not used for SSH credential enrollment. No other-plugin SSH database or broker is used as a fallback. Serial monitoring requires the actual saved equipment profile and provisioned collector adapter/lock directory; a connection alone is not fabricated monitoring evidence.
 
@@ -276,7 +276,7 @@ PHP must still permit file uploads and have a writable upload temporary director
 
 ### Device diagnostics and BLR discovery coverage
 
-Inventory, the Diagnostics tool selector, topology device details and map device details all use the saved Device Diagnostics assignment. Disabled devices and devices without selected methods expose no diagnostic actions; the collector continues to enforce the same selection. Topology cards open details in view mode and remain draggable only in edit mode. Device Diagnostics also displays a read-only discovery summary from saved Protocol Config, using the same method selection, configuration hash and freshness rules as topology links. Diagnostic ARP reads the collector cache; remote IPv4/IPv6 neighbour observations are collected through SNMP/IP-MIB, and learned MAC observations through BRIDGE-MIB/Q-BRIDGE-MIB.
+Device Mgmt, the Diagnostics tool selector, topology device details and map device details all use the saved Device Diagnostics assignment. Disabled devices and devices without selected methods expose no diagnostic actions; the collector continues to enforce the same selection. Topology cards open details in view mode and remain draggable only in edit mode. Device Diagnostics also displays a read-only discovery summary from saved Protocol Config, using the same method selection, configuration hash and freshness rules as topology links. Diagnostic ARP reads the collector cache; remote IPv4/IPv6 neighbour observations are collected through SNMP/IP-MIB, and learned MAC observations through BRIDGE-MIB/Q-BRIDGE-MIB.
 
 BLR sections 5.3.2.1.1 and 5.3.5.3.1 are partially covered: LLDP/CDP Layer 2 neighbour discovery, IP-neighbour/MAC observations and native Cacti subnet reachability discovery are implemented. This is not a complete routed Layer 3 topology, a combined IP/port-scanning discovery wizard, or verified real-time topology refresh. Those requirements remain open; indirect ARP/FDB evidence must not be promoted to confirmed physical links.
 
@@ -286,7 +286,7 @@ The diagnostic page submits once and reads job status automatically every 500 ms
 
 Topology Configuration → Device Connections contains the discovery and diagnostics actions beside existing connection results, using the same saved method selection, protocol gates, configuration hash and freshness rules as topology device popups. Legacy Discovery & Diagnostics URLs redirect to Device Connections. Discover Now queues only that authorized device through its assigned collector; diagnostics opens only its saved diagnostic choices. Layer 2 LLDP/CDP links are confirmed neighbour adjacencies; IP-MIB IPv4/IPv6 and BRIDGE/Q-BRIDGE MAC results remain observations and do not constitute a complete routed Layer 3 topology.
 
-All diagnostic links in Inventory, topology, map details and Topology Configuration use one shared popup with saved-method selection, Run Diagnostic, live queued results and Close. Direct diagnostic URLs open the same popup and retain the normal server page as a no-JavaScript fallback. Opening the popup does not run a test; Run Diagnostic submits the existing CSRF-protected queue endpoint. The options endpoint enforces the same management/device access and selected-method checks. Output uses textContent, requests remain same-origin, closing stops result polling without cancelling the collector job, and no iframe or security-header change is required. Live checks verified completed Ping and ARP readings and consistent iPerf3 selection from topology/direct URLs.
+All diagnostic links in Device Mgmt, topology, map details and Topology Configuration use one shared popup with saved-method selection, Run Diagnostic, live queued results and Close. Direct diagnostic URLs open the same popup and retain the normal server page as a no-JavaScript fallback. Opening the popup does not run a test; Run Diagnostic submits the existing CSRF-protected queue endpoint. The options endpoint enforces the same management/device access and selected-method checks. Output uses textContent, requests remain same-origin, closing stops result polling without cancelling the collector job, and no iframe or security-header change is required. Live checks verified completed Ping and ARP readings and consistent iPerf3 selection from topology/direct URLs.
 
 ### MIB graph review and large selections
 
@@ -348,7 +348,7 @@ Database compatibility with the supplied v1.3.2 ZIP: the four `plugin_icct_nms_s
 
 Discovery uses the existing **Topology Configuration → Networks**, **Discovered Devices** and **Device Connections** screens. Choose combined ICMP, SNMP, TCP ports, CDP and LLDP in Add/Edit Network. Discover Now starts Cacti's native automation and an additional bounded evidence job on the assigned collector. Cacti's scheduled runs are mirrored by the discovery worker. The native Automatically Add to Cacti option retains its native rule/template behavior; otherwise Review / Add opens the existing Add Device wizard. Graph and data query selections stay in its existing steps. Range observations alone never create physical links.
 
-Saved SNMP credential sets remain in Cacti. Results contain observations, not passwords. Repeated review uses native host IDs and a database lock; ambiguous identities require Inventory review. Completed evidence survives cancellation and retry. Existing status/identity changes are recorded in the plugin event journal and reported through existing dashboard notifications.
+Saved SNMP credential sets remain in Cacti. Results contain observations, not passwords. Repeated review uses native host IDs and a database lock; ambiguous identities require Device Mgmt review. Completed evidence survives cancellation and retry. Existing status/identity changes are recorded in the plugin event journal and reported through existing dashboard notifications.
 
 Register each remote collector through Cacti’s existing **Remote Data Collector installation** workflow, which creates its native poller record on the primary server. Manage the registered collector through **Cacti Backend → Data Collection → Data Collectors**. Install this plugin and both workers on each collector. The worker uses that collector's native `poller_id` and Cacti's primary database connection; when the primary is unavailable it stops and retries, rather than using stale local permissions. The main server does not scan on behalf of a remote collector.
 
@@ -366,6 +366,6 @@ Adjust service paths/user/group for other installations. Collection and the ship
 
 Configure GNSS through **Presets → Site → Configure GNSS** beside the appropriate collector. Supported inputs are vendor SNMP coordinate/fix OIDs, NMEA TCP/UDP, USB/RS-232 serial, local NMEA files and gpsd TPV. Select the actual receiver transport; a generic model cannot supply vendor OIDs automatically. Coordinates update the existing Map/Birds Eye poller marker without overwriting the saved site. Invalid, future or stale fixes do not appear as a current position. Birds Eye uses logical positions when coordinates are absent, not inferred geographic distance.
 
-For file input, place a current checksum-valid NMEA file under `/var/lib/icct-nms/gnss/` and grant the service read access. For serial, allow the service user access to the receiver device; the supplied RHEL unit uses the `dialout` group. Allow only the configured receiver/collector traffic through the existing firewall. SNMP uses the selected Inventory device's credentials. A GNSS device must belong to that collector. Real hardware and remote receiver connectivity require site-specific verification.
+For file input, place a current checksum-valid NMEA file under `/var/lib/icct-nms/gnss/` and grant the service read access. For serial, allow the service user access to the receiver device; the supplied RHEL unit uses the `dialout` group. Allow only the configured receiver/collector traffic through the existing firewall. SNMP uses the selected Device Mgmt device's credentials. A GNSS device must belong to that collector. Real hardware and remote receiver connectivity require site-specific verification.
 
 Map/Birds Eye contain native LNMS/pollers only. Cross-collector connections are derived from existing manual or fresh CDP/LLDP device links; link Up/Down comes from collected interface readings. Missing readings are not shown as a healthy link. Dashboard refresh is saved per user (5–3600 seconds).

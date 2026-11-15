@@ -1,8 +1,8 @@
 ; Cacti Plugin Management metadata. Keep version and compatibility aligned with setup.php.
 [info]
 name = icct_nms
-version = 1.4.20
-longname = ICCT NMS Inventory
+version = 1.4.21
+longname = ICCT NMS Device Mgmt
 author = NMS Project
 homepage = https://www.cacti.net/
 email = admin@localhost

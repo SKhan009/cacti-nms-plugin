@@ -3,11 +3,14 @@
  */ ?>
 <div class="inventory-heading">
     <div>
-        <p class="breadcrumb">
-            <a href="dashboard/controllers/topology.php">Dashboard</a> / <a
-                href="inventory/controllers/inventory.php">Inventory</a> / Table View
-        </p>
-        <h1>Inventory</h1>
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="dashboard/controllers/topology.php">Dashboard</a>
+            <span aria-hidden="true">/</span>
+            <a href="inventory/controllers/inventory.php">Device Mgmt</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">Table View</span>
+        </nav>
+        <h1>Device Mgmt</h1>
     </div>
     <div class="inventory-tools">
         <div class="view-toggle">
@@ -21,7 +24,7 @@
         <a
             class="export-button"
             href="inventory/controllers/export.php"
-            aria-label="Export inventory CSV">↥</a>
+            aria-label="Export device CSV">↥</a>
         <?php if ($management): ?>
             <a
                 class="button"
@@ -57,7 +60,7 @@
         id="clear-filters"
         disabled>Clear All</button>
     <label class="field inventory-search">
-        <span class="sr-only">Search inventory</span>
+        <span class="sr-only">Search devices</span>
         <input
             id="inventory-search"
             type="search"
@@ -68,7 +71,7 @@
     class="table-scroll"
     tabindex="0"
     role="region"
-    aria-label="Inventory table">
+    aria-label="Device Mgmt table">
     <table
         class="action-table"
         id="inventory-table">

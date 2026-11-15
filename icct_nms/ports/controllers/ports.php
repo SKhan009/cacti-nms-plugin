@@ -9,7 +9,7 @@ try {
     icct_nms_backend();
     $host = icct_nms_device(icct_nms_id($_GET['id'] ?? 0));
     echo json_encode(
-        ['ok' => true, 'data' => icct_backend_ports_view($host)],
+        ['ok' => true, 'data' => icct_nms_config_ports_view($host)],
         JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE,
     );
 } catch (Throwable $failure) {

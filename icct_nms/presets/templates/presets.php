@@ -4,8 +4,11 @@
         <nav
             class="presets-breadcrumb"
             aria-label="Breadcrumb">
-            <a href="dashboard/controllers/topology.php">Dashboard</a> / <a
-                href="presets/controllers/presets.php">Presets</a> / <span><?= $presetTabs[$activePreset] ?></span>
+            <a href="dashboard/controllers/topology.php">Dashboard</a>
+            <span aria-hidden="true">/</span>
+            <a href="presets/controllers/presets.php">Presets</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page"><?= $presetTabs[$activePreset] ?></span>
         </nav>
         <h1>Presets</h1>
     </div>

@@ -3,6 +3,102 @@
 require_once __DIR__ . '/../../../../protocols/ping/services/command.php';
 /** ICCT-owned diagnostics services, derived from the existing ICCT NMS implementation. */
 
+/** Read interface names from the collector itself; no network discovery is needed. */
+function icct_backend_diag_local_interfaces($directory = '/sys/class/net')
+{
+    $interfaces = [];
+    foreach (glob($directory . '/*') ?: [] as $path) {
+        $name = basename($path);
+        if (preg_match('/^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,14}$/D', $name)) {
+            $interfaces[$name] = $name;
+        }
+    }
+    ksort($interfaces, SORT_NATURAL);
+    return $interfaces;
+}
+
+/** Stable bits fit the existing profile column; no schema or package upgrade required. */
+function icct_backend_diag_arp_types()
+{
+    return [1=>'Physical — Ethernet (copper or fiber)',2=>'Physical — Wi-Fi',4=>'Physical — USB Ethernet adapter',
+        8=>'Software / Virtual — VLAN',16=>'Software / Virtual — Bridge',32=>'Software / Virtual — Bond',
+        64=>'Software / Virtual — Virtual Ethernet pair',128=>'Software / Virtual — VM virtual NIC',
+        256=>'Software / Virtual — TAP',512=>'Software / Virtual — MACVLAN',1024=>'Software / Virtual — VXLAN'];
+}
+
+function icct_backend_diag_arp_classify(array $link)
+{
+    if (($link['link_type'] ?? '') !== 'ether' || array_intersect(['NOARP','LOOPBACK'], $link['flags'] ?? [])) return 0;
+    $kind = $link['linkinfo']['info_kind'] ?? '';
+    $types = ['vlan'=>8,'bridge'=>16,'bond'=>32,'veth'=>64,'macvlan'=>512,'vxlan'=>1024];
+    if (isset($types[$kind])) return $types[$kind];
+    if ($kind === 'tun') return !empty($link['tap']) ? 256 : 0;
+    if ($kind !== '') return 0; // Unknown tunnel/device kinds are not guessed from names.
+    if (!empty($link['wireless'])) return 2;
+    if (!empty($link['usb'])) return 4;
+    if (!empty($link['vm_nic'])) return 128;
+    return !empty($link['physical']) ? 1 : 0;
+}
+
+function icct_backend_diag_arp_interfaces()
+{
+    $ip = icct_backend_diag_program('ip');
+    if (!$ip) return [];
+    $result = icct_backend_diag_run_command([$ip, '-j', '-d', 'link', 'show'], 5);
+    if ($result['exit'] !== 0) return [];
+    $links = json_decode($result['stdout'], true);
+    $out = [];
+    foreach (is_array($links) ? $links : [] as $link) {
+        $name = $link['ifname'] ?? '';
+        if (!preg_match('/^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,14}$/D', $name)) continue;
+        $base = '/sys/class/net/' . $name;
+        $device = realpath($base . '/device') ?: '';
+        $driver = basename(realpath($base . '/device/driver') ?: '');
+        $link['physical'] = $device !== '';
+        $link['wireless'] = is_dir($base . '/wireless') || is_dir($base . '/phy80211');
+        $link['usb'] = strpos($device, '/usb') !== false;
+        $link['vm_nic'] = in_array($driver, ['virtio_net','vmxnet3','hv_netvsc','xen_netfront'], true) || strpos($device, '/virtio') !== false;
+        // Emulated PCI NICs in a VM also use physical-looking drivers.
+        $product = @file_get_contents('/sys/class/dmi/id/product_name') ?: '';
+        if ($device !== '' && preg_match('/KVM|VirtualBox|VMware|Virtual Machine|QEMU|Parallels/i', $product)) $link['vm_nic'] = true;
+        $link['tap'] = ((intval(trim(@file_get_contents($base . '/tun_flags') ?: '0'), 0) & 2) !== 0);
+        $type = icct_backend_diag_arp_classify($link);
+        if ($type) $out[$name] = $type;
+    }
+    return $out;
+}
+
+function icct_backend_diag_arp_inventory($collector)
+{
+    if ((int) $collector === icct_backend_inventory_collector_id()) return icct_backend_diag_arp_interfaces();
+    $snapshot = json_decode((string) db_fetch_cell_prepared(
+        'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=? AND updated_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)',
+        ['diagnostic_runner_' . (int) $collector]), true);
+    return array_filter($snapshot['arp_interfaces'] ?? [], static fn($type) => isset(icct_backend_diag_arp_types()[$type]));
+}
+
+function icct_backend_diag_interface_choices($collector)
+{
+    return array_intersect_key(icct_backend_diag_arp_types(), array_flip(array_values(icct_backend_diag_arp_inventory($collector))));
+}
+
+function icct_backend_diag_arp_selected($value, $inventory)
+{
+    if (str_starts_with($value, '@arp:')) {
+        $mask = (int) substr($value, 5);
+        return array_keys(array_filter(icct_backend_diag_arp_types(), static fn($label, $bit) => ($mask & $bit) !== 0, ARRAY_FILTER_USE_BOTH));
+    }
+    return isset($inventory[$value]) ? [$inventory[$value]] : [];
+}
+
+function icct_backend_diag_arp_resolve($value, array $inventory)
+{
+    if ($value === '' || $value === '@arp:0') return array_keys($inventory);
+    if (!str_starts_with($value, '@arp:')) return isset($inventory[$value]) ? [$value] : [];
+    $mask = (int) substr($value, 5);
+    return array_keys(array_filter($inventory, static fn($bit) => ($mask & $bit) !== 0));
+}
+
 function icct_backend_diag_arguments($row, $tool, $name)
 {
     $target = icct_backend_diag_target($row['hostname']);
@@ -24,8 +120,8 @@ function icct_backend_diag_arguments($row, $tool, $name)
     $timeout = 40;
     switch ($tool) {
         case 'arp':
-            $args = ['neigh', 'show'];
-            if (!empty($row['arp_interface'])) {
+            $args = ['-4', 'neigh', 'show'];
+            if (!empty($row['arp_interface']) && !str_starts_with($row['arp_interface'], '@arp:')) {
                 array_push($args, 'dev', $row['arp_interface']);
             }
             $timeout = 5;
@@ -238,6 +334,11 @@ function icct_backend_diag_execute($row, $tool)
     if (icct_backend_inventory_collector_id() !== (int) $row['poller_id']) {
         throw new RuntimeException('Diagnostic belongs to another collector.');
     }
+    $arpNames = [];
+    if ($tool === 'arp') {
+        $arpNames = icct_backend_diag_arp_resolve($row['arp_interface'] ?? '', icct_backend_diag_arp_interfaces());
+        if (!$arpNames) throw new RuntimeException('No ARP-capable interfaces match the selection on this collector.');
+    }
     [$command, $timeout] = icct_backend_diag_command($row, $tool);
 
     if (
@@ -249,6 +350,17 @@ function icct_backend_diag_execute($row, $tool)
         [$command, $result] = icct_backend_diag_netperf_self_test($command, $timeout);
     } else {
         $result = icct_backend_diag_run_command($command, $timeout);
+    }
+    if ($tool === 'arp' && $result['exit'] === 0) {
+        $lines = preg_split('/\r?\n/', trim($result['stdout']));
+        $lines = array_filter($lines, static function ($line) use ($arpNames) {
+            return preg_match('/\bdev\s+(\S+)/', $line, $m) && in_array($m[1], $arpNames, true);
+        });
+        // A legacy single-interface command omits "dev" in its output.
+        if (empty($row['arp_interface']) || str_starts_with($row['arp_interface'], '@arp:')) {
+            $result['stdout'] = implode("\n", $lines);
+            $result['output'] = $result['stdout'];
+        }
     }
     if ($tool === 'pathchar') {
         $result['self_test'] = icct_backend_diag_collector_address($row['hostname']);
@@ -315,13 +427,19 @@ function icct_backend_diag_profile_validate($input)
         throw new InvalidArgumentException('Select an MTR method for automatic monitoring.');
     }
     $arpInterface = trim((string) ($input['arp_interface'] ?? ''));
-    if (
-        $arpInterface !== '' &&
-        !preg_match('/^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,14}$/D', $arpInterface)
-    ) {
-        throw new InvalidArgumentException(
-            'Enter a collector interface name of up to 15 characters.',
-        );
+    if (isset($input['arp_types_present'])) {
+        $bits = $input['arp_types'] ?? [];
+        if (!is_array($bits)) throw new InvalidArgumentException('Select valid ARP interface types.');
+        $mask = 0;
+        foreach ($bits as $bit) {
+            if (!is_scalar($bit) || !ctype_digit((string) $bit) || !isset(icct_backend_diag_arp_types()[(int) $bit])) throw new InvalidArgumentException('Select valid ARP interface types.');
+            $mask |= (int) $bit;
+        }
+        $arpInterface = '@arp:' . $mask;
+    }
+    if ($arpInterface !== '' && !preg_match('/^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,14}$/D', $arpInterface) &&
+        !(preg_match('/^@arp:([0-9]{1,4})$/D', $arpInterface, $m) && (int) $m[1] <= 2047)) {
+        throw new InvalidArgumentException('Select valid collector interface types.');
     }
     $pathHops = (int) ($input['pathchar_hops'] ?? 20);
     $pathTimeout = (int) ($input['pathchar_timeout'] ?? 60);
@@ -416,7 +534,7 @@ function icct_backend_diag_result($row, $tool, $command, $result)
         trim($result['stdout']) === '' &&
         trim($result['stderr']) === ''
     ) {
-        $result['output'] = 'No IPv4 or IPv6 neighbours are cached by this collector.';
+        $result['output'] = 'No IPv4 ARP neighbours are cached on the selected collector interfaces.';
     }
     if (
         in_array($tool, ['iperf3', 'iperf3_udp', 'netperf'], true) &&

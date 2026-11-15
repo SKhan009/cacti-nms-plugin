@@ -27,7 +27,7 @@ if (!is_realm_allowed(3)): ?>
         throw new RuntimeException('Unable to read port alarm history.');
     }
     $portCurrentEvidence = icct_nms_port_alarm_snapshot((int) $id);
-    $portEvidenceTime = static fn ($time) => $time === null ? 'Not recorded' : date('Y-m-d H:i:s T', (int) $time);
+    $portEvidenceTime = static fn ($time) => $time === null ? 'Not recorded' : icct_nms_display_time((int) $time);
     ?>
     <h3>Port alarm history</h3>
     <div
@@ -49,7 +49,7 @@ if (!is_realm_allowed(3)): ?>
                 name="port-alarm-records">
                 <summary>
                     <span>
-                        <small>Time</small><?= icct_nms_h($event['created_at']) ?>
+                        <small>Time</small><?= icct_nms_time_cell($event['created_at']) ?>
                     </span>
                     <span>
                         <small>Port / interface group</small>
@@ -89,8 +89,8 @@ if (!is_realm_allowed(3)): ?>
                             'Duration evidence' => $hasIncident ? (!empty($latest['observation_gap']) ? 'Missing observations occurred during this span; continuous downtime is not confirmed.' : 'Measured between saved polling samples, not the exact physical failure or repair time.') : 'No outage episode was recorded for this event.',
                             'Recovery / repair information' => $latest['recovery'] ?? 'No recovery or repair action was recorded for this event.',
                             'Acknowledged by' => $acknowledgement,
-                            'Acknowledgement time' => $event['ack_time'] ?? 'Not recorded',
-                            'Reading time at this event' => $event['collected_at'] ?? 'Not recorded',
+                            'Acknowledgement time' => $event['ack_time'] ? icct_nms_display_time($event['ack_time']) : 'Not recorded',
+                            'Reading time at this event' => $event['collected_at'] ? icct_nms_display_time($event['collected_at']) : 'Not recorded',
                             'Device-reported last change (ticks)' => isset($recorded['if_last_change_ticks']) ? (string) $recorded['if_last_change_ticks'] : 'Not recorded',
                             'Device-reported uptime (ticks)' => isset($recorded['uptime_ticks']) ? (string) $recorded['uptime_ticks'] : 'Not recorded',
                             'Device-reported interface type' => isset($recorded['if_type']) ? (string) $recorded['if_type'] : 'Not recorded',

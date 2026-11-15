@@ -134,7 +134,7 @@ function icct_nms_save_ssh($id, $input)
     $values = icct_backend_ssh_preset_values(
         $input + [
             'name' => 'ICCT ' . $id . ' ' . bin2hex(random_bytes(6)),
-            'description' => 'Device-specific ICCT Inventory configuration',
+            'description' => 'Device-specific ICCT Device Mgmt configuration',
             'enabled' => 1,
         ],
     );

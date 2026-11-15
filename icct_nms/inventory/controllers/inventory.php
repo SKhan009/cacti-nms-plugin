@@ -18,7 +18,7 @@ try {
 } catch (Throwable $error) {
     icct_nms_failure($error);
 }
-$title = 'Inventory';
+$title = 'Device Mgmt';
 $management = is_realm_allowed(3);
 $notice = $_SESSION['icct_nms_notice'] ?? '';
 unset($_SESSION['icct_nms_notice']);

@@ -50,7 +50,7 @@ require __DIR__ . '/device_record_pager.php'; ?>
                     name="configuration-records">
                     <summary>
                         <span>
-                            <small>Time</small><?= $display($event['time'] ?? '') ?>
+                            <small>Time</small><?= icct_nms_time_cell($event['time'] ?? '') ?>
 
                         </span>
                         <span>
@@ -140,7 +140,7 @@ if (
                             if (!is_array($change)) continue;
                             ?>
                             <tr>
-                                <td><?= $display($change['time'] ?? '') ?></td>
+                                <td><?= icct_nms_time_cell($change['time'] ?? '') ?></td>
                                 <td><?= $display($change['user'] ?: 'User ' . $change['user_id']) ?></td>
                                 <td><?= $display($change['host_id'] ?? '') ?></td>
                                 <td><?= $display($change['source_ip'] ?? '') ?></td>

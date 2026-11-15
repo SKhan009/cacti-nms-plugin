@@ -324,7 +324,7 @@ function icct_backend_ssh_collect($host_id)
         $portSample = null;
         try {
             $portOutput = '';
-            $ssh->exec('LC_ALL=C ip -j link show', function ($chunk) use (&$portOutput) {
+            $ssh->exec('LC_ALL=C ip -j -d link show', function ($chunk) use (&$portOutput) {
                 $portOutput .= $chunk;
                 if (strlen($portOutput) > 1048576) {
                     throw new RuntimeException('Interface response exceeded limit.');
@@ -336,6 +336,18 @@ function icct_backend_ssh_collect($host_id)
         } catch (Throwable $portError) {
             $portSample = null;
         }
+
+        $hardwareSample = null;
+        try {
+            $hardwareOutput = '';
+            $ssh->exec(icct_nms_hardware_command(), function ($chunk) use (&$hardwareOutput) {
+                $hardwareOutput .= $chunk;
+                if (strlen($hardwareOutput) > 1048576) { throw new RuntimeException('Hardware response exceeded limit.'); }
+            });
+            if (!$ssh->isTimeout() && $ssh->getExitStatus() === 0) {
+                $hardwareSample = icct_nms_hardware_parse($hardwareOutput);
+            }
+        } catch (Throwable $e) { /* Hardware support must not interrupt health monitoring. */ }
 
         $now = icct_backend_ssh_device($host_id);
         if (
@@ -360,6 +372,11 @@ function icct_backend_ssh_collect($host_id)
             )
         ) {
             throw new RuntimeException('SSH reading storage failed.');
+        }
+        if ($hardwareSample !== null) {
+            $host = db_fetch_row_prepared('SELECT * FROM host WHERE id=?', [$host_id]);
+            icct_backend_ports_store($host, $hardwareSample, 'SSH Linux hardware', 'hardware_snapshot_',
+                array_intersect_key($d, array_flip(['preset_revision', 'device_revision', 'endpoint'])));
         }
         if ($portSample !== null) {
             $host = db_fetch_row_prepared('SELECT * FROM host WHERE id=?', [$host_id]);

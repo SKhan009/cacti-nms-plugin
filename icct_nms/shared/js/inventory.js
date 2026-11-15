@@ -1231,7 +1231,6 @@ if (diagnosticSettings) {
         ],
         bandwidth_seconds: ['iperf3', 'iperf3_udp', 'netperf'],
         mtr_cycles: ['mtr_icmp', 'mtr_tcp'],
-        arp_interface: ['arp'],
         pathchar_hops: ['pathchar'],
         pathchar_timeout: ['pathchar'],
     };
@@ -1291,8 +1290,8 @@ if (diagnosticSettings) {
                 `[data-diagnostic-parameter="${name}"]`,
             );
             sections.forEach((section) => {
-                const input = section.querySelector('input');
                 const inactive = !methods.some((method) => selected.includes(method));
+                const input = section.querySelector('input');
                 input.disabled = inactive;
                 section.classList.toggle('diagnostic-inactive', inactive);
                 // Disabled fields still retain their configured value when other methods are saved.
@@ -2001,7 +2000,7 @@ document.addEventListener('click', (event) => {
             state.image.src = 'data:image/' + data.image_format + ';base64,' + data.data;
             state.status.textContent =
                 'Real-time · Updated ' +
-                new Date().toLocaleTimeString() +
+                new Intl.DateTimeFormat('en-GB', {timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'}).format(new Date()) +
                 ' · Every ' +
                 interval.value +
                 ' seconds';

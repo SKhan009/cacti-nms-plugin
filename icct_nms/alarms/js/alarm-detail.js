@@ -6,6 +6,9 @@
         busy = false,
         historyPage = 1;
     const feedback = document.querySelector('#alarm-detail-feedback');
+    const ackButton = document.querySelector('#alarm-detail-ack');
+    const ticketMenu = document.querySelector('.alarm-detail-ticket-menu');
+    if (root.dataset.success) icctToast({ title: 'Saved', text: root.dataset.success });
     const colors = icctSeverityColors,
         names = { Warning: 'Warn', Information: 'Info' };
     const make = (tag, text = '', cls = '') => {
@@ -35,6 +38,13 @@
                 .map((p) => [p.type, p.value]),
         );
         return `${p.day}-${p.month}-${p.year} ${p.hour}:${p.minute}:${p.second}`;
+    }
+    function dateCell(epoch) {
+        const cell = make('td');
+        if (!Number(epoch)) return cell;
+        const [day, time] = date(epoch).split(' ');
+        cell.append(document.createTextNode(day), document.createElement('br'), document.createTextNode(time));
+        return cell;
     }
     function tab(id) {
         const escalation =
@@ -85,7 +95,7 @@
                 : '',
             fields = {
                 ...r,
-                occurred: date(r.occurred_epoch),
+                occurred: date(r.occurred_epoch).replace(' ', '\n'),
                 alarm_count: r.name + ' (' + r.occurrences + ')',
                 ack_status: Number(r.acknowledged) ? 'Ack' : 'Not_Ack',
                 escalation_status: Number(r.escalated) ? 'Esc' : 'Not_Esc',
@@ -111,16 +121,17 @@
                   ? 'offline'
                   : 'other');
         dot.setAttribute('aria-label', r.device_status);
+        if (ackButton) ackButton.disabled = !!Number(r.acknowledged) || r.state === 'Closed';
 
         const body = document.querySelector('#alarm-detail-history');
         body.replaceChildren();
         const window = historyWindow(
-            data.history.length,
+            data.occurrence_history.length,
             Number(document.querySelector('#alarm-history-size').value),
             historyPage,
         );
         historyPage = window.page;
-        for (const event of data.history.slice(window.start, window.end)) {
+        for (const event of data.occurrence_history.slice(window.start, window.end)) {
             const s = event.snapshot || {},
                 tr = make('tr'),
                 severity = s.severity || (colors[event.note] ? event.note : ''),
@@ -153,7 +164,7 @@
                 ),
             );
             tr.append(
-                make('td', Number(event.created_epoch) ? date(event.created_epoch) : ''),
+                dateCell(event.created_epoch),
                 sev,
                 description,
                 remarks,
@@ -161,7 +172,7 @@
             );
             body.append(tr);
         }
-        if (!data.history.length) {
+        if (!data.occurrence_history.length) {
             const tr = make('tr'),
                 td = make('td', 'No alarm history recorded.');
             td.colSpan = 5;
@@ -174,8 +185,8 @@
         pagePicker.value = String(window.page);
         document.querySelector('#alarm-history-pages').textContent =
             'of ' + window.pages + ' pages';
-        document.querySelector('#alarm-history-range').textContent = data.history.length
-            ? window.start + 1 + '–' + window.end + ' of ' + data.history.length + ' items'
+        document.querySelector('#alarm-history-range').textContent = data.occurrence_history.length
+            ? window.start + 1 + '–' + window.end + ' of ' + data.occurrence_history.length + ' items'
             : '0 items';
         document.querySelector('#alarm-history-prev').disabled = window.page === 1;
         document.querySelector('#alarm-history-next').disabled = window.page === window.pages;
@@ -188,12 +199,26 @@
             const item = make('li', '', 'alarm-ticket-event ' + event.kind);
             item.append(
                 make('h3', event.label),
-                make('time', date(event.created_epoch)),
+                make('time', date(event.created_epoch).replace(' ', '\n')),
                 make('p', event.note),
             );
             timeline.append(item);
         }
         document.querySelector('#alarm-escalation-tab').disabled = !ticket.timeline.length;
+        if (ticketMenu) {
+            const escalated = !!Number(r.escalated);
+            const state = r.ticket_state || 'Open';
+            for (const button of ticketMenu.querySelectorAll('[data-ticket-action]')) {
+                button.hidden = button.dataset.ticketAction === 'escalate' ? escalated : !escalated;
+                button.disabled = {
+                    escalate: escalated || r.state === 'Closed',
+                    ticket_progress: state !== 'Open',
+                    ticket_resolve: !['Open', 'In Progress'].includes(state),
+                    ticket_reopen: !['Resolved', 'Closed'].includes(state),
+                    ticket_close: state === 'Closed',
+                }[button.dataset.ticketAction];
+            }
+        }
         tab(location.hash.slice(1));
     }
     async function request() {
@@ -213,7 +238,7 @@
         return result;
     }
     async function refresh() {
-        if (busy) return;
+        if (busy || ticketMenu?.open) return;
         busy = true;
         try {
             data = await request();
@@ -229,6 +254,10 @@
         historyPage = 1;
         render();
     });
+    if (ackButton) ackButton.addEventListener('click', () => {
+        if (ackButton.disabled) return;
+        location.assign('alarms/controllers/alarms.php?ack=' + encodeURIComponent(root.dataset.alarmKey));
+    });
     document.querySelector('#alarm-history-page').addEventListener('change', (event) => {
         historyPage = Number(event.target.value);
         render();
@@ -241,63 +270,31 @@
         historyPage++;
         render();
     });
-    document.querySelector('#alarm-detail-export').addEventListener('click', () => {
-        const cell = (v) =>
-            '"' +
-            String(v ?? '')
-                .replace(/^\s*(?=[=+@-])/g, "'")
-                .replace(/"/g, '""') +
-            '"';
-        const r = data.alarm,
-            rows = [
-                ['Alarm', r.name],
-                ['Device Name', r.device_name],
-                ['Short Name', r.short_name],
-                ['IP Address', r.address],
-                ['Type of Network Element', r.network_type],
-                ['Ack Status', Number(r.acknowledged) ? 'Ack' : 'Not_Ack'],
-                ['Escalation Status', Number(r.escalated) ? 'Esc' : 'Not_Esc'],
-                [],
-                ['Alarm Occurred', 'Severity & Ack', 'Description & Fix', 'Ack & Remarks', 'Count'],
-                ...data.history.map((e) => [
-                    date(e.created_epoch),
-                    e.snapshot?.severity || '',
-                    (e.snapshot?.description || '') + '\n' + (e.snapshot?.fix || ''),
-                    (e.snapshot?.acknowledged === undefined
-                        ? ''
-                        : Number(e.snapshot.acknowledged)
-                          ? 'Ack'
-                          : 'Not_Ack') +
-                        '\n' +
-                        (e.event === 'Acknowledged' ? e.note : e.snapshot?.ack_note || ''),
-                    e.snapshot?.occurrences ?? '',
-                ]),
-                ...(data.ticket?.details
-                    ? [
-                          [],
-                          ['Ticket Severity', data.ticket.details.severity],
-                          ['Ticket Name', data.ticket.details.name],
-                          ['Remarks', data.ticket.details.remarks],
-                          [],
-                          ['Ticket Status', 'Updated', 'Remarks'],
-                          ...data.ticket.timeline.map((e) => [
-                              e.label,
-                              date(e.created_epoch),
-                              e.note,
-                          ]),
-                      ]
-                    : []),
-            ],
-            url = URL.createObjectURL(
-                new Blob([rows.map((row) => row.map(cell).join(',')).join('\r\n')], {
-                    type: 'text/csv;charset=utf-8',
-                }),
-            ),
-            a = make('a');
-        a.href = url;
-        a.download = 'alarm-details.csv';
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    if (ticketMenu) {
+        ticketMenu.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-ticket-action]');
+            if (!button || button.disabled) return;
+            if (button.dataset.ticketAction === 'escalate') {
+                location.assign('alarms/controllers/alarms.php?escalate=' + encodeURIComponent(root.dataset.alarmKey));
+                return;
+            }
+            location.assign(
+                'alarms/controllers/alarms.php?ticket=' +
+                    encodeURIComponent(root.dataset.alarmKey) +
+                    '&ticket_action=' + encodeURIComponent(button.dataset.ticketAction) +
+                    '&return=detail',
+            );
+        });
+        document.addEventListener('click', (event) => {
+            if (ticketMenu.open && !ticketMenu.contains(event.target)) ticketMenu.open = false;
+        });
+    }
+    document.querySelector('#alarm-detail-export').addEventListener('click', async () => {
+        try {
+            await icctAlarmPdf.detail(data, { site: root.dataset.reportSite, user: root.dataset.reportUser });
+        } catch (error) {
+            feedback.textContent = error.message || 'Unable to generate PDF report.';
+        }
     });
     render();
     setInterval(refresh, 30000);

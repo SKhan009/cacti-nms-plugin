@@ -18,7 +18,7 @@ $profile = icct_backend_diag_profile_validate($input);
 $row = $profile + ['hostname' => '192.0.2.1'];
 [$arp, $timeout] = icct_backend_diag_arguments($row, 'arp', 'ip');
 diagnosticParameterAssert(
-    $arp === ['neigh', 'show', 'dev', 'enp0s8'] && $timeout === 5,
+    $arp === ['-4', 'neigh', 'show', 'dev', 'enp0s8'] && $timeout === 5,
     'ARP interface did not reach command arguments.',
 );
 [$path, $timeout] = icct_backend_diag_arguments($row, 'pathchar', 'pchar');

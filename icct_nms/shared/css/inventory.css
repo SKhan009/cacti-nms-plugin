@@ -1186,13 +1186,21 @@ a.button {
     padding: 14px 16px;
 }
 .breadcrumb {
-    font-size: 12px;
-    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #202020;
     margin: 0 0 8px;
 }
 .breadcrumb a {
-    color: #0f62fe;
+    color: #155cff;
     text-decoration: none;
+}
+.breadcrumb a:hover,
+.breadcrumb a:focus-visible {
+    text-decoration: underline;
 }
 .inventory-tools {
     display: flex;
@@ -1830,7 +1838,10 @@ body:has(#inventory-table) .table-scroll {
 }
 .help-tooltip {
     position: fixed;
+    inset: auto;
     z-index: 10000;
+    margin: 0;
+    border: 0;
     width: max-content;
     max-width: min(300px, calc(100vw - 16px));
     padding: 8px 12px;
@@ -1880,7 +1891,8 @@ body:has(#inventory-table) .table-scroll {
 
 /* Application messages use the same button and typography styles as the forms. */
 #message-dialog {
-    width: min(440px, calc(100vw - 32px));
+    box-sizing: border-box;
+    width: min(460px, calc(100vw - 32px));
     max-height: calc(100dvh - 32px);
     padding: 24px;
     border: 0;
@@ -1888,6 +1900,7 @@ body:has(#inventory-table) .table-scroll {
     color: #262626;
     background: #fff;
     box-shadow: 0 12px 48px #0004;
+    overflow: auto;
 }
 #message-dialog::backdrop {
     background: #0006;
@@ -1902,6 +1915,7 @@ body:has(#inventory-table) .table-scroll {
     margin: 0;
     font-size: 20px;
     font-weight: 500;
+    line-height: 1.3;
 }
 #message-close {
     border: 0;
@@ -1913,7 +1927,7 @@ body:has(#inventory-table) .table-scroll {
     padding: 4px;
 }
 #message-text {
-    margin: 20px 0 24px;
+    margin: 16px 0 24px;
     color: #393939;
     line-height: 1.5;
     overflow-wrap: anywhere;
@@ -1921,6 +1935,7 @@ body:has(#inventory-table) .table-scroll {
 .message-actions {
     display: flex;
     justify-content: flex-end;
+    align-items: center;
     gap: 12px;
 }
 .message-actions .button {
@@ -2635,12 +2650,20 @@ body.icct-inventory:has(.protocol-form) {
     font-weight: 400;
 }
 .presets-breadcrumb {
-    font-size: 12px;
-    color: #525252;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #202020;
 }
 .presets-breadcrumb a {
-    color: var(--blue);
+    color: #155cff;
     text-decoration: none;
+}
+.presets-breadcrumb a:hover,
+.presets-breadcrumb a:focus-visible {
+    text-decoration: underline;
 }
 .presets-heading .button {
     min-width: 64px;
@@ -6234,20 +6257,23 @@ h6 {
 }
 
 .device-port-table {
-    min-width: 1360px;
-    table-layout: auto;
+    min-width: 1660px;
+    table-layout: fixed;
 }
 .device-port-table th,
 .device-port-table td {
-    overflow-wrap: normal;
+    white-space: normal;
+    overflow-wrap: anywhere;
     word-break: normal;
 }
-.device-port-table th,
-.device-port-table td:nth-child(-n + 5),
-.device-port-table td:nth-child(8),
-.device-port-table td:nth-child(9),
-.device-port-table td:nth-child(10) {
-    white-space: nowrap;
+.device-port-table :is(th, td):nth-child(2) {
+    width: 16%;
+}
+.device-port-table :is(th, td):nth-child(6) {
+    width: 15%;
+}
+.device-port-table :is(th, td):nth-child(3) {
+    width: 10%;
 }
 
 .device-port-legend {
@@ -6873,10 +6899,66 @@ h6 {
     color: #155cff;
     text-decoration: none;
 }
+.alarm-page-heading-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-shrink: 0;
+}
+.alarm-heading-divider {
+    width: 1px;
+    height: 34px;
+    background: #dedede;
+}
+.alarm-view-switch {
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid #222;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.alarm-view-switch button {
+    border: 0;
+    background: #fff;
+    color: #222;
+    padding: 8px 16px;
+    font: inherit;
+    font-size: 14px;
+    line-height: 18px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.alarm-view-switch button + button {
+    border-left: 1px solid #222;
+}
+.alarm-view-switch button.is-active {
+    background: #222;
+    color: #fff;
+}
+.alarm-view-switch button:focus-visible {
+    outline: 2px solid #155cff;
+    outline-offset: -3px;
+}
+@media (max-width: 700px) {
+    .alarm-page-heading {
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+    .alarm-page-heading-actions {
+        width: 100%;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    .alarm-view-switch button {
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+}
 .alarm-filters {
     display: grid;
-    grid-template-columns: repeat(4, minmax(100px, 1fr)) auto minmax(260px, 2.4fr);
-    gap: 16px;
+    grid-template-columns: minmax(155px, 1fr) minmax(125px, .8fr) minmax(165px, 1fr) minmax(320px, 2fr) auto minmax(240px, 1.8fr);
+    gap: 12px;
     align-items: end;
     padding: 20px 22px 14px;
 }
@@ -6900,6 +6982,109 @@ h6 {
     color: #222;
     box-sizing: border-box;
 }
+.alarm-source-field[hidden] {
+    display: none;
+}
+.alarm-device-picker {
+    position: relative;
+}
+.alarm-device-picker > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 44px;
+    padding: 0 14px;
+    box-sizing: border-box;
+    border-bottom: 1px solid #999;
+    background: #f4f4f4;
+    color: #222;
+    cursor: pointer;
+    list-style: none;
+    white-space: nowrap;
+    overflow: hidden;
+}
+.alarm-device-picker > summary::-webkit-details-marker {
+    display: none;
+}
+.alarm-device-picker > summary::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    margin: -4px 2px 0 8px;
+    border-right: 1.5px solid #222;
+    border-bottom: 1.5px solid #222;
+    transform: rotate(45deg);
+    flex: none;
+}
+.alarm-device-picker[open] > summary::after {
+    margin-top: 4px;
+    transform: rotate(225deg);
+}
+.alarm-device-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 20;
+    width: max(100%, 230px);
+    padding: 8px;
+    box-sizing: border-box;
+    background: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 14px #0002;
+}
+.alarm-device-menu #alarm-device-search {
+    height: 36px;
+    margin-bottom: 6px;
+    border: 1px solid #bbb;
+    background: #fff;
+}
+.alarm-device-options {
+    max-height: 220px;
+    overflow-y: auto;
+}
+.alarm-device-options :is(.alarm-device-all, .alarm-device-option) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 36px;
+    padding: 6px 8px;
+    box-sizing: border-box;
+    border: 0;
+    background: transparent;
+    color: #222;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+.alarm-device-options :is(.alarm-device-all, .alarm-device-option):hover {
+    background: #eef4ff;
+}
+.alarm-device-options .alarm-device-all[aria-pressed='true'] {
+    background: #e5efff;
+}
+.alarm-device-options .alarm-device-option[hidden] {
+    display: none;
+}
+.alarm-device-options .alarm-device-option input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    accent-color: #155cff;
+}
+.alarm-date-range-inputs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.alarm-date-range-inputs input {
+    min-width: 0;
+    flex: 1;
+    padding: 10px 6px;
+    font-size: 12px;
+}
 .alarm-search {
     border-left: 1px solid #ddd;
     padding-left: 22px;
@@ -6922,6 +7107,9 @@ h6 {
     overflow: auto;
     margin: 0 22px;
     flex: 1;
+}
+.netflow-time-pair + .netflow-time-pair {
+    margin-top: 8px;
 }
 .alarm-table {
     border-collapse: collapse;
@@ -6980,6 +7168,42 @@ h6 {
     padding: 0;
     cursor: pointer;
 }
+.alarm-sort-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+}
+.alarm-sort-heading > span:first-child {
+    white-space: nowrap;
+}
+.alarm-table th .alarm-sort-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 24px;
+    width: 24px;
+    height: 28px;
+    color: #222;
+    padding: 2px;
+}
+.alarm-sort-button svg {
+    display: block;
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+}
+.alarm-sort-button.is-descending svg {
+    transform: rotate(180deg);
+}
+.alarm-table th .alarm-sort-button:focus-visible {
+    outline: 2px solid #155cff;
+}
 .alarm-severity {
     display: inline-block;
     border: 1px solid #161616;
@@ -7022,19 +7246,17 @@ h6 {
     display: none;
 }
 .alarm-action-menu {
-    position: absolute;
-    right: 0;
-    top: 32px;
+    position: fixed;
     background: #f4f4f4;
-    border: 1px solid #ccc;
-    box-shadow: 0 3px 10px #0002;
-    z-index: 5;
-    min-width: 175px;
+    border: 1px solid #c9c9c9;
+    box-shadow: 0 4px 12px #0002;
+    z-index: 100;
+    min-width: 185px;
 }
 .alarm-action-menu button {
     display: block;
     text-align: left;
-    padding: 10px 14px;
+    padding: 8px 14px;
     width: 100%;
     border: 0;
     background: transparent;
@@ -7049,12 +7271,40 @@ h6 {
     color: #aaa;
     cursor: default;
 }
-.alarm-action-menu button:last-child {
+.alarm-action-menu button:disabled:hover {
+    background: transparent;
+}
+.alarm-action-menu .alarm-ticket-close {
     border-top: 1px solid #ccc;
     color: #f94144;
 }
-.alarm-action-menu button:last-child:disabled {
+.alarm-action-menu .alarm-ticket-close:disabled {
     color: #aaa;
+}
+.alarm-action-menu .alarm-ticket-close:not(:disabled),
+.alarm-detail-ticket-menu [data-ticket-action='ticket_close']:not(:disabled) {
+    color: #f94144;
+}
+.alarm-action-menu .alarm-close-action,
+.alarm-detail-ticket-menu .alarm-close-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+.alarm-actions .alarm-close-action .alarm-close-icon,
+.alarm-detail-ticket-menu .alarm-close-action .alarm-close-icon {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: #666;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.alarm-detail-ticket-menu [data-ticket-action='ticket_close'] {
+    border-top: 1px solid #ccc;
 }
 .alarm-pagination {
     display: flex;
@@ -7109,9 +7359,281 @@ h6 {
 #alarm-detail dt {
     color: #777;
 }
-#alarm-action-dialog {
-    width: 460px;
+#alarm-action-dialog,
+#alarm-detail-action-dialog {
+    width: min(460px, calc(100vw - 32px));
     max-width: calc(100vw - 40px);
+    max-height: calc(100dvh - 32px);
+    padding: 24px;
+    border-radius: 4px;
+    color: #262626;
+    background: #fff;
+    box-shadow: 0 12px 48px #0004;
+}
+#alarm-action-form,
+#alarm-detail-action-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin: 0;
+}
+#alarm-action-title,
+#alarm-detail-action-title {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.3;
+    font-weight: 500;
+}
+#alarm-action-help,
+#alarm-detail-action-help {
+    margin: 0;
+    color: #393939;
+    line-height: 1.5;
+}
+#alarm-ticket-fields:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+#alarm-action-dialog .field textarea,
+#alarm-detail-action-dialog .field textarea {
+    height: 124px;
+    min-height: 96px;
+}
+#alarm-action-dialog .message-actions,
+#alarm-detail-action-dialog .message-actions {
+    align-items: center;
+    margin-top: 4px;
+}
+
+/* Full-page alarm acknowledgement from the Actions column. */
+.alarm-ack-page {
+    min-height: calc(100dvh - 100px);
+    background: #fff;
+}
+.alarm-ack-page form {
+    margin: 0;
+}
+.alarm-ack-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding: 16px 24px;
+    border-bottom: 1px solid #d8d8d8;
+}
+.alarm-ack-heading h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 400;
+}
+.alarm-ack-controls {
+    display: flex;
+    gap: 8px;
+}
+.alarm-ack-controls .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px;
+    min-height: 36px;
+    padding: 7px 14px;
+    border-radius: 0;
+    text-decoration: none;
+    box-sizing: border-box;
+}
+.alarm-ack-controls .button:disabled {
+    background: #d1d1d1;
+    color: #999;
+    cursor: default;
+}
+.alarm-ack-content {
+    padding: 20px 24px;
+}
+.alarm-ack-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+    margin: 0;
+}
+.alarm-ack-summary dt,
+.alarm-ack-description h2,
+.alarm-ack-remarks label {
+    color: #696969;
+    font-size: 14px;
+    font-weight: 400;
+}
+.alarm-ack-summary dd {
+    margin: 7px 0 0;
+    overflow-wrap: anywhere;
+}
+.alarm-ack-description {
+    padding: 18px 0;
+    border-bottom: 1px solid #d8d8d8;
+}
+.alarm-ack-description h2 {
+    margin: 0 0 6px;
+}
+.alarm-ack-description p {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.alarm-ack-remarks {
+    margin-top: 16px;
+}
+.alarm-ack-remarks-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 5px;
+}
+.alarm-ack-remarks-heading output {
+    color: #777;
+    font-size: 12px;
+}
+.alarm-ack-remarks textarea {
+    display: block;
+    width: 100%;
+    min-height: 124px;
+    padding: 14px;
+    box-sizing: border-box;
+    border: 0;
+    border-bottom: 1px solid #999;
+    border-radius: 0;
+    background: #f4f4f4;
+    font: inherit;
+    resize: vertical;
+}
+.alarm-ack-remarks textarea:focus-visible {
+    outline: 2px solid #155cff;
+    outline-offset: 2px;
+}
+#alarm-ack-feedback {
+    color: #b4232a;
+}
+#alarm-ack-feedback:empty {
+    display: none;
+}
+.alarm-escalate-summary {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 20px;
+    margin: 0 0 26px;
+}
+.alarm-escalate-summary dt {
+    color: #696969;
+    font-size: 14px;
+}
+.alarm-escalate-summary dd {
+    margin: 6px 0 0;
+    overflow-wrap: anywhere;
+}
+.alarm-escalate-history h2 {
+    margin: 0 0 12px;
+    font-size: 17px;
+}
+.alarm-escalate-history-wrap {
+    overflow-x: auto;
+}
+.alarm-escalate-history tbody tr[hidden] {
+    display: none;
+}
+.alarm-escalate-show-more {
+    display: block;
+    position: relative;
+    margin: -1px auto 24px;
+    padding: 9px 20px;
+    border: 1px solid #ddd;
+    background: white;
+    box-shadow: 0 2px 5px #0002;
+    font: inherit;
+    cursor: pointer;
+}
+.alarm-escalate-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: end;
+    padding-top: 22px;
+    border-top: 1px solid #ddd;
+}
+.alarm-escalate-severity {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+.alarm-escalate-severity legend,
+.alarm-escalate-ticket-name > span {
+    display: block;
+    margin-bottom: 9px;
+    color: #696969;
+    font-size: 14px;
+}
+.alarm-escalate-severity-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border: 1px solid #222;
+    border-radius: 5px;
+    overflow: hidden;
+}
+.alarm-escalate-severity-options label + label {
+    border-left: 1px solid #ccc;
+}
+.alarm-escalate-severity-options input {
+    position: absolute;
+    opacity: 0;
+}
+.alarm-escalate-severity-options span {
+    display: block;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+}
+.alarm-escalate-severity-options input:checked + span {
+    background: #191919;
+    color: white;
+}
+.alarm-escalate-severity-options input:focus-visible + span {
+    outline: 2px solid #155cff;
+    outline-offset: -2px;
+}
+.alarm-escalate-ticket-name {
+    min-width: 0;
+}
+.alarm-escalate-ticket-name input {
+    display: block;
+    width: 100%;
+    height: 43px;
+    padding: 10px 14px;
+    border: 0;
+    border-bottom: 1px solid #999;
+    box-sizing: border-box;
+    background: #f4f4f4;
+    font: inherit;
+}
+#alarm-escalate-feedback {
+    color: #b4232a;
+}
+#alarm-escalate-feedback:empty {
+    display: none;
+}
+@media (max-width: 700px) {
+    .alarm-ack-heading {
+        flex-wrap: wrap;
+    }
+    .alarm-ack-summary {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+    .alarm-escalate-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .alarm-escalate-fields {
+        grid-template-columns: 1fr;
+    }
 }
 @media (max-width: 1100px) {
     .alarm-filters {
@@ -7125,6 +7647,9 @@ h6 {
     .alarm-filters {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         padding: 14px;
+    }
+    .alarm-date-range {
+        grid-column: 1 / -1;
     }
     .alarm-search {
         padding-left: 0;
@@ -7211,6 +7736,60 @@ h6 {
     border-left: 1px solid #ddd;
     padding-left: 14px;
 }
+.alarm-detail-ack {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 7px;
+    border: 0;
+    border-radius: 50%;
+    background: #383838;
+    color: #fff;
+    cursor: pointer;
+}
+.alarm-detail-ack:hover:not(:disabled) {
+    background: #155cff;
+}
+.alarm-detail-ack:disabled {
+    background: #c6c6c6;
+    color: #888;
+    cursor: default;
+}
+.alarm-detail-ack svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.alarm-detail-ack:focus-visible {
+    outline: 2px solid #155cff;
+    outline-offset: 3px;
+}
+.alarm-detail-ticket-menu {
+    position: relative;
+}
+.alarm-detail-ticket-menu > summary {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #383838;
+    color: #fff;
+    font-size: 23px;
+    line-height: 1;
+}
+.alarm-detail-ticket-menu > summary:hover,
+.alarm-detail-ticket-menu[open] > summary {
+    background: #155cff;
+}
+.alarm-detail-ticket-menu .row-menu-panel {
+    position: fixed;
+}
 .alarm-detail-actions .button {
     height: 32px;
     min-height: 32px;
@@ -7265,6 +7844,9 @@ h6 {
     line-height: 1.4;
     overflow-wrap: anywhere;
     white-space: pre-wrap;
+}
+.alarm-detail-summary [data-detail='occurred'] {
+    white-space: pre-line;
 }
 .alarm-detail-summary a {
     color: #252525;
@@ -7405,13 +7987,12 @@ h6 {
 #alarm-detail-feedback:empty {
     display: none;
 }
-#alarm-detail-action-dialog {
-    width: 480px;
-    max-width: calc(100vw - 32px);
+#alarm-detail-action-error {
+    margin: 0;
+    color: #a32b2b;
 }
-#alarm-detail-action-form textarea {
-    width: 100%;
-    box-sizing: border-box;
+#alarm-detail-action-error:empty {
+    display: none;
 }
 @media (max-width: 800px) {
     .alarm-detail-summary {
@@ -7463,20 +8044,28 @@ h6 {
 }
 
 .alarm-status-checked::before {
-    content: '✓';
+    content: '';
+    display: inline-flex;
+    flex: none;
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+    background: #000 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='m6 10 2.7 2.7L14 7.4' fill='none' stroke='%23fff' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+    border-radius: 50%;
+    vertical-align: middle;
+}
+.alarm-table .alarm-status-checked {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 13px;
-    height: 13px;
-    margin-right: 4px;
-    border-radius: 50%;
-    background: #161616;
-    color: white;
-    font-size: 9px;
-    font-weight: 700;
-    line-height: 1;
-    vertical-align: middle;
+    gap: 5px;
+    vertical-align: top;
+}
+.alarm-table td small.alarm-status-checked {
+    display: flex;
+}
+.alarm-table .alarm-status-checked::before {
+    display: block;
+    margin-right: 0;
 }
 .alarm-history-pagination {
     display: flex;
@@ -7558,8 +8147,64 @@ h6 {
 .alarm-table small.alarm-status-checked {
     color: #252525;
 }
+.alarm-table .alarm-ticket-status {
+    color: #252525;
+}
 
 /* Escalation ticket details and Figma status timeline. */
+.alarm-ticket-action-section {
+    padding: 4px 0 18px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid #d8d8d8;
+}
+.alarm-ticket-action-section h2 {
+    margin: 0 0 16px;
+    font-size: 16px;
+    font-weight: 600;
+}
+.alarm-ticket-action-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px 28px;
+    margin: 0;
+}
+.alarm-ticket-action-grid dt {
+    color: #696969;
+    font-size: 14px;
+}
+.alarm-ticket-action-grid dd {
+    margin: 5px 0 0;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+.alarm-ticket-action-description {
+    grid-column: 1 / -1;
+}
+.alarm-ticket-action-timeline {
+    list-style: none;
+    margin: 20px 0 0;
+    padding: 0;
+}
+.alarm-ticket-action-timeline .alarm-ticket-event {
+    margin-bottom: 12px;
+}
+.alarm-ticket-action-timeline .alarm-ticket-event[hidden] {
+    display: none;
+}
+.alarm-ticket-action-timeline time {
+    white-space: normal;
+}
+#alarm-ticket-action-feedback {
+    color: #b4232a;
+}
+#alarm-ticket-action-feedback:empty {
+    display: none;
+}
+@media (max-width: 700px) {
+    .alarm-ticket-action-grid {
+        grid-template-columns: 1fr;
+    }
+}
 .alarm-ticket-layout {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -7598,6 +8243,9 @@ h6 {
 .alarm-ticket-event.reopen {
     border-left-color: #ec6337;
 }
+.alarm-ticket-event.closed {
+    border-left-color: #666;
+}
 .alarm-ticket-event h3 {
     font-size: 14px;
     line-height: 1.4;
@@ -7613,6 +8261,10 @@ h6 {
     margin: 0;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+}
+.alarm-ticket-event time {
+    display: block;
+    white-space: pre-line;
 }
 .alarm-ticket-event p:empty {
     display: none;
@@ -8060,29 +8712,9 @@ h6 {
     font-size: 16px;
 }
 
-/* Keep the Figma filter row compact; source and time filters remain available on demand. */
+/* Keep the visible filter row compact. */
 .alarm-filters .field {
     min-width: 0;
-}
-.alarm-extra-filters {
-    grid-column: 1 / -1;
-    font-size: 13px;
-    color: #666;
-}
-.alarm-extra-filters > summary {
-    cursor: pointer;
-    width: fit-content;
-}
-.alarm-extra-filter-fields {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
-    padding-top: 12px;
-}
-@media (max-width: 650px) {
-    .alarm-extra-filter-fields {
-        grid-template-columns: 1fr;
-    }
 }
 
 /* Port events share the same expandable record rows as diagnostic results. */
@@ -8517,4 +9149,72 @@ h6 {
     stroke: none;
     font-family: inherit;
     font-weight: 400;
+}
+
+/* Keep the compact front panel centered; wide banks can scroll from the first socket. */
+#view-ports .device-port-chassis {
+    justify-content: safe center;
+}
+#view-ports .device-port-table :is(th, td):nth-child(n + 6):nth-child(-n + 8) {
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+#view-ports .device-port-bank {
+    flex: 0 0 auto;
+}
+#view-ports .device-port-jack:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 3px;
+}
+
+/* Match the Figma front-panel proportions at the browser's CSS pixel scale. */
+#view-ports .device-port-chassis {
+    gap: 8px;
+    padding: 17px 7px;
+}
+#view-ports .device-port-bank {
+    gap: 3px;
+    padding: 3px;
+}
+#view-ports .device-port-pair,
+#view-ports .device-port-pair.single {
+    gap: 5px;
+    min-height: 55px;
+}
+#view-ports .device-port-pair.single {
+    justify-content: center;
+}
+#view-ports .device-port-jack,
+#view-ports .device-port-pair.single .device-port-jack {
+    width: 32px;
+    min-width: 32px;
+    height: 25px;
+    min-height: 25px;
+    padding: 0;
+    flex-direction: row;
+    gap: 0;
+}
+#view-ports .device-port-jack span,
+#view-ports .device-port-pair.single .device-port-jack span {
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    bottom: auto;
+    transform: translateX(-50%);
+    max-width: 48px;
+    padding: 0;
+    font-size: 9px;
+    line-height: 12px;
+    overflow: visible;
+}
+#view-ports .device-port-pair .device-port-jack:nth-child(2) span {
+    top: auto;
+    bottom: -16px;
+}
+#view-ports .device-port-jack svg {
+    width: 29px;
+    height: 22px;
+}
+#view-ports .device-port-jack.unknown {
+    color: #d0d0d0;
 }

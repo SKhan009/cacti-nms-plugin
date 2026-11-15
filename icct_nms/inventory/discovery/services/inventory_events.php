@@ -4,7 +4,7 @@
 function icct_nms_inventory_observe($poller)
 {
     if (PHP_SAPI !== 'cli') {
-        throw new RuntimeException('Inventory observations are collector-owned.');
+        throw new RuntimeException('Device observations are collector-owned.');
     }
     foreach (
         db_fetch_assoc_prepared(

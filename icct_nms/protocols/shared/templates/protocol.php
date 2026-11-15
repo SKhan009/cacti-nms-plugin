@@ -765,17 +765,7 @@ if ($failedProtocol === 'ntp') {
                                 </div>
                             <?php endif; ?>
                             <?php if ($group === 'ARP'): ?>
-                                <div
-                                    class="diagnostic-parameter"
-                                    data-diagnostic-parameter="arp_interface">
-                                    <?php icct_nms_input(
-                                        'Collector Interface (optional)',
-                                        'arp_interface',
-                                        $diag['arp_interface'] ?? '',
-                                        'text',
-                                        'maxlength="15" placeholder="All interfaces"',
-                                    ); ?>
-                                </div>
+                                <input type="hidden" name="arp_types_present" value="1">
                             <?php endif; ?>
                             <?php if ($group === 'Pathchar'): ?>
                                 <div

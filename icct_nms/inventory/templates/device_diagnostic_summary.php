@@ -57,8 +57,8 @@ if ($metrics): ?>
     <h5>Test details</h5>
     <dl class="diagnostic-summary-grid">
         <?php foreach ([
-            'Started' => $run['started_at'],
-            'Finished' => $run['finished_at'],
+            'Started' => icct_nms_display_time($run['started_at']),
+            'Finished' => icct_nms_display_time($run['finished_at']),
             'Collector' => $result['execution_host'] ?? '',
             'Target' => $reading['endpoint'] ?? $result['target'] ?? '',
             'Source IP' => $reading['source_ip'] ?? '',

@@ -10,11 +10,8 @@ const code = source.slice(
     source.indexOf('    function button('),
 );
 const controls = {
-    device: { value: '2' },
     severity: { value: 'Warning' },
     source: { value: 'Syslog' },
-    ack: { value: '0' },
-    esc: { value: '' },
     search: { value: 'link' },
     since: { value: '2026-11-04T10:00' },
     until: { value: '2026-11-04T11:00' },
@@ -26,6 +23,7 @@ const base = {
     source: 'Syslog',
     acknowledged: 0,
     escalated: 0,
+    ticket_state: '',
     occurred_epoch: epoch,
     first_seen: '2026-11-04 10:30:00',
     alarm_key: '1',
@@ -48,18 +46,26 @@ const context = {
     ],
     status: {},
     descending: true,
+    sortKey: 'occurred',
+    view: 'syslog',
+    selectedDevices: new Set(['2']),
+    ticketStatus: () => '—',
 };
 vm.createContext(context);
 vm.runInContext(code + '; result=filtered();', context);
-assert.equal(context.result.length, 1, 'Combined dropdown/source/time/ack filtering failed');
-controls.device.value = '';
+assert.equal(context.result.length, 1, 'Combined device, severity, source and time filtering failed');
+context.selectedDevices.clear();
 controls.severity.value = '';
 vm.runInContext('result=filtered()', context);
-assert.equal(context.result.length, 3, 'All must include every matching device and severity');
+assert.equal(context.result.length, 4, 'All must include every matching device and severity');
+context.rows.push({ ...base, host_id: 2, alarm_key: 'ticket', escalated: 1, ticket_state: 'Open' });
+context.selectedDevices.add('2');
+vm.runInContext('result=filtered()', context);
+assert.equal(context.result.length, 2, 'Selected devices must filter all matching alarms');
 controls.until.value = '2026-11-04T09:00';
 vm.runInContext('result=filtered()', context);
 assert.equal(context.result.length, 0);
 assert.match(context.status.textContent, /From/);
 console.log(
-    'PASS: combined source, Device/Severity dropdowns and All selections, acknowledgement, time windows and inverted-window validation.',
+    'PASS: combined alarm device, severity, source, search and time filters.',
 );

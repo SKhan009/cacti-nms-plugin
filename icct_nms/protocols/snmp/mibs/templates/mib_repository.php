@@ -14,9 +14,11 @@ endif; ?>
 <?php if ($mode === 'list'): ?>
     <div class="titlebar mib-browser-titlebar">
         <div>
-            <p class="breadcrumb">
-                <a href="dashboard/controllers/topology.php">Dashboard</a> / MIB Repository
-            </p>
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+                <a href="dashboard/controllers/topology.php">Dashboard</a>
+                <span aria-hidden="true">/</span>
+                <span aria-current="page">MIB Repository</span>
+            </nav>
             <h1><?= isset($repositoryBundle) ? icct_nms_h($repositoryBundle['name']) : 'MIB Repository' ?></h1>
         </div>
         <div class="mib-browser-title-actions">

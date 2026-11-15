@@ -3,12 +3,25 @@
     const dataElement = document.querySelector('#dashboardData');
     if (!dataElement) return;
     const data = JSON.parse(dataElement.textContent);
+    function dashboardTime(epoch) {
+        const parts = Object.fromEntries(
+            new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Asia/Kolkata',
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+            }).formatToParts(new Date(Number(epoch) * 1000)).map((part) => [part.type, part.value]),
+        );
+        return `${parts.day}-${parts.month}-${parts.year} ${parts.hour}:${parts.minute}:${parts.second}`;
+    }
     let preferences = data.preferences,
         readings = data.readings,
         mode = 'severity',
         saveAgain = false;
     const names = {
-            topology: 'Topology / Rack / Image / Map',
+            topology: 'Topology',
+            image: 'Image View',
+            map: 'Map View',
+            rack: 'Rack View',
             birds: 'Birds Eye View',
             alarms: 'Alarm Overview',
             ack: 'Ack Overview',
@@ -19,6 +32,32 @@
             problematic: 'Problematic Devices by Active Alarms Count',
             ntp: 'NTP Overview',
             netflow_talkers: 'NetFlow Top Talkers',
+        },
+        descriptions = {
+            topology: 'Explore device connections in topology, image, map, and rack views.',
+            image: 'Monitor devices through a visual, image-based representation.',
+            map: 'Locate and monitor sites on a geographical map.',
+            rack: 'Monitor rack-mounted devices and their physical positions.',
+            birds: 'Locate and monitor sites on a radar map.',
+            alarms: 'See active alarms across severity levels.',
+            ack: 'Compare acknowledged and unacknowledged alarms.',
+            escalation: 'Track escalated and pending alarms.',
+            frequent: 'See the alarms occurring most often.',
+            recent: 'Review the latest 25 alarms.',
+            ports: 'Monitor device interface and port status.',
+            problematic: 'Find devices with the most active alarms.',
+            ntp: 'Monitor NTP synchronization and offset.',
+            netflow_talkers: 'See devices generating the most network traffic.',
+        },
+        createDescriptions = {
+            topology: 'Helps you visualize network connections and relationships between devices.',
+            image: 'Helps you monitor devices through a visual, image-based representation.',
+            map: 'Helps you locate and monitor other ICCT sites on a geographical map.',
+            rack: 'Helps you monitor rack-mounted devices and their physical positions within a rack.',
+            birds: 'Helps you locate and monitor other ICCT sites on a radar map relative to your site.',
+            alarms: 'Helps you view the total number of active alarms across all severity levels.',
+            ack: 'Helps you view the total number of acknowledged and unacknowledged alarms.',
+            escalation: 'Helps you view escalated and pending alarms.',
         },
         colors = icctSeverityColors,
         palette = [
@@ -51,7 +90,6 @@
         return palette[hash % palette.length];
     }
     const select = document.querySelector('#dashboardSelect'),
-        picker = document.querySelector('.dashboard-widget-picker'),
         status = document.querySelector('#dashboardSaveStatus'),
         side = document.querySelector('#dashboardWidgets'),
         extras = document.querySelector('#dashboardExtraWidgets'),
@@ -69,6 +107,10 @@
     }
     function widgets() {
         return preferences.dashboards[preferences.selected].widgets;
+    }
+    const viewKeys = ['topology', 'image', 'rack', 'map'];
+    function views() {
+        return preferences.dashboards[preferences.selected].views || viewKeys;
     }
     preferences.dashboards.forEach((dashboard) => {
         dashboard.columns = 'auto';
@@ -100,13 +142,13 @@
                         body,
                         credentials: 'same-origin',
                     });
-                    if (!r.ok) throw Error();
+                    if (!r.ok) throw Error(`HTTP ${r.status}`);
                     const stored = await r.json();
                     if (!stored || !Array.isArray(stored.dashboards)) throw Error();
                     reportStatus('Dashboard saved successfully.', true);
                 } catch (e) {
                     ok = false;
-                    reportStatus('Layout could not be saved. Click to retry.');
+                    reportStatus(`Layout could not be saved (${e.message}). Click to retry.`);
                 }
             } while (saveAgain);
             return ok;
@@ -149,6 +191,15 @@
             select.append(option);
         });
         select.value = preferences.selected;
+        const allowedViews = views();
+        document.querySelectorAll('.icct-view-tabs [data-view]').forEach((tab) => {
+            tab.hidden = !allowedViews.includes(tab.dataset.view);
+        });
+        const activeTab = document.querySelector('.icct-view-tabs [aria-selected="true"]');
+        if (activeTab?.hidden) {
+            const first = document.querySelector('.icct-view-tabs [data-view]:not([hidden])');
+            first?.click();
+        }
         document.querySelector('#dashboardAdd').disabled = preferences.dashboards.length >= 5;
         document
             .querySelectorAll('[data-widget]')
@@ -169,9 +220,6 @@
             grid.append(empty);
         }
         empty.hidden = widgets().length !== 0;
-        document.querySelector('#dashboardDelete').disabled = preferences.dashboards.length === 1;
-        document.querySelector('#dashboardUndo').hidden =
-            !preferences.deleted || preferences.dashboards.length >= 5;
         window.dispatchEvent(new Event('resize'));
     }
     select.addEventListener('change', async () => {
@@ -185,185 +233,362 @@
         if (widgets().includes('netflow_talkers')) refreshReadings();
         save();
     });
-    const nameDialog = document.querySelector('#dashboardNameDialog'),
-        nameInput = document.querySelector('#dashboardName');
-    let nameMode = 'create';
-    function openDashboardName(mode) {
-        nameMode = mode;
-        nameInput.setCustomValidity('');
-        nameInput.value =
-            mode === 'rename'
-                ? preferences.dashboards[preferences.selected].name ||
-                  'Dashboard #' + (preferences.selected + 1)
-                : '';
-        document.querySelector('#dashboardNameTitle').textContent =
-            mode === 'rename' ? 'Rename dashboard' : 'Save dashboard view';
-        const nameHelp = document.querySelector('#dashboardNameHelp');
-        nameHelp.dataset.tooltip =
-            mode === 'rename'
-                ? 'Update the name of the selected dashboard.'
-                : 'Save the current cards, their order and column layout as a new dashboard.';
-        nameHelp.setAttribute('aria-label', nameHelp.dataset.tooltip);
-        document.querySelector('#dashboardNameSubmit').textContent =
-            mode === 'rename' ? 'Save Name' : 'Save Dashboard';
-        nameDialog.showModal();
-        nameInput.focus();
-        if (mode === 'rename') nameInput.select();
+    const addWidget = document.querySelector('#dashboardAddWidget'),
+        addDashboard = document.querySelector('#dashboardAdd'),
+        widgetEditor = document.querySelector('#dashboardWidgetEditor'),
+        dashboardToolbar = document.querySelector('.dashboard-toolbar'),
+        dashboardConfigTitle = document.querySelector('.dashboard-config-title'),
+        choices = document.querySelector('#dashboardWidgetChoices'),
+        widgetSave = document.querySelector('#dashboardWidgetSave'),
+        widgetNameRow = document.querySelector('#dashboardWidgetNameRow'),
+        widgetName = document.querySelector('#dashboardWidgetName'),
+        widgetError = document.querySelector('#dashboardWidgetError');
+    const configurationPage = document.querySelector('.icct-map-page')?.dataset.dashboardConfig === '1';
+    let editorDashboardIndex = preferences.selected;
+    let widgetEditorMode = 'widgets';
+    function editorDashboard() {
+        return preferences.dashboards[editorDashboardIndex];
     }
-    document.querySelector('#dashboardSave').addEventListener('click', async function () {
-        this.disabled = true;
-        try {
-            if (await save()) reportStatus('Dashboard saved successfully.', true);
-        } finally {
-            this.disabled = false;
-        }
-    });
-    document
-        .querySelector('#dashboardRename')
-        .addEventListener('click', () => openDashboardName('rename'));
-    const deleteDialog = document.querySelector('#dashboardDeleteDialog');
-    let deleteIndex = null;
-    document.querySelector('#dashboardDelete').addEventListener('click', () => {
-        if (preferences.dashboards.length <= 1) return;
-        deleteIndex = preferences.selected;
-        document.querySelector('#dashboardDeleteMessage').textContent =
-            'Delete “' + preferences.dashboards[deleteIndex].name + '”?';
-        deleteDialog.showModal();
-        document.querySelector('#dashboardDeleteCancel').focus();
-    });
-    document.querySelector('#dashboardDeleteCancel').addEventListener('click', () => {
-        deleteIndex = null;
-        deleteDialog.close();
-    });
-    deleteDialog.addEventListener('cancel', () => {
-        deleteIndex = null;
-    });
-    document.querySelector('#dashboardDeleteConfirm').addEventListener('click', () => {
-        if (
-            deleteIndex === null ||
-            deleteIndex !== preferences.selected ||
-            preferences.dashboards.length <= 1
-        ) {
-            deleteDialog.close();
-            return;
-        }
-        const index = deleteIndex;
-        deleteIndex = null;
-        deleteDialog.close();
-        preferences.deleted = { index, dashboard: preferences.dashboards[index] };
-        preferences.dashboards.splice(index, 1);
-        preferences.selected = Math.min(index, preferences.dashboards.length - 1);
-        const site = preferences.dashboards[preferences.selected].site_id ?? 0;
-        if (site !== data.site_id) {
-            save().then((ok) => {
-                if (ok) location.assign(siteUrl(site));
+    function editorViews() {
+        return editorDashboard().views || viewKeys;
+    }
+    function showSavedMessage(message, error = false) {
+        const field = document.querySelector('#dashboardSavedMessage');
+        if (!field) return;
+        field.textContent = message;
+        field.hidden = !message;
+        field.classList.toggle('is-error', error);
+        field.classList.toggle('is-neutral', message === 'No changes to save.');
+    }
+    function showConfigurationList(message = '') {
+        widgetEditor.hidden = true;
+        document.querySelector('#dashboardSavedList').hidden = false;
+        renderSavedDashboards();
+        showSavedMessage(message);
+        window.scrollTo({ top: 0 });
+    }
+    function renderSavedDashboards() {
+        if (!configurationPage) return;
+        const rows = document.querySelector('#dashboardSavedRows');
+        rows.replaceChildren();
+        document.querySelector('#dashboardSavedCount').textContent =
+            `${preferences.dashboards.length} of 5 dashboards`;
+        document.querySelector('#dashboardConfigAdd').disabled = preferences.dashboards.length >= 5;
+        preferences.dashboards.forEach((dashboard, index) => {
+            const row = element('tr');
+            row.classList.toggle('is-current', index === editorDashboardIndex);
+            const title = element('td');
+            title.append(element('strong', dashboard.name || `Dashboard #${index + 1}`));
+            if (index === preferences.selected) title.append(element('small', 'Currently displayed dashboard'));
+            const viewNames = (dashboard.views || viewKeys).map((key) => names[key]);
+            const viewsCell = element('td', viewNames.join(', '));
+            const widgetNames = dashboard.widgets.filter((key) => key !== 'topology').map((key) => names[key]);
+            const widgetsCell = element('td', widgetNames.length ? widgetNames.join(', ') : 'No additional widgets');
+            const action = element('td');
+            action.className = 'dashboard-saved-actions';
+            const buttons = element('div');
+            buttons.className = 'dashboard-saved-action-buttons';
+            const displayName = dashboard.name || `Dashboard #${index + 1}`;
+            const iconButton = (label, paths) => {
+                const button = element('button');
+                button.type = 'button';
+                button.setAttribute('aria-label', `${label} ${displayName}`);
+                button.title = label;
+                const icon = svg('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true' });
+                paths.forEach((path) => icon.append(svg('path', { d: path })));
+                button.append(icon);
+                return button;
+            };
+            const viewButton = iconButton('View', ['M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z', 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z']);
+            const editButton = iconButton('Edit', ['M4 20h4l11-11-4-4L4 16v4Z', 'm13 7 4 4']);
+            const deleteButton = iconButton('Delete', ['M4 7h16', 'M9 7V4h6v3', 'M6 7l1 13h10l1-13', 'M10 10v7', 'M14 10v7']);
+            const open = (mode) => {
+                editorDashboardIndex = index;
+                showSavedMessage('');
+                openWidgetEditor(mode);
+                window.scrollTo({ top: 0 });
+            };
+            viewButton.addEventListener('click', () => open('view'));
+            editButton.addEventListener('click', () => open('edit'));
+            deleteButton.disabled = preferences.dashboards.length === 1;
+            deleteButton.addEventListener('click', () => {
+                buttons.hidden = true;
+                const confirmation = element('div');
+                confirmation.className = 'dashboard-delete-confirmation';
+                confirmation.append(element('span', 'Delete this dashboard?'));
+                const confirm = element('button', 'Delete');
+                confirm.type = 'button';
+                confirm.className = 'is-danger';
+                const cancel = element('button', 'Cancel');
+                cancel.type = 'button';
+                cancel.addEventListener('click', () => {
+                    confirmation.remove();
+                    buttons.hidden = false;
+                });
+                confirm.addEventListener('click', async () => {
+                    confirm.disabled = true;
+                    const removed = preferences.dashboards.splice(index, 1)[0];
+                    const oldSelected = preferences.selected;
+                    preferences.selected = Math.min(
+                        oldSelected > index ? oldSelected - 1 : oldSelected,
+                        preferences.dashboards.length - 1,
+                    );
+                    if (await save()) {
+                        editorDashboardIndex = preferences.selected;
+                        layout();
+                        showConfigurationList('Dashboard deleted successfully.');
+                    } else {
+                        preferences.dashboards.splice(index, 0, removed);
+                        preferences.selected = oldSelected;
+                        layout();
+                        renderSavedDashboards();
+                        showSavedMessage('Dashboard could not be deleted.', true);
+                    }
+                });
+                confirmation.append(confirm, cancel);
+                action.append(confirmation);
             });
+            buttons.append(viewButton, editButton, deleteButton);
+            action.append(buttons);
+            row.append(title, viewsCell, widgetsCell, action);
+            rows.append(row);
+        });
+    }
+    function closeWidgetEditor() {
+        if (configurationPage) {
+            showConfigurationList();
             return;
         }
-        layout();
-        save();
-    });
-    document.querySelector('#dashboardUndo').addEventListener('click', () => {
-        if (!preferences.deleted || preferences.dashboards.length >= 5) return;
-        const { index, dashboard } = preferences.deleted;
-        const position = Math.min(index, preferences.dashboards.length);
-        preferences.dashboards.splice(position, 0, dashboard);
-        preferences.selected = position;
-        delete preferences.deleted;
-        if ((dashboard.site_id ?? 0) !== data.site_id) {
-            save().then((ok) => {
-                if (ok) location.assign(siteUrl(dashboard.site_id ?? 0));
+        widgetEditor.hidden = true;
+        dashboardToolbar.hidden = false;
+        grid.hidden = false;
+        if (dashboardConfigTitle) dashboardConfigTitle.hidden = false;
+        (widgetEditorMode === 'create' ? addDashboard : addWidget).focus();
+    }
+    function widgetPreview(key, preview) {
+        const source = document.querySelector(`[data-widget="${key}"]`);
+        if (!source) return;
+        const copy = source.cloneNode(true);
+        copy.hidden = false;
+        copy.querySelectorAll('[data-widget]').forEach((node) => {
+            node.removeAttribute('data-widget');
+        });
+        copy.removeAttribute('data-widget');
+        copy.inert = true;
+        copy.classList.add('dashboard-widget-preview-copy');
+        const frame = element('span');
+        frame.className = 'dashboard-widget-preview-live';
+        frame.setAttribute('aria-hidden', 'true');
+        frame.append(copy);
+        preview.append(frame);
+    }
+    function widgetIllustration(key, preview) {
+        if (key === 'map') {
+            const image = document.createElement('img');
+            image.className = 'dashboard-widget-illustration';
+            image.src = 'shared/assets/maps/india-preview.svg';
+            image.alt = '';
+            preview.append(image);
+            return;
+        }
+        const art = svg('svg', { viewBox: '0 0 300 150', 'aria-hidden': 'true' });
+        art.classList.add('dashboard-widget-illustration');
+        const add = (tag, attributes) => art.append(svg(tag, attributes));
+        if (key === 'topology' || key === 'image') {
+            add('path', { d: 'M55 45v10h190V45M115 45v10M185 45v10M150 55v5M150 95v10H55v5M150 105h95v5M115 105v5M185 105v5', fill: 'none', stroke: '#c8c8c8' });
+            [35, 95, 155, 215].forEach((x) => {
+                add('rect', { x, y: 20, width: 40, height: 25, fill: '#e4e4e4', stroke: '#c8c8c8' });
+                add('rect', { x, y: 110, width: 40, height: 25, fill: '#e4e4e4', stroke: '#c8c8c8' });
             });
-            return;
-        }
-        layout();
-        save();
-    });
-    document.querySelector('#dashboardAdd').addEventListener('click', () => {
-        if (preferences.dashboards.length >= 5) return;
-        openDashboardName('create');
-    });
-    document
-        .querySelector('#dashboardNameCancel')
-        .addEventListener('click', () => nameDialog.close());
-    document.querySelector('#dashboardNameForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const name = nameInput.value.trim();
-        if (!name) {
-            nameInput.setCustomValidity('Enter a dashboard name.');
-            nameInput.reportValidity();
-            return;
-        }
-        const previous = JSON.parse(JSON.stringify(preferences));
-        if (nameMode === 'rename') {
-            preferences.dashboards[preferences.selected].name = name;
+            add('rect', { x: 90, y: 60, width: 120, height: 35, fill: '#dedede', stroke: '#c8c8c8' });
+        } else if (key === 'rack') {
+            add('rect', { x: 112, y: 15, width: 76, height: 120, fill: '#e5e5e5', stroke: '#c8c8c8' });
+            [30, 57, 84, 111].forEach((y) => {
+                add('rect', { x: 119, y, width: 62, height: 18, fill: '#f2f2f2', stroke: '#bdbdbd' });
+                add('line', { x1: 125, y1: y + 6, x2: 169, y2: y + 6, stroke: '#c4c4c4' });
+            });
+        } else if (key === 'birds') {
+            [20, 40, 60].forEach((r) => add('circle', { cx: 150, cy: 75, r, fill: 'none', stroke: '#c7c7c7' }));
+            [0, 45, 90, 135].forEach((angle) => {
+                const rad = angle * Math.PI / 180;
+                add('line', { x1: 150 - 60 * Math.cos(rad), y1: 75 - 60 * Math.sin(rad), x2: 150 + 60 * Math.cos(rad), y2: 75 + 60 * Math.sin(rad), stroke: '#d0d0d0' });
+            });
+        } else if (['alarms', 'ack', 'escalation'].includes(key)) {
+            add('circle', { cx: 125, cy: 75, r: 45, fill: 'none', stroke: '#bcbcbc', 'stroke-width': 25 });
+            add('circle', { cx: 125, cy: 75, r: 45, fill: 'none', stroke: '#d7d7d7', 'stroke-width': 25, 'stroke-dasharray': '90 283' });
+            [50, 68, 86, 104].forEach((y) => add('rect', { x: 195, y, width: 54, height: 9, fill: '#c8c8c8' }));
         } else {
-            if (preferences.dashboards.length >= 5) return;
-            const current = preferences.dashboards[preferences.selected];
+            [25, 45, 75, 60, 30].forEach((height, index) => add('rect', { x: 65 + index * 36, y: 135 - height, width: 25, height, fill: '#dedede', stroke: '#c8c8c8' }));
+        }
+        preview.append(art);
+    }
+    function sizeWidgetPreviews() {
+        choices.querySelectorAll('.dashboard-widget-choice-preview').forEach((preview) => {
+            const sourceWidth = 520;
+            const copy = preview.querySelector('.dashboard-widget-preview-copy');
+            const sourceHeight = copy?.scrollHeight || 450;
+            const scale = Math.min(preview.clientWidth / sourceWidth, preview.clientHeight / sourceHeight, 1);
+            preview.style.setProperty('--widget-preview-width', `${sourceWidth}px`);
+            preview.style.setProperty('--widget-preview-scale', String(scale));
+            preview.style.setProperty('--widget-preview-left', `${Math.max(0, (preview.clientWidth - sourceWidth * scale) / 2)}px`);
+        });
+    }
+    window.addEventListener('resize', () => {
+        if (!widgetEditor.hidden) sizeWidgetPreviews();
+    });
+    function openWidgetEditor(mode) {
+        if (mode === 'create' && preferences.dashboards.length >= 5) return;
+        widgetEditorMode = mode;
+        widgetEditor.classList.toggle('dashboard-widget-editor-create', mode === 'create');
+        widgetEditor.classList.toggle('dashboard-widget-editor-view', mode === 'view');
+        widgetNameRow.hidden = !['create', 'edit', 'view'].includes(mode);
+        widgetName.value = mode === 'create' ? '' : editorDashboard().name;
+        widgetName.readOnly = mode === 'view';
+        widgetError.hidden = true;
+        widgetError.classList.remove('is-success');
+        document.querySelector('#dashboardWidgetTitle').textContent =
+            mode === 'create' ? 'Add Dashboard' :
+                mode === 'edit' ? 'Edit Dashboard' :
+                    mode === 'view' ? 'View Dashboard' : 'Select Widgets';
+        document.querySelector('#dashboardWidgetHelp').textContent =
+            mode === 'create' ? 'Select Widgets' :
+                mode === 'view' ? 'Selected widgets on this dashboard.' :
+                    'Choose the widgets to show on this dashboard.';
+        widgetSave.textContent = mode === 'create' ? 'Add' : mode === 'edit' ? 'Save' : 'Save Widgets';
+        document.querySelector('#dashboardWidgetEdit').hidden = mode !== 'view';
+        widgetSave.hidden = mode === 'view';
+        widgetSave.disabled = mode === 'create';
+        choices.replaceChildren();
+        Object.entries(names).forEach(([key, name]) => {
+            const card = element('label');
+            card.className = 'dashboard-widget-choice';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.disabled = mode === 'view';
+            checkbox.value = key;
+            checkbox.checked = mode === 'create'
+                ? ['topology', 'image', 'rack', 'birds', 'alarms'].includes(key)
+                : viewKeys.includes(key) ? editorViews().includes(key) : editorDashboard().widgets.includes(key);
+            card.classList.toggle('is-selected', checkbox.checked);
+            checkbox.addEventListener('change', () => {
+                card.classList.toggle('is-selected', checkbox.checked);
+                widgetError.hidden = true;
+                widgetError.classList.remove('is-success');
+            });
+            const heading = element('span', mode === 'create' && key === 'alarms' ? 'Alarm’s Overview' : name);
+            heading.className = 'dashboard-widget-choice-title';
+            const description = element('span', mode === 'create' ? (createDescriptions[key] || descriptions[key]) : descriptions[key]);
+            description.className = 'dashboard-widget-choice-description';
+            const preview = element('span');
+            preview.className = 'dashboard-widget-choice-preview';
+            preview.dataset.preview = key;
+            if (key === 'topology' || mode === 'create' || viewKeys.includes(key)) widgetIllustration(key, preview);
+            else widgetPreview(key, preview);
+            card.append(checkbox, heading, description, preview);
+            choices.append(card);
+        });
+        dashboardToolbar.hidden = true;
+        grid.hidden = true;
+        if (dashboardConfigTitle && !configurationPage) dashboardConfigTitle.hidden = true;
+        if (configurationPage) document.querySelector('#dashboardSavedList').hidden = true;
+        widgetEditor.hidden = false;
+        sizeWidgetPreviews();
+        if (!configurationPage || mode === 'create' || mode === 'edit')
+            (mode === 'create' || mode === 'edit' ? widgetName : choices.querySelector('input')).focus();
+    }
+    addWidget.addEventListener('click', () => openWidgetEditor('widgets'));
+    addDashboard.addEventListener('click', () => openWidgetEditor('create'));
+    document.querySelector('#dashboardConfigAdd')?.addEventListener('click', () => openWidgetEditor('create'));
+    widgetName.addEventListener('input', () => {
+        if (widgetEditorMode === 'create' || widgetEditorMode === 'edit')
+            widgetSave.disabled = !widgetName.value.trim();
+        widgetError.hidden = true;
+    });
+    document.querySelector('#dashboardWidgetCancel').addEventListener('click', closeWidgetEditor);
+    document.querySelector('#dashboardWidgetEdit').addEventListener('click', () => openWidgetEditor('edit'));
+    widgetSave.addEventListener('click', async () => {
+        const selected = [...choices.querySelectorAll('.dashboard-widget-choice > input:checked')]
+            .map((input) => input.value);
+        const selectedViews = viewKeys.filter((key) => selected.includes(key));
+        if (!selectedViews.length) {
+            widgetError.textContent = 'Select at least one dashboard view.';
+            widgetError.hidden = false;
+            return;
+        }
+        if (widgetEditorMode === 'create') {
+            const name = widgetName.value.trim();
+            if (!name) {
+                widgetName.reportValidity();
+                return;
+            }
+            const previousSelected = preferences.selected;
+            const current = preferences.dashboards[previousSelected];
             preferences.dashboards.push({
                 name,
                 columns: 'auto',
                 site_id: current.site_id ?? 0,
-                widgets: [...current.widgets],
+                views: selectedViews,
+                widgets: ['topology', ...selected.filter((key) => !viewKeys.includes(key))],
             });
-            preferences.selected = preferences.dashboards.length - 1;
-        }
-        const submit = document.querySelector('#dashboardNameSubmit');
-        submit.disabled = true;
-        layout();
-        try {
-            if (await save()) {
-                nameDialog.close();
-            } else {
-                preferences = previous;
-                layout();
+            if (!configurationPage) preferences.selected = preferences.dashboards.length - 1;
+            widgetSave.disabled = true;
+            try {
+                if (await save()) {
+                    layout();
+                    if (configurationPage) showConfigurationList('Dashboard added successfully.');
+                    else closeWidgetEditor();
+                    if (selected.includes('ntp') || selected.includes('netflow_talkers')) refreshReadings();
+                } else {
+                    preferences.dashboards.pop();
+                    preferences.selected = previousSelected;
+                    widgetError.textContent = 'Dashboard could not be added. Please try again.';
+                    widgetError.hidden = false;
+                }
+            } finally {
+                widgetSave.disabled = false;
             }
-        } finally {
-            submit.disabled = false;
-        }
-    });
-    nameInput.addEventListener('input', () => nameInput.setCustomValidity(''));
-    const addWidget = document.querySelector('#dashboardAddWidget'),
-        choices = document.querySelector('#dashboardWidgetChoices');
-    function closePicker() {
-        choices.hidden = true;
-        addWidget.setAttribute('aria-expanded', 'false');
-    }
-    addWidget.addEventListener('click', () => {
-        if (!choices.hidden) {
-            closePicker();
             return;
         }
-        choices.replaceChildren();
-        Object.entries(names)
-            .filter(([key]) => key !== 'topology')
-            .forEach(([key, name]) => {
-                const button = element(
-                    'button',
-                    name + (widgets().includes(key) ? ' — Added' : ''),
-                );
-                button.type = 'button';
-                button.disabled = widgets().includes(key);
-                button.addEventListener('click', () => {
-                    widgets().push(key);
-                    layout();
-                    save();
-                    if (key === 'ntp' || key === 'netflow_talkers') refreshReadings();
-                    closePicker();
-                    addWidget.focus();
-                });
-                choices.append(button);
-            });
-        choices.hidden = false;
-        addWidget.setAttribute('aria-expanded', 'true');
-    });
-    document.addEventListener('click', (e) => {
-        if (!picker.contains(e.target)) closePicker();
-    });
-    picker.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closePicker();
-            addWidget.focus();
+        const previous = [...editorDashboard().widgets];
+        const previousViews = [...editorViews()];
+        const previousName = editorDashboard().name;
+        const nextName = widgetEditorMode === 'edit' ? widgetName.value.trim() : previousName;
+        if (!nextName) {
+            widgetName.reportValidity();
+            return;
+        }
+        const selectedWidgets = selected.filter((key) => !viewKeys.includes(key));
+        const next = ['topology', ...previous.filter((key) => key !== 'topology' && selectedWidgets.includes(key)),
+            ...selectedWidgets.filter((key) => !previous.includes(key))];
+        if (next.join('|') === previous.join('|') && selectedViews.join('|') === previousViews.join('|') && nextName === previousName) {
+            if (configurationPage) {
+                showConfigurationList('No changes to save.');
+            } else closeWidgetEditor();
+            return;
+        }
+        editorDashboard().widgets = next;
+        editorDashboard().views = selectedViews;
+        editorDashboard().name = nextName;
+        layout();
+        widgetSave.disabled = true;
+        try {
+            if (await save()) {
+                if (configurationPage) {
+                    showConfigurationList('Dashboard saved successfully.');
+                } else closeWidgetEditor();
+                if (next.includes('ntp') || next.includes('netflow_talkers')) refreshReadings();
+            } else {
+                editorDashboard().widgets = previous;
+                editorDashboard().views = previousViews;
+                editorDashboard().name = previousName;
+                layout();
+                if (configurationPage) {
+                    widgetError.textContent = 'Dashboard could not be saved.';
+                    widgetError.hidden = false;
+                }
+            }
+        } finally {
+            widgetSave.disabled = false;
         }
     });
     document.querySelectorAll('[data-remove-widget]').forEach((button) =>
@@ -926,11 +1151,7 @@
                 dot = element('i'),
                 heading = element('span'),
                 name = element('strong', alarm.name),
-                when = alarm.time
-                    ? new Date(alarm.time * 1000).toLocaleString('en-IN', {
-                          timeZone: 'Asia/Kolkata',
-                      })
-                    : 'Time unavailable',
+                when = alarm.time ? dashboardTime(alarm.time) : 'Time unavailable',
                 meta = element('small', when + ' · ' + alarm.device);
             dot.style.background = colors[alarm.severity] || '#999';
             dot.title = alarm.severity;
@@ -961,17 +1182,8 @@
                 'inventory/controllers/device.php?id=' +
                 alarm.device_id +
                 '&view=1#' +
-                ({ 'SNMP Traps': 'view-traps', Syslog: 'view-syslog' }[alarm.source] ||
+                ({ 'SNMP Traps': 'view-traps', Syslog: 'view-syslog', NetFlow: 'view-netflow' }[alarm.source] ||
                     'view-fcaps');
-            if (alarm.source === 'NetFlow' && alarm.alarm_key) {
-                device.textContent = 'NetFlow finding →';
-                device.href =
-                    'inventory/controllers/device.php?id=' +
-                    alarm.device_id +
-                    '&view=1&netflow_alarm=' +
-                    encodeURIComponent(alarm.alarm_key) +
-                    '#view-netflow';
-            }
             links.append(device);
             if (alarm.alarm_key) {
                 const record = element('a', 'Alarm Details →');
@@ -1355,7 +1567,7 @@
         inventoryCursor = Math.max(inventoryCursor, ...rows.map((row) => Number(row.id)));
         if (rows.length && typeof window.icctShowMessage === 'function')
             window.icctShowMessage({
-                title: 'Inventory updated',
+                title: 'Device Mgmt updated',
                 text:
                     rows
                         .slice(0, 3)
@@ -1368,8 +1580,8 @@
     async function refreshReadings(manual = false) {
         if (refreshPending || (!manual && document.hidden)) return;
         refreshPending = true;
-        const button = document.querySelector('#birdsRefresh');
-        button.disabled = true;
+        const buttons = [document.querySelector('#birdsRefresh'), document.querySelector('#dashboardRefresh')];
+        buttons.forEach((button) => { button.disabled = true; });
         try {
             const url = siteUrl(data.site_id);
             url.searchParams.set('dashboard_readings', '1');
@@ -1407,10 +1619,14 @@
             reportStatus('Widget refresh failed. Showing last received readings.');
         } finally {
             refreshPending = false;
-            button.disabled = false;
+            buttons.forEach((button) => { button.disabled = false; });
         }
     }
     document.querySelector('#birdsRefresh').addEventListener('click', () => refreshReadings(true));
+    document.querySelector('#dashboardRefresh').addEventListener('click', () => {
+        document.dispatchEvent(new Event('icct:refresh-topology'));
+        refreshReadings(true);
+    });
     const refreshSeconds = Number(preferences.refresh_seconds) || 30;
     setInterval(refreshReadings, Math.max(5, refreshSeconds) * 1000);
     document.dispatchEvent(new CustomEvent('icct:refresh-interval', { detail: refreshSeconds }));
@@ -1428,4 +1644,5 @@
     portsOverview();
     problematicDevices();
     inventoryChanges();
+    if (configurationPage) showConfigurationList();
 })();

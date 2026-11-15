@@ -61,7 +61,7 @@ if ($serialView && (int) $old['snmp_version'] === 0):
                                 <td><?= icct_nms_h($reading['value'] ?? '—') ?></td>
                                 <td><?= icct_nms_h($field['unit']) ?></td>
                                 <td><?= icct_nms_h(ucfirst($reading['status'])) ?></td>
-                                <td><?= icct_nms_h($reading['observed_at'] ?? 'Awaiting collection') ?></td>
+                                <td><?= empty($reading['observed_at']) ? 'Awaiting collection' : icct_nms_time_cell($reading['observed_at']) ?></td>
                             </tr>
                         <?php
                         endforeach; ?>
@@ -79,7 +79,7 @@ if ($serialView && (int) $old['snmp_version'] === 0):
     </section>
 <?php return;
 endif;
-$portView = icct_backend_ports_view($old);
+$portView = icct_nms_config_ports_view($old);
 $states = [
     1 => 'UP',
     2 => 'DOWN',
@@ -89,57 +89,78 @@ $states = [
     6 => 'NOT PRESENT',
     7 => 'LOWER LAYER DOWN',
 ];
+if (!isset($profile)) {
+    $classification = db_fetch_row_prepared(
+        'SELECT category_id,device_type FROM plugin_icct_nms_device_classification WHERE host_id=?',
+        [$id],
+    );
+    foreach (icct_nms_device_types() as $type) {
+        if ((int) $type['category_id'] === (int) ($classification['category_id'] ?? 0) &&
+            $type['name'] === ($classification['device_type'] ?? '')
+        ) {
+            $profile = $type;
+            break;
+        }
+    }
+}
 $slots = icct_nms_port_slots($portView['ports'], $profile['physical_ports'] ?? null);
 $physicalPorts = array_values(
     array_filter($slots['chassis'], static fn ($port) => empty($port['placeholder'])),
 );
-$allPorts = $portView['ports'];
-$portGroups = [
-    'physical' => $physicalPorts,
-    'software' => array_values(array_filter($allPorts, static fn ($port) => icct_nms_port_kind($port) === 'Software')),
-    'unclassified' => array_values(array_filter($allPorts, static fn ($port) => icct_nms_port_kind($port) === 'Unclassified')),
-];
-$portTab = $_GET['ports_tab'] ?? 'physical';
-if ($portTab === 'interfaces' || !in_array($portTab, ['physical', 'software', 'unclassified', 'history'], true)) {
-    $portTab = 'physical';
-}
+$visualHardware = icct_nms_visual_hardware_ports($portView['ports']);
+$usbPanel = icct_nms_usb_panel_ports($portView['usb_hosts'] ?? [], $visualHardware);
+$physicalPorts = array_merge($physicalPorts, $visualHardware);
+$softwarePorts = array_values(array_filter(
+    $slots['ports'],
+    static fn ($port) => empty($port['hardware']) && icct_nms_port_kind($port) === 'Software',
+));
+$allPorts = array_merge($physicalPorts, $softwarePorts);
+$portTab = ($_GET['ports_tab'] ?? 'interfaces') === 'history' ? 'history' : 'interfaces';
 $portHistoryActive = $portTab === 'history';
-$portView['ports'] = $portHistoryActive ? [] : $portGroups[$portTab];
-$isPhysicalTab = $portTab === 'physical';
-$portConnections = $portHistoryActive ? [] : icct_nms_port_connections($id, $portView['ports'], $isPhysicalTab);
-// Software interfaces use the same tiles, with one tile per reported interface.
-$portDiagram = match ($portTab) {
-    'physical' => $slots['chassis'],
-    'software' => $portView['ports'],
-    default => [],
+$portView['ports'] = $portHistoryActive ? [] : $allPorts;
+$isPhysicalTab = false;
+$portConnections = $portHistoryActive || !$portView['fresh']
+    ? [] : icct_nms_port_connections($id, $portView['ports'], true);
+$portBanks = $portHistoryActive ? [] : array_merge(
+    array_chunk($slots['chassis'], 16),
+    array_chunk($usbPanel, 16),
+);
+$portTabs = ['interfaces' => 'Interface/Port', 'history' => 'Port alarm history'];
+$portAvailability = static function ($port) use ($portView) {
+    if (!empty($port['placeholder']) || !($port['fresh'] ?? $portView['fresh'])) {
+        return 'Unknown';
+    }
+    if (!empty($port['hardware'])) {
+        return match ($port['status'] ?? '') {
+            'connected' => 'In use',
+            'disconnected', 'Not present' => 'Not in use',
+            'Enumerated' => 'Present',
+            default => 'Unknown',
+        };
+    }
+    return match ($port['status'] ?? '') {
+        'In use', 'connected' => 'In use',
+        'Available (link down)', 'Disabled', 'disconnected', 'Not present', 'Dormant', 'Lower layer down' => 'Not in use',
+        default => 'Unknown',
+    };
 };
-$portTabs = ['physical' => 'Physical ports', 'software' => 'Software interfaces'];
-if ($portGroups['unclassified']) {
-    $portTabs['unclassified'] = 'Unclassified interfaces';
-}
-$portTabs['history'] = 'Port alarm history';
-$portAvailability = static fn ($port) => match ($port['status']) {
-    'In use' => 'In use',
-    'Available (link down)' => 'Not in use',
-    'Disabled' => 'Disabled',
-    default => 'Unknown',
+$portTone = static function ($port) use ($portView) {
+    if (!empty($port['placeholder']) || !($port['fresh'] ?? $portView['fresh'])) {
+        return 'unknown';
+    }
+    return match ($port['oper'] ?? null) {
+        1 => 'up',
+        2, 7 => 'down',
+        default => 'unknown',
+    };
 };
-$portTone = static fn ($port) => !empty($port['placeholder']) || !$portView['fresh']
-    ? 'unknown'
-    : (
-        ($port['admin'] ?? null) === 2 || in_array($port['oper'] ?? null, [2, 7], true)
-        ? 'down'
-        : (($port['oper'] ?? null) === 1
-            ? 'up'
-            : 'unknown')
-    );
 ?>
 <section
     id="view-ports"
     data-device-view-panel="ports"
     hidden>
     <h2 class="device-help-heading">Interfaces/Ports <?php
-    $headingHelpText = 'Groups use the device-reported connector and interface type. Virtual machines can present Ethernet adapters as physical-facing interfaces. Unknown types remain unclassified.';
+    $headingHelpText = 'Groups use the device-reported connector and interface type. Network connection details come from LLDP/CDP or learned MAC and IP observations. Power inputs appear when the monitored Linux device reports their online state.';
     require __DIR__ . '/../../shared/templates/heading_help.php';
     ?>
  </h2>
@@ -157,31 +178,24 @@ $portTone = static fn ($port) => !empty($port['placeholder']) || !$portView['fre
                 <?= $key === $portTab ? 'aria-current="page"' : '' ?>><?= $label ?></a>
         <?php endforeach; ?>
     </nav>
-    <?php if (!$portHistoryActive): ?>
-        <p class="device-port-legend">
-            <span class="up">● UP</span>
-            <span class="down">● DOWN</span>
-            <span class="unknown">● Unknown / unmapped</span>
-        </p>
-    <?php endif; ?>
-    <?php if ($portDiagram): ?>
+    <?php if ($portBanks): ?>
         <div
             class="device-port-chassis"
             role="group"
-            aria-label="<?= $isPhysicalTab ? 'Physical ports and preset slots' : 'Software interface tiles' ?>">
-            <?php foreach (
-                array_chunk($portDiagram, 16) as $bank
-            ): ?>
+            aria-label="Network, USB and power ports">
+            <?php foreach ($portBanks as $bank): ?>
                 <div class="device-port-bank">
                     <?php foreach (
                         array_chunk($bank, 2) as $pair
                     ): ?>
-                        <div class="device-port-pair <?= count($pair) === 1 && (!$isPhysicalTab || count($bank) === 1) ? 'single' : '' ?>">
+                        <div class="device-port-pair <?= count($pair) === 1 && count($bank) === 1 ? 'single' : '' ?>">
                             <?php
                             foreach ($pair as $port):
                                 $label = !empty($port['placeholder'])
-                                        ? 'Slot ' . $port['panel_port']
-                                        : $port['name']; ?>
+                                        ? (!empty($port['usb_slot']) ? 'USB port ' : 'Slot ') . $port['panel_port']
+                                        : $port['name'];
+                                $shortLabel = !empty($port['hardware']) || !empty($port['usb_slot'])
+                                    ? $port['panel_port'] : $label; ?>
                                 <button
                                     type="button"
                                     class="device-port-jack <?= $portTone($port) ?>"
@@ -189,12 +203,12 @@ $portTone = static fn ($port) => !empty($port['placeholder']) || !$portView['fre
                                     <?= !empty($port['placeholder']) ? 'disabled' : '' ?>
 
                                     aria-label="<?= icct_nms_h(
-                                        $label . ' · ' . (!empty($port['placeholder']) ? 'Not discovered' : $portAvailability($port)),
+                                        $label . ' · ' . $portAvailability($port) . ' · ' . (!empty($port['placeholder']) ? 'Not discovered' : (!($port['fresh'] ?? $portView['fresh']) ? 'Unknown (stale reading)' : (!empty($port['hardware']) ? $port['status'] : ($states[$port['oper'] ?? 0] ?? 'UNKNOWN')))),
                                     ) ?>"
                                     title="<?= icct_nms_h(
-                                        $label . ' · ' . (!empty($port['placeholder']) ? 'Not discovered' : $portAvailability($port)),
+                                        $label . ' · ' . $portAvailability($port) . ' · ' . (!empty($port['placeholder']) ? 'Not discovered' : (!($port['fresh'] ?? $portView['fresh']) ? 'Unknown (stale reading)' : (!empty($port['hardware']) ? $port['status'] : ($states[$port['oper'] ?? 0] ?? 'UNKNOWN')))),
                                     ) ?>">
-                                    <span><?= icct_nms_h($label) ?></span>
+                                    <span><?= icct_nms_h($shortLabel) ?></span>
                                     <svg
                                         viewBox="0 0 40 30"
                                         aria-hidden="true">
@@ -202,26 +216,7 @@ $portTone = static fn ($port) => !empty($port['placeholder']) || !$portView['fre
                                     </svg>
                                 </button>
                             <?php
-                            endforeach;
-                        if (
-                            $isPhysicalTab && count($pair) === 1 &&
-                            count($bank) > 1
-                        ): ?>
-                                <button
-                                    type="button"
-                                    class="device-port-jack unknown device-port-empty-slot"
-                                    disabled
-                                    aria-label="Empty position · Not in use"
-                                    title="Empty diagram position; no discovered interface">
-                                    <span>Not in use</span>
-                                    <svg
-                                        viewBox="0 0 40 30"
-                                        aria-hidden="true">
-                                        <path d="M3 27V9h7V5h7V2h6v3h7v4h7v18Z" />
-                                    </svg>
-                                </button>
-                            <?php endif;
-                        ?>
+                            endforeach; ?>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -283,12 +278,11 @@ $portTone = static fn ($port) => !empty($port['placeholder']) || !$portView['fre
                 </thead>
                 <tbody id="device-port-rows">
                     <?php foreach ($portView['ports'] as $port):
-                        $fresh = $portView['fresh'] && empty($port['placeholder']);
-                        $names = array_values(
-                            array_unique(array_filter($portConnections[$port['index']]['names'] ?? [])),
-                        );
-                        $addresses = array_values(
-                            array_unique(array_filter($portConnections[$port['index']]['addresses'] ?? [])),
+                        $fresh = ($port['fresh'] ?? $portView['fresh']) && empty($port['placeholder']);
+                        [$device, $address, $vlan] = icct_nms_port_connection_cells(
+                            $port,
+                            $portConnections[$port['index']] ?? [],
+                            $fresh,
                         );
                         $speed = ($port['high_speed_mbps'] ?? 0) * 1000000 ?: $port['speed_bps'] ?? 0;
                         $lastChange = 'Not reported';
@@ -298,43 +292,42 @@ $portTone = static fn ($port) => !empty($port['placeholder']) || !$portView['fre
                             if ($ticks === 0) {
                                 $lastChange = 'Before last agent restart';
                             } elseif ($uptime !== null && $uptime >= $ticks) {
-                                $lastChange = date(
-                                    'd/m/Y H:i:s',
+                                $lastChange = icct_nms_display_time(
                                     (int) ($portView['collected'] - ($uptime - $ticks) / 100),
                                 );
                             }
                         }
                         $availability = $portAvailability($port);
                         $cells = [
-                            empty($port['placeholder']) ? (int) $port['index'] : 'Not reported',
+                            !empty($port['hardware']) ? '—' : (empty($port['placeholder']) ? (int) $port['index'] : 'Not reported'),
                             $port['name'],
                             $port['panel_port'] ?? 'Not reported',
                             $availability,
-                            $fresh ? $states[$port['oper'] ?? 0] ?? 'UNKNOWN' : 'UNKNOWN',
-                            implode(', ', $names) ?: 'Not reported',
-                            implode(', ', $addresses) ?: 'Not reported',
-                            $fresh && !empty($port['vlan_id']) ? '[' . $port['vlan_id'] . ']' : 'Not reported',
-                            $fresh ? $states[$port['admin'] ?? 0] ?? 'UNKNOWN' : 'UNKNOWN',
-                            $fresh && $speed > 0
+                            $fresh ? (!empty($port['hardware']) ? $port['status'] : ($states[$port['oper'] ?? 0] ?? 'UNKNOWN')) : 'UNKNOWN',
+                            $device,
+                            $address,
+                            $vlan,
+                            !empty($port['hardware']) ? '—' : ($fresh ? $states[$port['admin'] ?? 0] ?? 'UNKNOWN' : 'UNKNOWN'),
+                            !empty($port['hardware']) ? '—' : ($fresh && $speed > 0
                                         ? rtrim(rtrim(number_format($speed / 1e9, 6, '.', ''), '0'), '.')
-                                        : 'Not reported',
-                            $lastChange,
+                                        : 'Not reported'),
+                            !empty($port['hardware']) ? '—' : $lastChange,
                         ];
                         ?>
-                        <tr data-port-row="<?= (int) $port['index'] ?>">
+                        <tr data-port-row="<?= (int) $port['index'] ?>" data-interface-type="<?= icct_nms_h(icct_nms_port_type_label($port)) ?>" class="<?= !empty($port['hardware']) ? 'device-port-hardware-row' : '' ?>">
                             <?php foreach (
                                 $cells as $column => $cell
                             ): ?>
                                 <td<?php if (in_array($column, [4, 8], true)): ?>
 
                                     class="port-state <?= $fresh
-                                        ? ($cell === 'UP'
+                                        ? (in_array($cell, ['UP', 'connected'], true)
                                             ? 'up'
-                                            : (in_array($cell, ['DOWN', 'LOWER LAYER DOWN'], true)
+                                            : (in_array($cell, ['DOWN', 'LOWER LAYER DOWN', 'disconnected', 'Not present'], true)
                                                 ? 'down'
                                                 : 'unknown'))
                                         : 'unknown' ?>"
-                                    <?php endif; ?>><?= icct_nms_h($cell) ?></td>
+                                    <?php endif; ?>><?= $column === 10 && $cell !== '—' && $cell !== 'Not reported' && $cell !== 'Before last agent restart' ? icct_nms_time_cell($cell) : icct_nms_h($cell) ?></td>
                             <?php endforeach; ?>
                             <?php if ($isPhysicalTab): ?>
                                 <?php $learned = $fresh ? ($portConnections[$port['index']]['endpoints'] ?? []) : []; ?>
@@ -361,7 +354,7 @@ $portTone = static fn ($port) => !empty($port['placeholder']) || !$portView['fre
                                             </ul>
                                         </details>
                                     <?php else: ?>
-                                        None reported
+                                        <?= !empty($port['hardware']) ? '—' : 'None reported' ?>
                                     <?php endif; ?>
                                 </td>
                             <?php endif; ?>

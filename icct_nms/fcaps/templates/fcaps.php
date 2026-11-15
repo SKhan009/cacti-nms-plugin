@@ -256,7 +256,7 @@
                     <?php
                             foreach ($configurationHistory as $event): ?>
                         <tr>
-                            <td><?= icct_nms_h($event['time']) ?></td>
+                            <td><?= icct_nms_time_cell($event['time']) ?></td>
                             <td><?= icct_nms_h($event['user'] ?: 'User ' . $event['user_id']) ?></td>
                             <td><?= icct_nms_h($event['action']) ?></td>
                             <td>

@@ -29,6 +29,35 @@ function icct_nms_h($value)
     return html_escape((string) $value);
 }
 
+/** Format a stored timestamp for the operator in IST. Storage and filter values stay unchanged. */
+function icct_nms_display_time($value)
+{
+    if ($value === null || $value === '' || $value === '0000-00-00 00:00:00') {
+        return '—';
+    }
+    try {
+        $timezone = new DateTimeZone('Asia/Kolkata');
+        $date = is_int($value) || (is_string($value) && ctype_digit($value))
+            ? new DateTimeImmutable('@' . $value)
+            : new DateTimeImmutable((string) $value, $timezone);
+        return $date->setTimezone($timezone)->format('d-m-Y H:i:s');
+    } catch (Throwable $error) {
+        return '—';
+    }
+}
+
+/** Render date and time on separate lines inside a table or record cell. */
+function icct_nms_time_cell($value)
+{
+    $formatted = icct_nms_display_time($value);
+    if ($formatted === '—') {
+        return '—';
+    }
+    [$day, $time] = explode(' ', $formatted, 2);
+    return '<span class="nms-time-date">' . icct_nms_h($day) .
+        '</span><br><span class="nms-time-clock">' . icct_nms_h($time) . '</span>';
+}
+
 /**
  * Validate a device identifier against the native supported integer range.
  */
@@ -78,9 +107,9 @@ function icct_nms_redirect($url)
 function icct_nms_failure(Throwable $error)
 {
     http_response_code(503);
-    print '<!doctype html><html lang="en"><meta charset="utf-8"><title>Inventory unavailable</title><link rel="stylesheet" href="' .
+    print '<!doctype html><html lang="en"><meta charset="utf-8"><title>Device Mgmt unavailable</title><link rel="stylesheet" href="' .
         icct_nms_h($GLOBALS['config']['url_path'] . 'plugins/icct_nms/shared/css/inventory.css') .
-        '"><body class="icct-inventory"><h1>Inventory unavailable</h1><p>' .
+        '"><body class="icct-inventory"><h1>Device Mgmt unavailable</h1><p>' .
         icct_nms_h($error->getMessage()) .
         '</p><p><a href="' .
         icct_nms_h($GLOBALS['config']['url_path'] . 'plugins.php') .

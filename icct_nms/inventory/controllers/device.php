@@ -56,6 +56,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'fault
     }
     exit();
 }
+if (($_GET['fragment'] ?? '') === 'ports' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    header('Content-Type: text/html; charset=utf-8');
+    header('Cache-Control: no-store');
+    try {
+        icct_nms_backend();
+        $id = icct_nms_id($_GET['id'] ?? 0);
+        $old = icct_nms_device($id);
+        require dirname(__DIR__, 2) . '/ports/templates/device_view_ports.php';
+    } catch (Throwable $failure) {
+        http_response_code(400);
+    }
+    return;
+}
 $error = '';
 $notice = '';
 try {
@@ -132,7 +145,7 @@ try {
         $matches = icct_nms_scan_existing($prefill['hostname']);
         if (count($matches) > 1) {
             throw new InvalidArgumentException(
-                'Multiple saved devices match this address. Review them in Inventory before adding another device.',
+                'Multiple saved devices match this address. Review them in Device Mgmt before adding another device.',
             );
         }
         if (count($matches) === 1) {
@@ -163,7 +176,7 @@ try {
             $_SESSION['icct_nms_notice'] = $cloneId
                 ? 'Device “' .
                     trim($_POST['description']) .
-                    '” cloned successfully and added to Inventory.'
+                    '” cloned successfully and added to Device Mgmt.'
                 : 'Device “' . trim($_POST['description']) . '” saved successfully.';
             icct_nms_redirect('inventory/controllers/inventory.php');
         } catch (Throwable $e) {

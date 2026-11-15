@@ -171,7 +171,7 @@ function icct_backend_syslog_assignment($host_id)
     );
 }
 
-function icct_backend_syslog_match_device($source_ip, $source_host)
+function icct_backend_syslog_match_device($source_ip, $source_host, ?array $record = null)
 {
     $source_ip = icct_nms_syslog_ip($source_ip);
     $rows = db_fetch_assoc_prepared(
@@ -193,7 +193,50 @@ function icct_backend_syslog_match_device($source_ip, $source_host)
         ),
     );
     // A sender-controlled hostname is display data, never authorization to claim another device.
-    return count($matches) === 1 ? $matches[0] : [];
+    // One owner per received event. Existing filters can distinguish logical devices;
+    // overlapping filters deterministically retain the oldest eligible native device.
+    usort($matches, static fn($a, $b) => (int) $a['host_id'] <=> (int) $b['host_id']);
+    foreach ($matches as $match) {
+        if ($record === null || icct_backend_syslog_filter_reason($match, $record) === '') {
+            return $match;
+        }
+    }
+    // Preserve the specific rejection reason when all mapped devices filter the event.
+    return $matches[0] ?? [];
+}
+
+function icct_backend_syslog_filter_reason(array $assignment, array $record)
+{
+    $severity_code = $record['severity_code'];
+    $filters = icct_backend_syslog_effective_filters($assignment);
+    if (!in_array($severity_code, $filters['severity_codes'], true)) {
+        return 'severity-filtered';
+    }
+
+    $transport = $record['transport'];
+    $expected = (string) $assignment['transport'];
+    if ($transport === 'unknown' || ($expected !== 'both' && $transport !== $expected)) {
+        return 'transport-filtered';
+    }
+
+    $facility_code = $record['facility_code'];
+    if (!in_array($facility_code, $filters['facility_codes'], true)) {
+        return 'facility-filtered';
+    }
+    $message = $record['message'];
+    if ($filters['match_strings']) {
+        $matched = false;
+        foreach ($filters['match_strings'] as $keyword) {
+            if (mb_stripos($message, $keyword) !== false) {
+                $matched = true;
+                break;
+            }
+        }
+        if (!$matched) {
+            return 'keyword-filtered';
+        }
+    }
+    return '';
 }
 
 function icct_backend_syslog_transport($input_name)
@@ -224,49 +267,24 @@ function icct_backend_syslog_ingest(array $record, &$reason = null)
     }
     $source_ip = $normalized['source_ip'];
     $source_host = $normalized['hostname'];
-    $assignment = icct_backend_syslog_match_device($source_ip, $source_host);
+    $assignment = icct_backend_syslog_match_device($source_ip, $source_host, $normalized);
     if (!$assignment) {
         // Production default: do not persist arbitrary/unmanaged senders.
         $reason = 'unmapped-source';
         return 'dropped';
     }
 
+    $reason = icct_backend_syslog_filter_reason($assignment, $normalized);
+    if ($reason !== '') {
+        return 'dropped';
+    }
     $severity_code = $normalized['severity_code'];
-    $filters = icct_backend_syslog_effective_filters($assignment);
-    if (!in_array($severity_code, $filters['severity_codes'], true)) {
-        $reason = 'severity-filtered';
-        return 'dropped';
-    }
-
-    $transport = $normalized['transport'];
-    $expected = (string) $assignment['transport'];
-    if ($transport === 'unknown' || ($expected !== 'both' && $transport !== $expected)) {
-        $reason = 'transport-filtered';
-        return 'dropped';
-    }
-
     $facility_code = $normalized['facility_code'];
-    if (!in_array($facility_code, $filters['facility_codes'], true)) {
-        $reason = 'facility-filtered';
-        return 'dropped';
-    }
+    $transport = $normalized['transport'];
     $facility = icct_backend_syslog_facility_labels()[$facility_code];
     $severity = icct_backend_syslog_severity_labels()[$severity_code];
     $program = $normalized['program'];
     $message = $normalized['message'];
-    if ($filters['match_strings']) {
-        $matched = false;
-        foreach ($filters['match_strings'] as $keyword) {
-            if (mb_stripos($message, $keyword) !== false) {
-                $matched = true;
-                break;
-            }
-        }
-        if (!$matched) {
-            $reason = 'keyword-filtered';
-            return 'dropped';
-        }
-    }
     $event_time = $normalized['event_time'];
     $now = date('Y-m-d H:i:s');
     $nms_severity = icct_backend_syslog_nms_severity($severity_code);

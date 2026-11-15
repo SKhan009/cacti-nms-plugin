@@ -230,14 +230,39 @@
         src="protocols/snmp/mibs/js/mib-wizard.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../../protocols/snmp/mibs/js/mib-wizard.js'), 0, 12) ?>"
         defer></script>
 <?php endif; ?>
+<?php if (!empty($alarmDetail) || (!empty($alarmsPage) && empty($alarmAckPage) && empty($alarmEscalatePage) && empty($alarmTicketPage))): ?>
+    <script src="shared/assets/vendor/pdfmake/pdfmake.min.js" defer></script>
+    <script src="shared/assets/vendor/pdfmake/vfs_fonts.js" defer></script>
+    <script
+        src="alarms/js/alarm-report.js?v=<?= substr(hash_file('sha256', ICCT_NMS_ROOT . '/alarms/js/alarm-report.js'), 0, 12) ?>"
+        defer></script>
+<?php endif; ?>
 <?php if (!empty($alarmDetail)): ?>
     <script
         src="alarms/js/alarm-detail.js?v=<?= substr(hash_file('sha256', ICCT_NMS_ROOT . '/alarms/js/alarm-detail.js'), 0, 12) ?>"
         defer></script>
 <?php endif; ?>
+<?php if (!empty($alarmAckPage)): ?>
+    <script
+        src="alarms/js/alarm-ack.js?v=<?= substr(hash_file('sha256', ICCT_NMS_ROOT . '/alarms/js/alarm-ack.js'), 0, 12) ?>"
+        defer></script>
+<?php endif; ?>
+<?php if (!empty($alarmEscalatePage)): ?>
+    <script
+        src="alarms/js/alarm-escalate.js?v=<?= substr(hash_file('sha256', ICCT_NMS_ROOT . '/alarms/js/alarm-escalate.js'), 0, 12) ?>"
+        defer></script>
+<?php endif; ?>
+<?php if (!empty($alarmTicketPage)): ?>
+    <script
+        src="alarms/js/ticket-action.js?v=<?= substr(hash_file('sha256', ICCT_NMS_ROOT . '/alarms/js/ticket-action.js'), 0, 12) ?>"
+        defer></script>
+<?php endif; ?>
 <?php if (
     !empty($alarmsPage) &&
-    !isset($alarmDetail)
+    !isset($alarmDetail) &&
+    empty($alarmAckPage) &&
+    empty($alarmEscalatePage) &&
+    empty($alarmTicketPage)
 ): ?>
     <script
         src="alarms/js/alarms.js?v=<?= substr(hash_file('sha256', ICCT_NMS_ROOT . '/alarms/js/alarms.js'), 0, 12) ?>"

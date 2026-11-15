@@ -2,6 +2,7 @@
 
 /** Read-only IF-MIB/IF-X-MIB observations; preset capacity never creates observed ports. */
 require_once __DIR__ . '/../port_evidence.php';
+require_once __DIR__ . '/hardware.php';
 require_once __DIR__ .
     '/../../../protocols/shared/services/backend/discovery_management_addresses.php';
 
@@ -57,6 +58,9 @@ function icct_backend_ports_integer($value)
         'l2vlan' => 135,
         'l3ipvlan' => 136,
         'tunnel' => 131,
+        'ieee80211' => 71,
+        'ieee8023adlag' => 161,
+        'bridge' => 209,
     ][strtolower($value)] ?? null;
 }
 function icct_backend_ports_ticks($value)
@@ -108,7 +112,8 @@ function icct_backend_ports_parse($columns)
         foreach ($columns['bridge_ifindex'] ?? [] as $bridge => $mapped) {
             if (icct_backend_ports_integer($mapped) === (int) $index) {
                 $port['bridge_port'] = (int) $bridge;
-                $port['vlan_id'] = icct_backend_ports_integer($columns['pvid'][$bridge] ?? '');
+                $vlan = icct_backend_ports_integer($columns['pvid'][$bridge] ?? '');
+                $port['vlan_id'] = $vlan >= 1 && $vlan <= 4094 ? $vlan : null;
                 break;
             }
         }
@@ -145,7 +150,15 @@ function icct_backend_ports_linux_parse($json)
             $state === 'UNKNOWN' &&
             in_array('UP', $flags, true) &&
             in_array('LOWER_UP', $flags, true);
+        $kind = $row['linkinfo']['info_kind'] ?? '';
+        $vlan = $kind === 'vlan' ? ($row['linkinfo']['info_data']['id'] ?? null) : null;
+        $label = ['vlan' => 'VLAN', 'bridge' => 'Bridge', 'bond' => 'Bond',
+            'veth' => 'Virtual Ethernet pair', 'macvlan' => 'MACVLAN', 'vxlan' => 'VXLAN',
+            'tun' => (($row['linkinfo']['info_data']['type'] ?? '') === 'tap' ? 'TAP' : 'TUN')][$kind]
+            ?? ($loopback ? 'Loopback' : (($row['link_type'] ?? '') === 'ether' ? 'Ethernet (copper or fiber)' : 'Unclassified'));
         $ports[] = [
+            'interface_type' => $label,
+            'interface_kind' => $loopback || $kind !== '' ? 'Software' : (($row['link_type'] ?? '') === 'ether' ? 'Physical' : 'Unclassified'),
             'index' => $row['ifindex'],
             'name' => $row['ifname'],
             'description' => $row['ifname'],
@@ -168,6 +181,7 @@ function icct_backend_ports_linux_parse($json)
             'speed_bps' => null,
             'high_speed_mbps' => null,
             'last_change_ticks' => null,
+            'vlan_id' => is_int($vlan) && $vlan >= 1 && $vlan <= 4094 ? $vlan : null,
         ];
     }
     return $ports;
@@ -175,6 +189,16 @@ function icct_backend_ports_linux_parse($json)
 function icct_backend_ports_local()
 {
     $ports = [];
+    $details = [];
+    foreach (['/usr/sbin/ip', '/sbin/ip', '/usr/bin/ip'] as $binary) {
+        if (is_executable($binary)) {
+            $decoded = json_decode((string) shell_exec($binary . ' -j -d link show 2>/dev/null'), true);
+            foreach (is_array($decoded) ? $decoded : [] as $row) {
+                $details[$row['ifname'] ?? ''] = $row;
+            }
+            break;
+        }
+    }
     foreach (glob('/sys/class/net/*') ?: [] as $path) {
         if (!is_readable($path . '/ifindex')) {
             continue;
@@ -193,6 +217,7 @@ function icct_backend_ports_local()
         $port = icct_backend_ports_linux_parse(
             json_encode([
                 [
+                    'linkinfo' => $details[$name]['linkinfo'] ?? [],
                     'ifindex' => $index,
                     'ifname' => $name,
                     'flags' => array_merge(
@@ -208,6 +233,15 @@ function icct_backend_ports_local()
             ]),
         )[0];
         $port['connector'] = is_dir($path . '/device') ? 1 : ($port['type'] === 24 ? 2 : null);
+        if (is_dir($path . '/wireless') || file_exists($path . '/phy80211')) {
+            $port['interface_type'] = 'Wi-Fi';
+        } elseif (strpos((string) realpath($path . '/device'), '/usb') !== false) {
+            $port['interface_type'] = 'USB Ethernet adapter';
+        } elseif (preg_match('/virtio|vmxnet|hv_netvsc|xen_netfront/i', (string) realpath($path . '/device/driver'))) {
+            $port['interface_type'] = 'VM virtual NIC';
+            $port['interface_kind'] = 'Software';
+        }
+
         $ports[] = $port;
     }
     usort($ports, static fn($a, $b) => $a['index'] <=> $b['index']);
@@ -215,6 +249,36 @@ function icct_backend_ports_local()
 }
 function icct_backend_ports_store($host, $ports, $source, $key = 'ports_snapshot_', $extra = [])
 {
+    if ($key === 'hardware_snapshot_') {
+        $previous = json_decode((string) db_fetch_cell_prepared(
+            'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
+            [$key . $host['id']],
+        ), true);
+        $sameSource = is_array($previous) &&
+            ($previous['signature'] ?? '') === icct_backend_ports_signature($host) &&
+            ($previous['source'] ?? '') === $source;
+        foreach (['device_revision', 'preset_revision', 'endpoint'] as $field) {
+            if (array_key_exists($field, $extra) &&
+                ($previous[$field] ?? null) !== $extra[$field]) {
+                $sameSource = false;
+            }
+        }
+        if ($sameSource) {
+            $current = [];
+            foreach ($ports as $port) {
+                $current[$port['type'] . ':' . $port['name']] = true;
+            }
+            foreach ($previous['ports'] ?? [] as $port) {
+                if (!in_array($port['type'] ?? '', ['USB', 'Power input'], true) ||
+                    !isset($port['name']) ||
+                    isset($current[$port['type'] . ':' . $port['name']])) {
+                    continue;
+                }
+                $port['status'] = 'Not present';
+                $ports[] = $port;
+            }
+        }
+    }
     $snapshot =
         [
             'signature' => icct_backend_ports_signature($host),
@@ -238,6 +302,14 @@ function icct_backend_collect_ports()
         [$collector],
     );
     foreach ($hosts as $host) {
+        if (icct_backend_identity_local_endpoint($host['hostname'])) {
+            try {
+                $hardwareOutput = shell_exec('/usr/bin/timeout 10 /bin/sh -c ' . escapeshellarg(icct_nms_hardware_command()));
+                icct_backend_ports_store($host, icct_nms_hardware_parse((string) $hardwareOutput), 'Local Linux hardware', 'hardware_snapshot_');
+            } catch (Throwable $e) {
+                // Keep the last observation; its timestamp makes collection failures visible as stale.
+            }
+        }
         if (
             icct_backend_identity_local_endpoint($host['hostname']) &&
             ((int) $host['snmp_version'] < 1 || !icct_backend_protocol_enabled($host['id'], 'snmp'))
@@ -504,6 +576,7 @@ function icct_backend_ports_view($host)
         ($snapshot['signature'] ?? '') === icct_backend_ports_signature($host);
     $ports = $same && is_array($snapshot['ports'] ?? null) ? $snapshot['ports'] : [];
     foreach ($ports as &$port) {
+        $port['interface_type'] = icct_nms_port_type_label($port);
         $port['status'] = icct_backend_ports_status($port, $fresh);
     }
     unset($port);
@@ -561,7 +634,7 @@ function icct_nms_port_connections($id, $ports, $includeEndpoints = false)
                     continue;
                 }
                 $connections[$port['index']]['names'][] =
-                    $peer['remote_name'] ?? ($peer['peer_label'] ?? '');
+                    trim($peer['remote_name'] ?? '') ?: ($peer['peer_label'] ?? '');
                 foreach (
                     icct_nms_management_addresses($peer['management_addresses'] ?? [])
                     as $address
@@ -581,6 +654,37 @@ function icct_nms_port_connections($id, $ports, $includeEndpoints = false)
         }
     }
     return $connections;
+}
+
+/** Prefer advertised identity; label forwarding-table evidence as learned. */
+function icct_nms_port_connection_cells($port, $connection, $fresh)
+{
+    $missing = 'Not reported';
+    if (!$fresh) {
+        return [$missing, $missing, $missing];
+    }
+    if (!empty($port['hardware'])) {
+        $device = ($port['status'] ?? '') === 'Enumerated' &&
+            in_array($port['interface_type'] ?? '', ['USB', 'PCI/PCIe'], true)
+            ? ($port['description'] ?? '') : '';
+        return [$device ?: $missing, '—', '—'];
+    }
+    $names = array_filter($connection['names'] ?? []);
+    $addresses = $connection['addresses'] ?? [];
+    $macs = $ips = $vlans = [];
+    foreach ($connection['endpoints'] ?? [] as $endpoint) {
+        $macs[] = $endpoint['mac'];
+        $ips = array_merge($ips, $endpoint['ips']);
+        $vlans = array_merge($vlans, $endpoint['vlans']);
+    }
+    $join = static fn ($values) => implode(', ', array_unique($values));
+    $learned = static fn ($values) => $values ? $join($values) . ' (learned)' : $missing;
+    $vlan = $port['vlan_id'] ?? null;
+    return [
+        $names ? $join($names) : $learned($macs),
+        $addresses ? $join($addresses) : $learned($ips),
+        $vlan ? '[' . $vlan . ']' : $learned($vlans),
+    ];
 }
 
 /** Group learned MACs by interface. IP evidence comes from the same device and exact ifIndex. */

@@ -356,10 +356,12 @@
     }
     window.addEventListener('popstate', function () {
         const view = new URL(window.location.href).searchParams.get('view') || 'topology';
-        selectView(tabs.find((tab) => tab.dataset.view === view) || tabs[0], false);
+        selectView(tabs.find((tab) => tab.dataset.view === view && !tab.hidden) ||
+            tabs.find((tab) => !tab.hidden) || tabs[0], false);
     });
     const initialView = new URL(window.location.href).searchParams.get('view') || 'topology';
-    selectView(tabs.find((tab) => tab.dataset.view === initialView) || tabs[0], false);
+    selectView(tabs.find((tab) => tab.dataset.view === initialView && !tab.hidden) ||
+        tabs.find((tab) => !tab.hidden) || tabs[0], false);
     tabs.forEach(function (tab, index) {
         tab.addEventListener('click', function () {
             selectView(tab);

@@ -194,6 +194,8 @@ function icct_nms_schema_install()
     icct_nms_schema_rack_catalogue_migration();
     icct_nms_schema_missing_preset_racks();
     icct_nms_schema_syslog_availability_migration();
+    require_once __DIR__ . '/netflow_alarm_migration.php';
+    icct_nms_schema_netflow_alarm_migration();
     require_once __DIR__ . '/../../protocols/shared/services/protocol_seed.php';
     require_once __DIR__ . '/ntp_fault_migration.php';
     icct_nms_schema_ntp_faults();

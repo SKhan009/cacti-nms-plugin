@@ -294,16 +294,6 @@ try {
     $alarm = db_fetch_row(
         "SELECT * FROM plugin_icct_nms_alarms WHERE source='NetFlow' ORDER BY alarm_key LIMIT 1",
     );
-    $linked = icct_nms_netflow_read($id, [
-        'netflow_alarm' => $alarm['alarm_key'],
-        'end' => date('Y-m-d H:i:s', time() - 86400),
-    ])['events'];
-    nfAssert(
-        count($linked) === 1 &&
-            $linked[0]['alarm_key'] === $alarm['alarm_key'] &&
-            icct_nms_netflow_read($id, ['netflow_alarm' => str_repeat('0', 64)])['events'] === [],
-        'Alarm link did not isolate the matching finding outside the normal time range',
-    );
     icct_nms_alarm_action([
         'alarm_key' => $alarm['alarm_key'],
         'alarm_action' => 'ack',

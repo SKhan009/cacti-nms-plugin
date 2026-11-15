@@ -78,7 +78,7 @@ $display = static function ($value) {
         <a
             class="device-back"
             href="inventory/controllers/inventory.php"
-            aria-label="Back to inventory">←</a>
+            aria-label="Back to Device Mgmt">←</a>
         <div class="device-view-identity">
             <h1>
                 <span

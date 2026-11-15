@@ -316,7 +316,7 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
             ?>
             <details class="device-record-item" name="syslog-event-records">
                 <summary>
-                    <span><small>Event time</small><?= icct_nms_h($event['event_time']) ?></span>
+                    <span><small>Event time</small><?= icct_nms_time_cell($event['event_time']) ?></span>
                     <span><small>Event</small><strong><?= icct_nms_h($title) ?></strong></span>
                     <span>
                         <small>Severity</small>
@@ -337,8 +337,8 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
                             <h4 data-field-help="Shows the recorded time, sender, transport, and the original message.">Syslog record</h4>
                             <dl class="syslog-event-evidence">
                                 <?php foreach ([
-                                    'Event time' => $event['event_time'] . ' (' . $timeSource . ')',
-                                    $availability ? 'Last recorded' : 'Last received' => $event['last_seen'],
+                                    'Event time' => icct_nms_display_time($event['event_time']) . ' (' . $timeSource . ')',
+                                    $availability ? 'Last recorded' : 'Last received' => icct_nms_display_time($event['last_seen']),
                                     'Source IP' => $event['source_ip'],
                                     'Received via' => $syslogTransportLabels[$event['transport'] ?? ''] ?? null,
                                     'Times recorded' => (int) $event['repeat_count'],
@@ -361,9 +361,9 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
                             <?php if ($sessionEvidence): ?>
                                 <div class="syslog-original-message">
                                     <h5>Related session records</h5>
-                                    <p><?= icct_nms_h($sessionEvidence['opening_time'] . ' · ' . $sessionEvidence['opening_message']) ?></p>
+                                    <p><?= icct_nms_h(icct_nms_display_time($sessionEvidence['opening_time']) . ' · ' . $sessionEvidence['opening_message']) ?></p>
                                     <?php if (!empty($sessionEvidence['logout_message'])): ?>
-                                        <p><?= icct_nms_h($sessionEvidence['logout_time'] . ' · ' . $sessionEvidence['logout_message']) ?></p>
+                                        <p><?= icct_nms_h(icct_nms_display_time($sessionEvidence['logout_time']) . ' · ' . $sessionEvidence['logout_message']) ?></p>
                                     <?php endif; ?>
                                 </div>
                             <?php endif; ?>
@@ -390,7 +390,7 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
                                     <h5>Test trap received after the fix</h5>
                                     <dl class="syslog-event-evidence">
                                         <?php foreach ([
-                                            'Received at' => $verificationTrap['event_time'],
+                                    'Received at' => icct_nms_display_time($verificationTrap['event_time']),
                                             'Source IP' => $verificationTrap['source_ip'],
                                             'Transport' => strtoupper($verificationTrap['transport']),
                                             'Times received' => $verificationTrap['repeat_count'],

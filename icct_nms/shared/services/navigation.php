@@ -19,11 +19,14 @@ function icct_nms_navigation()
         'EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/dashboard/controllers/topology.php'
     ] = 'Dashboard';
     $url = $config['url_path'] . 'plugins/icct_nms/inventory/controllers/inventory.php';
-    $menu['ICCT NMS']['EXTERNAL::' . $url] = 'Inventory';
+    $menu['ICCT NMS']['EXTERNAL::' . $url] = 'Device Mgmt';
     $menu['ICCT NMS'][
         'EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/presets/controllers/presets.php'
     ] = 'Presets';
-    $menu['ICCT NMS'][
+    $menu['Configuration'][
+        'EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/dashboard/controllers/topology.php?configure=1'
+    ] = 'Widget Configuration';
+    $menu['Configuration'][
         'EXTERNAL::' .
             $config['url_path'] .
             'plugins/icct_nms/dashboard/topology/controllers/topology_configuration.php'
@@ -32,7 +35,7 @@ function icct_nms_navigation()
         'EXTERNAL::' .
             $config['url_path'] .
             'plugins/icct_nms/protocols/snmp/mibs/controllers/mib_repository.php'
-    ] = 'MIB Repository';
+    ] = 'Templates';
     $menu['ICCT NMS'][
         'EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/alarms/controllers/alarms.php'
     ] = 'Alarms';

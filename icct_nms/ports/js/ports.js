@@ -86,7 +86,7 @@
         rows.querySelectorAll('.port-config-row').forEach((box) => {
             const rule = settings.ports[box.dataset.index];
             box.querySelectorAll('[data-port-severity]').forEach(
-                (select) => (select.required = enabled.checked && !!rule?.alarm),
+                (select) => (select.required = enabled.checked && !!rule?.alarm && !(box.dataset.hardware && select.dataset.portSeverity === 'admin_severity')),
             );
         });
     }
@@ -113,6 +113,7 @@
             const box = document.createElement('div');
             box.className = 'port-config-row';
             box.dataset.index = String(p.index);
+            if (p.hardware) box.dataset.hardware = 'true';
             const bind = () => {
                 settings.ports[p.index] = rule;
             };
@@ -135,7 +136,7 @@
                 ),
                 field(
                     'Enable Alarm',
-                    'Raise a fault when this interface is operationally or administratively down.',
+                    p.hardware ? 'Alarm when this device disappears from a fresh inventory or its display connector reports disconnected. Presence does not prove attached equipment health.' : 'Raise a fault when this interface is operationally or administratively down.',
                     checkbox(rule, 'alarm'),
                 ),
                 field(
@@ -154,6 +155,11 @@
                     severity(rule, 'admin_severity'),
                 ),
             );
+            if (p.hardware) {
+                const admin = box.querySelector('[data-port-severity=admin_severity]');
+                admin.required = false; admin.disabled = true;
+                admin.replaceChildren(new Option('Not applicable', ''));
+            }
             const clear = document.createElement('select');
             clear.add(new Option('Clear', 'Normal'));
             clear.disabled = true;
@@ -197,6 +203,7 @@
             loading ||
             location.hash !== '#ports' ||
             document.hidden ||
+            rows.contains?.(document.activeElement) ||
             basic.dataset.staticPreview ||
             !Number(wizard.dataset.deviceId)
         )
@@ -214,7 +221,7 @@
                 throw new Error(payload.error || 'Interfaces could not load.');
             observation = payload.data;
             document.querySelector('#port-error').hidden = true;
-            render();
+            if (!rows.contains?.(document.activeElement)) render();
         } catch (error) {
             const status = document.querySelector('#port-error');
             status.textContent = error.message;

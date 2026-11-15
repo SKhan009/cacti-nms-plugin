@@ -32,7 +32,7 @@
             <label class="field">
                 <span
                     class="field-label"
-                    data-field-help="Name used to identify this rack in inventory and Rack View.">Rack Name *</span>
+                    data-field-help="Name used to identify this rack in Device Mgmt and Rack View.">Rack Name *</span>
                 <input
                     name="rack_name"
                     required

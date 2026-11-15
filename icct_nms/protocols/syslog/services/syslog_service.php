@@ -12,7 +12,11 @@ function icct_nms_save_syslog($id, $host, $input)
     icct_backend_require_management(3);
     icct_backend_require_device_access($id);
 
-    $source = icct_nms_syslog_ip($input['source_address'] ?? null);
+    $source = trim((string) ($input['source_address'] ?? ''));
+    if ($source === '') {
+        $source = trim((string) ($host['hostname'] ?? ''));
+    }
+    $source = icct_nms_syslog_ip($source);
     $transport = strtolower((string) ($input['transport'] ?? 'both'));
     if (!in_array($transport, ['udp', 'tcp', 'both'], true)) {
         throw new InvalidArgumentException('Select UDP, TCP or Both for Syslog transport.');
@@ -67,7 +71,7 @@ function icct_nms_syslog_remove($id)
     ]);
 }
 
-/** Serialize source mapping changes so two devices cannot claim the same sender. */
+/** Serialize updates while allowing native Cacti devices to share a sender address. */
 function icct_nms_syslog_source_write($id, $source, callable $write)
 {
     $lock = 'icct_syslog_source_' . hash('sha256', $source);
@@ -76,29 +80,6 @@ function icct_nms_syslog_source_write($id, $source, callable $write)
         throw new RuntimeException('Syslog source mapping is busy. Retry the change.');
     }
     try {
-        $duplicate = db_fetch_row_prepared(
-            'SELECT d.host_id,h.description,h.hostname FROM plugin_icct_nms_syslog_devices d INNER ' .
-                'JOIN host h ON h.id=d.host_id WHERE d.host_id<>? AND d.enabled=1 AND INET6_ATON(d.source_address)=INET6_ATON(?) ' .
-                'AND h.deleted=\'\' ORDER BY d.host_id LIMIT 1',
-            [(int) $id, $source],
-        );
-        if ($duplicate) {
-            $label = trim((string) ($duplicate['description'] ?? ''));
-            $endpoint = trim((string) ($duplicate['hostname'] ?? ''));
-            $detail =
-                $label !== '' ? ' “' . $label . '”' : ' device #' . (int) $duplicate['host_id'];
-            if ($endpoint !== '') {
-                $detail .= ' (' . $endpoint . ')';
-            }
-            throw new InvalidArgumentException(
-                'Syslog source ' .
-                    $source .
-                    ' is already assigned to enabled device' .
-                    $detail .
-                    '. Change or disable that mapping before reusing the source address.',
-            );
-        }
-
         $write();
     } finally {
         db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)', [$lock]);
