@@ -32,6 +32,11 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
         <link
             rel="stylesheet"
             href="shared/css/inventory.css?v=<?= substr(hash_file('sha256', __DIR__ . '/../css/inventory.css'), 0, 12) ?>" />
+        <?php if (($activePreset ?? '') === 'site'): ?>
+            <link
+                rel="stylesheet"
+                href="presets/css/sites.css?v=<?= substr(hash_file('sha256', __DIR__ . '/../../presets/css/sites.css'), 0, 12) ?>" />
+        <?php endif; ?>
         <?php if (!empty($installationPage)): ?>
             <link rel="stylesheet"
                 href="installation/css/installation.css?v=<?= substr(hash_file('sha256', __DIR__ . '/../../installation/css/installation.css'), 0, 12) ?>">

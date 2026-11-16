@@ -228,7 +228,13 @@ $lnmsAssignments = icct_nms_lnms_site_assignments(); ?>
         }
         $hosts = icct_nms_inventory();
         ?>
-        <h2>GNSS Position Source</h2>
+        <h2>GNSS Position Source <span
+                class="field-info section-help"
+                tabindex="0"
+                role="img"
+                aria-label="SNMP uses the selected device credentials. Map vendor coordinate and valid-fix OIDs; divisor 1000000 converts microdegrees. NMEA accepts checksum-verified RMC/GGA; gpsd uses valid TPV fixes. Files must be under /var/lib/icct-nms/gnss/. Stale or invalid fixes are marked and never treated as a current position."
+                data-tooltip="SNMP uses the selected device credentials. Map vendor coordinate and valid-fix OIDs; divisor 1000000 converts microdegrees. NMEA accepts checksum-verified RMC/GGA; gpsd uses valid TPV fixes. Files must be under /var/lib/icct-nms/gnss/. Stale or invalid fixes are marked and never treated as a current position.">ⓘ</span>
+        </h2>
         <form
             method="post"
             id="gnss-config">
@@ -331,12 +337,6 @@ $lnmsAssignments = icct_nms_lnms_site_assignments(); ?>
                     );
                 } ?>
             </div>
-            <span
-                class="field-info section-help"
-                tabindex="0"
-                role="img"
-                aria-label="SNMP uses the selected device credentials. Map vendor coordinate and valid-fix OIDs; divisor 1000000 converts microdegrees. NMEA accepts checksum-verified RMC/GGA; gpsd uses valid TPV fixes. Files must be under /var/lib/icct-nms/gnss/. Stale or invalid fixes are marked and never treated as a current position."
-                data-tooltip="SNMP uses the selected device credentials. Map vendor coordinate and valid-fix OIDs; divisor 1000000 converts microdegrees. NMEA accepts checksum-verified RMC/GGA; gpsd uses valid TPV fixes. Files must be under /var/lib/icct-nms/gnss/. Stale or invalid fixes are marked and never treated as a current position.">ⓘ</span>
             <div class="protocol-actions">
                 <button class="button primary">Save GNSS Source</button>
             </div>

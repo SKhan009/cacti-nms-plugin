@@ -1,0 +1,17 @@
+/* Align the collector GNSS settings as complete rows at each screen width. */
+#gnss-config > .form-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 20px;
+}
+
+@media (max-width: 980px) {
+    #gnss-config > .form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 580px) {
+    #gnss-config > .form-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
