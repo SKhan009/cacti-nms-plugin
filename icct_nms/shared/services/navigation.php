@@ -23,10 +23,10 @@ function icct_nms_navigation()
     $menu['ICCT NMS'][
         'EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/presets/controllers/presets.php'
     ] = 'Presets';
-    $menu['Configuration'][
+    $menu['ICCT NMS'][
         'EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/dashboard/controllers/topology.php?configure=1'
     ] = 'Widget Configuration';
-    $menu['Configuration'][
+    $menu['ICCT NMS'][
         'EXTERNAL::' .
             $config['url_path'] .
             'plugins/icct_nms/dashboard/topology/controllers/topology_configuration.php'
