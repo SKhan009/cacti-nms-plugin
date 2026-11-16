@@ -4,9 +4,7 @@ Description=ICCT NMS MIB simulator
 [Service]
 User=snmpsim
 Group=snmpsim
-RuntimeDirectory=icct-nms-mib-simulator
-Environment=SNMP_PERSISTENT_DIR=/run/icct-nms-mib-simulator
-ExecStart=/usr/sbin/snmpd -C -f -Lo -c /etc/icct-nms-mib-simulator.conf -p /run/icct-nms-mib-simulator/snmpd.pid
+ExecStart=/usr/bin/python3 /usr/local/libexec/icct-nms-mib-simulator.py
 ProtectSystem=strict
 ProtectHome=yes
 NoNewPrivileges=yes

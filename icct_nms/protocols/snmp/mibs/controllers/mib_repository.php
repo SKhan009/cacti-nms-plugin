@@ -45,7 +45,26 @@ try {
     $management = is_realm_allowed(3);
     if ($simulatorTab && $_SERVER['REQUEST_METHOD'] === 'POST') {
         icct_nms_post();
-        icct_mib_simulator_control($_POST['action'] ?? '');
+        $action = $_POST['action'] ?? '';
+        if ($action === 'simulator_upload') {
+            $upload = $_FILES['simulator_mib'] ?? [];
+            icct_mib_validate_upload_selection($upload);
+            if (strtolower(pathinfo($upload['name'][0], PATHINFO_EXTENSION)) !== 'mib') {
+                throw new InvalidArgumentException('Select a .mib file.');
+            }
+            $preview = icct_mib_parse_upload($upload);
+            $objects = icct_mib_simulator_objects($preview['records']);
+            if (!$objects) {
+                throw new InvalidArgumentException('The MIB has no readable supported objects to simulate.');
+            }
+            $_SESSION['icct_mib_simulator_draft'] = [
+                'token' => $preview['id'],
+                'files' => array_column($preview['files'], 'name'),
+                'objects' => $objects,
+            ];
+        } else {
+            icct_mib_simulator_control($action, $_POST, $_SESSION['icct_mib_simulator_draft'] ?? []);
+        }
         icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?tab=simulator');
     }
     $types = icct_mib_device_types();

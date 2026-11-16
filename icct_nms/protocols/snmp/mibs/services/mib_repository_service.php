@@ -157,11 +157,20 @@ function icct_mib_text($text)
 }
 function icct_mib_preview($upload, $typeId, $allowUnresolved = false, $progress = null)
 {
-    require_once __DIR__ . '/mib_offline_parser.php';
     $types = icct_mib_device_types();
     if (!is_string($typeId) || !isset($types[$typeId])) {
         throw new InvalidArgumentException('Select a device type.');
     }
+    return icct_mib_parse_upload($upload, $allowUnresolved, $progress) + [
+        'type_id' => $typeId,
+        'type_name' => $types[$typeId]['name'],
+        'category_id' => $types[$typeId]['category_id'],
+    ];
+}
+
+function icct_mib_parse_upload($upload, $allowUnresolved = false, $progress = null)
+{
+    require_once __DIR__ . '/mib_offline_parser.php';
     $names = $upload['name'] ?? [];
     if (!is_array($names) || !count($names) || count($names) > 8) {
         throw new InvalidArgumentException('Upload 1–8 MIB files including dependencies.');
@@ -271,9 +280,6 @@ function icct_mib_preview($upload, $typeId, $allowUnresolved = false, $progress 
     }
     return [
         'id' => bin2hex(random_bytes(16)),
-        'type_id' => $typeId,
-        'type_name' => $types[$typeId]['name'],
-        'category_id' => $types[$typeId]['category_id'],
         'files' => array_values($files),
         'records' => $records,
         'parse_error' => $error,
