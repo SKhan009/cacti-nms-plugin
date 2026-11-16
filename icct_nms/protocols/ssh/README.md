@@ -33,3 +33,20 @@ Installation Checks verifies the strict native file hashes and the broker socket
 Open **Open SSH Terminal (HTTPS)** from the existing device view or its SSH settings. **Test saved credential** performs actual host-key verification and authentication through the broker. **Connect** starts the bundled Guacamole display; **Disconnect** revokes its browser-bound authorization. No password or private key is returned to the browser. Terminal operations retain the device's monitoring switch and never create devices or replace host-key approvals.
 
 Each console requires the native Inventory/protocol and device permissions plus management access. HTTPS, native CSRF tokens, one-use connection tickets, browser-session binding, live permission/revision checks and bounded authorization leases protect every operation. Browser certificate warnings must be reviewed by the user; the plugin does not bypass them or substitute an HTTP terminal.
+
+## Cacti graphs and ICCT NMS alarms
+
+Import [icct_nms_ssh_health_templates.xml](cacti/icct_nms_ssh_health_templates.xml) into Cacti 1.2.31. The XML contains one shared Script/Command Data Input Method, three data templates, and three graph templates. It uses the metric script already installed with the plugin and needs no Internet access.
+
+1. In **Console → Import/Export → Import Templates**, select the XML and preview the import. Choose the Data Source Profile that matches your Cacti poller interval. Import with **Remove Orphans** unchecked.
+2. If the site enforces a Cacti Data Input whitelist, review and approve the new **ICCT NMS - SSH Health Reading** method according to the site's whitelist procedure before creating graphs.
+3. Enable SSH monitoring for the Linux device in ICCT NMS and confirm that collection succeeds. In Cacti, open that device, choose **Create Graphs for this Device**, and add the **ICCT NMS - SSH CPU Usage**, **ICCT NMS - SSH Memory Usage**, or **ICCT NMS - SSH Uptime** templates. Cacti supplies the selected device's numeric ID.
+4. Once Cacti has polled the resulting graphs, edit the device in ICCT NMS. Under **FCAPS → Fault**, select **Cacti Data Source**, add a rule, then choose the imported graph template and data source. Set the condition, threshold, and severity, enable the rule, and save. Check **Current Readings** and **Triggered Alarms** after another poll.
+
+| Graph | Data source | Units | Example alarm condition |
+|---|---|---|---|
+| SSH CPU Usage | `cpu_percent` | Percent | Above 90 |
+| SSH Memory Usage | `memory_percent` | Percent | Above 90 |
+| SSH Uptime | `uptime_seconds` | Seconds | Below 300 |
+
+The input method reads the collector's cached sample. If the graph or alarm shows an unknown reading, check the device's SSH collection status and the Cacti poller log. The XML provides data sources for rules that you configure per device.

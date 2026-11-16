@@ -1,0 +1,241 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<cacti>
+  <hash_0301031a713910d2e95292970918acc05e6031>
+    <name>ICCT NMS - SSH Health Reading</name>
+    <type_id>1</type_id>
+    <input_string>PHBhdGhfcGhwX2JpbmFyeT4gLXEgPHBhdGhfY2FjdGk+L3BsdWdpbnMvaWNjdF9ubXMvcHJvdG9jb2xzL3NzaC9tZXRyaWNzLnBocCA8aG9zdF9pZD4gPG1ldHJpYz4=</input_string>
+    <fields>
+      <hash_0701031fbb4aeff3a95f9abc075c04f505c5b9>
+        <name>Cacti Device ID</name>
+        <data_name>host_id</data_name>
+        <input_output>in</input_output>
+        <update_rra />
+        <sequence>1</sequence>
+        <type_code>host_id</type_code>
+        <regexp_match>^[1-9][0-9]*$</regexp_match>
+        <allow_nulls />
+      </hash_0701031fbb4aeff3a95f9abc075c04f505c5b9>
+      <hash_07010319a139571320557c99d5dc1955962d3f>
+        <name>SSH Metric</name>
+        <data_name>metric</data_name>
+        <input_output>in</input_output>
+        <update_rra />
+        <sequence>2</sequence>
+        <type_code />
+        <regexp_match>^(cpu_percent|memory_percent|uptime_seconds)$</regexp_match>
+        <allow_nulls />
+      </hash_07010319a139571320557c99d5dc1955962d3f>
+      <hash_070103a1cf8926424153d8ad2effc2ff83645f>
+        <name>Reading</name>
+        <data_name>reading</data_name>
+        <input_output>out</input_output>
+        <update_rra>on</update_rra>
+        <sequence>3</sequence>
+        <type_code />
+        <regexp_match />
+        <allow_nulls />
+      </hash_070103a1cf8926424153d8ad2effc2ff83645f>
+    </fields>
+  </hash_0301031a713910d2e95292970918acc05e6031>
+  <hash_0101037691e25c733f54aebd3e5dca415eb3c9>
+    <name>ICCT NMS - SSH CPU Usage</name>
+    <ds>
+      <t_name />
+      <name>|host_description| - SSH CPU Usage</name>
+      <data_input_id>hash_0301031a713910d2e95292970918acc05e6031</data_input_id>
+      <t_active />
+      <active>on</active>
+    </ds>
+    <items>
+      <hash_0801030cbe3d6797205632916e2f0ca109fe0c>
+        <rrd_minimum>0</rrd_minimum>
+        <rrd_maximum>100</rrd_maximum>
+        <rrd_heartbeat>600</rrd_heartbeat>
+        <data_source_type_id>1</data_source_type_id>
+        <data_source_name>cpu_percent</data_source_name>
+        <data_input_field_id>hash_070103a1cf8926424153d8ad2effc2ff83645f</data_input_field_id>
+      </hash_0801030cbe3d6797205632916e2f0ca109fe0c>
+    </items>
+    <data>
+      <item_000>
+        <data_input_field_id>hash_0701031fbb4aeff3a95f9abc075c04f505c5b9</data_input_field_id>
+        <t_value />
+        <value />
+      </item_000>
+      <item_001>
+        <data_input_field_id>hash_07010319a139571320557c99d5dc1955962d3f</data_input_field_id>
+        <t_value />
+        <value>cpu_percent</value>
+      </item_001>
+    </data>
+  </hash_0101037691e25c733f54aebd3e5dca415eb3c9>
+  <hash_0001030f53d334269e5f278efa7b44af65b45b>
+    <name>ICCT NMS - SSH CPU Usage</name>
+    <multiple />
+    <test_source />
+    <graph>
+      <t_title />
+      <title>|host_description| - SSH CPU Usage</title>
+      <vertical_label>Percent</vertical_label>
+      <image_format_id>1</image_format_id>
+      <height>120</height>
+      <width>500</width>
+      <base_value>1000</base_value>
+      <lower_limit>0</lower_limit>
+      <upper_limit>100</upper_limit>
+      <auto_scale />
+      <auto_scale_opts>2</auto_scale_opts>
+      <auto_scale_rigid>on</auto_scale_rigid>
+      <auto_padding>on</auto_padding>
+      <unit_exponent_value />
+      <slope_mode>on</slope_mode>
+    </graph>
+    <items>
+      <hash_1001037ace3f896f73511d87eef81013665e0f>
+        <task_item_id>hash_0801030cbe3d6797205632916e2f0ca109fe0c</task_item_id>
+        <color_id>006699</color_id>
+        <alpha>FF</alpha>
+        <graph_type_id>5</graph_type_id>
+        <consolidation_function_id>1</consolidation_function_id>
+        <line_width>2</line_width>
+        <text_format>CPU Usage</text_format>
+        <sequence>1</sequence>
+      </hash_1001037ace3f896f73511d87eef81013665e0f>
+    </items>
+    <inputs />
+  </hash_0001030f53d334269e5f278efa7b44af65b45b>
+  <hash_0101039d04fe3e66865460b9ac4862f719f58e>
+    <name>ICCT NMS - SSH Memory Usage</name>
+    <ds>
+      <t_name />
+      <name>|host_description| - SSH Memory Usage</name>
+      <data_input_id>hash_0301031a713910d2e95292970918acc05e6031</data_input_id>
+      <t_active />
+      <active>on</active>
+    </ds>
+    <items>
+      <hash_0801037333e4bba64f538cbc19810d8a6c6271>
+        <rrd_minimum>0</rrd_minimum>
+        <rrd_maximum>100</rrd_maximum>
+        <rrd_heartbeat>600</rrd_heartbeat>
+        <data_source_type_id>1</data_source_type_id>
+        <data_source_name>memory_percent</data_source_name>
+        <data_input_field_id>hash_070103a1cf8926424153d8ad2effc2ff83645f</data_input_field_id>
+      </hash_0801037333e4bba64f538cbc19810d8a6c6271>
+    </items>
+    <data>
+      <item_000>
+        <data_input_field_id>hash_0701031fbb4aeff3a95f9abc075c04f505c5b9</data_input_field_id>
+        <t_value />
+        <value />
+      </item_000>
+      <item_001>
+        <data_input_field_id>hash_07010319a139571320557c99d5dc1955962d3f</data_input_field_id>
+        <t_value />
+        <value>memory_percent</value>
+      </item_001>
+    </data>
+  </hash_0101039d04fe3e66865460b9ac4862f719f58e>
+  <hash_0001036db23617c118566fab1d949841003041>
+    <name>ICCT NMS - SSH Memory Usage</name>
+    <multiple />
+    <test_source />
+    <graph>
+      <t_title />
+      <title>|host_description| - SSH Memory Usage</title>
+      <vertical_label>Percent</vertical_label>
+      <image_format_id>1</image_format_id>
+      <height>120</height>
+      <width>500</width>
+      <base_value>1000</base_value>
+      <lower_limit>0</lower_limit>
+      <upper_limit>100</upper_limit>
+      <auto_scale />
+      <auto_scale_opts>2</auto_scale_opts>
+      <auto_scale_rigid>on</auto_scale_rigid>
+      <auto_padding>on</auto_padding>
+      <unit_exponent_value />
+      <slope_mode>on</slope_mode>
+    </graph>
+    <items>
+      <hash_1001037e28051a139152b58b951998ce273cf6>
+        <task_item_id>hash_0801037333e4bba64f538cbc19810d8a6c6271</task_item_id>
+        <color_id>008000</color_id>
+        <alpha>FF</alpha>
+        <graph_type_id>5</graph_type_id>
+        <consolidation_function_id>1</consolidation_function_id>
+        <line_width>2</line_width>
+        <text_format>Memory Usage</text_format>
+        <sequence>1</sequence>
+      </hash_1001037e28051a139152b58b951998ce273cf6>
+    </items>
+    <inputs />
+  </hash_0001036db23617c118566fab1d949841003041>
+  <hash_010103e75f119342355a488d378d1a314bdfad>
+    <name>ICCT NMS - SSH Uptime</name>
+    <ds>
+      <t_name />
+      <name>|host_description| - SSH Uptime</name>
+      <data_input_id>hash_0301031a713910d2e95292970918acc05e6031</data_input_id>
+      <t_active />
+      <active>on</active>
+    </ds>
+    <items>
+      <hash_080103494d36556b215543830450ece08bca82>
+        <rrd_minimum>0</rrd_minimum>
+        <rrd_maximum>U</rrd_maximum>
+        <rrd_heartbeat>600</rrd_heartbeat>
+        <data_source_type_id>1</data_source_type_id>
+        <data_source_name>uptime_seconds</data_source_name>
+        <data_input_field_id>hash_070103a1cf8926424153d8ad2effc2ff83645f</data_input_field_id>
+      </hash_080103494d36556b215543830450ece08bca82>
+    </items>
+    <data>
+      <item_000>
+        <data_input_field_id>hash_0701031fbb4aeff3a95f9abc075c04f505c5b9</data_input_field_id>
+        <t_value />
+        <value />
+      </item_000>
+      <item_001>
+        <data_input_field_id>hash_07010319a139571320557c99d5dc1955962d3f</data_input_field_id>
+        <t_value />
+        <value>uptime_seconds</value>
+      </item_001>
+    </data>
+  </hash_010103e75f119342355a488d378d1a314bdfad>
+  <hash_00010352d13f0b07705543815d6cd3c72693b4>
+    <name>ICCT NMS - SSH Uptime</name>
+    <multiple />
+    <test_source />
+    <graph>
+      <t_title />
+      <title>|host_description| - SSH Uptime</title>
+      <vertical_label>Seconds</vertical_label>
+      <image_format_id>1</image_format_id>
+      <height>120</height>
+      <width>500</width>
+      <base_value>1000</base_value>
+      <lower_limit>0</lower_limit>
+      <upper_limit>0</upper_limit>
+      <auto_scale>on</auto_scale>
+      <auto_scale_opts>2</auto_scale_opts>
+      <auto_scale_rigid />
+      <auto_padding>on</auto_padding>
+      <unit_exponent_value />
+      <slope_mode>on</slope_mode>
+    </graph>
+    <items>
+      <hash_100103b6046853a22059848f75cb61525d1b3c>
+        <task_item_id>hash_080103494d36556b215543830450ece08bca82</task_item_id>
+        <color_id>800080</color_id>
+        <alpha>FF</alpha>
+        <graph_type_id>5</graph_type_id>
+        <consolidation_function_id>1</consolidation_function_id>
+        <line_width>2</line_width>
+        <text_format>Uptime</text_format>
+        <sequence>1</sequence>
+      </hash_100103b6046853a22059848f75cb61525d1b3c>
+    </items>
+    <inputs />
+  </hash_00010352d13f0b07705543815d6cd3c72693b4>
+</cacti>
