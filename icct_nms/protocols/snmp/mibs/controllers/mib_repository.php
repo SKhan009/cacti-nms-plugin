@@ -10,6 +10,7 @@ require_once dirname(__DIR__, 4) . '/protocols/snmp/mibs/services/mib_generation
 require_once dirname(__DIR__, 4) . '/shared/services/forms.php';
 require_once dirname(__DIR__, 4) . '/protocols/snmp/mibs/services/mib_staging_service.php';
 require_once dirname(__DIR__, 4) . '/protocols/snmp/mibs/services/mib_upload_session_service.php';
+require_once __DIR__ . '/../services/mib_simulator_service.php';
 $uploadStream =
     $_SERVER['REQUEST_METHOD'] === 'POST' &&
     ($_POST['action'] ?? '') === 'upload' &&
@@ -29,6 +30,7 @@ $generationStream = false;
 $error = '';
 $notice = '';
 $mode = 'list';
+$simulatorTab = ($_GET['tab'] ?? '') === 'simulator' && !isset($_GET['upload']);
 $preview = null;
 $plan = null;
 $reviewValues = [];
@@ -41,6 +43,11 @@ try {
 }
 try {
     $management = is_realm_allowed(3);
+    if ($simulatorTab && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        icct_nms_post();
+        icct_mib_simulator_control($_POST['action'] ?? '');
+        icct_nms_redirect('protocols/snmp/mibs/controllers/mib_repository.php?tab=simulator');
+    }
     $types = icct_mib_device_types();
     $bundles = icct_mib_list();
     if (isset($_GET['repository'])) {
@@ -176,10 +183,10 @@ try {
                 $_SESSION['icct_mib_deleted_notice'] = $_POST['bundle_id'];
             }
             icct_nms_redirect(
-                'protocols/snmp/mibs/controllers/mib_repository.php' .
+                'protocols/snmp/mibs/controllers/mib_repository.php?' .
                     ($action === 'delete'
-                        ? '?deleted=' . rawurlencode($_POST['bundle_id'])
-                        : '?restored=1'),
+                        ? 'deleted=' . rawurlencode($_POST['bundle_id'])
+                        : 'restored=1'),
             );
         } elseif ($action === 'discard_generated') {
             icct_backend_require_management(3);
@@ -717,6 +724,12 @@ try {
 if ($mode === 'upload') {
     $mode = 'list';
     $uploadOpen = true;
+}
+if ($mode === 'list') {
+    // Separate the simulator fixture without changing stored MIBs or their native templates.
+    $bundles = array_filter($bundles ?? [], static function ($bundle) {
+        return array_column($bundle['files'], 'module') !== ['ICCT-SPIKE-SIM-MIB'];
+    });
 }
 $title = 'MIB Repository';
 $mibRepositoryPage = true;

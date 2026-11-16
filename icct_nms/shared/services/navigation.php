@@ -35,7 +35,7 @@ function icct_nms_navigation()
         'EXTERNAL::' .
             $config['url_path'] .
             'plugins/icct_nms/protocols/snmp/mibs/controllers/mib_repository.php'
-    ] = 'Templates';
+    ] = 'MIB Repository';
     $menu['ICCT NMS'][
         'EXTERNAL::' . $config['url_path'] . 'plugins/icct_nms/alarms/controllers/alarms.php'
     ] = 'Alarms';

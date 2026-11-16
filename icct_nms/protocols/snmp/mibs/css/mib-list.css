@@ -235,3 +235,21 @@
         min-height: 0;
     }
 }
+.mib-repo-tabs {
+    display: flex;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 1rem;
+}
+
+.mib-repo-tabs a {
+    padding: .9rem 1.2rem;
+    border-bottom: 2px solid transparent;
+    color: inherit;
+    text-decoration: none;
+}
+
+.mib-repo-tabs a[aria-current='page'] {
+    border-bottom-color: #0f62fe;
+    color: #0f62fe;
+    font-weight: 600;
+}
