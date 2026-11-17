@@ -3,9 +3,13 @@
 /** Portable, non-secret starter values. Run only from plugin install/upgrade. */
 require_once __DIR__ . '/../../netflow/services/netflow_service.php';
 require_once __DIR__ . '/protocol_preset_service.php';
+require_once __DIR__ . '/../../../fcaps/services/ntp_fault_service.php';
 function icct_nms_protocol_starters()
 {
-    $cadence = max(60, (int) read_config_option('poller_interval'));
+    $pollerCadence = max(1, (int) read_config_option('poller_interval'));
+    $cadence = max(60, $pollerCadence);
+    $ntpInterval = intdiv(300 + $pollerCadence - 1, $pollerCadence) * $pollerCadence;
+    $ntpFaultDefaults = icct_nms_ntp_fault_default_preset();
     $snmpDiscoveryInterval = intdiv(300 + $cadence - 1, $cadence) * $cadence;
     $hostname = gethostname() ?: 'localhost';
     if (!filter_var($hostname, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
@@ -75,10 +79,14 @@ function icct_nms_protocol_starters()
             'transport' => 'both',
         ],
         'ntp' => [
-            'method' => '',
+            'method' => 'udp',
             'timeout' => 5,
-            'interval_seconds' => 0,
-            'stale_seconds' => max(60, 3 * $cadence),
+            'interval_seconds' => $ntpInterval,
+            'stale_seconds' => 3 * $ntpInterval,
+            'server_address' => '',
+            'maximum_offset_ms' => $ntpFaultDefaults['absolute_offset_ms']['maximum'],
+            'maximum_delay_ms' => $ntpFaultDefaults['peer_delay_ms']['maximum'],
+            'alarm_unsynchronized' => $ntpFaultDefaults['synchronized']['enabled'] ? '1' : '0',
         ],
         'netflow' => array_replace(icct_nms_netflow_defaults(), ['collector' => $hostname]),
     ];
