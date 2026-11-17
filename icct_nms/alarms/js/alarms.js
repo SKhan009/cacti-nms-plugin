@@ -98,6 +98,17 @@
             : names.length === 1 ? names[0] : `${names.length} devices`;
         filterDeviceOptions();
     }
+    function eventSources() {
+        const select = controls.source;
+        const selected = select.value;
+        const sources = [...new Set(rows.map((row) => row.source).filter(Boolean))];
+        if (selected && !sources.includes(selected)) sources.push(selected);
+        sources.sort((a, b) => a.localeCompare(b));
+        if (sources.length === select.options.length - 1 &&
+            sources.every((source, index) => source === select.options[index + 1].value)) return;
+        select.replaceChildren(select.options[0], ...sources.map((source) => new Option(source, source)));
+        select.value = selected;
+    }
     function filterDeviceOptions() {
         const query = deviceSearch.value.trim().toLowerCase();
         for (const option of deviceOptions.querySelectorAll('.alarm-device-option')) {
@@ -185,10 +196,11 @@
             button.classList.toggle('is-active', active);
             button.classList.toggle('is-descending', active && descending);
             button.closest('th').setAttribute('aria-sort', active ? (descending ? 'descending' : 'ascending') : 'none');
+            const nextDescending = active && !descending;
             const direction = button.dataset.alarmSort === 'occurred'
-                ? (descending ? 'newest first' : 'oldest first')
-                : (descending ? 'descending' : 'ascending');
-            const label = `Sort ${button.dataset.alarmSort}, ${active ? direction : 'ascending'}`;
+                ? (nextDescending ? 'newest first' : 'oldest first')
+                : (nextDescending ? 'descending' : 'ascending');
+            const label = `Sort ${button.querySelector('span').textContent}, ${direction}`;
             button.setAttribute('aria-label', label);
             button.title = label;
         }
@@ -392,6 +404,7 @@
         try {
             rows = await request('?readings=1');
             devices();
+            eventSources();
             status.textContent = '';
             render();
         } catch (e) {
@@ -422,6 +435,7 @@
         selectedDevices.clear();
         deviceSearch.value = '';
         devices();
+        eventSources();
         page = 1;
         render();
     });
@@ -454,6 +468,7 @@
         }));
     });
     devices();
+    eventSources();
     render();
     setInterval(refresh, 5000);
 })();

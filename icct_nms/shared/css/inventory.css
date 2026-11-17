@@ -7168,30 +7168,19 @@ h6 {
     padding: 0;
     cursor: pointer;
 }
-.alarm-sort-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    width: 100%;
-}
-.alarm-sort-heading > span:first-child {
-    white-space: nowrap;
-}
 .alarm-table th .alarm-sort-button {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    flex: 0 0 24px;
-    width: 24px;
-    height: 28px;
-    color: #222;
-    padding: 2px;
+    gap: 8px;
+    max-width: 100%;
+    color: inherit;
+    line-height: inherit;
 }
 .alarm-sort-button svg {
     display: block;
-    width: 22px;
-    height: 22px;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
     fill: none;
     stroke: currentColor;
     stroke-width: 1.8;

@@ -37,12 +37,9 @@ unset($_SESSION['icct_nms_alarm_action_success'], $_SESSION['icct_nms_alarm_ack_
             </select>
         </label>
         <label class="field alarm-source-field">
-            <span>Fault &amp; Trap Type</span>
-            <select name="source" aria-label="Fault and trap type">
-                <option value="">All</option>
-                <?php foreach (['SNMP Traps', 'Syslog', 'Passive events', 'SNMP', 'NTP', 'NetFlow', 'Cacti', 'Port', 'Availability'] as $source): ?>
-                    <option><?= $source ?></option>
-                <?php endforeach; ?>
+            <span>Event Source</span>
+            <select name="source">
+                <option value="">All sources</option>
             </select>
         </label>
         <div class="field alarm-date-range">
@@ -73,20 +70,24 @@ unset($_SESSION['icct_nms_alarm_action_success'], $_SESSION['icct_nms_alarm_ack_
         <table class="alarm-table">
             <thead>
                 <tr>
-                    <th>
-                        <span class="alarm-sort-heading">
-                            <span>Alarm Occurred</span>
-                            <button type="button" class="alarm-sort-button" data-alarm-sort="occurred" aria-label="Sort alarm time, newest first" title="Sort alarm time, newest first"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V4m-7 7 7-7 7 7"/></svg></button>
-                        </span>
-                    </th>
-                    <th><span class="alarm-sort-heading"><span>Device Name &amp;<br>Short Name</span><button type="button" class="alarm-sort-button" data-alarm-sort="device" aria-label="Sort device name" title="Sort device name"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V4m-7 7 7-7 7 7"/></svg></button></span>
-                    </th>
-                    <th>Event Source
-                    </th>
-                    <th><span class="alarm-sort-heading"><span>Severity &amp;<br>Ack Status</span><button type="button" class="alarm-sort-button" data-alarm-sort="severity" aria-label="Sort severity" title="Sort severity"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V4m-7 7 7-7 7 7"/></svg></button></span>
-                    </th>
-                    <th><span class="alarm-sort-heading"><span>Escalation<br>&amp; Status</span><button type="button" class="alarm-sort-button" data-alarm-sort="escalation" aria-label="Sort escalation status" title="Sort escalation status"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V4m-7 7 7-7 7 7"/></svg></button></span></span>
-                    </th>
+                    <?php foreach ([
+                        'occurred' => 'Alarm Occurred',
+                        'device' => 'Device Name & Short Name',
+                        'source' => 'Event Source',
+                        'severity' => 'Severity & Ack Status',
+                        'escalation' => 'Escalation & Status',
+                    ] as $key => $caption): ?>
+                        <th scope="col">
+                            <?php if ($key === 'source'): ?>
+                                <?= icct_nms_h($caption) ?>
+                            <?php else: ?>
+                                <button type="button" class="alarm-sort-button" data-alarm-sort="<?= $key ?>">
+                                    <span><?= icct_nms_h($caption) ?></span>
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V4m-7 7 7-7 7 7"/></svg>
+                                </button>
+                            <?php endif; ?>
+                        </th>
+                    <?php endforeach; ?>
                     <th>Alarm Name
                         <br> (Count)
                     </th>
