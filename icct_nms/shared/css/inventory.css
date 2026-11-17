@@ -7169,18 +7169,25 @@ h6 {
     cursor: pointer;
 }
 .alarm-table th .alarm-sort-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+    display: inline-grid;
+    grid-template-columns: minmax(0, max-content) 20px;
+    align-items: start;
+    gap: 12px;
     max-width: 100%;
     color: inherit;
     line-height: inherit;
+    white-space: normal;
+}
+.alarm-table th .alarm-sort-button[data-alarm-sort="device"] {
+    column-gap: 10px;
+}
+.alarm-table th a.alarm-sort-button {
+    text-decoration: none;
 }
 .alarm-sort-button svg {
     display: block;
-    flex: 0 0 16px;
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     fill: none;
     stroke: currentColor;
     stroke-width: 1.8;

@@ -82,7 +82,7 @@ unset($_SESSION['icct_nms_alarm_action_success'], $_SESSION['icct_nms_alarm_ack_
                                 <?= icct_nms_h($caption) ?>
                             <?php else: ?>
                                 <button type="button" class="alarm-sort-button" data-alarm-sort="<?= $key ?>">
-                                    <span><?= icct_nms_h($caption) ?></span>
+                                    <span><?php if ($key === 'device'): ?>Device Name &amp; <br>Short Name<?php else: ?><?= icct_nms_h($caption) ?><?php endif; ?></span>
                                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V4m-7 7 7-7 7 7"/></svg>
                                 </button>
                             <?php endif; ?>

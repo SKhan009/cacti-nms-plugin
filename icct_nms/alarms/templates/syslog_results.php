@@ -14,8 +14,12 @@ $oldest = ($syslogParams['sort'] ?? '') === 'oldest';
             <thead>
                 <tr>
                     <th scope="col" aria-sort="<?= $oldest ? 'ascending' : 'descending' ?>">
-                        <a href="<?= icct_nms_h(icct_nms_alarm_syslog_url($syslogConsole, ['sort' => $oldest ? '' : 'oldest'])) ?>"
-                            aria-label="Sort event time, <?= $oldest ? 'newest' : 'oldest' ?> first">Event time <?= $oldest ? '↑' : '↓' ?></a>
+                        <a class="alarm-sort-button<?= $oldest ? '' : ' is-descending' ?>"
+                            href="<?= icct_nms_h(icct_nms_alarm_syslog_url($syslogConsole, ['sort' => $oldest ? '' : 'oldest'])) ?>"
+                            aria-label="Sort event time, <?= $oldest ? 'newest' : 'oldest' ?> first">
+                            <span>Event time</span>
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V4m-7 7 7-7 7 7"/></svg>
+                        </a>
                     </th>
                     <th scope="col">Device name &amp; short name</th>
                     <th scope="col">Source IP &amp; received via</th>
