@@ -30,6 +30,7 @@ if (($ntp['method'] ?? '') === 'auto') {
     $ntpHelp['method'] .= ' Choose a method to replace the saved Automatic setting.';
 }
 $ntpStaticSource = ($ntp['server_address'] ?? '') !== '' || ($ntp['expected_source'] ?? '') !== '';
+$ntpDeviceAddress = empty($presetMode) ? ($ntpAssignment['hostname'] ?? $old['hostname'] ?? '') : '';
 $ntpSshVerified = !empty($ntpSsh['enabled']) && !empty($ntpSsh['host_key']) &&
     ($ntpSsh['verified_endpoint'] ?? null) === ($ntpSsh['endpoint'] ?? null);
 $ntpSshEnabled = empty($presetMode) && !empty($id) && $ntpSsh &&
@@ -78,6 +79,16 @@ $ntpSshEnabled = empty($presetMode) && !empty($id) && $ntpSsh &&
                 <?php endif; ?>
             </label>
         <?php endforeach; ?>
+        <?php if ($ntpDeviceAddress !== ''): ?>
+            <label class="field" data-ntp-methods="udp" data-ntp-device-source
+                <?= ($ntp['method'] ?? '') === 'udp' && !$ntpStaticSource ? '' : 'hidden' ?>>
+                <span class="field-label">NTP server from device
+                    <?php $ntpHelpText = 'Direct NTP uses the saved hostname or IP from Basic Information. Changes to that address automatically apply here after saving the device.';
+                    require __DIR__ . '/help.php'; ?>
+                </span>
+                <input type="text" value="<?= icct_nms_h($ntpDeviceAddress) ?>" readonly>
+            </label>
+        <?php endif; ?>
         <div class="field" data-ntp-methods="udp" data-ntp-static-source>
             <label><span class="field-label">NTP server IP or hostname
                     <?php $ntpHelpText = 'Direct NTP sends queries to this address from the collector over UDP port 123.';

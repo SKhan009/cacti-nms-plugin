@@ -26,7 +26,8 @@ document.querySelectorAll('[data-ntp-settings]').forEach((settings) => {
         const staticSource = addressing.querySelector('input:checked').value === 'static';
         for (const group of settings.querySelectorAll('[data-ntp-methods]')) {
             const visible = group.dataset.ntpMethods.split(' ').includes(method.value) &&
-                (!group.hasAttribute('data-ntp-static-source') || staticSource);
+                (!group.hasAttribute('data-ntp-static-source') || staticSource) &&
+                (!group.hasAttribute('data-ntp-device-source') || !staticSource);
             group.hidden = !visible;
             for (const input of group.querySelectorAll('input, select')) input.disabled = !visible;
         }
