@@ -4,6 +4,7 @@ require dirname(__DIR__, 2) . '/../../include/auth.php';
 require_once dirname(__DIR__, 2) . '/shared/services/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/inventory/services/inventory.php';
 require_once dirname(__DIR__, 2) . '/graphs/services/graph_service.php';
+$syslogResultsOnly = ($_GET['tab'] ?? '') === 'syslog' && ($_GET['fragment'] ?? '') === 'syslog_results';
 try {
     icct_nms_backend();
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -73,6 +74,21 @@ try {
             echo json_encode($alarmDetail, JSON_THROW_ON_ERROR);
             exit();
         }
+    } elseif (($_GET['tab'] ?? '') === 'syslog' && !isset($_GET['readings'])) {
+        $alarmSyslog = true;
+        require_once dirname(__DIR__) . '/services/syslog_console.php';
+        $syslogConsole = icct_nms_alarm_syslog_console($_GET);
+        $syslogRefreshSeconds = icct_nms_syslog_refresh_seconds(icct_nms_protocol_presets()['syslog'] ?? []);
+        if ($syslogResultsOnly) {
+            header('Content-Type: text/html; charset=utf-8');
+            header('Cache-Control: no-store');
+            require dirname(__DIR__) . '/templates/syslog_results.php';
+            exit();
+        }
+        if (($_GET['export'] ?? '') === 'csv') {
+            require dirname(__DIR__) . '/templates/syslog_csv.php';
+            exit();
+        }
     } else {
         $alarmRows = icct_nms_alarm_rows();
     }
@@ -83,6 +99,10 @@ try {
         exit();
     }
 } catch (Throwable $e) {
+    if ($syslogResultsOnly) {
+        http_response_code(400);
+        exit();
+    }
     if (
         $_SERVER['REQUEST_METHOD'] === 'POST' ||
         isset($_GET['history']) ||
@@ -111,6 +131,8 @@ if (isset($ticketDetail)) {
     require dirname(__DIR__) . '/templates/escalate.php';
 } elseif (isset($alarmDetail)) {
     require dirname(__DIR__) . '/templates/detail.php';
+} elseif (!empty($alarmSyslog)) {
+    require dirname(__DIR__) . '/templates/syslog.php';
 } else {
     require dirname(__DIR__) . '/templates/list.php';
 }

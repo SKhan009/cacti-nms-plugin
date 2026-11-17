@@ -2,6 +2,15 @@
 
 require_once __DIR__ . '/../../ntp/services/ntp_service.php';
 
+const ICCT_SYSLOG_REFRESH_DEFAULT = 30;
+const ICCT_SYSLOG_REFRESH_MIN = 10;
+const ICCT_SYSLOG_REFRESH_MAX = 3600;
+
+function icct_nms_syslog_refresh_seconds(array $preset): int
+{
+    return (int) ($preset['console_refresh_seconds'] ?? ICCT_SYSLOG_REFRESH_DEFAULT);
+}
+
 /** Preset values populate drafts; explicit overrides belong to one device. */
 function icct_nms_protocol_preset_fields($protocol)
 {
@@ -239,6 +248,14 @@ function icct_nms_protocol_preset_validate($protocol, $input)
             ['both', 'udp', 'tcp'],
             'Syslog transport',
         );
+        if (array_key_exists('console_refresh_seconds', $input)) {
+            $out['console_refresh_seconds'] = icct_backend_config_integer(
+                $input['console_refresh_seconds'],
+                ICCT_SYSLOG_REFRESH_MIN,
+                ICCT_SYSLOG_REFRESH_MAX,
+                'Syslog auto-refresh interval',
+            );
+        }
         foreach (icct_backend_syslog_filters($out) as $field => $values) {
             $out[$field] = json_encode($values, JSON_THROW_ON_ERROR);
         }
@@ -281,10 +298,13 @@ function icct_nms_save_protocol_preset($input)
                 ($variant ? $profiles[$protocol][$profile] ?? null : $profiles[$profile] ?? null) ??
                 ((string) ($previous[$profileField] ?? '') === $profile ? $previous : []);
         }
+        if ($protocol === 'syslog') {
+            $values['console_refresh_seconds'] ??= icct_nms_syslog_refresh_seconds($previous);
+        }
         $baseline = icct_nms_protocol_inheritance_baseline();
         $priorBaseline = $baseline;
         foreach (array_intersect_key($previous, $values) as $field => $value) {
-            if ($field !== $profileField && (string) $value !== (string) $values[$field]) {
+            if ($field !== $profileField && $field !== 'console_refresh_seconds' && (string) $value !== (string) $values[$field]) {
                 $baseline[$protocol][$profile][$field] ??= $value;
             }
         }

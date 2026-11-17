@@ -77,6 +77,7 @@ function icct_nms_protocol_starters()
             'facility_codes' => json_encode(range(0, 23)),
             'match_strings' => '[]',
             'transport' => 'both',
+            'console_refresh_seconds' => ICCT_SYSLOG_REFRESH_DEFAULT,
         ],
         'ntp' => [
             'method' => 'udp',
@@ -110,6 +111,8 @@ function icct_nms_seed_protocol_presets()
             $allowed = array_flip(icct_nms_protocol_preset_fields($protocol));
             if ($protocol === 'ntp') {
                 $allowed += array_flip(icct_nms_ntp_optional_fields());
+            } elseif ($protocol === 'syslog') {
+                $allowed['console_refresh_seconds'] = true;
             }
             $presets[$protocol] = array_replace(
                 $starter,

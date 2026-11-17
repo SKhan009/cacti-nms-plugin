@@ -73,6 +73,19 @@ $syslogHelp = static function ($label, $help) {
             <?php endforeach; ?>
         </select>
     </label>
+    <?php if (!empty($presetMode)): ?>
+        <label class="field">
+            <span class="field-label">Auto-refresh interval (seconds) <?php $syslogHelp('Auto-refresh interval', 'How often Alarms → Syslog checks for new messages while the tab is visible. Applies to all devices.'); ?></span>
+            <input
+                name="console_refresh_seconds"
+                type="number"
+                min="<?= ICCT_SYSLOG_REFRESH_MIN ?>"
+                max="<?= ICCT_SYSLOG_REFRESH_MAX ?>"
+                step="1"
+                required
+                value="<?= icct_nms_syslog_refresh_seconds($syslog) ?>">
+        </label>
+    <?php endif; ?>
 </div>
 <div class="protocol-grid cols-2 syslog-settings">
     <?php foreach (

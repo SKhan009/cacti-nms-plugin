@@ -9,8 +9,7 @@
         page = 1,
         descending = true,
         sortKey = 'occurred',
-        refreshing = false,
-        view = 'alarms';
+        refreshing = false;
     const selectedDevices = new Set(),
         devicePicker = document.querySelector('#alarm-device-picker'),
         deviceSummary = document.querySelector('#alarm-device-summary'),
@@ -61,7 +60,6 @@
     }
     function devices() {
         const choices = new Map(rows
-            .filter((r) => (view === 'syslog') === (r.source === 'Syslog'))
             .map((r) => [String(r.host_id), r.device_name]));
         for (const id of selectedDevices) if (!choices.has(id)) selectedDevices.delete(id);
         deviceOptions.replaceChildren();
@@ -119,7 +117,6 @@
         return rows
             .filter(
                 (r) =>
-                    ((view === 'syslog') === (r.source === 'Syslog')) &&
                     (!selectedDevices.size || selectedDevices.has(String(r.host_id))) &&
                     (!severity || severity === r.severity) &&
                     (!controls.source.value || controls.source.value === r.source) &&
@@ -183,11 +180,6 @@
         }
     }
     function render() {
-        for (const tab of root.querySelectorAll('[data-alarm-view]')) {
-            const active = tab.dataset.alarmView === view;
-            tab.classList.toggle('is-active', active);
-            tab.setAttribute('aria-pressed', String(active));
-        }
         for (const button of root.querySelectorAll('[data-alarm-sort]')) {
             const active = button.dataset.alarmSort === sortKey;
             button.classList.toggle('is-active', active);
@@ -359,9 +351,7 @@
             body.append(tr);
         }
         if (!result.length) {
-            const cell = node('td', view === 'syslog'
-                ? 'No Syslog alarms match the current filters.'
-                : 'No alarms match the current filters.');
+            const cell = node('td', 'No alarms match the current filters.');
             cell.colSpan = 8;
             const tr = node('tr');
             tr.append(cell);
@@ -426,20 +416,6 @@
         event.stopPropagation();
         filterDeviceOptions();
     });
-    for (const tab of root.querySelectorAll('[data-alarm-view]')) {
-        tab.addEventListener('click', () => {
-            if (view === tab.dataset.alarmView) return;
-            view = tab.dataset.alarmView;
-            selectedDevices.clear();
-            controls.source.value = '';
-            form.querySelector('.alarm-source-field').hidden = view === 'syslog';
-            deviceSearch.value = '';
-            devicePicker.open = false;
-            page = 1;
-            devices();
-            render();
-        });
-    }
     form.addEventListener('reset', (event) => {
         event.preventDefault();
         for (const input of Array.from(form.elements)) if (input.name) input.value = '';

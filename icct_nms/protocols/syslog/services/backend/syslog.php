@@ -749,6 +749,7 @@ function icct_backend_syslog_events(
     $offset,
     &$total,
     bool $include_alarm_details = true,
+    bool $console = false,
 ) {
     $allowed_host_ids = array_values(array_unique(array_map('intval', $allowed_host_ids)));
     if (!$allowed_host_ids) {
@@ -801,9 +802,11 @@ function icct_backend_syslog_events(
         $where[] = 'COALESCE(a.acknowledged,e.acknowledged)=0';
     }
     if (($filters['search'] ?? '') !== '') {
-        $fields = $include_alarm_details
+        $fields = $console
+            ? ['e.message', 'e.program', 'e.facility', 'e.source_ip', 'h.description', 'h.hostname']
+            : ($include_alarm_details
             ? ['e.message', 'e.program', 'e.source_ip', 'h.description', 'h.hostname']
-            : ['e.message', 'e.source_ip'];
+            : ['e.message', 'e.source_ip']);
         $where[] = '(' . implode(' LIKE ? OR ', $fields) . ' LIKE ?)';
         array_push($params, ...array_fill(0, count($fields), '%' . $filters['search'] . '%'));
     }
@@ -827,12 +830,16 @@ function icct_backend_syslog_events(
     );
     $fields = $include_alarm_details
         ? 'e.*,COALESCE(a.acknowledged,e.acknowledged) AS acknowledged,a.state AS alarm_state,h.description,h.hostname,u.username AS ack_username'
-        : 'e.id,e.event_origin,e.event_time,e.last_seen,e.source_ip,e.transport,e.repeat_count,e.program,e.facility_code,e.facility,e.message,e.timestamp_kind,e.severity_code,e.fingerprint,e.raw_message';
+        : 'e.id,e.event_origin,e.event_time,e.last_seen,e.source_ip,e.transport,e.repeat_count,e.program,e.facility_code,e.facility,e.message,e.timestamp_kind,e.severity_code,e.fingerprint,e.raw_message,e.alarm_key';
     $userJoin = $include_alarm_details ? ' LEFT JOIN user_auth u ON u.id=e.acknowledged_by' : '';
+    if ($console) {
+        $fields .= ',e.host_id';
+    }
+    $direction = $console && !empty($filters['oldest_first']) ? 'ASC' : 'DESC';
     $sql =
         "SELECT {$fields}{$from}{$alarmJoin}{$userJoin}
             {$where_sql}
-            ORDER BY e.event_time DESC,e.id DESC
+            ORDER BY e.event_time {$direction},e.id {$direction}
             LIMIT " .
         (int) $offset .
         ',' .

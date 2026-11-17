@@ -114,3 +114,26 @@ try {
 } catch (InvalidArgumentException $e) {
 }
 echo "Syslog presets validate severity/facility selections and match strings.\n";
+
+$syslogInput = ['preset_protocol' => 'syslog'] + $syslog;
+if (icct_nms_syslog_refresh_seconds([]) !== 30 || $syslog['console_refresh_seconds'] !== 30) {
+    throw new RuntimeException('Existing installations must default to a 30-second refresh.');
+}
+icct_nms_save_protocol_preset(array_replace($syslogInput, ['console_refresh_seconds' => '45']));
+unset($syslogInput['console_refresh_seconds']);
+icct_nms_save_protocol_preset($syslogInput);
+if (icct_nms_syslog_refresh_seconds(icct_nms_protocol_presets()['syslog']) !== 45) {
+    throw new RuntimeException('Saving Syslog defaults must preserve the configured interval.');
+}
+$before = $writes;
+foreach (['', '9', '3601', '30.5', ['30']] as $invalid) {
+    try {
+        icct_nms_save_protocol_preset($syslogInput + ['console_refresh_seconds' => $invalid]);
+        throw new RuntimeException('Invalid Syslog refresh interval accepted.');
+    } catch (InvalidArgumentException $e) {
+        if ($writes !== $before) {
+            throw new RuntimeException('Invalid Syslog interval wrote data.');
+        }
+    }
+}
+echo "Syslog refresh settings default, persist, and validate.\n";

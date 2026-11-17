@@ -9,33 +9,7 @@ unset($_SESSION['icct_nms_alarm_action_success'], $_SESSION['icct_nms_alarm_ack_
     data-report-site="<?= icct_nms_h($serverStatus['hostname'] ?? 'ICCT NMS') ?>"
     data-report-user="<?= icct_nms_h($user['username'] ?? 'Cacti user') ?>"
     data-success="<?= icct_nms_h($alarmSuccess) ?>">
-    <header class="alarm-page-heading">
-        <div>
-            <p>
-                <a href="dashboard/controllers/topology.php">Dashboard</a> / Alarms
-            </p>
-            <h1>Alarms</h1>
-        </div>
-        <div class="alarm-page-heading-actions">
-            <div class="alarm-view-switch" role="group" aria-label="Event view">
-                <button type="button" class="is-active" data-alarm-view="alarms" aria-pressed="true">Alarms (Faults &amp; Traps)</button>
-                <button type="button" data-alarm-view="syslog" aria-pressed="false">Syslog</button>
-            </div>
-            <span class="alarm-heading-divider" aria-hidden="true"></span>
-            <button
-                type="button"
-                class="icon-button"
-                id="alarm-export"
-                aria-label="Export alarm report (PDF)"
-                title="Export alarm report (PDF)">
-                <svg
-                    viewBox="0 0 24 24"
-                    aria-hidden="true">
-                    <path d="M12 16V3m-4 4 4-4 4 4M5 10H3v11h18V10h-2" />
-                </svg>
-            </button>
-        </div>
-    </header>
+    <?php require __DIR__ . '/list_header.php'; ?>
     <form
         id="alarm-filters"
         class="alarm-filters">
@@ -66,7 +40,7 @@ unset($_SESSION['icct_nms_alarm_action_success'], $_SESSION['icct_nms_alarm_ack_
             <span>Fault &amp; Trap Type</span>
             <select name="source" aria-label="Fault and trap type">
                 <option value="">All</option>
-                <?php foreach (['SNMP Traps', 'Passive events', 'SNMP', 'NTP', 'NetFlow', 'Cacti', 'Port', 'Availability'] as $source): ?>
+                <?php foreach (['SNMP Traps', 'Syslog', 'Passive events', 'SNMP', 'NTP', 'NetFlow', 'Cacti', 'Port', 'Availability'] as $source): ?>
                     <option><?= $source ?></option>
                 <?php endforeach; ?>
             </select>
