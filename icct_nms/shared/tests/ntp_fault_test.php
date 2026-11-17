@@ -62,6 +62,30 @@ ntpFaultCheck(
     'Older observations were backfilled with substitute measurements.',
 );
 $rules = icct_nms_fault_validate(icct_nms_ntp_fault_starters(), [], []);
+$preset = icct_nms_ntp_fault_default_preset();
+$direct = icct_nms_ntp_fault_parameters('udp');
+ntpFaultCheck(
+    array_keys(array_intersect_key($preset, $direct)) ===
+        ['absolute_offset_ms', 'offset_ms', 'peer_delay_ms', 'stratum', 'synchronized', 'collection_available', 'age_seconds'],
+    'Direct NTP exposed chrony-only measurements.',
+);
+ntpFaultCheck(
+    $preset['absolute_offset_ms']['maximum'] === 50 && $preset['offset_ms']['minimum'] === -50 &&
+        $preset['rms_offset_ms']['maximum'] === 25 && $preset['jitter_ms']['maximum'] === 20 &&
+        $preset['root_delay_ms']['maximum'] === 100 && $preset['age_seconds']['maximum'] === 900,
+    'Starter thresholds changed.',
+);
+$failed = icct_nms_ntp_fault_values(array_replace($current, ['status' => 'Unavailable', 'sample' => null]));
+$unsynchronized = icct_nms_ntp_fault_values(array_replace($current, [
+    'status' => 'Unsynchronized', 'sample' => array_replace($sample, ['synchronized' => false]),
+]));
+ntpFaultCheck(
+    icct_nms_fault_state($preset['collection_available'], $failed['collection_available']) === 'Warning' &&
+        icct_nms_fault_state($preset['synchronized'], $failed['synchronized']) === 'Unknown' &&
+        icct_nms_fault_state($preset['collection_available'], $unsynchronized['collection_available']) === 'Normal' &&
+        icct_nms_fault_state($preset['synchronized'], $unsynchronized['synchronized']) === 'Warning',
+    'Collection failure and unsynchronized clock alarms overlapped.',
+);
 foreach (['Information', 'Minor', 'Warning', 'Major', 'Critical'] as $severity) {
     $rule = array_replace($rules[0], ['severity' => $severity, 'maximum' => 5]);
     ntpFaultCheck(icct_nms_fault_state($rule, 6) === $severity, 'Configured severity ignored.');

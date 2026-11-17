@@ -11,6 +11,7 @@
                 new URLSearchParams(new FormData(form)),
             ]),
         );
+    const refreshInterval = 30000;
     let page = 1,
         busy = false,
         pending = false,
@@ -80,10 +81,16 @@
         }
         return td;
     }
-    let chartData = null;
-    function drawChart(rows, interval) {
-        chartData = { rows, interval };
-        const svg = document.querySelector('#netflow-chart');
+    const charts = new Map();
+    const historicalChart = section.querySelector('#netflow-chart');
+    const liveChart = section.querySelector('#netflow-live-chart');
+    const liveChartError = section.querySelector('#netflow-live-chart-error');
+    function drawChart(svg, rows, interval, range = null) {
+        if (!Array.isArray(rows) || numeric(interval) === null || Number(interval) <= 0)
+            throw new Error('Invalid flow chart data.');
+        if (rows.some((row) => numeric(row.epoch) === null || numeric(row.bps) === null))
+            throw new Error('Incomplete flow chart observation.');
+        charts.set(svg, { rows, interval, range });
         const width = Math.max(320, svg.clientWidth || 900),
             left = 100, right = width - 16, top = 20, bottom = 188;
         svg.setAttribute('viewBox', `0 0 ${width} 240`);
@@ -104,15 +111,8 @@
             );
             return;
         }
-        if (numeric(interval) === null || Number(interval) <= 0) {
-            throw new Error('Invalid flow chart interval.');
-        }
-        if (rows.some((row) => numeric(row.epoch) === null || numeric(row.bps) === null)) {
-            throw new Error('Incomplete flow chart observation.');
-        }
         const times = rows.map((r) => Number(r.epoch)),
-            start = Math.min(...times),
-            end = Math.max(...times),
+            [start, end] = range ?? [Math.min(...times), Math.max(...times)],
             max = Math.max(1, ...rows.map((r) => Number(r.bps))),
             divisor = max >= 1e9 ? 1e9 : max >= 1e6 ? 1e6 : max >= 1e3 ? 1e3 : 1,
             unit = max >= 1e9 ? 'Gbps' : max >= 1e6 ? 'Mbps' : max >= 1e3 ? 'kbps' : 'bps';
@@ -146,7 +146,20 @@
                         'stroke-width': 2,
                     });
                 }
-                for (const [x, y] of points) add('circle', { cx: x, cy: y, r: 2, fill: color });
+                for (const [x, y, epoch, value] of points) {
+                    if (svg !== liveChart) {
+                        add('circle', { cx: x, cy: y, r: 2, fill: color });
+                        continue;
+                    }
+                    const label = (scope === 'Unknown' ? 'Unclassified' : scope) + ' · ' +
+                        (value / divisor).toLocaleString('en-IN', { maximumFractionDigits: 6 }) +
+                        ' ' + unit + ' · ' + date(epoch) + ' IST (interval start)';
+                    add('circle', {
+                        cx: x, cy: y, r: 4, fill: points.length === 1 ? color : 'transparent',
+                        stroke: 'transparent', 'stroke-width': 10, 'pointer-events': 'all',
+                        tabindex: 0, role: 'img', 'aria-label': label, 'data-tooltip': label,
+                    });
+                }
                 points.length = 0;
             };
             for (let t = start; t <= end; t += Number(interval)) {
@@ -157,6 +170,8 @@
                 points.push([
                     start === end ? (left + right) / 2 : left + ((t - start) / (end - start)) * (right - left),
                     bottom - (Number(map.get(t)) / max) * (bottom - top),
+                    t,
+                    map.get(t),
                 ]);
             }
             drawSegment();
@@ -172,9 +187,22 @@
             date(end),
         );
     }
-    new ResizeObserver(() => {
-        if (chartData) drawChart(chartData.rows, chartData.interval);
-    }).observe(document.querySelector('#netflow-chart'));
+    const chartObserver = new ResizeObserver((entries) => {
+        for (const {target} of entries) {
+            const data = charts.get(target);
+            if (data && !target.hasAttribute('hidden'))
+                drawChart(target, data.rows, data.interval, data.range);
+        }
+    });
+    chartObserver.observe(historicalChart);
+    if (liveChart) chartObserver.observe(liveChart);
+
+    function showLiveChartError(message) {
+        if (!liveChart) return;
+        liveChartError.textContent = message;
+        liveChartError.hidden = !message;
+        liveChart.toggleAttribute('hidden', Boolean(message));
+    }
     function render(data) {
         document.querySelector('#netflow-health').textContent =
             data.health +
@@ -209,7 +237,8 @@
               date(live.latest_epoch) +
               ' IST'
             : 'No flow records received. Readings do not require fault rules; configure the device exporter to send traffic to this collector.';
-        if (liveStatus.textContent !== liveMessage) liveStatus.textContent = liveMessage;
+        const liveSummary = liveMessage + ' · Refreshes every 30 seconds while this tab is open.';
+        if (liveStatus.textContent !== liveSummary) liveStatus.textContent = liveSummary;
         section.querySelectorAll('[data-netflow-live]').forEach((reading) => {
             const value = numeric(live?.values?.[reading.dataset.netflowLive]);
             reading.textContent =
@@ -235,7 +264,16 @@
         document.querySelector('#netflow-chart-interval').textContent =
             Number(data.chart_interval) / 60 +
             '-minute average throughput from exported flow records.';
-        drawChart(data.chart, data.chart_interval);
+        if (liveChart) {
+            try {
+                const trend = data.live_chart;
+                showLiveChartError('');
+                drawChart(liveChart, trend?.rows, trend?.interval, trend?.range);
+            } catch {
+                showLiveChartError('Unable to load the live bandwidth trend. Use Refresh flow readings to retry.');
+            }
+        }
+        drawChart(historicalChart, data.chart, data.chart_interval);
     }
     function renderBreakdown(data) {
         const rankings = document.querySelector('#netflow-rankings');
@@ -405,6 +443,7 @@
         try {
             const response = await fetch('protocols/netflow/controllers/netflow.php?' + query, {
                 credentials: 'same-origin',
+                cache: 'no-store',
             });
             if (
                 response.redirected ||
@@ -415,7 +454,10 @@
             if (!response.ok) throw Error(result.error || 'Unable to load readings.');
             if (isCurrent()) render(result);
         } catch (e) {
-            if (isCurrent()) feedback.textContent = e.message;
+            if (isCurrent()) {
+                feedback.textContent = e.message;
+                if (view === 'overview') showLiveChartError('Live bandwidth trend unavailable. ' + e.message);
+            }
         } finally {
             busy = false;
             if (pending) {
@@ -524,11 +566,13 @@
         load();
     });
     document.querySelector('#netflow-refresh').addEventListener('click', load);
+    const refreshVisible = () => {
+        if (!section.hidden && !document.hidden && !busy) load();
+    };
     window.addEventListener('hashchange', () => {
-        if (location.hash === '#view-netflow') load();
+        if (location.hash === '#view-netflow' && !document.hidden) load();
     });
-    setInterval(() => {
-        if (!section.hidden && !document.hidden) load();
-    }, 30000);
+    document.addEventListener('visibilitychange', refreshVisible);
+    setInterval(refreshVisible, refreshInterval);
     if (location.hash === '#view-netflow') load();
 })();

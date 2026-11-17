@@ -230,7 +230,7 @@ function icct_nms_protocol_preset_validate($protocol, $input)
         }
         $out['monitoring'] = !empty($input['monitoring']) ? '1' : '0';
     } elseif ($protocol === 'ntp') {
-        $out = icct_nms_ntp_validate($out);
+        $out = icct_nms_ntp_validate($out + array_intersect_key($input, array_flip(icct_nms_ntp_optional_fields())));
     } elseif ($protocol === 'netflow') {
         $out = icct_nms_netflow_validate($out);
     } elseif ($protocol === 'syslog') {

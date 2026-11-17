@@ -125,6 +125,9 @@
     defer></script>
 <?php if (!empty($deviceViewPage)): ?>
     <script
+        src="inventory/js/device-live-readings.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../../inventory/js/device-live-readings.js'), 0, 12) ?>"
+        defer></script>
+    <script
         src="protocols/netflow/js/netflow-view.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../../protocols/netflow/js/netflow-view.js'), 0, 12) ?>"
         defer></script>
     <script

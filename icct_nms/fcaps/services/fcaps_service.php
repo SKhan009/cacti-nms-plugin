@@ -507,13 +507,20 @@ function icct_nms_save_faults($id, $input)
         ),
     );
     $rules = icct_nms_fault_validate($rules, icct_nms_fault_catalogue(), $associated);
-    if (
-        array_filter($rules, fn($rule) => $rule['source'] === 'ntp' && $rule['enabled']) &&
-        !icct_nms_ntp_assignment($id)
-    ) {
-        throw new InvalidArgumentException(
-            'Configure NTP collection in Protocol Config before enabling NTP fault rules.',
-        );
+    $ntpRules = array_filter($rules, fn($rule) => $rule['source'] === 'ntp');
+    $supportedNtp = [];
+    if ($ntpRules || $source === 'ntp') {
+        $assignment = icct_nms_ntp_assignment($id);
+        if ($ntpRules && !$assignment) {
+            throw new InvalidArgumentException('Configure NTP collection in Protocol Config first.');
+        }
+        $sample = ($assignment['method'] ?? '') === 'auto' ? icct_nms_ntp_current($id)['sample'] : null;
+        $supportedNtp = icct_nms_ntp_fault_parameters(icct_nms_ntp_fault_method($assignment, $sample));
+        foreach ($ntpRules as $rule) {
+            if (!isset($supportedNtp[$rule['parameter']])) {
+                throw new InvalidArgumentException('This NTP collection method cannot measure the selected parameter.');
+            }
+        }
     }
 
     $key = 'fault_rules_' . $id;
@@ -543,7 +550,8 @@ function icct_nms_save_faults($id, $input)
         );
         $otherRules = array_filter(
             json_decode($stored, true, 64, JSON_THROW_ON_ERROR),
-            static fn($rule) => ($rule['source'] ?? 'rrd') !== $source,
+            static fn($rule) => ($rule['source'] ?? 'rrd') !== $source ||
+                ($source === 'ntp' && !isset($supportedNtp[$rule['parameter']])),
         );
         if (count($otherRules) + count($rules) > 100) {
             throw new InvalidArgumentException('Use no more than 100 fault rules.');

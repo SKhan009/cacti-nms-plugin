@@ -1,0 +1,146 @@
+#view-ntp .ntp-history-settings > summary {
+    width: fit-content;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#view-ntp .ntp-history-settings > summary:focus:not(:focus-visible) {
+    outline: none;
+}
+
+#view-ntp .ntp-history-settings .device-detail-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: start;
+    gap: 14px 16px;
+    margin: 12px 0 0;
+}
+
+#view-ntp .ntp-history-settings .device-detail-grid > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+#view-ntp .ntp-history-rules {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #d7dce5;
+}
+
+#view-ntp .ntp-history-rules h4,
+#view-ntp .ntp-history-trends-heading {
+    margin: 0;
+}
+
+#view-ntp #ntp-history-refresh-status {
+    margin: 12px 0;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+#view-ntp .ntp-history-trends {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+    gap: 16px;
+    margin: 12px 0 16px;
+}
+
+#view-ntp .ntp-history-trend-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+#view-ntp .ntp-history-trend-legend li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#view-ntp .ntp-history-trend-legend span {
+    width: 22px;
+    height: 7px;
+}
+
+#view-ntp .ntp-legend-line {
+    color: var(--ntp-trend-line);
+    background: linear-gradient(currentColor, currentColor) center / 100% 2px no-repeat;
+}
+
+#view-ntp .ntp-legend-dot {
+    color: var(--ntp-trend-dot);
+    background: radial-gradient(circle, currentColor 2.5px, transparent 3px);
+}
+
+#view-ntp .ntp-legend-gap {
+    color: var(--ntp-trend-gap);
+    background: linear-gradient(currentColor, currentColor) left center / 32% 2px no-repeat,
+        linear-gradient(currentColor, currentColor) right center / 32% 2px no-repeat;
+}
+
+#view-ntp .ntp-history-trend-time {
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid #d7dce5;
+    padding-top: 4px;
+}
+
+#view-ntp .ntp-history-trend {
+    display: grid;
+    align-content: start;
+    gap: 4px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid #d7dce5;
+}
+
+#view-ntp .ntp-history-trend p {
+    color: var(--muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1050px) {
+    #view-ntp .ntp-history-settings .device-detail-grid {
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
+    }
+}
+
+#view-ntp .ntp-history-trend h5,
+#view-ntp .ntp-history-trend p {
+    margin: 0;
+}
+
+#view-ntp .ntp-history-trend svg {
+    display: block;
+    width: 100%;
+    height: 44px;
+    margin: 0;
+    color: var(--ntp-trend-line);
+}
+
+#view-ntp .ntp-trend-isolated {
+    color: var(--ntp-trend-dot);
+}
+
+#view-ntp .ntp-trend-reading {
+    stroke: transparent;
+    stroke-width: 12px;
+    pointer-events: stroke;
+    cursor: help;
+}
+
+#view-ntp .ntp-trend-reading:hover,
+#view-ntp .ntp-trend-reading:focus-visible {
+    stroke: currentColor;
+    stroke-opacity: 0.35;
+}
+#view-ntp {
+    --ntp-trend-line: var(--blue, #0f62fe);
+    --ntp-trend-dot: #8a3ffc;
+    --ntp-trend-gap: #6f6f6f;
+}

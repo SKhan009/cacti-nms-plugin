@@ -432,28 +432,32 @@ if (!$viewGraphs): ?>
                 data-tooltip="Saved fault rules and current device observations.">ⓘ</span>
         </h2>
         <?php
-        $summaryRows = [];
-                    $viewRules = icct_nms_fault_rules($id);
-                    $faults = icct_nms_fault_observations($old);
-                    $summaryRrdReadings = [];
-foreach ($viewRules as $ruleIndex => $rule) {
-    $ruleReadings = array_values(array_filter($faults, static fn($item) => isset($item['rule']) && (string) $item['rule'] === (string) $ruleIndex));
-    if (($rule['source'] ?? 'rrd') === 'rrd') {
-        $readingKey = $rule['template_id'] . ':' . $rule['metric_id'];
-        if (!isset($summaryRrdReadings[$readingKey])) {
-            try {
-                $summaryRrdReadings[$readingKey] = icct_nms_fault_rrd_read($old, (int) $rule['template_id'], (int) $rule['metric_id']);
-            } catch (Throwable $error) {
-                $summaryRrdReadings[$readingKey] = [['value' => null, 'reason' => 'Unavailable (no fresh sample)']];
-            }
-        }
-        $ruleReadings = $summaryRrdReadings[$readingKey];
-    }
-    $summaryRows[$ruleIndex] = icct_nms_fault_summary_fields($rule, $ruleReadings);
-}
-
         $faultTab = $_GET['fault_tab'] ?? 'settings';
         if (!in_array($faultTab, ['settings', 'triggered', 'readings'], true)) $faultTab = 'settings';
+        $summaryRows = [];
+        $viewRules = $faultTab === 'settings' ? icct_nms_fault_rules($id) : [];
+        if ($faultTab === 'settings') {
+            $faults = icct_nms_fault_observations($old);
+            $summaryRrdReadings = [];
+            foreach ($viewRules as $ruleIndex => $rule) {
+                $ruleReadings = array_values(array_filter(
+                    $faults,
+                    static fn($item) => isset($item['rule']) && (string) $item['rule'] === (string) $ruleIndex,
+                ));
+                if (($rule['source'] ?? 'rrd') === 'rrd') {
+                    $readingKey = $rule['template_id'] . ':' . $rule['metric_id'];
+                    if (!isset($summaryRrdReadings[$readingKey])) {
+                        try {
+                            $summaryRrdReadings[$readingKey] = icct_nms_fault_rrd_read($old, (int) $rule['template_id'], (int) $rule['metric_id']);
+                        } catch (Throwable $error) {
+                            $summaryRrdReadings[$readingKey] = [['value' => null, 'reason' => 'Unavailable (no fresh sample)']];
+                        }
+                    }
+                    $ruleReadings = $summaryRrdReadings[$readingKey];
+                }
+                $summaryRows[$ruleIndex] = icct_nms_fault_summary_fields($rule, $ruleReadings);
+            }
+        }
         ?>
         <nav class="device-view-tabs" aria-label="Fault sections">
             <?php foreach (['settings' => 'Alarm Settings', 'triggered' => 'Triggered Alarms', 'readings' => 'Current Readings'] as $key => $label): ?>
@@ -551,14 +555,18 @@ if (!$viewRules): ?>
         </table></div>
         <?php else: ?>
         <h3>Current readings</h3>
+        <?php require_once __DIR__ . '/../services/live_readings.php';
+        $liveDeviceReadings = icct_nms_device_live_readings($old); ?>
+        <p id="device-live-readings-status" role="status">Refreshing every 30 seconds while this tab is open.</p>
         <div class="site-table-wrap"><table class="site-table">
-            <thead><tr><th>Rule</th><th>Units</th><th>Current Reading</th><th>Alarm Enabled</th></tr></thead>
-            <tbody>
-            <?php foreach ($viewRules as $ruleIndex => $rule): $summaryFields = $summaryRows[$ruleIndex]; ?>
-                <tr><td><?= $display($rule['name']) ?></td><td><?= $display($summaryFields['units']) ?></td>
-                    <td style="white-space: pre-line"><?= $display($summaryFields['reading']) ?></td><td><?= $rule['enabled'] ? 'Yes' : 'No' ?></td></tr>
+            <thead><tr><th>Source</th><th>Measurement</th><th>Units</th><th>Current Reading</th><th>Alarm Enabled</th></tr></thead>
+            <tbody id="device-live-readings">
+            <?php foreach ($liveDeviceReadings['rows'] as $reading): ?>
+                <tr><td><?= $display($reading['source']) ?></td><td><?= $display($reading['name']) ?></td>
+                    <td><?= $display($reading['units']) ?></td><td style="white-space: pre-line"><?= $display($reading['reading']) ?></td>
+                    <td><?= $display($reading['alarm_enabled']) ?></td></tr>
             <?php endforeach; ?>
-            <?php if (!$viewRules): ?><tr><td colspan="4">No fault readings configured for this device.</td></tr><?php endif; ?>
+            <?php if (!$liveDeviceReadings['rows']): ?><tr><td colspan="5">No readings configured for this device.</td></tr><?php endif; ?>
             </tbody>
         </table></div>
         <?php endif; ?>

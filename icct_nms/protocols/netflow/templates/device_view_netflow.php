@@ -54,6 +54,16 @@
                             </div>
                         <?php endforeach; ?>
                     </div>
+                    <div class="netflow-chart-panel">
+                        <h3>Live bandwidth trend</h3>
+                        <p>Last 5 minutes · 30-second averages · Hover over a reading for its time and value.</p>
+                        <div id="netflow-live-chart-error" class="inline-feedback error" role="alert" hidden></div>
+                        <svg id="netflow-live-chart" role="group" aria-label="Live NetFlow bandwidth trend"></svg>
+                        <p class="netflow-legend" aria-label="Live bandwidth legend">
+                            <span>● LAN</span><span>● WAN</span><span>● Unclassified</span>
+                        </p>
+                        <p>Lines connect consecutive readings. Dots mark individual readings. Gaps mean no reported flows.</p>
+                    </div>
                 </section>
             <?php endif; ?>
             <form class="device-history-filters netflow-filters" data-netflow-view="<?= $key ?>"

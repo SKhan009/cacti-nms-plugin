@@ -459,6 +459,7 @@
             scale: item.scale || 1,
             template_id: item.template_id || 0,
             metric_id: item.metric_id || 0,
+            ...(item.source === 'ntp' ? ntpParameters[item.parameter]?.starter : {}),
         });
         const added = list.children[list.children.length - 1];
         renderMeasurements(added);
@@ -1321,7 +1322,9 @@
         if (source.value === 'rrd' || (source.value === 'snmp' && oid.value)) readParameter();
     }
     saved.forEach((rule, index) => {
-        if (rule.source !== 'iperf3_udp') addRule(rule, index);
+        if (rule.source !== 'iperf3_udp' && (rule.source !== 'ntp' || ntpParameters[rule.parameter])) {
+            addRule(rule, index);
+        }
     });
     form.addEventListener('icct-fault-saved', (event) => {
         if (typeof event.detail === 'object') {

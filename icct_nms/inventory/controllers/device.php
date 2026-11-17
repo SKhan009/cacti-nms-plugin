@@ -21,6 +21,31 @@ require_once dirname(__DIR__, 2) . '/fcaps/services/fcaps_service.php';
 require_once dirname(__DIR__, 2) . '/protocols/shared/services/protocol_service.php';
 require_once dirname(__DIR__, 2) . '/protocols/serial/services/serial_service.php';
 require_once dirname(__DIR__, 2) . '/protocols/shared/services/protocol_preset_service.php';
+if (($_GET['fragment'] ?? '') === 'live_readings' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    try {
+        icct_nms_backend();
+        $id = icct_nms_id($_GET['id'] ?? 0);
+        $host = icct_nms_device($id);
+        if (($_GET['scope'] ?? '') === 'ntp') {
+            $ntp = icct_nms_ntp_assignment($id) ? icct_nms_ntp_current($id) : null;
+            if ($ntp !== null) {
+                $ntp['last_success_display'] = icct_nms_display_time($ntp['last_success']);
+                $ntp['last_attempt_display'] = icct_nms_display_time($ntp['last_attempt']);
+            }
+            $result = ['ntp' => $ntp];
+        } else {
+            require_once dirname(__DIR__, 2) . '/inventory/services/live_readings.php';
+            $result = icct_nms_device_live_readings($host);
+        }
+        echo json_encode($result, JSON_THROW_ON_ERROR);
+    } catch (Throwable $error) {
+        http_response_code(400);
+        echo json_encode(['error' => $error->getMessage()]);
+    }
+    exit();
+}
 // Read-only preview uses the saved device protocol credentials; never exposes them to JS.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'fault_parameter_read') {
     header('Content-Type: application/json; charset=utf-8');

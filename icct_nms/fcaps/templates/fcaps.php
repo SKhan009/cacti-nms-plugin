@@ -358,11 +358,19 @@
             JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE,
         ) ?></script>
     <?php $ntpFaultCurrent = icct_nms_ntp_current($id);
-    $ntpFaultAssignment = icct_nms_ntp_assignment($id); ?>
+    $ntpFaultAssignment = icct_nms_ntp_assignment($id);
+    $ntpEditorParameters = icct_nms_ntp_fault_parameters(
+        icct_nms_ntp_fault_method($ntpFaultAssignment, $ntpFaultCurrent['sample']),
+    );
+    foreach (icct_nms_ntp_fault_default_preset() as $parameter => $starter) {
+        if (isset($ntpEditorParameters[$parameter])) {
+            $ntpEditorParameters[$parameter]['starter'] = $starter;
+        }
+    } ?>
     <script
         type="application/json"
         id="fault-ntp-parameters"><?= json_encode(
-            icct_nms_ntp_fault_parameters(),
+            $ntpEditorParameters,
             JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR,
         ) ?></script>
     <script

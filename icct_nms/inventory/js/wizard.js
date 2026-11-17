@@ -531,7 +531,7 @@
     document.addEventListener(
         'submit',
         (event) => {
-            if (!wizard.contains(event.target)) return;
+            if (!wizard.contains(event.target) || event.target.hasAttribute('data-ntp-preset-copy')) return;
             event.preventDefault();
             event.stopImmediatePropagation();
             const form = event.target,

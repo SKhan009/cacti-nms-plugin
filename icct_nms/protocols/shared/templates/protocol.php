@@ -577,13 +577,13 @@ $netflow = array_replace(
         <?php
 $ntpAssignment = $presetMode ? [] : icct_nms_ntp_assignment($id);
 $ntpSaved = (bool) $ntpAssignment;
-$ntp = $presetMode ? ($protocolPresets['ntp'] ?? []) :
-    array_replace(icct_nms_protocol_presets()['ntp'] ?? [], $ntpAssignment);
-if (!$presetMode && !$ntpSaved && in_array($ntp['method'] ?? '', ['', 'local', 'ssh'], true)) {
-    $ntp['method'] = 'auto';
-}
+$ntpPreset = ($presetMode ? $protocolPresets : icct_nms_protocol_presets())['ntp'] ?? [];
+$ntp = array_replace($ntpPreset, $ntpAssignment);
 if ($failedProtocol === 'ntp') {
-    $ntp = array_intersect_key(array_filter(icct_nms_ntp_form_values($_POST), 'is_scalar'), array_flip(icct_nms_ntp_fields()));
+    $ntp = array_intersect_key(
+        array_filter(icct_nms_ntp_form_values($_POST), 'is_scalar'),
+        array_flip(array_merge(icct_nms_ntp_fields(), icct_nms_ntp_optional_fields())),
+    );
 }
 ?>
         <details class="protocol-item" id="protocol-ntp" data-saved="<?= $ntpSaved ? '1' : '0' ?>"
@@ -610,6 +610,22 @@ if ($failedProtocol === 'ntp') {
                     <?php if ($presetMode): ?><input type="hidden" name="preset_protocol" value="ntp"><?php endif; ?>
                     <?php require __DIR__ . '/../../ntp/templates/settings.php'; ?>
                 </form>
+                <?php if (!$presetMode && $ntpSaved && $ntpAssignment['method'] !== 'auto'): ?>
+                    <form method="post" action="presets/controllers/presets.php?tab=protocols" target="_blank" data-ntp-preset-copy>
+                        <?php icct_nms_token(); ?>
+                        <input type="hidden" name="action" value="save_protocol_defaults">
+                        <input type="hidden" name="preset_protocol" value="ntp">
+                        <?php foreach (array_intersect_key(
+                            array_replace($ntpPreset, $ntpAssignment),
+                            array_flip(array_merge(icct_nms_ntp_fields(), icct_nms_ntp_optional_fields())),
+                        ) as $field => $value): ?>
+                            <input type="hidden" name="<?= $field === 'method' ? 'ntp_method' : icct_nms_h($field) ?>" value="<?= icct_nms_h($value) ?>">
+                        <?php endforeach; ?>
+                        <div class="protocol-actions">
+                            <button class="button" type="submit">Save device settings as preset</button>
+                        </div>
+                    </form>
+                <?php endif; ?>
             </div>
         </details>
         <?php foreach (['tacacs' => 'TACACS+'] as $key => $label): ?>

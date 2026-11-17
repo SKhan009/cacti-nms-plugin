@@ -88,13 +88,13 @@ function icct_nms_ntp_udp_read($host, $timeout)
     ) {
         $endpoint = $host;
     } else {
-        throw new RuntimeException('Direct NTP requires an inventory IP address or hostname.');
+        throw new RuntimeException('Direct NTP requires a server IP address or hostname.');
     }
     $deadline = hrtime(true) + $timeout * 1000000000;
     $socket = @stream_socket_client('udp://' . $endpoint . ':123', $errno, $error, $timeout);
     if ($socket === false) {
         throw new RuntimeException(
-            'Could not open a direct NTP connection to the inventory address.',
+            'Could not open a direct NTP connection to the server.',
         );
     }
     try {
@@ -118,14 +118,14 @@ function icct_nms_ntp_udp_read($host, $timeout)
             ) !== 1
         ) {
             throw new RuntimeException(
-                'No direct NTP response. Check that the inventory address serves NTP on UDP 123.',
+                'No direct NTP response. Check that the server serves NTP on UDP 123.',
             );
         }
         $packet = @stream_socket_recvfrom($socket, 2048);
         $received = microtime(true);
         if ($packet === false || $packet === '' || hrtime(true) > $deadline) {
             throw new RuntimeException(
-                'No direct NTP response. Check that the inventory address serves NTP on UDP 123.',
+                'No direct NTP response. Check that the server serves NTP on UDP 123.',
             );
         }
         return icct_nms_ntp_udp_sample($packet, $origin, $sent, $received, $host);

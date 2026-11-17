@@ -431,6 +431,16 @@ function icct_nms_netflow_rankings($filter)
     return $rankings;
 }
 
+function icct_nms_netflow_chart($where, $args, int $interval)
+{
+    return db_fetch_assoc_prepared(
+        'SELECT FLOOR(UNIX_TIMESTAMP(last_seen)/' . $interval . ')*' . $interval .
+            ' AS epoch,traffic_scope,SUM(bytes)*8/' . $interval . ' AS bps ' .
+            'FROM plugin_icct_nms_netflow_flows WHERE ' . $where . ' GROUP BY epoch,traffic_scope ORDER BY epoch',
+        $args,
+    );
+}
+
 function icct_nms_netflow_read($id, $input)
 {
     $filter = icct_nms_netflow_filter($id, $input);
@@ -461,18 +471,23 @@ function icct_nms_netflow_read($id, $input)
     );
     $rankings = icct_nms_netflow_rankings($filter);
     $chartInterval = max(300, (int) ceil(($filter['end'] - $filter['start']) / 300 / 300) * 300);
-    $chart = db_fetch_assoc_prepared(
-        'SELECT FLOOR(UNIX_TIMESTAMP(last_seen)/' .
-            $chartInterval .
-            ')*' .
-            $chartInterval .
-            ' AS epoch,traffic_scope,SUM(bytes)*8/' .
-            $chartInterval .
-            ' AS bps FROM plugin_icct_nms_netflow_flows WHERE ' .
-            $where .
-            ' GROUP BY epoch,traffic_scope ORDER BY epoch',
-        $args,
-    );
+    $chart = icct_nms_netflow_chart($where, $args, $chartInterval);
+    $live = ($input['live'] ?? '') === '1';
+    $liveChart = null;
+    if ($live) {
+        $interval = 30;
+        $end = intdiv(time(), $interval) * $interval;
+        $start = $end - 300;
+        $liveChart = [
+            'rows' => icct_nms_netflow_chart(
+                'host_id=? AND last_seen>=FROM_UNIXTIME(?) AND last_seen<FROM_UNIXTIME(?)',
+                [(int) $id, $start, $end],
+                $interval,
+            ),
+            'interval' => $interval,
+            'range' => [$start, $end - $interval],
+        ];
+    }
     $eventWhere = ['e.host_id=?'];
     $eventArgs = [(int) $id];
     $eventWhere[] = 'e.updated_at BETWEEN ? AND ?';
@@ -549,10 +564,9 @@ function icct_nms_netflow_read($id, $input)
                             : 'Waiting for flows')))));
     return [
         'totals' => $totals,
-        'live_readings' =>
-            ($input['live'] ?? '') === '1' ? icct_nms_netflow_live_readings($id) : null,
-        'historical_readings' => ($input['live'] ?? '') === '1'
-            ? icct_nms_netflow_last_readings($id) : null,
+        'live_readings' => $live ? icct_nms_netflow_live_readings($id) : null,
+        'historical_readings' => $live ? icct_nms_netflow_last_readings($id) : null,
+        'live_chart' => $liveChart,
         'rankings' => $rankings,
         'chart' => $chart,
         'chart_interval' => $chartInterval,

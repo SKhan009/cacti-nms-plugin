@@ -7,6 +7,10 @@ function read_config_option($key)
 {
     return 60;
 }
+function icct_backend_inventory_collector_id()
+{
+    return 1;
+}
 function checkNtp($ok, $message)
 {
     if (!$ok) {
@@ -30,6 +34,15 @@ $values = [
     'stale_seconds' => 180,
 ];
 checkNtp(icct_nms_ntp_validate($values)['timeout'] === 5, 'Collection settings conversion failed.');
+$perPoll = icct_nms_ntp_validate(array_replace($values, [
+    'method' => 'auto', 'interval_seconds' => 0, 'server_address' => 'ntp.example.test', 'maximum_delay_ms' => '35',
+]));
+checkNtp($perPoll['interval_seconds'] === 0 && $perPoll['maximum_delay_ms'] === '35' &&
+    icct_nms_ntp_effective_method($perPoll + ['hostname' => '127.0.0.1']) === 'udp',
+    'A configured server must take precedence over collector chrony in automatic mode.');
+checkNtp(icct_nms_ntp_effective_method(['method' => 'ssh', 'hostname' => '127.0.0.1']) === 'ssh',
+    'Verified device SSH must never change the subject to the collector.');
+rejectsNtp(fn() => icct_nms_ntp_validate(array_replace($values, ['server_address' => 'udp://10.0.0.1'])));
 $posted = array_diff_key($values, ['method' => true]) + ['ntp_method' => 'udp'];
 require_once __DIR__ . '/../../shared/services/protocol_preset_service.php';
 checkNtp(
@@ -60,6 +73,12 @@ foreach (
 rejectsNtp(fn() => icct_nms_ntp_validate(array_diff_key($values, ['method' => true])));
 rejectsNtp(fn() => icct_nms_ntp_validate(array_replace($values, ['timeout' => []])));
 checkNtp(icct_nms_ntp_local_device(['hostname' => '::1']), 'IPv6 localhost rejected.');
+$collector = ['hostname' => gethostname(), 'poller_id' => 1];
+checkNtp(icct_nms_ntp_local_device($collector), 'Collector hostname rejected.');
+checkNtp(
+    !icct_nms_ntp_local_device(array_replace($collector, ['poller_id' => 2])),
+    'Collector hostname accepted for a different poller.',
+);
 checkNtp(
     !icct_nms_ntp_local_device(['hostname' => '192.0.2.4']),
     'Remote clock relabelled as collector.',

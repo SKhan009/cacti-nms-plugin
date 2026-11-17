@@ -6,12 +6,11 @@ require __DIR__ . '/../../../inventory/templates/device_record_pager.php';
 $ntpAssignment = icct_nms_ntp_assignment($id);
 $ntpCurrent = icct_nms_ntp_current($id);
 $ntpSample = $ntpCurrent['sample'];
-$ntpAlarms = $ntpAssignment ? db_fetch_assoc_prepared(
-    'SELECT alarm_key,name,description,severity FROM plugin_icct_nms_alarms WHERE host_id=? AND source=? AND state=? ' .
-        'ORDER BY last_seen DESC,alarm_key',
-    [(int) $id, 'NTP', 'Active'],
-) : [];
-$ntpTabs = ['overview' => 'Overview', 'history' => 'Observation History'];
+$ntpTabs = [
+    'overview' => 'Current Readings',
+    'alarms' => 'NTP Alarms',
+    'history' => 'Observation History',
+];
 $ntpTab = $_GET['ntp_tab'] ?? (
     isset($_GET['ntp_page']) ||
     isset($_GET['ntp_from']) || isset($_GET['ntp_to']) || isset($_GET['ntp_status'])
@@ -19,6 +18,11 @@ $ntpTab = $_GET['ntp_tab'] ?? (
         : 'overview'
 );
 $ntpTab = is_string($ntpTab) && isset($ntpTabs[$ntpTab]) ? $ntpTab : 'overview';
+$ntpAlarms = $ntpAssignment && $ntpTab === 'alarms' ? db_fetch_assoc_prepared(
+    'SELECT alarm_key,name,description,severity FROM plugin_icct_nms_alarms WHERE host_id=? AND source=? AND state=? ' .
+        'ORDER BY last_seen DESC,alarm_key',
+    [(int) $id, 'NTP', 'Active'],
+) : [];
 $ntpUrl = static fn ($tab, $params = []) => 'inventory/controllers/device.php?' .
     http_build_query(['id' => (int) $id, 'view' => 1, 'ntp_tab' => $tab] + $params) . '#view-ntp';
 $ntpHistory = $ntpFilters = [];
@@ -56,6 +60,7 @@ $ntpNumber = static function ($value): string {
         <span
             class="device-status"
             role="status"
+            data-ntp-live="status"
             data-log-status="<?= icct_nms_h($ntpCurrent['status']) ?>"><?= icct_nms_h($ntpCurrent['status']) ?></span>
     </div>
     <?php if ($ntpAssignment): ?>
@@ -66,36 +71,41 @@ $ntpNumber = static function ($value): string {
             <?php endforeach; ?>
         </nav>
         <?php if ($ntpTab === 'overview'): ?>
-            <?php if ($ntpCurrent['error'] !== ''): ?>
-                <p role="alert"><?= icct_nms_h($ntpCurrent['error']) ?></p>
-            <?php endif; ?>
+            <p id="ntp-live-refresh-status" role="status">Checking for new readings every 30 seconds while this tab is open.</p>
+            <p role="alert" data-ntp-live="error" <?= $ntpCurrent['error'] === '' ? 'hidden' : '' ?>><?= icct_nms_h($ntpCurrent['error']) ?></p>
             <section class="syslog-detail-panel ntp-overview-card">
-                <h3 data-field-help="Synchronization means the device is following a time source. Separate alarms can still flag jitter or delay.">Current readings</h3>
+                <h3>Current readings</h3>
                 <dl class="device-detail-grid">
+                    <?php foreach (['measured_host' => 'Measured host', 'method_used' => 'Method used', 'collector' => 'Collector'] as $field => $label): ?>
+                        <div>
+                            <dt><?= icct_nms_h($label) ?></dt>
+                            <dd data-ntp-live="<?= $field ?>"><?= $display($ntpCurrent[$field] ?? null) ?></dd>
+                        </div>
+                    <?php endforeach; ?>
                     <div>
                         <?php if (isset($ntpSample['server_address'])): ?>
                             <dt>Queried NTP server</dt>
-                            <dd><?= $display($ntpSample['server_address']) ?></dd>
+                            <dd data-ntp-live="server_address"><?= $display($ntpSample['server_address']) ?></dd>
                         <?php else: ?>
                             <dt data-field-help="IP address of the time source reported by the latest reading.">Observed source IP</dt>
-                            <dd><?= $display($ntpSample['source_address'] ?? null) ?></dd>
+                            <dd data-ntp-live="source_address"><?= $display($ntpSample['source_address'] ?? null) ?></dd>
                         <?php endif; ?>
                     </div>
                     <div>
                         <dt data-field-help="The device’s level in the NTP time hierarchy. A lower number means fewer levels from the reference clock.">Stratum</dt>
-                        <dd><?= $display($ntpSample['stratum'] ?? null) ?></dd>
+                        <dd data-ntp-live="stratum"><?= $display($ntpSample['stratum'] ?? null) ?></dd>
                     </div>
                     <div>
                         <dt data-field-help="When the collector last obtained a clock reading successfully.">Last successful read</dt>
-                        <dd><?= $display($ntpCurrent['last_success']) ?></dd>
+                        <dd data-ntp-live="last_success"><?= $display(icct_nms_display_time($ntpCurrent['last_success'])) ?></dd>
                     </div>
                     <div>
                         <dt data-field-help="The clock difference estimated during the latest update, in milliseconds.">Last measured offset (ms)</dt>
-                        <dd><?= $ntpNumber($ntpSample['offset_ms'] ?? null) ?></dd>
+                        <dd data-ntp-live="offset_ms"><?= $ntpNumber($ntpSample['offset_ms'] ?? null) ?></dd>
                     </div>
                     <div>
                         <dt data-field-help="How much the clock measurements from the selected time source vary. Chrony needs at least three samples to report this value.">Jitter (ms)</dt>
-                        <dd><?= $ntpNumber($ntpSample['jitter_ms'] ?? null) ?></dd>
+                        <dd data-ntp-live="jitter_ms"><?= $ntpNumber($ntpSample['jitter_ms'] ?? null) ?></dd>
                     </div>
                     <div>
                         <?php if (isset($ntpSample['server_address'])): ?>
@@ -103,10 +113,43 @@ $ntpNumber = static function ($value): string {
                         <?php else: ?>
                             <dt data-field-help="How long an NTP request takes to reach the selected time server and return.">Peer round-trip delay (ms)</dt>
                         <?php endif; ?>
-                        <dd><?= $ntpNumber($ntpSample['peer_delay_ms'] ?? null) ?></dd>
+                        <dd data-ntp-live="peer_delay_ms"><?= $ntpNumber($ntpSample['peer_delay_ms'] ?? null) ?></dd>
                     </div>
                 </dl>
             </section>
+            <details class="syslog-detail-panel ntp-overview-card ntp-technical-details">
+                <summary>Technical details</summary>
+                <dl class="device-detail-grid">
+                    <div>
+                        <dt>Configured method</dt>
+                        <dd><?= icct_nms_h(icct_nms_ntp_methods()[$ntpAssignment['method']]) ?></dd>
+                    </div>
+                    <div><dt>Collection interval</dt>
+                        <dd><?= (int) $ntpAssignment['interval_seconds'] ?: 'Every Cacti poll' ?><?= (int) $ntpAssignment['interval_seconds'] ? ' seconds' : '' ?></dd>
+                    </div>
+                    <div>
+                        <dt data-field-help="When the collector last tried to read the device clock status.">Last attempt</dt>
+                        <dd data-ntp-live="last_attempt"><?= icct_nms_h(icct_nms_display_time($ntpCurrent['last_attempt'])) ?></dd>
+                    </div>
+                    <div>
+                        <dt data-field-help="Identifier reported by the device for the time reference it is using.">Observed reference ID</dt>
+                        <dd data-ntp-live="source_id"><?= $display($ntpSample['source_id'] ?? null) ?></dd>
+                    </div>
+                    <div>
+                        <dt data-field-help="Shows whether the time source reports a leap-second warning or an unsynchronized clock.">Leap status</dt>
+                        <dd data-ntp-live="leap_status"><?= $display($ntpSample['leap_status'] ?? null) ?></dd>
+                    </div>
+                    <div>
+                        <dt data-field-help="A summary of clock differences over time that gives more weight to large differences.">RMS offset (ms)</dt>
+                        <dd data-ntp-live="rms_offset_ms"><?= $ntpNumber($ntpSample['rms_offset_ms'] ?? null) ?></dd>
+                    </div>
+                    <div>
+                        <dt data-field-help="Estimated total round-trip delay through the chain of time servers to the reference clock.">Root delay (ms)</dt>
+                        <dd data-ntp-live="root_delay_ms"><?= $ntpNumber($ntpSample['root_delay_ms'] ?? null) ?></dd>
+                    </div>
+                </dl>
+            </details>
+        <?php elseif ($ntpTab === 'alarms'): ?>
             <h3 data-field-help="Current NTP alarms for this device. Open an alarm to see the reading or condition that raised it.">Active NTP alarms</h3>
             <?php if ($ntpAlarms): ?>
                 <div class="site-table-wrap">
@@ -133,38 +176,11 @@ $ntpNumber = static function ($value): string {
             <?php else: ?>
                 <p class="device-record-empty">There are no active NTP alarms for this device.</p>
             <?php endif; ?>
-            <details class="syslog-detail-panel ntp-overview-card ntp-technical-details">
-                <summary>Technical details</summary>
-                <dl class="device-detail-grid">
-                    <div>
-                        <dt data-field-help="How Cacti obtains the clock readings, either from the local collector or over SSH.">Collection method</dt>
-                        <dd><?= icct_nms_h(icct_nms_ntp_methods()[$ntpAssignment['method']]) ?></dd>
-                    </div>
-                    <div>
-                        <dt data-field-help="When the collector last tried to read the device clock status.">Last attempt</dt>
-                        <dd><?= icct_nms_h(icct_nms_display_time($ntpCurrent['last_attempt'])) ?></dd>
-                    </div>
-                    <div>
-                        <dt data-field-help="Identifier reported by the device for the time reference it is using.">Observed reference ID</dt>
-                        <dd><?= $display($ntpSample['source_id'] ?? null) ?></dd>
-                    </div>
-                    <div>
-                        <dt data-field-help="Shows whether the time source reports a leap-second warning or an unsynchronized clock.">Leap status</dt>
-                        <dd><?= $display($ntpSample['leap_status'] ?? null) ?></dd>
-                    </div>
-                    <div>
-                        <dt data-field-help="A summary of clock differences over time that gives more weight to large differences.">RMS offset (ms)</dt>
-                        <dd><?= $ntpNumber($ntpSample['rms_offset_ms'] ?? null) ?></dd>
-                    </div>
-                    <div>
-                        <dt data-field-help="Estimated total round-trip delay through the chain of time servers to the reference clock.">Root delay (ms)</dt>
-                        <dd><?= $ntpNumber($ntpSample['root_delay_ms'] ?? null) ?></dd>
-                    </div>
-                </dl>
-            </details>
         <?php else: ?>
+            <link rel="stylesheet" href="protocols/ntp/css/history.css?v=<?= substr(hash_file('sha256', __DIR__ . '/../css/history.css'), 0, 12) ?>">
             <h3>Observation history <?php $ntpHelpText = 'Collection removes records older than 30 days. Older observations without jitter or peer delay display a dash. Export includes all retained rows matching the applied filters.';
             require __DIR__ . '/help.php'; ?></h3>
+            <?php require __DIR__ . '/history_settings.php'; ?>
             <form
                 method="get"
                 action="inventory/controllers/device.php#view-ntp"
@@ -212,6 +228,8 @@ $ntpNumber = static function ($value): string {
                     <?php endif; ?>
                 </div>
             </form>
+            <p id="ntp-history-refresh-status" role="status">New observations appear here automatically while this tab is open.</p>
+            <div id="ntp-history-results" data-last-ntp-attempt="<?= (int) ($ntpCurrent['attempted_epoch'] ?? 0) ?>">
             <?php if ($ntpHistoryError !== ''): ?>
                 <p role="alert"><?= icct_nms_h($ntpHistoryError) ?></p>
             <?php endif; ?>
@@ -223,7 +241,8 @@ $ntpNumber = static function ($value): string {
                             <tr>
                                 <th>Observed at</th>
                                 <th>Status</th>
-                                <th>Source IP</th>
+                                <th>Measured host and method</th>
+                                <th>Observed source IP</th>
                                 <th>Offset (ms)</th>
                                 <th>Jitter (ms)</th>
                                 <th>Peer delay (ms)</th>
@@ -240,6 +259,8 @@ $ntpNumber = static function ($value): string {
                                             class="device-status"
                                             data-log-status="<?= icct_nms_h($observation['status']) ?>"><?= icct_nms_h($observation['status']) ?></span>
                                     </td>
+                                    <td><?= $display(isset($sample['measured_host']) ? $sample['measured_host'] . ' · ' .
+                                        (icct_nms_ntp_methods()[$sample['collection_method'] ?? ''] ?? '') : null) ?></td>
                                     <td><?= $display($sample['source_address'] ?? null) ?></td>
                                     <td><?= $ntpNumber($sample['offset_ms'] ?? null) ?></td>
                                     <td><?= $ntpNumber($sample['jitter_ms'] ?? null) ?></td>
@@ -254,6 +275,7 @@ $ntpNumber = static function ($value): string {
             <?php elseif ($ntpHistoryError === ''): ?>
                 <p>No NTP observations match the selected filters.</p>
             <?php endif; ?>
+            </div>
         <?php endif; ?>
     <?php else: ?>
         <p>Configure NTP in the device's Protocol Config to collect its clock status.</p>
