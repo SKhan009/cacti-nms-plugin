@@ -84,24 +84,28 @@
     ); ?>
             </div>
             <div class="ssh-private-key">
-                <h3>Upload files <span
-                        class="field-info section-help"
-                        tabindex="0"
-                        role="img"
-                        aria-label="Maximum 64 KB. Supported formats: .ppk, PEM, OpenSSH."
-                        data-tooltip="Maximum 64 KB. Supported formats: .ppk, PEM, OpenSSH.">ⓘ</span>
-                </h3>
-                <label class="upload-zone"> Upload +
-                    <input
-                        name="key_file"
-                        type="file"
-                        accept=".ppk,.pem,.key"
-                        aria-label="Upload private key" />
-                </label>
-                <span
-                    class="selected-file"
-                    aria-live="polite"></span>
-                <?php icct_nms_input('Key Passphrase', 'passphrase', '', 'password', 'autocomplete="new-password"'); ?>
+                <div class="protocol-grid cols-4 ssh-key-fields">
+                    <?php icct_nms_input('Key Passphrase', 'passphrase', '', 'password', 'autocomplete="new-password"'); ?>
+                    <div class="ssh-key-upload">
+                        <h3>Upload files <span
+                                class="field-info section-help"
+                                tabindex="0"
+                                role="img"
+                                aria-label="Maximum 64 KB. Supported formats: .ppk, PEM, OpenSSH."
+                                data-tooltip="Maximum 64 KB. Supported formats: .ppk, PEM, OpenSSH.">ⓘ</span>
+                        </h3>
+                        <label class="upload-zone"> Upload +
+                            <input
+                                name="key_file"
+                                type="file"
+                                accept=".ppk,.pem,.key"
+                                aria-label="Upload private key" />
+                        </label>
+                        <span
+                            class="selected-file"
+                            aria-live="polite"></span>
+                    </div>
+                </div>
             </div>
             <label class="check-row">
                 <input

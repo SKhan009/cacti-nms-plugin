@@ -844,6 +844,9 @@ input[type='radio'] {
 .diagnostic-child {
     margin-left: 28px;
 }
+.ssh-key-fields > .ssh-key-upload {
+    grid-column: -2 / -1;
+}
 .ssh-private-key h3 {
     font-size: 14px;
     margin: 12px 0;
