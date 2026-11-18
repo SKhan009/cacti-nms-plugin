@@ -89,15 +89,14 @@ $ntpSshEnabled = empty($presetMode) && !empty($id) && $ntpSsh &&
                 <input type="text" value="<?= icct_nms_h($ntpDeviceAddress) ?>" readonly>
             </label>
         <?php endif; ?>
-        <div class="field" data-ntp-methods="udp" data-ntp-static-source>
-            <label><span class="field-label">NTP server IP or hostname
-                    <?php $ntpHelpText = 'Direct NTP sends queries to this address from the collector over UDP port 123.';
-                    require __DIR__ . '/help.php'; ?>
-                </span>
-                <input name="server_address" maxlength="253" value="<?= icct_nms_h($ntp['server_address'] ?? '') ?>"
-                    required>
-            </label>
-        </div>
+        <label class="field" data-ntp-methods="udp" data-ntp-static-source>
+            <span class="field-label">NTP server IP or hostname
+                <?php $ntpHelpText = 'Direct NTP sends queries to this address from the collector over UDP port 123.';
+                require __DIR__ . '/help.php'; ?>
+            </span>
+            <input name="server_address" maxlength="253" value="<?= icct_nms_h($ntp['server_address'] ?? '') ?>"
+                required>
+        </label>
         <?php if (empty($ntpSaved)): ?>
             <label class="field"><span class="field-label">Initial maximum offset (ms)</span>
                 <input type="number" name="maximum_offset_ms" min="0" step="any" value="<?= icct_nms_h($ntp['maximum_offset_ms'] ?? '') ?>">
