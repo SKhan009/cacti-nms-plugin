@@ -6,6 +6,12 @@ require __DIR__ . '/../../../inventory/templates/device_record_pager.php';
 $ntpAssignment = icct_nms_ntp_assignment($id);
 $ntpCurrent = icct_nms_ntp_current($id);
 $ntpSample = $ntpCurrent['sample'];
+$ntpMetricHelp = [
+    'source_address' => 'IP of the upstream time source selected by chrony. A direct NTP query does not report the server’s upstream IP.',
+    'offset_ms' => 'Estimated difference between the clocks, in milliseconds. Values closer to zero indicate closer agreement.',
+    'jitter_ms' => 'Variation in offset measurements for the selected chrony source. The collector needs at least three samples. A single direct NTP query does not measure jitter.',
+    'peer_delay_ms' => 'Estimated round-trip network delay to the selected peer or directly queried server, in milliseconds.',
+];
 $ntpTabs = [
     'overview' => 'Current Readings',
     'alarms' => 'NTP Alarms',
@@ -242,10 +248,10 @@ $ntpNumber = static function ($value): string {
                                 <th>Observed at</th>
                                 <th>Status</th>
                                 <th>Measured host and method</th>
-                                <th>Observed source IP</th>
-                                <th>Offset (ms)</th>
-                                <th>Jitter (ms)</th>
-                                <th>Peer delay (ms)</th>
+                                <th>Observed source IP <?php $ntpHelpText = $ntpMetricHelp['source_address']; require __DIR__ . '/help.php'; ?></th>
+                                <th>Offset (ms) <?php $ntpHelpText = $ntpMetricHelp['offset_ms']; require __DIR__ . '/help.php'; ?></th>
+                                <th>Jitter (ms) <?php $ntpHelpText = $ntpMetricHelp['jitter_ms']; require __DIR__ . '/help.php'; ?></th>
+                                <th>Peer delay (ms) <?php $ntpHelpText = $ntpMetricHelp['peer_delay_ms']; require __DIR__ . '/help.php'; ?></th>
                                 <th>Collection detail</th>
                             </tr>
                         </thead>
@@ -261,10 +267,10 @@ $ntpNumber = static function ($value): string {
                                     </td>
                                     <td><?= $display(isset($sample['measured_host']) ? $sample['measured_host'] . ' · ' .
                                         (icct_nms_ntp_methods()[$sample['collection_method'] ?? ''] ?? '') : null) ?></td>
-                                    <td><?= $display($sample['source_address'] ?? null) ?></td>
+                                    <td><?= isset($sample['source_address']) ? $display($sample['source_address']) : (($sample['collection_method'] ?? '') === 'udp' ? 'Not measured by direct NTP' : 'Not reported') ?></td>
                                     <td><?= $ntpNumber($sample['offset_ms'] ?? null) ?></td>
-                                    <td><?= $ntpNumber($sample['jitter_ms'] ?? null) ?></td>
-                                    <td><?= $ntpNumber($sample['peer_delay_ms'] ?? null) ?></td>
+                                    <td><?= isset($sample['jitter_ms']) ? $ntpNumber($sample['jitter_ms']) : (($sample['collection_method'] ?? '') === 'udp' ? 'Not measured by direct NTP' : 'Not reported') ?></td>
+                                    <td><?= isset($sample['peer_delay_ms']) ? $ntpNumber($sample['peer_delay_ms']) : 'Not reported' ?></td>
                                     <td><?= $display($observation['error']) ?></td>
                                 </tr>
                             <?php endforeach; ?>

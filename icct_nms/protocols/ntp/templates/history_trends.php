@@ -12,7 +12,9 @@
         $trend = icct_nms_ntp_history_trend($ntpChronological, $metric, $ntpTrendInterval);
         ?>
         <div class="ntp-history-trend">
-            <h5><?= icct_nms_h($label) ?></h5>
+            <h5><?= icct_nms_h($label) ?> <?php
+                $ntpHelpText = $ntpMetricHelp[$metric] . ' Min and Max cover the readings on this page. Time runs from earlier on the left to later on the right.';
+                require __DIR__ . '/help.php'; ?></h5>
             <?php if (!$trend): ?>
                 <p>No measurements on this page.</p>
             <?php else: ?>
