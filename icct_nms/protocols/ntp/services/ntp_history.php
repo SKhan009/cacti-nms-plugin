@@ -102,6 +102,7 @@ function icct_nms_ntp_history_trend(array $rows, string $metric, int $interval):
     $start = min($times);
     $duration = max($times) - $start;
     $segments = [[]];
+    $readings = [];
     $previousTime = null;
     foreach ($rows as $i => $row) {
         $time = $times[$i];
@@ -115,11 +116,13 @@ function icct_nms_ntp_history_trend(array $rows, string $metric, int $interval):
         if ($value !== null) {
             $x = $duration ? 5 + (390 * ($time - $start)) / $duration : 200;
             $y = $high > $low ? 55 - (50 * ($value - $low)) / ($high - $low) : 30;
-            $segments[array_key_last($segments)][] = [round($x, 2), round($y, 2)];
+            $point = [round($x, 2), round($y, 2)];
+            $segments[array_key_last($segments)][] = $point;
+            $readings[] = ['point' => $point, 'observed_at' => $row['observed_at'], 'value' => $value];
         }
         $previousTime = $time;
     }
-    return ['min' => $low, 'max' => $high, 'segments' => array_filter($segments)];
+    return ['min' => $low, 'max' => $high, 'segments' => array_filter($segments), 'readings' => $readings];
 }
 
 function icct_nms_ntp_export_history(int $hostId, array $input): void

@@ -11,6 +11,7 @@ function icct_nms_schema_ntp_faults()
         throw new RuntimeException('NTP fault migration is busy. Retry the upgrade.');
     }
     try {
+        icct_nms_ntp_fault_seed_default_preset();
         if (
             db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?', [
                 'ntp_fault_rules_version',

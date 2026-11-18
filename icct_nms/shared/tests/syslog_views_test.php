@@ -59,6 +59,12 @@ function db_fetch_row_prepared($sql, $args)
 }
 function db_fetch_cell_prepared($sql, $args)
 {
+    if (str_contains($sql, 'SELECT name FROM poller')) {
+        return 'Lab poller';
+    }
+    if (($args[0] ?? '') === 'protocol_defaults') {
+        return '{"syslog":{"console_refresh_seconds":45}}';
+    }
     $GLOBALS['queries'][] = [$sql, $args];
     return count($GLOBALS['events']);
 }
@@ -81,6 +87,14 @@ function icct_nms_h($value)
 {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 }
+function icct_nms_display_time($value)
+{
+    return (string) $value;
+}
+function icct_nms_time_cell($value)
+{
+    return icct_nms_h($value);
+}
 function syslog_view_check($ok, $message)
 {
     if (!$ok) {
@@ -89,6 +103,9 @@ function syslog_view_check($ok, $message)
     echo "PASS: $message\n";
 }
 require __DIR__ . '/../../protocols/syslog/services/backend/syslog.php';
+require __DIR__ . '/../../protocols/shared/services/protocol_preset_service.php';
+$syslogPortStatus = ['available' => true, 'syslog_port' => 1514];
+$canManageSyslogPort = true;
 $template = __DIR__ . '/../../protocols/syslog/templates/syslog.php';
 $syslog = $binding;
 $presetMode = true;
@@ -107,6 +124,11 @@ syslog_view_check(
     !str_contains($html, 'Syslog Console'),
     'Preset has no standalone console action',
 );
+syslog_view_check(
+    str_contains($html, 'name="console_refresh_seconds"') &&
+    str_contains($html, 'name="receiver_port"'),
+    'Preset exposes editable collector port and refresh fields',
+);
 // Attribute layout may change; assert the rendered field and its value across whitespace.
 $presetMode = false;
 $syslog = [];
@@ -117,6 +139,14 @@ $html = ob_get_clean();
 syslog_view_check(
     preg_match('~name="source_address"\s+(?:required\s+)?value=""~', $html) === 1,
     'Unsaved device renders without a missing-hostname warning',
+);
+syslog_view_check(
+    str_contains($html, 'Auto-refresh interval (seconds)') &&
+    str_contains($html, 'Receiver port (TCP and UDP)') &&
+    !str_contains($html, 'name="receiver_port"') &&
+    !str_contains($html, 'name="console_refresh_seconds"') &&
+    str_contains($html, 'value="45"') && str_contains($html, 'value="1514"'),
+    'Device shows the saved collector settings without submitting global edits',
 );
 $host = ['hostname' => '192.0.2.85'];
 ob_start();
@@ -184,10 +214,12 @@ syslog_view_check(
         preg_match('~<dt>Received via</dt>\s*<dd>TCP</dd>~', $html) === 1 &&
         !str_contains($html, '<dt>Program</dt>') &&
         !str_contains($html, 'Alarm status') &&
-        !str_contains($html, 'linked alarm') &&
+        str_contains($html, 'view=linked-alarm">View linked alarm') &&
+        str_contains($html, 'data-syslog-live="1"') &&
+        str_contains($html, 'Checking for readings every 30 seconds on page 1 · Lab poller') &&
         !str_contains($html, 'syslog_ack') &&
         !str_contains($html, 'event_alarm'),
-    'History shows transport and omits program and alarm controls',
+    'History shows the assigned poller and links to a matched alarm without adding alarm controls',
 );
 syslog_view_check(
     str_contains($html, '&lt;script&gt;unsafe&lt;/script&gt;') &&
@@ -203,8 +235,8 @@ foreach ($queries as [$sql, $args]) {
         $args === [85, 85, '%link down%', '%link down%'] &&
             !str_contains($sql, 'plugin_icct_nms_alarms') &&
             !str_contains($sql, 'e.program LIKE') &&
-            !str_contains($sql, 'e.alarm_key'),
-        'Event queries search only this device’s messages and sender IPs without alarm data',
+            !str_contains($sql, 'e.alarm_key='),
+        'Event queries keep device scope and return alarm links without joining the alarm log',
     );
 }
 $binding = [];

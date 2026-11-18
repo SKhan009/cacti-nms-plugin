@@ -9,6 +9,7 @@ import re
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
+MEDIA_PREFIX = "icct_nms/installation/bundles/media/"
 spec = importlib.util.spec_from_file_location("icct_setup", ROOT / "installation/cli/setup.py")
 setup = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(setup)
@@ -36,7 +37,9 @@ def source_files(root):
             or path.suffix in (".pyc", ".log", ".pem", ".key")
         ):
             continue
-        if relative.parts[:2] == ("installation", "bundles"):
+        if relative.parts[:2] == ("installation", "bundles") and relative.as_posix() not in (
+            "installation/bundles/.htaccess", "installation/bundles/.gitignore",
+        ):
             continue
         private = [
             "protocols/snmp/mibs/storage",
@@ -128,17 +131,18 @@ def build_archive(root, output, bundle=None, native_bundles=None, component_bund
             bootstrap = (root / "installation/cli/deploy.py").read_bytes()
             archive.writestr("install.py", bootstrap)
             manifest["files"]["install.py"] = hashlib.sha256(bootstrap).hexdigest()
-            for path in packages + ([bundle / "bundle.json"] if bundle else []):
-                name = "packages/" + path.name
-                archive.write(path, name)
-                manifest["files"][name] = hashlib.sha256(path.read_bytes()).hexdigest()
-            for path, name in native_files + component_files:
+            base_files = [
+                (path, "packages/" + path.name)
+                for path in packages + ([bundle / "bundle.json"] if bundle else [])
+            ]
+            for path, relative in base_files + native_files + component_files:
+                name = MEDIA_PREFIX + relative
                 archive.write(path, name)
                 manifest["files"][name] = hashlib.sha256(path.read_bytes()).hexdigest()
             archive.writestr("release.json", json.dumps(manifest, indent=2) + "\n")
             archive.writestr(
                 "INSTALL.txt",
-                "Extract outside the web root.\nRead-only verification: python3 install.py --cacti-root /path/to/cacti --plan\nInstall: sudo python3 install.py --cacti-root /path/to/cacti\nSource-only archives require --online or --no-packages.\nPackages stay outside the web root. Existing local configuration and uploads are retained.\nSHA-256 hashes detect transport changes; obtain this archive from your trusted build system.\n",
+                "Extract outside the web root.\nRead-only verification: python3 install.py --cacti-root /path/to/cacti --plan\nInstall: sudo python3 install.py --cacti-root /path/to/cacti\nSource-only archives require --online or --no-packages.\nOffline media is in icct_nms/installation/bundles/media and is private to the installer. Existing local configuration and uploads are retained.\nSHA-256 hashes detect transport changes; obtain this archive from your trusted build system.\n",
             )
     except BaseException:
         output.unlink(missing_ok=True)

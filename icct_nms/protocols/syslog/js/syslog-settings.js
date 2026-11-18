@@ -1,6 +1,28 @@
 'use strict';
 // Hidden JSON controls keep presets and device drafts compatible with one validated format.
 (() => {
+    const deviceIp = document.querySelector('#device-form [name="hostname"]');
+    const sourceIp = document.querySelector('[data-syslog-device-ip]');
+    if (deviceIp && sourceIp) {
+        const showDeviceIp = () => {
+            const address = deviceIp.value.trim();
+            const ipv4 = address.split('.');
+            const isV4 = ipv4.length === 4 && ipv4.every(
+                part => /^(0|[1-9][0-9]{0,2})$/.test(part) && Number(part) <= 255
+            );
+            let isV6 = false;
+            if (address.includes(':') && /^[a-f0-9:.]+$/i.test(address)) {
+                try {
+                    isV6 = Boolean(new URL('http://[' + address + ']').hostname);
+                } catch {
+                    // An incomplete IPv6 address stays blank while the user types.
+                }
+            }
+            sourceIp.value = isV4 || isV6 ? address : '';
+        };
+        deviceIp.addEventListener('input', showDeviceIp);
+        showDeviceIp();
+    }
     const menus = [...document.querySelectorAll('.syslog-select-menu')];
     document.querySelectorAll('[data-syslog-selection]').forEach((section) => {
         const hidden = section.querySelector('input[type=hidden]'),
@@ -35,15 +57,6 @@
             const count = menu.querySelectorAll('input:checked').length;
             summary.textContent = count ? `${count} selected` : 'All severities';
         });
-    });
-    document.querySelectorAll('[data-syslog-history-pager]').forEach((form) => {
-        const size = form.elements.syslog_size;
-        const page = form.elements.syslog_page;
-        size.addEventListener('change', () => {
-            page.value = '1';
-            form.requestSubmit();
-        });
-        page.addEventListener('change', () => form.requestSubmit());
     });
     menus.forEach((menu) => {
         menu.querySelector('summary').addEventListener('click', () => {
@@ -138,4 +151,65 @@
         });
         render();
     });
+})();
+
+(() => {
+    const panel = document.querySelector('#view-syslog');
+    if (!panel) return;
+    const status = panel.querySelector('#syslog-live-status');
+    let busy = false;
+    const visible = () => !panel.hidden && !document.hidden;
+    const ready = () => {
+        if (!visible() || panel.dataset.syslogLive !== '1') return false;
+        const results = panel.querySelector('#syslog-history-results');
+        if (panel.dataset.syslogPage !== '1' || results.querySelector('details[open]') ||
+            results.contains(document.activeElement)) {
+            status.textContent = 'Live updates paused while reviewing history.';
+            return false;
+        }
+        return true;
+    };
+    async function refresh() {
+        if (busy || !ready()) return;
+        busy = true;
+        const url = new URL(location.href);
+        url.hash = '';
+        url.searchParams.set('fragment', 'syslog_history');
+        try {
+            const response = await fetch(url, {credentials: 'same-origin', cache: 'no-store'});
+            if (!response.ok || response.redirected ||
+                !response.headers.get('content-type')?.includes('text/html')) {
+                throw new Error('Syslog refresh returned no history.');
+            }
+            const next = new DOMParser().parseFromString(await response.text(), 'text/html')
+                .querySelector('#view-syslog');
+            if (!next) throw new Error('Syslog history is missing from the response.');
+            if (!ready()) return;
+            panel.dataset.syslogLive = next.dataset.syslogLive;
+            for (const selector of ['.syslog-summary', '#syslog-history-results']) {
+                const current = panel.querySelector(selector);
+                const updated = next.querySelector(selector);
+                if (current.innerHTML !== updated.innerHTML) current.replaceWith(updated);
+            }
+            const normalStatus = next.querySelector('#syslog-live-status').textContent;
+            if (status.textContent !== normalStatus) status.textContent = normalStatus;
+        } catch {
+            if (visible()) status.textContent = 'Unable to refresh Syslog. Use Refresh to retry.';
+        } finally {
+            busy = false;
+        }
+    }
+    panel.addEventListener('change', (event) => {
+        const form = event.target.closest('[data-syslog-history-pager]');
+        if (!form) return;
+        if (event.target.name === 'syslog_size') form.elements.syslog_page.value = '1';
+        form.requestSubmit();
+    });
+    panel.addEventListener('toggle', (event) => {
+        if (event.target.matches('.device-record-item') && !event.target.open) refresh();
+    }, true);
+    window.addEventListener('hashchange', refresh);
+    window.addEventListener('pageshow', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    setInterval(refresh, 30000);
 })();

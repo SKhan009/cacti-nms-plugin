@@ -1,9 +1,20 @@
 <?php
 
 /** Reuse the private broker fixture; secrets and host-key edits stay in its disposable database. */
-require '/var/www/html/cacti/include/cli_check.php';
-if (!str_starts_with((string) db_fetch_cell('SELECT DATABASE()'), 'icct_discovery_qa_')) {
-    throw new RuntimeException('Disposable NTP SSH database required.');
+$options = getopt('', ['cacti-root:', 'database:']);
+$qaRoot = realpath($options['cacti-root'] ?? '');
+$database = $options['database'] ?? '';
+$marker = $qaRoot ? $qaRoot . '/.icct-disposable-qa.json' : '';
+if (!$qaRoot || !preg_match('/^icct_discovery_qa_[a-zA-Z0-9_]+$/D', $database) ||
+    !is_file($marker) || is_link($marker) ||
+    (json_decode(file_get_contents($marker), true)['database'] ?? '') !== $database) {
+    fwrite(STDERR, "Explicit disposable QA root and database marker required; no Cacti runtime was loaded.\n");
+    exit(2);
+}
+require $qaRoot . '/include/cli_check.php';
+if ((string) db_fetch_cell('SELECT DATABASE()') !== $database) {
+    fwrite(STDERR, "Disposable QA database does not match the marker.\n");
+    exit(2);
 }
 api_plugin_load_realms();
 require_once $config['base_path'] . '/lib/auth.php';

@@ -7,6 +7,10 @@ function read_config_option($key)
 {
     return 60;
 }
+function icct_backend_inventory_collector_id()
+{
+    return 1;
+}
 function checkNtp($ok, $message)
 {
     if (!$ok) {
@@ -30,6 +34,15 @@ $values = [
     'stale_seconds' => 180,
 ];
 checkNtp(icct_nms_ntp_validate($values)['timeout'] === 5, 'Collection settings conversion failed.');
+$perPoll = icct_nms_ntp_validate(array_replace($values, [
+    'method' => 'auto', 'interval_seconds' => 0, 'server_address' => 'ntp.example.test', 'maximum_delay_ms' => '35',
+]));
+checkNtp($perPoll['interval_seconds'] === 0 && $perPoll['maximum_delay_ms'] === '35' &&
+    icct_nms_ntp_effective_method($perPoll + ['hostname' => '127.0.0.1']) === 'udp',
+    'A configured server must take precedence over collector chrony in automatic mode.');
+checkNtp(icct_nms_ntp_effective_method(['method' => 'ssh', 'hostname' => '127.0.0.1']) === 'ssh',
+    'Verified device SSH must never change the subject to the collector.');
+rejectsNtp(fn() => icct_nms_ntp_validate(array_replace($values, ['server_address' => 'udp://10.0.0.1'])));
 $posted = array_diff_key($values, ['method' => true]) + ['ntp_method' => 'udp'];
 require_once __DIR__ . '/../../shared/services/protocol_preset_service.php';
 checkNtp(
@@ -60,6 +73,12 @@ foreach (
 rejectsNtp(fn() => icct_nms_ntp_validate(array_diff_key($values, ['method' => true])));
 rejectsNtp(fn() => icct_nms_ntp_validate(array_replace($values, ['timeout' => []])));
 checkNtp(icct_nms_ntp_local_device(['hostname' => '::1']), 'IPv6 localhost rejected.');
+$collector = ['hostname' => gethostname(), 'poller_id' => 1];
+checkNtp(icct_nms_ntp_local_device($collector), 'Collector hostname rejected.');
+checkNtp(
+    !icct_nms_ntp_local_device(array_replace($collector, ['poller_id' => 2])),
+    'Collector hostname accepted for a different poller.',
+);
 checkNtp(
     !icct_nms_ntp_local_device(['hostname' => '192.0.2.4']),
     'Remote clock relabelled as collector.',
@@ -200,3 +219,33 @@ checkNtp(
     'The trend must show real zero and break at unknown readings, missed cycles and backward clock steps.',
 );
 echo "PASS: NTP parsing, read-only commands, date filters and trend gaps.\n";
+
+function icct_nms_h($value)
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
+$renderSettings = static function (bool $saved, bool $preset): string {
+    $id = 0;
+    $presetMode = $preset;
+    $ntpSaved = $saved;
+    $ntpLimitMultiple = [];
+    $ntp = ['method' => 'udp', 'timeout' => 5, 'interval_seconds' => 300,
+        'stale_seconds' => 900, 'maximum_offset_ms' => 125, 'maximum_delay_ms' => 75];
+    $ntpPreset = $ntp;
+    ob_start();
+    require __DIR__ . '/../templates/settings.php';
+    return ob_get_clean();
+};
+$presetHtml = $renderSettings(false, true);
+$deviceHtml = $renderSettings(true, false);
+foreach (['NTP source addressing', 'Maximum clock offset (ms)', 'Maximum round-trip delay (ms)', 'Alarm when unsynchronized'] as $label) {
+    checkNtp(str_contains($presetHtml, $label) && str_contains($deviceHtml, $label),
+        'Preset and saved device must both show ' . $label);
+}
+checkNtp(!str_contains($deviceHtml, 'Load preset') &&
+    !str_contains($deviceHtml, 'name="maximum_offset_ms"') &&
+    str_contains($deviceHtml, 'readonly') && str_contains($deviceHtml, 'value="125"'),
+    'Saved device must display its FCAPS limit without posting a replacement.');
+checkNtp(str_contains($presetHtml, 'name="maximum_offset_ms"'),
+    'New-assignment alarm defaults must remain editable.');
+echo "PASS: Shared NTP forms show alarm limits and protect saved FCAPS rules.\n";

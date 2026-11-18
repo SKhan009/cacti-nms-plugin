@@ -94,7 +94,6 @@ $collector = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [
                         <button type="button" class="settings-menu-trigger" aria-expanded="false" aria-controls="mib-repo-submenu">MIB Repository</button>
                         <div class="settings-submenu" id="mib-repo-submenu" hidden>
                             <a href="protocols/snmp/mibs/controllers/mib_repository.php">MIB Files</a>
-                            <a href="protocols/snmp/mibs/controllers/mib_repository.php?tab=simulator">Simulator</a>
                         </div>
                     </div>
                     <?php if (is_realm_allowed(26)): ?>

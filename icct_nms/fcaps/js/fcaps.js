@@ -459,6 +459,7 @@
             scale: item.scale || 1,
             template_id: item.template_id || 0,
             metric_id: item.metric_id || 0,
+            ...(item.source === 'ntp' ? ntpParameters[item.parameter]?.starter : {}),
         });
         const added = list.children[list.children.length - 1];
         renderMeasurements(added);
@@ -1272,17 +1273,18 @@
             sync();
         });
         condition.addEventListener('change', () => conditionFields(true));
-        const description = field(row, 'Description', 'textarea', 'description');
+        const notes = document.createElement('div');
+        notes.className = 'fault-rule-notes';
+        row.append(notes);
+        const description = field(notes, 'Description', 'textarea', 'description');
         description.rows = 3;
         description.maxLength = 1000;
         description.value = rule.description || '';
-        wrapper(description).classList.add('fault-description');
-        const guidance = field(row, 'Fix', 'textarea', 'corrective-action');
-        guidance.rows = 2;
+        const guidance = field(notes, 'Fix', 'textarea', 'corrective-action');
+        guidance.rows = 3;
         guidance.maxLength = 1000;
         guidance.placeholder = 'Suggested action when a fault occurs';
         guidance.value = rule.corrective_action || '';
-        wrapper(guidance).classList.add('fault-guidance');
         // Preserve existing notification preferences without presenting inactive delivery controls.
         const preferences = document.createElement('div');
         preferences.hidden = true;
@@ -1321,7 +1323,9 @@
         if (source.value === 'rrd' || (source.value === 'snmp' && oid.value)) readParameter();
     }
     saved.forEach((rule, index) => {
-        if (rule.source !== 'iperf3_udp') addRule(rule, index);
+        if (rule.source !== 'iperf3_udp' && (rule.source !== 'ntp' || ntpParameters[rule.parameter])) {
+            addRule(rule, index);
+        }
     });
     form.addEventListener('icct-fault-saved', (event) => {
         if (typeof event.detail === 'object') {

@@ -144,22 +144,39 @@
                         id="icctMapZoomIn"
                         type="button"
                         aria-label="Zoom in"
-                        title="Zoom in">+</button>
+                        title="Zoom in">
+                        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                            <path d="M4 8h8M8 4v8" />
+                        </svg>
+                    </button>
                     <button
                         id="icctMapZoomOut"
                         type="button"
                         aria-label="Zoom out"
-                        title="Zoom out">−</button>
+                        title="Zoom out">
+                        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                            <path d="M4 8h8" />
+                        </svg>
+                    </button>
                     <button
                         id="icctMapFit"
                         type="button"
                         aria-label="Reset map view"
-                        title="Reset map view">▣</button>
+                        title="Reset map view">
+                        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                            <rect x="3" y="3" width="10" height="10" />
+                            <rect x="6" y="6" width="4" height="4" />
+                        </svg>
+                    </button>
                     <button
                         id="icctMapFullscreen"
                         type="button"
                         aria-label="Toggle map fullscreen"
-                        title="Fullscreen">⛶</button>
+                        title="Fullscreen">
+                        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                            <path d="M3 6V3h3m4 0h3v3m0 4v3h-3m-4 0H3v-3" />
+                        </svg>
+                    </button>
                 </div>
             </div>
             <?php foreach (['topology', 'rack', 'image'] as $view): ?>

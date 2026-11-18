@@ -85,7 +85,10 @@ try {
     }
     header('Content-Type: application/json');
     header('Cache-Control: no-store');
-    echo json_encode(icct_nms_netflow_read($id, $_GET), JSON_THROW_ON_ERROR);
+    $result = isset($_GET['reception'])
+        ? icct_nms_netflow_reception($id, true)
+        : icct_nms_netflow_read($id, $_GET);
+    echo json_encode($result, JSON_THROW_ON_ERROR);
 } catch (Throwable $e) {
     http_response_code(400);
     header('Content-Type: application/json');

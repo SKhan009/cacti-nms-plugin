@@ -9,8 +9,7 @@
         page = 1,
         descending = true,
         sortKey = 'occurred',
-        refreshing = false,
-        view = 'alarms';
+        refreshing = false;
     const selectedDevices = new Set(),
         devicePicker = document.querySelector('#alarm-device-picker'),
         deviceSummary = document.querySelector('#alarm-device-summary'),
@@ -61,7 +60,6 @@
     }
     function devices() {
         const choices = new Map(rows
-            .filter((r) => (view === 'syslog') === (r.source === 'Syslog'))
             .map((r) => [String(r.host_id), r.device_name]));
         for (const id of selectedDevices) if (!choices.has(id)) selectedDevices.delete(id);
         deviceOptions.replaceChildren();
@@ -100,6 +98,18 @@
             : names.length === 1 ? names[0] : `${names.length} devices`;
         filterDeviceOptions();
     }
+    function eventSources() {
+        const select = controls.source;
+        const selected = select.value.toLowerCase() === 'syslog' ? '' : select.value;
+        const sources = [...new Set(rows.map((row) => row.source)
+            .filter(source => source && source.toLowerCase() !== 'syslog'))];
+        if (selected && !sources.includes(selected)) sources.push(selected);
+        sources.sort((a, b) => a.localeCompare(b));
+        if (sources.length === select.options.length - 1 &&
+            sources.every((source, index) => source === select.options[index + 1].value)) return;
+        select.replaceChildren(select.options[0], ...sources.map((source) => new Option(source, source)));
+        select.value = selected;
+    }
     function filterDeviceOptions() {
         const query = deviceSearch.value.trim().toLowerCase();
         for (const option of deviceOptions.querySelectorAll('.alarm-device-option')) {
@@ -119,7 +129,6 @@
         return rows
             .filter(
                 (r) =>
-                    ((view === 'syslog') === (r.source === 'Syslog')) &&
                     (!selectedDevices.size || selectedDevices.has(String(r.host_id))) &&
                     (!severity || severity === r.severity) &&
                     (!controls.source.value || controls.source.value === r.source) &&
@@ -183,20 +192,16 @@
         }
     }
     function render() {
-        for (const tab of root.querySelectorAll('[data-alarm-view]')) {
-            const active = tab.dataset.alarmView === view;
-            tab.classList.toggle('is-active', active);
-            tab.setAttribute('aria-pressed', String(active));
-        }
         for (const button of root.querySelectorAll('[data-alarm-sort]')) {
             const active = button.dataset.alarmSort === sortKey;
             button.classList.toggle('is-active', active);
             button.classList.toggle('is-descending', active && descending);
             button.closest('th').setAttribute('aria-sort', active ? (descending ? 'descending' : 'ascending') : 'none');
+            const nextDescending = active && !descending;
             const direction = button.dataset.alarmSort === 'occurred'
-                ? (descending ? 'newest first' : 'oldest first')
-                : (descending ? 'descending' : 'ascending');
-            const label = `Sort ${button.dataset.alarmSort}, ${active ? direction : 'ascending'}`;
+                ? (nextDescending ? 'newest first' : 'oldest first')
+                : (nextDescending ? 'descending' : 'ascending');
+            const label = `Sort ${button.querySelector('span').textContent}, ${direction}`;
             button.setAttribute('aria-label', label);
             button.title = label;
         }
@@ -359,9 +364,7 @@
             body.append(tr);
         }
         if (!result.length) {
-            const cell = node('td', view === 'syslog'
-                ? 'No Syslog alarms match the current filters.'
-                : 'No alarms match the current filters.');
+            const cell = node('td', 'No alarms match the current filters.');
             cell.colSpan = 8;
             const tr = node('tr');
             tr.append(cell);
@@ -402,6 +405,7 @@
         try {
             rows = await request('?readings=1');
             devices();
+            eventSources();
             status.textContent = '';
             render();
         } catch (e) {
@@ -426,26 +430,13 @@
         event.stopPropagation();
         filterDeviceOptions();
     });
-    for (const tab of root.querySelectorAll('[data-alarm-view]')) {
-        tab.addEventListener('click', () => {
-            if (view === tab.dataset.alarmView) return;
-            view = tab.dataset.alarmView;
-            selectedDevices.clear();
-            controls.source.value = '';
-            form.querySelector('.alarm-source-field').hidden = view === 'syslog';
-            deviceSearch.value = '';
-            devicePicker.open = false;
-            page = 1;
-            devices();
-            render();
-        });
-    }
     form.addEventListener('reset', (event) => {
         event.preventDefault();
         for (const input of Array.from(form.elements)) if (input.name) input.value = '';
         selectedDevices.clear();
         deviceSearch.value = '';
         devices();
+        eventSources();
         page = 1;
         render();
     });
@@ -478,6 +469,7 @@
         }));
     });
     devices();
+    eventSources();
     render();
     setInterval(refresh, 5000);
 })();

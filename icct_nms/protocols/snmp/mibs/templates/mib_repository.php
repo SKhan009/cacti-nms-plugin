@@ -43,8 +43,6 @@ endif; ?>
     <nav class="mib-repo-tabs" aria-label="MIB Repository">
         <a href="protocols/snmp/mibs/controllers/mib_repository.php"
             <?= !$simulatorTab ? 'aria-current="page"' : '' ?>>MIB Files</a>
-        <a href="protocols/snmp/mibs/controllers/mib_repository.php?tab=simulator"
-            <?= $simulatorTab ? 'aria-current="page"' : '' ?>>Simulator</a>
     </nav>
     <?php if (
         $deletedId
@@ -73,7 +71,6 @@ if ($simulatorTab) {
     require __DIR__ . '/mib_browser.php';
 }
 if ($management && !$simulatorTab) {
-    $uploadChooser = true;
     require __DIR__ . '/mib_upload_dialog.php';
 }
 return;

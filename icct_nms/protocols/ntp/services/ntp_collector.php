@@ -100,12 +100,13 @@ function icct_nms_ntp_evaluate($sample, $device)
 /** One transport per assignment and one command timeout budget for the coherent observation. */
 function icct_nms_ntp_read($device)
 {
-    $method = $device['method'];
-    if ($method === 'auto') {
-        $method = icct_nms_ntp_local_device($device) ? 'local' : 'udp';
-    }
+    $method = icct_nms_ntp_effective_method($device);
+    $collector = gethostname() ?: 'Assigned collector';
     if ($method === 'udp') {
-        return icct_nms_ntp_udp_read($device['hostname'], (int) $device['timeout']);
+        $server = ($device['server_address'] ?? '') ?: $device['hostname'];
+        return icct_nms_ntp_udp_read($server, (int) $device['timeout']) + [
+            'collection_method' => $method, 'measured_host' => $server, 'collector' => $collector,
+        ];
     }
     $ssh = null;
     if ($method === 'local') {
@@ -161,7 +162,11 @@ function icct_nms_ntp_read($device)
             }
             return $output;
         };
-        return icct_nms_ntp_observe($read);
+        return icct_nms_ntp_observe($read) + [
+            'collection_method' => $method,
+            'measured_host' => $method === 'local' ? $collector : $device['hostname'],
+            'collector' => $collector,
+        ];
     } finally {
         if ($ssh !== null) {
             $ssh->disconnect();
@@ -178,14 +183,18 @@ function icct_nms_ntp_due($method, $poller)
     $methods = (array) $method;
     $placeholders = implode(',', array_fill(0, count($methods), '?'));
     $cycleTolerance = in_array('ssh', $methods, true) ? 0 : 5;
+    $cadence = max(1, (int) read_config_option('poller_interval'));
+    $limit = in_array('ssh', $methods, true) ? ' LIMIT 4' : '';
     return db_fetch_assoc_prepared(
         'SELECT d.host_id,d.method FROM plugin_icct_nms_ntp_monitors d JOIN host h ON h.id=d.host_id ' .
             'LEFT JOIN plugin_icct_nms_ntp_monitor_state s ON s.host_id=d.host_id ' .
             'WHERE h.deleted=\'\' AND h.disabled=\'\' AND h.poller_id=? AND d.method IN (' . $placeholders . ') ' .
             'AND NOT EXISTS(SELECT 1 FROM plugin_icct_nms_meta m WHERE m.meta_key=CONCAT(\'protocol_disabled_ntp_\',d.host_id) AND m.meta_value=\'1\') ' .
             'AND (s.last_attempt IS NULL OR s.last_attempt>NOW() OR ' .
-            'TIMESTAMPDIFF(SECOND,s.last_attempt,NOW())+?>=d.interval_seconds) ORDER BY s.last_attempt LIMIT 4',
-        [(int) $poller, ...$methods, $cycleTolerance],
+            '(d.interval_seconds=0 AND UNIX_TIMESTAMP(s.last_attempt) DIV ? < UNIX_TIMESTAMP(NOW()) DIV ?) OR ' .
+            '(d.interval_seconds>0 AND TIMESTAMPDIFF(SECOND,s.last_attempt,NOW())+?>=d.interval_seconds)) ' .
+            'ORDER BY s.last_attempt,d.host_id' . $limit,
+        [(int) $poller, ...$methods, $cadence, $cadence, $cycleTolerance],
     );
 }
 
@@ -215,13 +224,20 @@ function icct_nms_ntp_collect($id, $method)
         }
         $sample = null;
         $hash = '';
+        $started = time();
         try {
             $hash = icct_nms_ntp_hash($device);
             $sample = icct_nms_ntp_read($device);
             [$status, $error] = icct_nms_ntp_evaluate($sample, $device);
         } catch (Throwable $failure) {
             $status = 'Unavailable';
-            $error = mb_substr($failure->getMessage(), 0, 500);
+            $methodUsed = icct_nms_ntp_effective_method($device);
+            $prefix = $methodUsed === 'ssh'
+                ? 'Device synchronization unavailable for ' . $device['hostname'] . '. '
+                : ($methodUsed === 'udp'
+                    ? 'Direct NTP unavailable for ' . (($device['server_address'] ?? '') ?: $device['hostname']) . '. '
+                    : 'Collector synchronization unavailable for ' . (gethostname() ?: 'the assigned collector') . '. ');
+            $error = mb_substr($prefix . $failure->getMessage(), 0, 500);
         }
         $now = icct_nms_ntp_assignment($id);
         if (
@@ -242,10 +258,10 @@ function icct_nms_ntp_collect($id, $method)
         try {
             icct_backend_category_execute(
                 'INSERT INTO plugin_icct_nms_ntp_monitor_state(host_id,status,last_error,sample_json,config_hash,last_attempt,last_success) ' .
-                    'VALUES(?,?,?,?,?,NOW(),IF(? IS NOT NULL,NOW(),NULL)) ON DUPLICATE KEY UPDATE status=VALUES(status),' .
+                    'VALUES(?,?,?,?,?,FROM_UNIXTIME(?),IF(? IS NOT NULL,NOW(),NULL)) ON DUPLICATE KEY UPDATE status=VALUES(status),' .
                     'last_error=VALUES(last_error),sample_json=VALUES(sample_json),config_hash=VALUES(config_hash),' .
-                    'last_attempt=NOW(),last_success=IF(VALUES(sample_json) IS NOT NULL,NOW(),last_success)',
-                [(int) $id, $status, $error, $json, $hash, $json],
+                    'last_attempt=VALUES(last_attempt),last_success=IF(VALUES(sample_json) IS NOT NULL,NOW(),last_success)',
+                [(int) $id, $status, $error, $json, $hash, $started, $json],
             );
             icct_backend_category_execute(
                 'INSERT INTO plugin_icct_nms_ntp_monitor_history(host_id,status,sample_json,error,observed_at) VALUES(?,?,?,?,NOW())',

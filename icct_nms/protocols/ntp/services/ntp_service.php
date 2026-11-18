@@ -6,6 +6,11 @@ function icct_nms_ntp_fields()
     return ['method', 'timeout', 'interval_seconds', 'stale_seconds'];
 }
 
+function icct_nms_ntp_optional_fields()
+{
+    return ['server_address', 'maximum_offset_ms', 'maximum_delay_ms', 'alarm_unsynchronized', 'expected_source'];
+}
+
 function icct_nms_ntp_methods()
 {
     return [
@@ -39,7 +44,7 @@ function icct_nms_ntp_validate($input)
         throw new InvalidArgumentException('Choose an NTP collection method.');
     }
     foreach (
-        ['timeout' => [1, 30], 'interval_seconds' => [60, 86400], 'stale_seconds' => [60, 604800]]
+        ['timeout' => [1, 30], 'interval_seconds' => [0, 86400], 'stale_seconds' => [60, 604800]]
         as $field => $range
     ) {
         $values[$field] = icct_backend_topology_integer(
@@ -50,15 +55,45 @@ function icct_nms_ntp_validate($input)
         );
     }
     $cadence = (int) read_config_option('poller_interval');
-    if ($cadence < 1 || $values['interval_seconds'] % $cadence !== 0) {
+    if ($cadence < 1 || ($values['interval_seconds'] !== 0 &&
+        ($values['interval_seconds'] < 60 || $values['interval_seconds'] % $cadence !== 0))) {
         throw new InvalidArgumentException(
             'NTP collection interval must be a multiple of the Cacti poller interval.',
         );
     }
-    if ($values['stale_seconds'] < $values['interval_seconds'] + $values['timeout']) {
+    if ($values['stale_seconds'] < ($values['interval_seconds'] ?: $cadence) + $values['timeout']) {
         throw new InvalidArgumentException(
             'NTP stale interval must cover the collection interval and timeout.',
         );
+    }
+    foreach (icct_nms_ntp_optional_fields() as $field) {
+        $value = $input[$field] ?? '';
+        if (!is_scalar($value)) {
+            throw new InvalidArgumentException('Invalid NTP field: ' . $field);
+        }
+        $values[$field] = trim((string) $value);
+    }
+    $server = $values['server_address'];
+    if ($server !== '' && !filter_var($server, FILTER_VALIDATE_IP) &&
+        !filter_var($server, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
+        throw new InvalidArgumentException('Enter a valid NTP server IP address or hostname.');
+    }
+    if (!in_array($values['method'], ['auto', 'udp'], true)) {
+        $values['server_address'] = '';
+        $values['maximum_delay_ms'] = '';
+    }
+    foreach (['maximum_offset_ms', 'maximum_delay_ms'] as $field) {
+        $value = $values[$field];
+        if ($value !== '' && (!is_numeric($value) || !is_finite((float) $value) || (float) $value < 0)) {
+            throw new InvalidArgumentException('NTP thresholds must be finite nonnegative milliseconds.');
+        }
+    }
+    if (!in_array($values['alarm_unsynchronized'], ['', '0', '1'], true) ||
+        ($values['expected_source'] !== '' && !filter_var($values['expected_source'], FILTER_VALIDATE_IP))) {
+        throw new InvalidArgumentException('Choose an alarm setting and enter an expected time source IP if needed.');
+    }
+    if ($values['method'] === 'udp' || $values['server_address'] !== '') {
+        $values['expected_source'] = '';
     }
     return $values;
 }
@@ -76,25 +111,43 @@ function icct_nms_ntp_assignment($id)
         return [];
     }
     return db_fetch_row_prepared(
-        'SELECT d.*,h.hostname,h.poller_id,h.disabled,h.deleted FROM plugin_icct_nms_ntp_monitors d ' .
-            'JOIN host h ON h.id=d.host_id WHERE d.host_id=? AND h.deleted=\'\'',
+        'SELECT d.*,h.hostname,h.poller_id,h.disabled,h.deleted,COALESCE(m.meta_value,\'\') AS server_address ' .
+            'FROM plugin_icct_nms_ntp_monitors d JOIN host h ON h.id=d.host_id ' .
+            'LEFT JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT(\'ntp_server_\',d.host_id) ' .
+            'WHERE d.host_id=? AND h.deleted=\'\'',
         [(int) $id],
     );
+}
+
+function icct_nms_ntp_effective_method($device)
+{
+    if ($device['method'] !== 'auto') {
+        return $device['method'];
+    }
+    return empty($device['server_address']) && icct_nms_ntp_local_device($device) ? 'local' : 'udp';
 }
 
 /** Local collection must never relabel the collector's clock as an unrelated device's clock. */
 function icct_nms_ntp_local_device($device)
 {
-    $hostname = strtolower($device['hostname']);
+    $hostname = strtolower(rtrim($device['hostname'], '.'));
     if (in_array($hostname, ['localhost', '127.0.0.1', '::1'], true)) {
         return true;
     }
+    $collectorHostname = gethostname();
+    $matchesHostname = $collectorHostname !== false &&
+        $hostname === strtolower(rtrim($collectorHostname, '.'));
+    if (!$matchesHostname && !filter_var($hostname, FILTER_VALIDATE_IP)) {
+        return false;
+    }
     if (
-        !filter_var($hostname, FILTER_VALIDATE_IP) ||
         !isset($device['poller_id']) ||
         (int) $device['poller_id'] !== icct_backend_inventory_collector_id()
     ) {
         return false;
+    }
+    if ($matchesHostname) {
+        return true;
     }
     $address = inet_pton($hostname);
     foreach (net_get_interfaces() ?: [] as $interface) {
@@ -125,9 +178,12 @@ function icct_nms_ntp_save($id, $input)
     if (!$host) {
         throw new RuntimeException('Existing inventory device required for NTP.');
     }
+    if (icct_nms_ntp_effective_method($host + $values) === 'udp') {
+        $values['expected_source'] = '';
+    }
     if ($values['method'] === 'local' && !icct_nms_ntp_local_device($host)) {
         throw new InvalidArgumentException(
-            'Local chrony requires a loopback or an IP assigned to this device’s Cacti collector. Choose Automatic or Direct NTP for a remote NTP server.',
+            'Local chrony requires the assigned collector’s hostname, a loopback address, or an IP on that collector. Choose Direct NTP for a remote time server or verified SSH for a remote chrony device.',
         );
     }
     if ($values['method'] === 'ssh') {
@@ -158,9 +214,13 @@ function icct_nms_ntp_save($id, $input)
                     icct_backend_current_user_id(),
                 ],
             );
+            icct_backend_category_execute(
+                'REPLACE INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW())',
+                ['ntp_server_' . (int) $id, $values['server_address']],
+            );
             if (!$existing) {
                 require_once __DIR__ . '/../../../fcaps/services/ntp_fault_service.php';
-                icct_nms_ntp_fault_assign_defaults($id);
+                icct_nms_ntp_fault_assign_defaults($id, $values);
             }
             icct_backend_category_execute(
                 'DELETE FROM plugin_icct_nms_ntp_monitor_state WHERE host_id=?',
@@ -192,6 +252,9 @@ function icct_nms_ntp_hash($device)
             ]),
         ),
     );
+    if (!empty($device['server_address'])) {
+        $values['server_address'] = $device['server_address'];
+    }
     $values['measurement_version'] = 2;
     if ($device['method'] === 'ssh') {
         $ssh = icct_backend_ssh_device($device['host_id']);
@@ -217,6 +280,13 @@ function icct_nms_ntp_current($id)
     if (!$device) {
         return $out;
     }
+    $poller = db_fetch_row_prepared('SELECT name,hostname FROM poller WHERE id=?', [(int) $device['poller_id']]);
+    $out['collector'] = ($poller['hostname'] ?? '') ?: ($poller['name'] ?? 'Assigned Cacti poller');
+    $method = icct_nms_ntp_effective_method($device);
+    $out['method_used'] = icct_nms_ntp_methods()[$method];
+    $out['measured_host'] = $method === 'local'
+        ? $out['collector']
+        : (($method === 'udp' ? $device['server_address'] : '') ?: $device['hostname']);
     if ($device['disabled'] !== '' || !icct_backend_protocol_enabled($id, 'ntp')) {
         return array_replace($out, ['status' => 'Disabled']);
     }
@@ -247,12 +317,13 @@ function icct_nms_ntp_current($id)
             'error' => 'No current NTP observation from the assigned collector.',
         ]);
     }
+    $sample = $state['sample_json'] === null ? null : json_decode($state['sample_json'], true, 16, JSON_THROW_ON_ERROR);
     return array_replace($out, [
         'status' => $state['status'],
         'error' => $state['last_error'],
-        'sample' =>
-            $state['sample_json'] === null
-                ? null
-                : json_decode($state['sample_json'], true, 16, JSON_THROW_ON_ERROR),
+        'sample' => $sample,
+        'collector' => $sample['collector'] ?? $out['collector'],
+        'method_used' => icct_nms_ntp_methods()[$sample['collection_method'] ?? ''] ?? $out['method_used'],
+        'measured_host' => $sample['measured_host'] ?? $out['measured_host'],
     ]);
 }

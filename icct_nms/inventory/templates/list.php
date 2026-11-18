@@ -162,7 +162,7 @@
                                 </svg>
                             </a>
                             <a
-                                href="<?= icct_nms_h($config['url_path']) ?>graph_view.php?action=preview&amp;host_id=<?= $id ?>"
+                                href="inventory/controllers/device.php?id=<?= $id ?>&amp;view=1#view-graphs"
                                 aria-label="Graphs for <?= icct_nms_h($d['description']) ?>">
                                 <svg
                                     viewBox="0 0 24 24"

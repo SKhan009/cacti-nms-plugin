@@ -19,6 +19,79 @@ Supported package-manager adapters: RHEL/Rocky/AlmaLinux with DNF; Debian/Ubuntu
 
 Open **Settings → Installation Checks → Checks** with native Installation/Upgrades permission. It shows real binaries, bundled assets, current web PHP extensions and worker state. Run `php plugins/icct_nms/installation/cli/check.php` for the CLI PHP environment; web and CLI can have different extensions. Repeat setup on every remote collector using that collector's own Cacti configuration/poller ID.
 
+## RHEL packaged Cacti recovery
+
+RHEL RPM installations can use `/usr/share/cacti/resource` as a symlink to
+`/var/lib/cacti/resource`. Setup resolves that existing resource directory and
+creates only its `snmp_queries/icct_nms` child. Symlinks within that child path
+or within the plugin upload paths are rejected with the exact offending path.
+
+For a source checkout already under `/usr/share/cacti/plugins/icct_nms`, run:
+
+```sh
+cd /usr/share/cacti
+sudo python3 plugins/icct_nms/installation/cli/setup.py install --no-packages --cacti-root /usr/share/cacti
+sudo php plugins/icct_nms/installation/cli/check.php --save
+```
+
+The check command is PHP. The root `install.py` bootstrap is supplied by a
+complete release archive. A source checkout uses `installation/cli/setup.py`.
+The `--no-packages` option uses installed dependencies. Missing `nfdump`,
+`nfcapd`, optional tools, or a strict-auth Guacamole build still require the
+corresponding verified offline media.
+
+Offline Packages also requires its runner and complete media with
+`packages/bundle.json` and the required component bundles. A folder containing
+assorted tools without bundle manifests cannot provision the runner. See
+**Offline Packages in the browser** below for provisioning and disabled-button
+recovery.
+
+If Installation Checks reports writable source files, inspect their ownership,
+ACLs and parent directories with `namei -l` and `getfacl`. Administrator-owned
+source directories must prevent the PHP account from replacing scripts. Grant
+write access only to the runtime paths described under permissions below.
+An active worker service reports process health. Missing executables or
+feature configuration shown in other checklist rows require their own setup.
+
+## Verify Syslog delivery on RHEL
+
+Configure **Device Mgmt → Protocol Config → Syslog** with the actual sender IP,
+enable Syslog, and select the required severity, facility and transport.
+Messages map to the packet sender IP. The sender-provided hostname is displayed
+as message data. For a loopback test, the enabled binding must use
+`127.0.0.1`.
+
+Use the saved receiver port from **Presets → Protocols → Syslog**. For the default
+UDP port, this explicit test sends to the receiver:
+
+```sh
+logger --server 127.0.0.1 --port 514 --udp --priority local0.notice --tag icct-check "ICCT_SYSLOG_DELIVERY_TEST"
+sudo tail -n 5 /var/log/icct-nms/remote.ndjson
+```
+
+A plain `logger -p local0.notice ...` writes to local logging. Local journal
+forwarding requires the companion
+`protocols/syslog/rhel/enable_local_syslog_rhel.sh` configuration.
+In **Alarms → Syslog**, select the bound device and search for the marker.
+Repeated messages may update an existing row and its count.
+
+For ingestion diagnostics, run the following inside the Cacti MariaDB console:
+
+```sql
+SELECT meta_value, updated_at
+FROM plugin_icct_nms_meta
+WHERE meta_key = 'syslog_worker_status';
+```
+
+The heartbeat reports current batch drops and retains `last_drop_reasons`,
+`last_drop_at`, `last_error` and `last_error_at` across idle batches and worker
+restarts. Use their timestamps to distinguish a past rejection from the current
+service state. `unmapped-source` means the sender has no eligible binding on
+this collector. Check the numeric sender IP, device and protocol enablement,
+and the device's native Cacti poller assignment. Transport, severity, facility
+and keyword filtering have separate rejection reasons. Existing internal
+availability events alone do not verify network Syslog delivery.
+
 ## Offline bundle
 
 Build on an online machine with the **same OS ID, release and CPU architecture** as the offline target. Copy the plugin there before building. On DNF systems install `dnf-plugins-core` first; on APT systems the build requires root to resolve packages.
@@ -64,7 +137,7 @@ python3 install.py --cacti-root /path/to/cacti --plan
 sudo python3 install.py --cacti-root /path/to/cacti
 ```
 
-The bootstrap verifies the plugin files and every bundled package, rejects mismatched OS/release/CPU bundles, backs up an existing plugin to a private archive, copies application code atomically and runs the native plugin/package/service installer. Package files remain in the extracted release outside the web root. Existing local configuration, MIB sessions and uploaded device images are excluded from release builds and retained during deployment. Developer tests and caches are not shipped. Source-only archives require explicit `--online` or `--no-packages`.
+The bootstrap verifies the plugin files and every bundled package, rejects mismatched OS/release/CPU bundles, backs up an existing plugin to a private archive, copies application code atomically and runs the native plugin/package/service installer. The installer carries the package media inside `icct_nms/installation/bundles/media` and deploys it with the plugin. The installed media directory is private to root and blocked by Apache. Existing local configuration, MIB sessions and uploaded device images are excluded from release builds and retained during deployment. Developer tests and caches are not shipped. Source-only archives require explicit `--online` or `--no-packages`.
 
 Debian 12's Netperf package requires the official `non-free` repository component. Have the administrator configure approved repositories before building/installing. The installer does not silently enable components or omit requested tools. Debian package-adapter tests are distinct from systemd service validation on a full Debian host.
 
@@ -113,7 +186,7 @@ BLR §5.3.2.5.1 includes SFTP. Rebuild the transfer profile to include the OpenS
 
 For online setup, `setup.py install --online --all-components` installs the core dependencies plus all available protocol package profiles. This includes Redis, Python WebSocket support, NTP tools, TACACS+ tools and FTP/TFTP/Telnet clients. RHEL also offers the distribution Guacamole package; Debian uses the verified native build instead. A package being installed does not imply its application backend is implemented.
 
-For a complete offline release, add repeated `--component-bundle /path/to/profile-bundle` arguments to `package.py` together with the core `--bundle` and native bundles. The single resulting archive carries the profile manifests and packages outside the web root. Its bootstrap validates every selected profile's OS/CPU, component ID and SHA-256 hashes before updating source or invoking a package manager, then automatically forwards them to setup. The read-only `install.py --plan` lists the selected components.
+For a complete offline release, add repeated `--component-bundle /path/to/profile-bundle` arguments to `package.py` together with the core `--bundle` and native bundles. The resulting archive carries the profile manifests and packages inside the plugin’s private media folder. Its bootstrap validates every selected profile's OS/CPU, component ID and SHA-256 hashes before updating source or invoking a package manager, then automatically forwards them to setup. The read-only `install.py --plan` lists the selected components.
 
 Direct offline setup accepts the same repeated `--component-bundle` arguments. Adding `--all-components` requires every available profile bundle and rejects incomplete sets before making changes. Existing Cacti pages, credentials and records are preserved. Debian's package manager is instructed not to remove existing packages; a conflicting installed time daemon must be resolved by the administrator rather than silently replaced.
 
@@ -150,23 +223,90 @@ The fixed policy permits only tracking, source-statistics and peer-data reads as
 
 Jitter is chrony's selected-source residual offset standard deviation (`sourcestats`, in milliseconds), with its sample count and span stored alongside it. Peer delay is the measured round-trip delay to that same selected NTP peer (`ntpdata`), distinct from root delay to the ultimate reference. Tracking brackets both reads; a source/reference update invalidates the collection. All measurements and errors are stored per inventory device. Older history retains missing jitter/delay as unknown and is never backfilled with zero or RMS offset.
 
+## MIB Simulator on offline RHEL
+
+The MIB Simulator is an optional service for generating test SNMP readings.
+If **MIB Repository → Simulator** reports that setup is missing, run the
+[simulator installer](../protocols/snmp/mibs/simulator/README.md) on that
+Cacti collector with the actual PHP service account.
+
+## Feature installation through Cacti
+
+The Offline Packages catalog groups dependencies into Cacti framework requirements,
+plugin protocols and diagnostics, and optional services. The native Cacti account,
+device inventory and Installation/Upgrades permission control access.
+
+Each Install button submits a fixed feature or RPM selection to the local
+privileged runner. The runner reads the RPM database, selects missing packages,
+verifies the bundle for the collector's RHEL release and CPU architecture, resolves
+dependencies from local media, and reports the transaction result. Existing
+packages are included in the readiness count. A feature's protocol configuration
+and credentials are completed in Device Mgmt after its dependencies are ready.
+
+LLDP/CDP discovery reads SNMP neighbor tables from managed devices and uses the
+plugin's collectors with PHP SNMP and Net-SNMP tools. Its catalog entry checks
+those dependencies. Pathchar uses the ICCT Pathchar RPM. Syslog uses rsyslog and
+logrotate. NetFlow/IPFIX uses nfdump and nfcapd. Serial/GNSS collection uses Python
+and the bundled collectors.
+
+The local media prepared for this workspace is RHEL 9.8 aarch64. For a different
+RHEL release or CPU, build matching media using the bundle instructions above.
+Transfer complete bundles including their manifests and dependencies. The
+installer displays the measured collector platform and rejects incompatible
+media. Build complete distributable archives with:
+
+```sh
+python3 installation/cli/package.py --help
+```
+
+When building a complete release, supply the verified media directory with the
+packager's `--media` option so the RPMs are carried inside
+`icct_nms/installation/bundles/media`.
+
 ## Offline Packages in the browser
 
 **Checks** reports application and collector readiness. **Offline Packages** is the RHEL package manager. The page stays read-only on Windows WAMP and other hosts without the RHEL runner.
 
-Keep the complete media folder outside the web root. It has `packages/` for core dependencies and `components/{redis,websocket,ntp,tacacs,guacamole,transfer}/` for the individual verified bundles. See the bundle commands above to build media for a different OS release or CPU. Native Guacamole and Pathchar bundles, when supplied in `native/`, use the native installer described above.
+The complete installer keeps its media in `icct_nms/installation/bundles/media`. It has `packages/` for core dependencies and `components/<profile>/` for the individual verified bundles. See the bundle commands above to build media for a different OS release or CPU. Native Guacamole and Pathchar bundles, when supplied in `native/`, use the native installer described above.
 
-After installing or enabling the plugin, provision its package runner once as a system administrator. Substitute the actual Cacti root, PHP account and extracted media directory.
+The complete installer provisions the runner automatically. To reprovision it, run the command below as a system administrator. The media directory must be root-owned with mode `0700`. Its files and all parent directories must be root-owned and writable only by root.
 
 ```sh
 sudo /usr/bin/python3 /var/www/html/cacti/plugins/icct_nms/installation/cli/package_runner.py provision \
-  --cacti-root /var/www/html/cacti --web-user apache --media /media/icct-rhel98-aarch64-package-media
+  --cacti-root /var/www/html/cacti --web-user apache
 ```
 
-The runner verifies all bundles, installs missing runner prerequisites from the local media, keeps a private copy of the media and starts a systemd timer. The target needs Cacti, PHP and the RHEL system Python/DNF runtime for this initial provisioning. The browser submits only an allowlisted operation through Cacti's authenticated Installation/Upgrades page. It shows the runner's actual RPM checks, transaction selection and verification. RPM operations use local media only and stop if installation would replace an installed package. Service configuration and plugin activation are separate.
+Copying the plugin folder or using `--application-only` does not start the
+runner. On a server where dependencies are already installed, run the command
+above with `--no-packages` to enable the runner without changing installed RPMs.
+Alternatively, run the complete installer's `install.py --no-packages` to
+deploy and configure the plugin and runner together. Use the account actually
+running Cacti's PHP requests if it differs from `apache`.
+
+The runner verifies all bundles, installs missing runner prerequisites from the local media, uses the bundled media directly and starts a systemd timer. The target needs Cacti, PHP and the RHEL system Python/DNF runtime for this initial provisioning. The browser submits only an allowlisted operation through Cacti's authenticated Installation/Upgrades page. It shows the runner's actual RPM checks, transaction selection and verification. RPM operations use local media only and stop if installation would replace an installed package. Service configuration and plugin activation are separate.
 
 **Uninstall** applies to eligible tools installed by this runner. It protects pre-existing packages and core dependencies and rejects transactions that would remove additional packages. Runner failures appear in the progress dialog and in `journalctl -u icct-nms-package-runner.service`.
 
+### If Verify media and Install are disabled on RHEL
+
+**Not checked** means the page has no usable runner status. The message above the package list identifies the condition and shows the appropriate command.
+
+1. If the runner has not been set up, transfer the **complete offline release** for the server's RHEL release and CPU architecture and extract it outside the web root. If the required RPMs and runner prerequisites are already installed, run this from the extracted directory:
+
+   ```sh
+   sudo /usr/bin/python3 install.py --cacti-root /usr/share/cacti --web-user apache --no-packages
+   ```
+
+   Replace `/usr/share/cacti` with the actual Cacti root and `apache` with the account serving Cacti's PHP requests. Omit `--no-packages` if the complete installer should install the missing dependencies from its local media.
+2. If the runner is configured for a different Cacti installation or PHP cannot submit requests, reprovision it with the correct Cacti root and PHP account using the `package_runner.py provision` command above.
+3. If the status is unreadable or stale, check the systemd timer and runner log on that collector:
+
+   ```sh
+   systemctl status icct-nms-package-runner.timer
+   sudo journalctl -u icct-nms-package-runner.service -n 30 --no-pager
+   ```
+
+Reopen **Installation → Offline Packages** after the runner is ready and select **Verify media**. An individual **Install** button can still be disabled if the verified offline bundle does not contain the required RPM.
 
 In **Presets → Protocols → Syslog**, enter the receiver port and select **Save**. This control requires the updated RHEL offline
 runner, provisioned by the complete offline installer. The default is 514.
@@ -174,3 +314,9 @@ The runner updates TCP, UDP, and any enabled local journal forwarding together.
 Use the same port on sending devices and in the site firewall. On SELinux
 Enforcing hosts, the selected port must be permitted for rsyslog before applying
 it. The change requires no repository or internet access.
+
+## Isolated regression tests
+
+Run standalone unit tests without connecting to the live Cacti database. Database integration entry points require explicit `--cacti-root` and `--database` arguments. The root must be an isolated Cacti copy with a `.icct-disposable-qa.json` marker identifying its disposable database, and its configuration must connect to that exact database. The guard exits before Cacti startup when the marker is absent. Do not run integration tests against the live installation or alter live database credentials for testing.
+
+Source permission checks inspect the source file and every parent directory within the detected Cacti root. Read-only files in a writable source directory still require correction because the web account could replace them.

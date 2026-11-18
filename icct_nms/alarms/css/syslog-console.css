@@ -1,0 +1,61 @@
+.alarm-view-switch a {
+    padding: 8px 16px;
+    color: #222;
+    background: #fff;
+    font-size: 14px;
+    line-height: 18px;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.alarm-view-switch a + a { border-left: 1px solid #222; }
+.alarm-view-switch a[aria-current='page'] { color: #fff; background: #222; }
+.alarm-view-switch a:focus-visible { outline: 2px solid #155cff; outline-offset: -3px; }
+
+.alarm-syslog .alarm-syslog-filters {
+    grid-template-columns: minmax(126px, 1fr) minmax(116px, .8fr) minmax(122px, 1fr)
+        minmax(182px, 1.25fr) minmax(176px, 1.4fr) auto;
+}
+
+.alarm-syslog-filter-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.alarm-syslog-table td:nth-child(6) { width: 34%; }
+.alarm-syslog-message { white-space: pre-wrap; }
+.alarm-syslog #alarm-syslog-refresh-status { margin: 0 22px 12px; color: #525252; font-size: 13px; }
+.alarm-syslog #alarm-syslog-results { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.alarm-syslog-table td:nth-child(7) { width: 10%; white-space: nowrap; }
+.alarm-syslog-table td small a { color: #0043ce; }
+.alarm-syslog-table th a { text-decoration: underline; text-underline-offset: 3px; }
+
+.alarm-syslog-priority {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 16px;
+    white-space: nowrap;
+    font-weight: 600;
+    background: #e8e8e8;
+    color: #393939;
+}
+
+.alarm-syslog-priority[data-priority='0'] { background: #750e13; color: #fff; }
+.alarm-syslog-priority[data-priority='1'] { background: #a2191f; color: #fff; }
+.alarm-syslog-priority[data-priority='2'] { background: #ffdadb; color: #83161b; }
+.alarm-syslog-priority[data-priority='3'] { background: #ffd9be; color: #713400; }
+.alarm-syslog-priority[data-priority='4'] { background: #fff0b3; color: #5f4500; }
+.alarm-syslog-priority[data-priority='5'] { background: #e8d9ff; color: #4f2386; }
+.alarm-syslog-priority[data-priority='6'] { background: #d0e2ff; color: #003a85; }
+.alarm-syslog-priority[data-priority='7'] { background: #dcefea; color: #125349; }
+
+@media (max-width: 1100px) {
+    .alarm-syslog .alarm-syslog-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 620px) {
+    .alarm-syslog .alarm-syslog-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .alarm-view-switch a { padding: 8px 10px; font-size: 12px; }
+}
+
+.alarm-syslog #alarm-syslog-refresh-status:empty { display: none; }

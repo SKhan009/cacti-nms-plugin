@@ -119,6 +119,7 @@ try {
                 }
                 $children[$port] = [
                     'process' => $process,
+                    'bind' => $bind,
                     'hash' => hash('sha256', json_encode($sources)),
                 ];
             }
@@ -167,6 +168,10 @@ try {
         $status = [
             'heartbeat' => time(),
             'ports' => array_keys($listeners),
+            'listener_bindings' => (object) array_map(
+                static fn($child) => $child['bind'],
+                array_filter($children, static fn($child) => proc_get_status($child['process'])['running']),
+            ),
             'devices' => count($assignments),
             'errors' => $errors,
             'failed_ports' => $failedPorts,

@@ -1,8 +1,9 @@
 <?php
 $simulatorUrl = 'protocols/snmp/mibs/controllers/mib_repository.php?tab=simulator';
 $simulatorReady = is_dir(ICCT_MIB_SIM_STATE);
-$simulatorState = icct_mib_simulator_state();
-$simulatorDevices = icct_mib_simulator_devices();
+$simulatorWritable = $simulatorReady && is_writable(ICCT_MIB_SIM_STATE);
+$simulatorState = $simulatorReady ? icct_mib_simulator_state() : [];
+$simulatorDevices = $simulatorReady ? icct_mib_simulator_devices() : [];
 $simulatorDraft = $management ? ($_SESSION['icct_mib_simulator_draft'] ?? []) : [];
 ?>
 <section class="mib-editor" aria-label="MIB Simulator">
@@ -10,8 +11,16 @@ $simulatorDraft = $management ? ($_SESSION['icct_mib_simulator_draft'] ?? []) : 
     <?php if ($error !== ''): ?>
         <p class="site-error" role="alert"><?= icct_nms_h($error) ?></p>
     <?php endif; ?>
-    <?php if (!$simulatorReady): ?>
-        <p>The simulator has not been provisioned on this collector.</p>
+    <?php if (!$simulatorReady || ($management && !$simulatorWritable)): ?>
+        <p class="site-error" role="status"><?= !$simulatorReady
+            ? 'The MIB Simulator is not set up on this collector.'
+            : 'The Cacti PHP account cannot write to the MIB Simulator state directory.' ?></p>
+        <?php if ($management): ?>
+            <p>Run this on the RHEL collector and replace <code>apache</code> if Cacti uses a different PHP account. Then reload this tab.</p>
+            <pre><code><?= icct_nms_h('sudo bash ' . escapeshellarg(
+                rtrim($config['base_path'], '/') . '/plugins/icct_nms/protocols/snmp/mibs/simulator/install_rhel.sh',
+            ) . ' apache') ?></code></pre>
+        <?php endif; ?>
     <?php else: ?>
         <p role="status"><?= $simulatorState ? 'Running' : 'Stopped' ?></p>
         <p><strong>Simulated data</strong> · All readings from this endpoint are generated for testing.</p>

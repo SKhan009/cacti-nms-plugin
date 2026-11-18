@@ -14,6 +14,7 @@ function icct_nms_netflow_defaults()
         'version' => 9,
         'collector' => '',
         'port' => 2055,
+        'no_flow_timeout' => 0,
         'active_timeout' => 60,
         'inactive_timeout' => 15,
         'sampling_rate' => 1,
@@ -27,6 +28,37 @@ function icct_nms_netflow_defaults()
 function icct_nms_netflow_fields()
 {
     return array_keys(icct_nms_netflow_defaults());
+}
+function icct_nms_netflow_alarm_ranges(): array
+{
+    return [
+        'bandwidth_limit_mbps' => [1, 1000000],
+        'scan_threshold' => [2, 1000000],
+        'syn_pps_threshold' => [1, 100000000],
+    ];
+}
+
+function icct_nms_netflow_cached_interfaces(int $id): array
+{
+    if (!$id) {
+        return [];
+    }
+    $rows = db_fetch_assoc_prepared(
+        "SELECT snmp_index,field_name,field_value FROM host_snmp_cache
+         WHERE host_id=? AND field_name IN ('ifName','ifDescr','ifIndex')
+         ORDER BY FIELD(field_name,'ifIndex','ifDescr','ifName'),snmp_query_id",
+        [$id],
+    );
+    $interfaces = [];
+    foreach ($rows as $row) {
+        $index = (string) $row['snmp_index'];
+        $name = trim((string) $row['field_value']);
+        if (ctype_digit($index) && (int) $index > 0 && $name !== '') {
+            $interfaces[(int) $index] = $row['field_name'] === 'ifIndex' ? 'Interface' : $name;
+        }
+    }
+    ksort($interfaces, SORT_NUMERIC);
+    return $interfaces;
 }
 function icct_nms_netflow_validate($input)
 {
@@ -44,13 +76,11 @@ function icct_nms_netflow_validate($input)
     foreach (
         [
             'port' => [1, 65535],
+            'no_flow_timeout' => [0, 86400],
             'active_timeout' => [1, 86400],
             'inactive_timeout' => [1, 86400],
             'sampling_rate' => [1, 1000000],
-            'bandwidth_limit_mbps' => [1, 1000000],
-            'scan_threshold' => [2, 1000000],
-            'syn_pps_threshold' => [1, 100000000],
-        ]
+        ] + icct_nms_netflow_alarm_ranges()
         as $key => $range
     ) {
         $value = filter_var($out[$key], FILTER_VALIDATE_INT);
@@ -60,6 +90,9 @@ function icct_nms_netflow_validate($input)
             );
         }
         $out[$key] = $value;
+    }
+    if ($out['active_timeout'] <= $out['inactive_timeout']) {
+        throw new InvalidArgumentException('Active timeout must exceed inactive timeout.');
     }
     if (
         $out['collector'] === '' ||
@@ -118,13 +151,26 @@ function icct_nms_netflow_assignment($id)
         );
     }
 
-    return array_replace(icct_nms_netflow_defaults(), $row, $extra);
+    $alarmSettings = json_decode((string) db_fetch_cell_prepared(
+        'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
+        ['netflow_alarm_thresholds_' . (int) $id],
+    ), true);
+    return array_replace(
+        icct_nms_netflow_defaults(),
+        $row,
+        $extra,
+        array_intersect_key(is_array($alarmSettings) ? $alarmSettings : [], icct_nms_netflow_alarm_ranges()),
+    );
 }
 function icct_nms_netflow_save($id, $host, $input)
 {
     icct_backend_require_management(3);
     icct_backend_require_device_access($id);
-    $v = icct_nms_netflow_validate($input);
+    $saved = icct_nms_netflow_assignment($id);
+    $preset = function_exists('icct_nms_netflow_profiles')
+        ? (icct_nms_netflow_profiles()[(int) ($input['version'] ?? 0)] ?? icct_nms_protocol_presets()['netflow'] ?? [])
+        : [];
+    $v = icct_nms_netflow_validate($input + array_intersect_key($saved + $preset, icct_nms_netflow_alarm_ranges()));
     $source = trim((string) ($input['exporter_address'] ?? ''));
     if ($source === '') {
         $source = trim((string) ($host['hostname'] ?? ''));
@@ -188,8 +234,10 @@ function icct_nms_netflow_remove($id)
     icct_backend_category_execute('DELETE FROM plugin_icct_nms_netflow_devices WHERE host_id=?', [
         (int) $id,
     ]);
-    icct_backend_category_execute('DELETE FROM plugin_icct_nms_meta WHERE meta_key=?', [
+    icct_backend_category_execute('DELETE FROM plugin_icct_nms_meta WHERE meta_key IN (?,?,?)', [
         'netflow_config_' . (int) $id,
+        'netflow_alarm_thresholds_' . (int) $id,
+        'netflow_reception_' . (int) $id,
     ]);
 }
 function icct_nms_netflow_cidr($ip, $cidr)
@@ -431,6 +479,16 @@ function icct_nms_netflow_rankings($filter)
     return $rankings;
 }
 
+function icct_nms_netflow_chart($where, $args, int $interval)
+{
+    return db_fetch_assoc_prepared(
+        'SELECT FLOOR(UNIX_TIMESTAMP(last_seen)/' . $interval . ')*' . $interval .
+            ' AS epoch,traffic_scope,SUM(bytes)*8/' . $interval . ' AS bps ' .
+            'FROM plugin_icct_nms_netflow_flows WHERE ' . $where . ' GROUP BY epoch,traffic_scope ORDER BY epoch',
+        $args,
+    );
+}
+
 function icct_nms_netflow_read($id, $input)
 {
     $filter = icct_nms_netflow_filter($id, $input);
@@ -461,18 +519,23 @@ function icct_nms_netflow_read($id, $input)
     );
     $rankings = icct_nms_netflow_rankings($filter);
     $chartInterval = max(300, (int) ceil(($filter['end'] - $filter['start']) / 300 / 300) * 300);
-    $chart = db_fetch_assoc_prepared(
-        'SELECT FLOOR(UNIX_TIMESTAMP(last_seen)/' .
-            $chartInterval .
-            ')*' .
-            $chartInterval .
-            ' AS epoch,traffic_scope,SUM(bytes)*8/' .
-            $chartInterval .
-            ' AS bps FROM plugin_icct_nms_netflow_flows WHERE ' .
-            $where .
-            ' GROUP BY epoch,traffic_scope ORDER BY epoch',
-        $args,
-    );
+    $chart = icct_nms_netflow_chart($where, $args, $chartInterval);
+    $live = ($input['live'] ?? '') === '1';
+    $liveChart = null;
+    if ($live) {
+        $interval = 30;
+        $end = intdiv(time(), $interval) * $interval;
+        $start = $end - 300;
+        $liveChart = [
+            'rows' => icct_nms_netflow_chart(
+                'host_id=? AND last_seen>=FROM_UNIXTIME(?) AND last_seen<FROM_UNIXTIME(?)',
+                [(int) $id, $start, $end],
+                $interval,
+            ),
+            'interval' => $interval,
+            'range' => [$start, $end - $interval],
+        ];
+    }
     $eventWhere = ['e.host_id=?'];
     $eventArgs = [(int) $id];
     $eventWhere[] = 'e.updated_at BETWEEN ? AND ?';
@@ -504,6 +567,32 @@ function icct_nms_netflow_read($id, $input)
             ' ORDER BY e.updated_at DESC LIMIT 100',
         $eventArgs,
     );
+    $reception = icct_nms_netflow_reception($id);
+    return [
+        'totals' => $totals,
+        'live_readings' => $live ? icct_nms_netflow_live_readings($id) : null,
+        'historical_readings' => $live ? icct_nms_netflow_last_readings($id) : null,
+        'live_chart' => $liveChart,
+        'rankings' => $rankings,
+        'chart' => $chart,
+        'chart_interval' => $chartInterval,
+        'rows' => $rows,
+        'events' => $events,
+        'anomaly_check' => json_decode((string) db_fetch_cell_prepared(
+            'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
+            ['netflow_anomaly_check_' . (int) $id],
+        ), true),
+        'page' => $page,
+        'pages' => $pages,
+        'size' => $size,
+        'range' => [$filter['start'], $filter['end']],
+        'loopback_exporter' => $reception['assignment'] &&
+            icct_nms_netflow_is_loopback($reception['assignment']['exporter_address']),
+    ] + $reception;
+}
+
+function icct_nms_netflow_reception($id, bool $details = false): array
+{
     $worker =
         json_decode(
             (string) db_fetch_cell_prepared(
@@ -526,6 +615,8 @@ function icct_nms_netflow_read($id, $input)
     $enabled =
         $assignment && $assignment['enabled'] && icct_backend_protocol_enabled($id, 'netflow');
     $fresh = $worker && time() - (int) $worker['heartbeat'] < 90;
+    $port = (int) ($assignment['port'] ?? 0);
+    $bind = $fresh && $enabled ? ($worker['listener_bindings'][$port] ?? null) : null;
     $listenerFailed =
         $assignment &&
         in_array(
@@ -533,6 +624,9 @@ function icct_nms_netflow_read($id, $input)
             array_map('intval', $worker['failed_ports'] ?? []),
             true,
         );
+    $noFlowTimeout = (int) ($assignment['no_flow_timeout'] ?? 0)
+        ?: max(180, 2 * (int) ($assignment['active_timeout'] ?? 0) + 120);
+    $lastData = (int) ($state['last_data_epoch'] ?? 0);
     $health = !$assignment
         ? 'Not configured'
         : (!$enabled
@@ -543,50 +637,34 @@ function icct_nms_netflow_read($id, $input)
                     ? 'Collector listener error'
                     : (($state['status'] ?? '') === 'error'
                         ? 'Import error'
-                        : (time() - (int) ($state['last_data_epoch'] ?? 0) <=
-                        max(180, 2 * (int) $assignment['active_timeout'] + 120)
+                        : (time() - $lastData <= $noFlowTimeout
                             ? 'Receiving'
                             : 'Waiting for flows')))));
-    return [
-        'totals' => $totals,
-        'live_readings' =>
-            ($input['live'] ?? '') === '1' ? icct_nms_netflow_live_readings($id) : null,
-        'historical_readings' => ($input['live'] ?? '') === '1'
-            ? icct_nms_netflow_last_readings($id) : null,
-        'rankings' => $rankings,
-        'chart' => $chart,
-        'chart_interval' => $chartInterval,
-        'rows' => $rows,
-        'events' => $events,
-        'anomaly_check' => json_decode((string) db_fetch_cell_prepared(
+    $observed = null;
+    if ($details && $assignment) {
+        $observation = json_decode((string) db_fetch_cell_prepared(
             'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
-            ['netflow_anomaly_check_' . (int) $id],
-        ), true),
-        'page' => $page,
-        'pages' => $pages,
-        'size' => $size,
-        'range' => [$filter['start'], $filter['end']],
+            ['netflow_reception_' . (int) $id],
+        ), true);
+        if (($observation['source'] ?? null) === $assignment['exporter_address'] &&
+            ($observation['port'] ?? null) === $port) {
+            $observed = $observation;
+        }
+    }
+    return [
+        'observation' => $observed,
         'health' => $health,
-        'loopback_exporter' =>
-            $assignment && icct_nms_netflow_is_loopback($assignment['exporter_address']),
-        'last_data_epoch' => (int) ($state['last_data_epoch'] ?? 0),
+        'last_data_epoch' => $lastData,
         'error' => $state['last_error'] ?? '',
-        'assignment' => $assignment
-            ? array_intersect_key(
-                $assignment,
-                array_flip([
-                    'exporter_address',
-                    'version',
-                    'collector',
-                    'port',
-                    'active_timeout',
-                    'inactive_timeout',
-                    'sampling_rate',
-                    'lan_cidrs',
-                    'wan_interfaces',
-                ]),
-            )
-            : null,
+        'listener' => $bind,
+        'listener_status' => !$enabled ? $health : ($bind !== null ? 'Running' : (
+            $fresh && !$listenerFailed ? 'Awaiting listener confirmation' : $health
+        )),
+        'no_flow_timeout' => $noFlowTimeout,
+        'assignment' => $assignment ? array_intersect_key($assignment, array_flip([
+            'exporter_address', 'version', 'collector', 'port', 'active_timeout',
+            'inactive_timeout', 'sampling_rate', 'lan_cidrs', 'wan_interfaces',
+        ])) : null,
     ];
 }
 

@@ -196,5 +196,17 @@
         }
         window.pdfMake.createPdf(doc).download(reportFilename(r.device_name));
     }
-    window.icctAlarmPdf = { list, detail };
+    async function syslog(headers, rows, meta) {
+        if (!window.pdfMake) throw new Error('PDF generator is unavailable.');
+        const doc = base(meta, await logo(), 'SYSLOG REPORT');
+        doc.info.subject = 'ICCT NMS Syslog events';
+        const events = table(headers, [67, 85, 84, 59, 75, '*', 67], rows.map(row =>
+            row.map(value => small(value.replace(/(\S{32})(?=\S)/gu, '$1\u200b')))
+        ));
+        events.table.dontBreakRows = false;
+        doc.content = [events];
+        if (!rows.length) doc.content.push({text: 'No Syslog messages match the current filters.'});
+        window.pdfMake.createPdf(doc).download('Syslog Report.pdf');
+    }
+    window.icctAlarmPdf = { list, detail, syslog };
 })();

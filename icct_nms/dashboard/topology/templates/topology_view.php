@@ -4,14 +4,26 @@
         class="topology-actions"
         hidden>
         <button
-            class="button"
+            class="rack-icon"
             id="topologyDiscard"
-            type="button">Discard</button>
+            type="button"
+            aria-label="Cancel topology editing"
+            title="Cancel topology editing">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
+        </button>
         <button
-            class="button primary"
+            class="rack-icon"
             id="topologySave"
             type="button"
-            disabled>Save</button>
+            aria-label="Save topology layout"
+            title="Save topology layout"
+            disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M4 4h13l3 3v13H4zM8 4v6h8V4M8 20v-6h8v6" />
+            </svg>
+        </button>
     </div>
     <p
         id="topologyMessage"

@@ -12,10 +12,11 @@ function is_realm_allowed($realm)
     global $management;
     return $management;
 }
-function icct_nms_h($s)
+function html_escape($s)
 {
     return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
 }
+require_once __DIR__ . '/../services/bootstrap.php';
 $display = static fn($v) => icct_nms_h($v ?: '—');
 function icct_backend_diag_authorize_job($job)
 {

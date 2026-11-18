@@ -21,10 +21,10 @@
         id="netflow-feedback"
         role="alert"></p>
     <?php $netflowViews = [
-        'overview' => 'Overview',
+        'overview' => 'Current Readings',
         'breakdown' => 'Traffic Breakdown',
         'records' => 'Traffic Records',
-        'anomalies' => 'Anomalies',
+        'anomalies' => 'Alarms / Anomalies',
     ]; ?>
     <div class="fcaps-tabs" role="tablist" aria-label="NetFlow views">
         <?php foreach ($netflowViews as $key => $label): ?>
@@ -53,6 +53,16 @@
                                     data-unit="<?= icct_nms_h($unit) ?>">—</strong>
                             </div>
                         <?php endforeach; ?>
+                    </div>
+                    <div class="netflow-chart-panel">
+                        <h3>Live bandwidth trend</h3>
+                        <p>Last 5 minutes · 30-second averages · Hover over a reading for its time and value.</p>
+                        <div id="netflow-live-chart-error" class="inline-feedback error" role="alert" hidden></div>
+                        <svg id="netflow-live-chart" role="group" aria-label="Live NetFlow bandwidth trend"></svg>
+                        <p class="netflow-legend" aria-label="Live bandwidth legend">
+                            <span>● LAN</span><span>● WAN</span><span>● Unclassified</span>
+                        </p>
+                        <p>Lines connect consecutive readings. Dots mark individual readings. Gaps mean no reported flows.</p>
                     </div>
                 </section>
             <?php endif; ?>

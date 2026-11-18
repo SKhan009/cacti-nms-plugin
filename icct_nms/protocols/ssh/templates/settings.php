@@ -62,12 +62,24 @@
         'Password',
         'secret',
         '',
-        'password',
-        'autocomplete="new-password" placeholder="Blank retains saved credential"',
+        $presetMode ? 'text' : 'password',
+        $presetMode
+            ? 'disabled placeholder="Set on each device"'
+            : 'autocomplete="new-password" placeholder="Blank retains saved credential"',
     ); ?>
+                <div class="ssh-private-key">
+                    <?php icct_nms_input(
+                        'Key Passphrase',
+                        'passphrase',
+                        '',
+                        'password',
+                        'autocomplete="new-password"',
+                    ); ?>
+                </div>
             </div>
             <div class="protocol-grid cols-3 ssh-common-settings">
-                <?php icct_nms_input(
+                <?php
+                icct_nms_input(
                     'Command Timeout (Sec)',
                     'command_timeout',
                     $ssh['command_timeout'] ?? '',
@@ -83,36 +95,31 @@
         'required min="0" max="300"',
     ); ?>
             </div>
-            <div class="ssh-private-key">
-                <h3>Upload files <span
-                        class="field-info section-help"
-                        tabindex="0"
-                        role="img"
-                        aria-label="Maximum 64 KB. Supported formats: .ppk, PEM, OpenSSH."
-                        data-tooltip="Maximum 64 KB. Supported formats: .ppk, PEM, OpenSSH.">ⓘ</span>
-                </h3>
-                <label class="upload-zone"> Upload +
-                    <input
-                        name="key_file"
-                        type="file"
-                        accept=".ppk,.pem,.key"
-                        aria-label="Upload private key" />
-                </label>
-                <span
-                    class="selected-file"
-                    aria-live="polite"></span>
-                <?php icct_nms_input('Key Passphrase', 'passphrase', '', 'password', 'autocomplete="new-password"'); ?>
-            </div>
             <label class="check-row">
                 <input
                     name="monitoring"
                     type="checkbox"
                     <?= !empty($ssh['monitoring']) ? 'checked' : '' ?> /> Enable SSH monitoring
             </label>
+            <div class="ssh-key-upload">
+                <h3>Upload files</h3>
+                <p>Maximum file size is 64 KB. Supported formats are .ppk, PEM and OpenSSH.</p>
+                <label class="upload-zone">
+                    <span>Upload</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    <input
+                        name="key_file"
+                        type="file"
+                        accept=".ppk,.pem,.key"
+                        aria-label="Upload private key" />
+                </label>
+                <span class="selected-file" aria-live="polite"></span>
+            </div>
             <div class="protocol-actions">
                 <button class="button primary">Save</button>
             </div>
         </form>
-        <?php require __DIR__ . '/terminal_action.php'; ?>
     </div>
 </details>

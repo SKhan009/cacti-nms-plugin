@@ -176,3 +176,19 @@ sp_check(
 );
 unlink($f);
 echo "Syslog NDJSON spool -> mapping -> filter -> dedupe -> storage cursor -> rotation pipeline tests passed.\n";
+
+$diagnostics = icct_backend_syslog_worker_diagnostics([], [
+    'drop_reasons' => ['unmapped-source' => 1],
+    'error_messages' => ['Invalid Syslog envelope.'],
+]);
+$restored = icct_backend_syslog_worker_diagnostics($diagnostics, [
+    'drop_reasons' => [],
+    'error_messages' => [],
+]);
+if ($restored !== $diagnostics || !$restored['last_drop_at'] || !$restored['last_error_at']) {
+    throw new RuntimeException('Idle batches must preserve the latest timestamped Syslog problem.');
+}
+if (icct_backend_syslog_worker_diagnostics($restored, null) !== $restored) {
+    throw new RuntimeException('Worker restarts must preserve the latest ingestion diagnostics.');
+}
+echo "Syslog rejection diagnostics survive idle batches and worker restarts.\n";

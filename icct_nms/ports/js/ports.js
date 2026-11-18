@@ -12,8 +12,7 @@
     settings.ports = Object.fromEntries(
         Object.entries(settings.ports || {}).filter(([, row]) => row !== null),
     );
-    let observation = JSON.parse(document.querySelector('#port-observations').textContent),
-        changedEndpoint = false;
+    let observation = JSON.parse(document.querySelector('#port-observations').textContent);
     const originalHostname = basic.elements.hostname.value,
         originalPoller = basic.elements.poller_id.value;
     function sync() {
@@ -92,11 +91,21 @@
     }
     function render() {
         const changed =
-            changedEndpoint ||
             basic.elements.hostname.value !== originalHostname ||
             basic.elements.poller_id.value !== originalPoller;
         const ports = changed ? [] : observation.ports;
         rows.replaceChildren();
+        if (!ports.length || observation.interface_count === 0 || !observation.fresh) {
+            const message = changed
+                ? 'Save connection settings to discover interfaces.'
+                : observation.message || (ports.length ? '' : 'No interfaces discovered yet.');
+            if (message) {
+                const status = document.createElement('p');
+                status.className = 'empty-state';
+                status.textContent = message;
+                rows.append(status);
+            }
+        }
         for (const p of ports) {
             const saved = settings.ports[p.index];
             const rule =
@@ -175,14 +184,6 @@
             box.append(clearField);
             rows.append(box);
         }
-        if (!ports.length) {
-            const empty = document.createElement('p');
-            empty.className = 'empty-state';
-            empty.textContent = changed
-                ? 'Save connection settings to discover interfaces.'
-                : 'No interfaces discovered yet.';
-            rows.append(empty);
-        }
         updateValidation();
     }
     enabled.addEventListener('change', () => {
@@ -191,12 +192,6 @@
     });
     basic.elements.hostname.addEventListener('input', render);
     basic.elements.poller_id.addEventListener('change', render);
-    ['#protocol-snmp', '#protocol-ssh'].forEach((selector) =>
-        document.querySelector(selector)?.addEventListener('change', () => {
-            changedEndpoint = true;
-            render();
-        }),
-    );
     let loading = false;
     async function refresh() {
         if (

@@ -1,6 +1,13 @@
 <?php
 /** Syslog filters inherit presets and remain independently editable per device. */
 $syslog = is_array($syslog ?? null) ? $syslog : [];
+$syslogDefaults = icct_nms_protocol_presets()['syslog'] ?? [];
+if (!isset($syslogPortStatus['syslog_port'])) {
+    require_once __DIR__ . '/../../../installation/services/package_jobs.php';
+    $syslogPortStatus = icct_nms_package_status($config['base_path']);
+}
+$syslogPortEditable = !empty($presetMode) && !empty($canManageSyslogPort);
+$syslogRefresh = icct_nms_syslog_refresh_seconds(!empty($presetMode) ? $syslog : $syslogDefaults);
 $syslogFilters = isset($syslog['host_id'])
     ? icct_backend_syslog_effective_filters($syslog)
     : icct_backend_syslog_filters($syslog);
@@ -26,19 +33,18 @@ $syslogHelp = static function ($label, $help) {
 };
 ?>
 <div class="protocol-grid cols-2">
-    <?php if (empty($presetMode)): ?>
-        <label class="field">
-            <span class="field-label">Source IP address <?php $syslogHelp('Source IP address', 'Leave blank to use the saved Cacti device IP. Override only when the device sends from a different IP. A hostname requires an explicit numeric sender IP; no internet lookup is used. Shared sender IPs use the first matching device by device ID after transport and message filters; each event and alarm has one owner.'); ?></span>
-            <input
-                name="source_address"
-                value="<?= icct_nms_h($syslog['source_address'] ?? ($host['hostname'] ?? ($values['hostname'] ?? ($old['hostname'] ?? '')))) ?>"
-                placeholder="Uses the saved device IP if blank">
-        </label>
-    <?php endif; ?>
-    <?php if (!empty($presetMode)):
+    <label class="field">
+        <span class="field-label">Source IP address <?php $syslogHelp('Source IP address', 'Uses the saved Syslog sender IP or the IP from Basic Information.'); ?></span>
+        <input
+            readonly
+            <?= empty($presetMode) && empty($syslog['source_address']) ? 'data-syslog-device-ip' : '' ?>
+            value="<?= !empty($presetMode) ? '' : icct_nms_h(filter_var($syslog['source_address'] ?? $host['hostname'] ?? $values['hostname'] ?? $old['hostname'] ?? '', FILTER_VALIDATE_IP) ?: '') ?>"
+            placeholder="<?= !empty($presetMode) ? 'Provided by each device' : 'Device IP required in Basic Information' ?>">
+    </label>
+    <?php
         $portAvailable = !empty($syslogPortStatus['available']) && isset($syslogPortStatus['syslog_port']);
         $portJob = $_GET['port_job'] ?? '';
-        $watchPort = !empty($canManageSyslogPort) && is_string($portJob) && preg_match('/^[a-f0-9]{32}$/D', $portJob);
+        $watchPort = $syslogPortEditable && is_string($portJob) && preg_match('/^[a-f0-9]{32}$/D', $portJob);
         ?>
         <div class="field">
             <label
@@ -48,21 +54,20 @@ $syslogHelp = static function ($label, $help) {
             </label>
             <input
                 id="syslog-receiver-port"
-                name="receiver_port"
+                <?= !empty($presetMode) && $syslogPortEditable && $portAvailable ? 'name="receiver_port"' : '' ?>
                 type="number"
                 min="1"
                 max="65535"
                 step="1"
-                placeholder="514"
-                value="<?= (int) ($syslogPortStatus['syslog_port'] ?? 514) ?>"
-                <?= $portAvailable ? 'required' : 'disabled' ?>>
+                placeholder="Not reported"
+                value="<?= isset($syslogPortStatus['syslog_port']) ? (int) $syslogPortStatus['syslog_port'] : '' ?>"
+                <?= $syslogPortEditable && $portAvailable ? 'required' : 'readonly' ?>>
             <?php if ($watchPort): ?>
                 <small data-syslog-save-job="<?= icct_nms_h($portJob) ?>" role="status">Waiting for the offline runner to apply the port…</small>
             <?php elseif (!$portAvailable): ?>
                 <small>Changing the port requires Installation permission and an available offline runner.</small>
             <?php endif; ?>
         </div>
-    <?php endif; ?>
     <label class="field">
         <span class="field-label">Transport <?php $syslogHelp('Transport', 'Accept Syslog messages from this device over the selected listener transport.'); ?></span>
         <select name="transport">
@@ -73,6 +78,17 @@ $syslogHelp = static function ($label, $help) {
             <?php endforeach; ?>
         </select>
     </label>
+        <label class="field">
+            <span class="field-label">Auto-refresh interval (seconds) <?php $syslogHelp('Auto-refresh interval', 'How often Alarms → Syslog checks for new messages while the tab is visible. Applies to all devices.'); ?></span>
+            <input
+                <?= !empty($presetMode) ? 'name="console_refresh_seconds"' : '' ?>
+                type="number"
+                min="<?= ICCT_SYSLOG_REFRESH_MIN ?>"
+                max="<?= ICCT_SYSLOG_REFRESH_MAX ?>"
+                step="1"
+                <?= !empty($presetMode) ? 'required' : 'readonly' ?>
+                value="<?= $syslogRefresh ?>">
+        </label>
 </div>
 <div class="protocol-grid cols-2 syslog-settings">
     <?php foreach (

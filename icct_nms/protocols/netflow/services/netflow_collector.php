@@ -72,6 +72,36 @@ function icct_nms_netflow_payload_key($id, $flows)
     sort($records, SORT_STRING);
     return hash('sha256', $id . '|' . json_encode($records, JSON_THROW_ON_ERROR));
 }
+function icct_nms_netflow_exporter_stats(string $output): array
+{
+    $exporters = [];
+    foreach (preg_split('/(?=^SysID:)/m', $output) as $block) {
+        if (!preg_match('/^SysID:\s*(\d+),\s*IP:\s*([^,]+),\s*version:\s*(\d+)([^\r\n]*)/', $block, $header)) {
+            continue;
+        }
+        preg_match('/\bpackets:\s*(\d+)/i', $header[4], $packets);
+        preg_match_all(
+            '/^\s*Sampler: (?:Generic|Assigned) Sampler: [^\r\n]*packet interval:\s*(\d+),\s*packet space:\s*(\d+)/m',
+            $block,
+            $samplers,
+            PREG_SET_ORDER,
+        );
+        $rates = [];
+        foreach ($samplers as [, $interval, $space]) {
+            if ((int) $interval > 0) {
+                $rates[] = round(1 + (int) $space / (int) $interval, 3);
+            }
+        }
+        $exporters[(int) $header[1]] = [
+            'source' => trim($header[2]),
+            'version' => (int) $header[3],
+            'packets' => (int) ($packets[1] ?? 0),
+            'sampling_rates' => array_values(array_unique($rates)),
+        ];
+    }
+    return $exporters;
+}
+
 function icct_nms_netflow_import_file($assignment, $file)
 {
     $id = (int) $assignment['host_id'];
@@ -88,17 +118,9 @@ function icct_nms_netflow_import_file($assignment, $file)
     ) {
         return 0;
     }
-    $versions = [];
-    $exporters = icct_nms_netflow_command(['/usr/bin/nfdump', '-E', $file]);
-    preg_match_all(
-        '/SysID:\s*(\d+),\s*IP:.*?version:\s*(\d+)/',
-        $exporters,
-        $matches,
-        PREG_SET_ORDER,
+    $exporters = icct_nms_netflow_exporter_stats(
+        icct_nms_netflow_command(['/usr/bin/nfdump', '-E', $file]),
     );
-    foreach ($matches as $m) {
-        $versions[(int) $m[1]] = (int) $m[2];
-    }
     $decoded = icct_nms_netflow_command(['/usr/bin/nfdump', '-r', $file, '-o', 'json']);
     $records =
         trim($decoded) === '' || preg_match('/^\[\s*No matching flows\s*\]$/D', trim($decoded))
@@ -138,15 +160,17 @@ function icct_nms_netflow_import_file($assignment, $file)
     }
     unset($record);
     $flows = [];
+    $templateDecoded = false;
     foreach ($records as $r) {
         if (($r['type'] ?? '') !== 'FLOW') {
             continue;
         }
-        $version = $versions[(int) ($r['export_sysid'] ?? 0)] ?? 0;
+        $version = $exporters[(int) ($r['export_sysid'] ?? 0)]['version'] ?? 0;
         if (!in_array($version, [5, 7, 9, 10], true)) {
             throw new RuntimeException('Unsupported or unidentified flow version.');
         }
         $flows[] = icct_nms_netflow_normalize($r, $version, $config);
+        $templateDecoded = $templateDecoded || in_array($version, [9, 10], true);
     }
     $payloadKey = icct_nms_netflow_payload_key($id, $flows);
     icct_backend_category_execute('START TRANSACTION', []);
@@ -163,6 +187,21 @@ function icct_nms_netflow_import_file($assignment, $file)
             'INSERT INTO plugin_icct_nms_netflow_files(capture_key,host_id,source_file,records_count,payload_key,imported_at) VALUES(?,?,?,?,?,NOW())',
             [$key, $id, $file, count($flows), $payloadKey],
         );
+        $received = array_values(array_filter($exporters, static fn($source) => $source['packets'] > 0));
+        if ($received || $flows) {
+            icct_backend_category_execute(
+                'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ' .
+                    'ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+                ['netflow_reception_' . $id, json_encode([
+                    'source' => $config['exporter_address'],
+                    'port' => (int) $config['port'],
+                    'checked_at' => time(),
+                    'exporters' => $received,
+                    'template_decoded' => $templateDecoded,
+                    'stored' => count($flows),
+                ], JSON_THROW_ON_ERROR)],
+            );
+        }
         foreach ($flows as $i => $flow) {
             $columns = array_keys($flow);
             $params = array_values($flow);

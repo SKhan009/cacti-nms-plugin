@@ -172,16 +172,27 @@
     gap: 8px;
 }
 .icct-map-controls button {
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
     width: 28px;
     height: 28px;
     border: 1px solid #555;
     border-radius: 50%;
     background: white;
     color: #333;
-    font-size: 20px;
-    line-height: 1;
     cursor: pointer;
     padding: 0;
+}
+.icct-map-controls svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
 }
 #icctMapStatus:empty {
     display: none;
@@ -598,7 +609,19 @@
 #rackEditActions {
     display: flex;
     justify-content: flex-end;
+    gap: 8px;
     margin: 0 44px 12px 0;
+}
+#rackEditActions #rackSaveDraft,
+.topology-actions #topologySave {
+    background: #0f62fe;
+    border-color: #0f62fe;
+    color: #fff;
+}
+#rackEditActions .rack-icon:disabled,
+.topology-actions .rack-icon:disabled {
+    opacity: 0.45;
+    cursor: default;
 }
 #rackEditActions[hidden] {
     display: none;

@@ -75,10 +75,10 @@ function icct_nms_protocol_starters()
             'transport' => 'both',
         ],
         'ntp' => [
-            'method' => 'auto',
+            'method' => '',
             'timeout' => 5,
-            'interval_seconds' => $cadence,
-            'stale_seconds' => 3 * $cadence,
+            'interval_seconds' => 0,
+            'stale_seconds' => max(60, 3 * $cadence),
         ],
         'netflow' => array_replace(icct_nms_netflow_defaults(), ['collector' => $hostname]),
     ];
@@ -100,6 +100,9 @@ function icct_nms_seed_protocol_presets()
         $starters = icct_nms_protocol_starters();
         foreach ($starters as $protocol => $starter) {
             $allowed = array_flip(icct_nms_protocol_preset_fields($protocol));
+            if ($protocol === 'ntp') {
+                $allowed += array_flip(icct_nms_ntp_optional_fields());
+            }
             $presets[$protocol] = array_replace(
                 $starter,
                 array_intersect_key($before[$protocol] ?? [], $allowed),

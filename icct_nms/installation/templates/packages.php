@@ -8,7 +8,10 @@
         <?php icct_nms_token(); ?>
     </form>
     <div class="installation-package-toolbar">
-        <p data-package-availability><?= icct_nms_h($status['message']) ?></p>
+        <p
+            data-package-availability
+            data-state="<?= $status['available'] ? 'ready' : 'unavailable' ?>"
+            role="status"><?= icct_nms_h($status['message']) ?></p>
         <div class="installation-package-actions">
             <button
                 type="button"
@@ -24,18 +27,37 @@
                 <?= !$status['available'] ? 'disabled' : '' ?>>Verify media</button>
         </div>
     </div>
+    <div class="installation-package-help" data-package-help <?= empty($status['next_step']) ? 'hidden' : '' ?>>
+        <p data-package-next-step><?= icct_nms_h($status['next_step'] ?? '') ?></p>
+        <pre data-package-command <?= empty($status['command']) ? 'hidden' : '' ?>><code><?= icct_nms_h($status['command'] ?? '') ?></code></pre>
+    </div>
+    <p data-package-platform><?php if (!empty($status['target'])): ?>
+        <?= icct_nms_h('Collector platform · ' . strtoupper($status['target']['id']) . ' ' .
+            $status['target']['version'] . ' · ' . $status['target']['arch']) ?>
+    <?php else: ?>Collector platform will appear when the package runner reports its status.<?php endif; ?></p>
+    <p>Install adds the missing dependencies for the selected feature from matching offline RPMs. LLDP and CDP use SNMP access to devices. Configure protocol credentials and receivers after installing their dependencies.</p>
     <div class="installation-table-wrap">
         <table class="action-table site-table installation-table">
             <thead>
                 <tr><th>Package profile</th><th>Installed</th><th>Actions</th></tr>
             </thead>
+            <?php $previousCategory = null; ?>
             <?php foreach ($packages as $id => $profile): ?>
+                <?php if ($previousCategory !== $profile['category']): ?>
+                    <tbody>
+                        <tr class="installation-package-category">
+                            <th scope="colgroup" colspan="3"><?= icct_nms_h($profile['category']) ?></th>
+                        </tr>
+                    </tbody>
+                    <?php $previousCategory = $profile['category']; ?>
+                <?php endif; ?>
                 <?php
                 $names = $profile['packages']['rhel'];
                 $installed = array_intersect($names, array_keys(($status['installed'] ?? []) + ($status['external'] ?? [])));
                 $versionProfile = $profile['version_profile'] ?? $id;
                 $versions = $status['versions'][$versionProfile] ?? [];
                 $missing = array_diff($names, $installed);
+                $removable = array_intersect($names, $status['removable'] ?? []);
                 $canInstall = $missing && !array_filter($missing, static fn ($name) => empty($versions[$name]['bundled']));
                 ?>
                 <tbody data-package-profile="<?= icct_nms_h($id) ?>" data-package-version-profile="<?= icct_nms_h($versionProfile) ?>">
@@ -62,7 +84,6 @@
                                     data-package-action="install"
                                     data-target="<?= icct_nms_h($id) ?>"
                                     aria-label="Install <?= icct_nms_h($profile['label']) ?>"
-                                    <?= !$missing ? 'hidden' : '' ?>
                                     <?= !$status['available'] || !$canInstall ? 'disabled' : '' ?>>Install</button>
                                 <button
                                     type="button"
@@ -70,9 +91,9 @@
                                     data-package-action="uninstall"
                                     data-target="<?= icct_nms_h($id) ?>"
                                     aria-label="Uninstall <?= icct_nms_h($profile['label']) ?>"
-                                    <?= !$installed ? 'hidden' : '' ?>
-                                    <?= !$status['available'] ? 'disabled' : '' ?>>Uninstall</button>
+                                    <?= !$status['available'] || !$removable ? 'disabled' : '' ?>>Uninstall</button>
                             </div>
+                            <small data-package-action-note></small>
                         </td>
                     </tr>
                     <tr
@@ -110,17 +131,16 @@
                                                         data-package-action="install"
                                                         data-target="rpm:<?= icct_nms_h($name) ?>"
                                                         aria-label="Install <?= icct_nms_h($name) ?>"
-                                                        <?= $present ? 'hidden' : '' ?>
-                                                        <?= !$status['available'] || empty($version['bundled']) ? 'disabled' : '' ?>>Install</button>
+                                                        <?= !$status['available'] || $present || empty($version['bundled']) ? 'disabled' : '' ?>>Install</button>
                                                     <button
                                                         type="button"
                                                         class="button"
                                                         data-package-action="uninstall"
                                                         data-target="rpm:<?= icct_nms_h($name) ?>"
                                                         aria-label="Uninstall <?= icct_nms_h($name) ?>"
-                                                        <?= !$present ? 'hidden' : '' ?>
-                                                        <?= !$status['available'] ? 'disabled' : '' ?>>Uninstall</button>
+                                                        <?= !$status['available'] || !in_array($name, $status['removable'] ?? [], true) ? 'disabled' : '' ?>>Uninstall</button>
                                                 </div>
+                                                <small data-package-action-note></small>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>

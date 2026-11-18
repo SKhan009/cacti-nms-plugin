@@ -47,6 +47,18 @@ expectPorts(
     'IF-MIB parsing or connector classification failed',
 );
 expectPorts(icct_backend_ports_status($ports[0], true) === 'In use', 'Live link not in use');
+$restricted = icct_backend_ports_parse([
+    'index' => [3 => '99'],
+    'name' => [3 => 'mismatched', 7 => 'Gi1/0/7', 8 => 'No Such Instance currently exists'],
+    'description' => [12 => 'eth12', '13.1' => 'invalid suffix'],
+    'oper' => [7 => 'up', 12 => 'down'],
+]);
+expectPorts(
+    array_column($restricted, 'index') === [7, 12] &&
+        array_column($restricted, 'name') === ['Gi1/0/7', 'eth12'] &&
+        array_column($restricted, 'oper') === [1, 2],
+    'Restricted IF-MIB views lost valid rows or accepted invalid identities',
+);
 expectPorts(
     icct_backend_ports_status($ports[1], true) === 'Disabled',
     'Admin-down interface marked available',

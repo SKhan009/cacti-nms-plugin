@@ -411,6 +411,24 @@ try {
             str_contains($alarm['description'], 'Rule disabled or removed'),
         'Deleting the rule did not retire its active alarm.',
     );
+    $nfSettings['no_flow_timeout'] = 360;
+    $nfSettings['bandwidth_limit_mbps'] = 200;
+    icct_nms_netflow_save($id, $host, $nfSettings);
+    icct_nms_netflow_save_rules($id, [
+        'netflow_revision' => icct_nms_netflow_rule_revision(icct_nms_netflow_rules($id)),
+        'netflow_rules' => json_encode(icct_nms_netflow_rules($id), JSON_THROW_ON_ERROR),
+        'bandwidth_limit_mbps' => '250',
+    ]);
+    $protocolOnly = array_diff_key($nfSettings, icct_nms_netflow_alarm_ranges());
+    icct_nms_netflow_save($id, $host, $protocolOnly);
+    $saved = icct_nms_netflow_assignment($id);
+    nfAssert((int) $saved['bandwidth_limit_mbps'] === 250, 'Protocol save replaced a device alarm threshold.');
+    nfAssert(icct_nms_netflow_reception($id, true)['no_flow_timeout'] === 360, 'Configured no-flow timeout was ignored.');
+    try {
+        icct_nms_netflow_validate(array_replace($nfSettings, ['active_timeout' => $nfSettings['inactive_timeout']]));
+        throw new LogicException('Equal active and inactive timeouts were accepted.');
+    } catch (InvalidArgumentException $e) {
+    }
     icct_nms_netflow_remove($id);
     nfAssert(
         !icct_nms_netflow_assignment($id) &&
@@ -418,7 +436,8 @@ try {
         'Removing assignment should retain history',
     );
     echo 'PASS: all four wire formats, device saves, decoded counters, exactly-once imports, ' .
-        'filtered reports, authorization, classifications, anomaly detection/recovery and history ' .
+        'filtered reports, authorization, classifications, alarm threshold persistence, reception timeout, ' .
+        'anomaly detection/recovery and history ' .
         "retention.\n";
 } catch (Throwable $e) {
     fwrite(STDERR, $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine() . "\n");

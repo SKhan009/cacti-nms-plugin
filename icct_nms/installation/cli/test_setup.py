@@ -242,6 +242,67 @@ class BundleSafety(unittest.TestCase):
             self.assertEqual(run.call_args_list[1].args[0], ["/usr/sbin/restorecon", "-RF", path])
             self.assertFalse(any("setenforce" in str(call) for call in run.call_args_list))
 
+    def test_rhel_resource_symlink_resolves_to_scoped_writable_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory).resolve()
+            root = base / "usr/share/cacti"
+            plugin = root / "plugins/icct_nms"
+            plugin.mkdir(parents=True)
+            resource = base / "var/lib/cacti/resource"
+            resource.mkdir(parents=True)
+            (root / "resource").symlink_to(resource, target_is_directory=True)
+            with patch.object(setup, "PLUGIN", plugin):
+                paths = setup.writable_paths(root)
+                self.assertEqual(paths[-1], resource / "snmp_queries/icct_nms")
+                self.assertFalse(paths[-1].exists())
+                (resource / "snmp_queries").mkdir()
+                (resource / "snmp_queries/icct_nms").mkdir()
+                self.assertEqual(setup.writable_paths(root), paths)
+
+    def test_writable_paths_reject_child_symlinks_and_files(self):
+        for child in ["snmp_queries", "snmp_queries/icct_nms"]:
+            with self.subTest(child=child), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                resource = root / "resource"
+                resource.mkdir()
+                plugin = root / "plugins/icct_nms"
+                plugin.mkdir(parents=True)
+                outside = root / "outside"
+                outside.mkdir()
+                destination = resource / child
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.symlink_to(outside, target_is_directory=True)
+                with patch.object(setup, "PLUGIN", plugin):
+                    with self.assertRaisesRegex(ValueError, "symlink:"):
+                        setup.writable_paths(root)
+                self.assertEqual(list(outside.iterdir()), [])
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            (root / "resource").mkdir()
+            plugin = root / "plugin"
+            plugin.mkdir()
+            (root / "resource/snmp_queries").write_text("not a directory")
+            with patch.object(setup, "PLUGIN", plugin):
+                with self.assertRaisesRegex(ValueError, "not a directory"):
+                    setup.writable_paths(root)
+
+    def test_writable_paths_reject_plugin_storage_symlink_and_broken_resource(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            plugin = root / "plugin"
+            storage = plugin / "protocols/snmp/mibs/storage"
+            storage.parent.mkdir(parents=True)
+            (root / "resource").mkdir()
+            storage.symlink_to(root / "other", target_is_directory=True)
+            with patch.object(setup, "PLUGIN", plugin):
+                with self.assertRaisesRegex(ValueError, "symlink:"):
+                    setup.writable_paths(root)
+                (root / "resource").rmdir()
+                (root / "resource").symlink_to(root / "missing", target_is_directory=True)
+                with self.assertRaisesRegex(ValueError, "resource directory"):
+                    setup.writable_paths(root)
+
     def test_old_python_is_rejected_before_setup(self):
         with self.assertRaisesRegex(ValueError, "Python 3.9.0"):
             setup.check_python_runtime((3, 8, 20))

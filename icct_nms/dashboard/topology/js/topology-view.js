@@ -584,6 +584,7 @@
             saved = structuredClone(positions);
             dirty = false;
             message.textContent = '';
+            icctToast({ title: 'Saved', text: 'Topology layout saved successfully.' });
             return true;
         } catch (e) {
             message.textContent = e.message;
@@ -625,7 +626,10 @@
             document.querySelector('#topologyEdit').focus();
         }
     });
-    document.querySelector('#topologyDiscard').addEventListener('click', discard);
+    document.querySelector('#topologyDiscard').addEventListener('click', () => {
+        discard();
+        document.querySelector('#topologyEdit').focus();
+    });
     document.querySelector('#topologyEdit').addEventListener('click', () => {
         if (busy) return;
         const nextEditing = !editing;

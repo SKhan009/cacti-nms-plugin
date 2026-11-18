@@ -90,9 +90,19 @@ class ReleasePackaging(unittest.TestCase):
             )
             self.assertEqual(result["package_components"], ["redis"])
             with zipfile.ZipFile(archive) as stream:
-                self.assertIn("components/redis/bundle.json", stream.namelist())
+                media = "icct_nms/installation/bundles/media/"
+                self.assertIn(media + "packages/fixture.rpm", stream.namelist())
+                self.assertIn(media + "components/redis/bundle.json", stream.namelist())
+                self.assertNotIn("packages/fixture.rpm", stream.namelist())
                 stream.extractall(base / "unpacked")
-            deploy.verify_release(base / "unpacked")
+            release = deploy.verify_release(base / "unpacked")
+            cacti = base / "cacti"
+            (cacti / "include").mkdir(parents=True)
+            (cacti / "include/cli_check.php").touch()
+            destination, _ = deploy.copy_source(base / "unpacked", cacti, release)
+            deployed = destination / "installation/bundles/media"
+            self.assertEqual(deployed.stat().st_mode & 0o777, 0o700)
+            self.assertEqual((deployed / "packages/fixture.rpm").read_bytes(), b"package fixture, not executed")
             manifest["target"] = dict(target, arch="x86_64")
             (bundles[1] / "bundle.json").write_text(json.dumps(manifest))
             with self.assertRaisesRegex(ValueError, "same OS and CPU"):

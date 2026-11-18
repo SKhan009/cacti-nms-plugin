@@ -111,6 +111,7 @@ function icct_nms_device_snmp_information(
     $saved = !empty($host['id']);
     $scanned = !$saved && !empty($discovery['snmp']);
     $fields = [];
+    $fieldErrors = [];
     foreach (
         [
             'System' => ['snmp_sysDescr', 'sysDescr'],
@@ -122,14 +123,25 @@ function icct_nms_device_snmp_information(
     ) {
         $value = $scanned ? $discovery[$key] ?? '' : $host[$column] ?? '';
         $value = is_scalar($value) ? trim((string) $value) : '';
+        $isError = preg_match(
+            '/^(?:SNMP error\b|No such (?:object|instance|name)\b|Timeout\b|No response\b|End of MIB\b)/i',
+            $value,
+        ) === 1;
+        if ($label === 'Location' || $label === 'Contact') {
+            $isError = $isError || preg_match(
+                '~^Unknown$|\((?:edit|configure)\s+/etc/snmp/[^)]+\)$~i',
+                $value,
+            ) === 1;
+        }
+        $fieldErrors[$label] = $isError;
         if (
             $value === 'U' ||
-            ($label === 'Uptime' && (!ctype_digit($value) || (float) $value <= 0))
+            ($label === 'Uptime' && !$isError && (!ctype_digit($value) || (float) $value <= 0))
         ) {
             $value = '';
         }
         $fields[$label] =
-            $label === 'Uptime' && $value !== ''
+            $label === 'Uptime' && $value !== '' && !$isError
                 ? $value . ' (' . icct_nms_uptime($value) . ')'
                 : $value;
     }
@@ -154,5 +166,6 @@ function icct_nms_device_snmp_information(
     if ($saved && $hasReadings && (!$enabled || $status !== 'Up')) {
         $message .= ' Showing the last stored SNMP readings.';
     }
-    return [$fields, $message];
+    $statusError = $saved && $enabled && in_array($status, ['Down', 'Recovering'], true);
+    return [$fields, $message, $fieldErrors, $statusError];
 }

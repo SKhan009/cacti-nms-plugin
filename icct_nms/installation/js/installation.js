@@ -46,6 +46,10 @@
     const confirm = dialog.querySelector('[data-package-confirm]');
     const close = dialog.querySelector('.message-actions [data-package-close]');
     const last = page.querySelector('[data-package-last]');
+    const availability = page.querySelector('[data-package-availability]');
+    const packageHelp = page.querySelector('[data-package-help]');
+    const nextStep = packageHelp.querySelector('[data-package-next-step]');
+    const command = packageHelp.querySelector('[data-package-command]');
     let selection;
     let watchedJob;
     let latestJob;
@@ -66,10 +70,18 @@
         if (last) last.hidden = !latestJob;
         const installed = { ...state.installed, ...state.external };
         const busy = submitting || Boolean(watchedJob) || state.job?.status === 'running';
-        const availability = page.querySelector('[data-package-availability]');
         const verify = page.querySelector('[data-package-action="verify"]');
-        if (availability) availability.textContent = state.message;
+        if (availability.textContent !== state.message) availability.textContent = state.message;
+        availability.dataset.state = state.available ? 'ready' : 'unavailable';
+        packageHelp.hidden = !state.next_step;
+        nextStep.textContent = state.next_step || '';
+        command.hidden = !state.command;
+        command.querySelector('code').textContent = state.command || '';
         if (verify) verify.disabled = busy || !state.available;
+        const platform = page.querySelector('[data-package-platform]');
+        if (platform && state.target) {
+            platform.textContent = `Collector platform · ${state.target.id.toUpperCase()} ${state.target.version} · ${state.target.arch}`;
+        }
         page.querySelectorAll('[data-package-profile]').forEach((profile) => {
             const rows = Array.from(profile.querySelectorAll('[data-rpm]'));
             const names = rows.map((row) => row.dataset.rpm);
@@ -93,9 +105,32 @@
                 const selected = target.startsWith('rpm:') ? [target.slice(4)] : names;
                 const install = button.dataset.packageAction === 'install';
                 const missing = selected.filter((name) => !hasPackage(name));
-                button.hidden = install ? missing.length === 0 : !selected.some(hasPackage);
-                button.disabled = !state.available || busy ||
-                    (install && missing.some((name) => !versions[name]?.bundled.length));
+                const removable = selected.some((name) => state.removable?.includes(name));
+                let reason = '';
+                if (!state.available) reason = state.message || 'Package runner unavailable.';
+                else if (busy) reason = 'A package operation is in progress.';
+                else if (install && !missing.length) reason = 'Already installed.';
+                else if (install && missing.some((name) => !versions[name]?.bundled.length))
+                    reason = 'Matching offline RPMs are unavailable.';
+                else if (!install && !removable) {
+                    if (!selected.some(hasPackage)) reason = 'Package is not installed.';
+                    else if (selected.every((name) => state.protected?.includes(name)))
+                        reason = 'Cacti or collector dependencies are protected from removal.';
+                    else reason = 'Uninstall requires an eligible RPM managed by this runner.';
+                }
+                button.hidden = false;
+                button.disabled = reason !== '';
+                button.title = reason || (install ? 'Install missing packages' : 'Review package removal');
+                const note = button.closest('td').querySelector('[data-package-action-note]');
+                if (note) {
+                    const installButton = button.closest('td').querySelector('[data-package-action="install"]');
+                    const uninstallButton = button.closest('td').querySelector('[data-package-action="uninstall"]');
+                    note.textContent = [installButton, uninstallButton]
+                        .filter((action) => action.disabled)
+                        .map((action) => action.title)
+                        .filter((text, index, all) => all.indexOf(text) === index)
+                        .join(' ');
+                }
             });
         });
     }
@@ -222,8 +257,12 @@
             }
             updatePackages(state);
         } catch {
-            const availability = page.querySelector('[data-package-availability]');
-            if (availability) availability.textContent = 'Could not read the offline runner status.';
+            availability.dataset.state = 'unavailable';
+            const message = 'Could not read Offline Packages status. Reload this page or sign in again if your session expired.';
+            if (availability.textContent !== message) availability.textContent = message;
+            page.querySelectorAll('[data-package-action]').forEach((button) => {
+                button.disabled = true;
+            });
         }
         window.setTimeout(refresh, watchedJob ? 1200 : 5000);
     }

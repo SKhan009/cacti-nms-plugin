@@ -12,11 +12,8 @@ function icct_nms_save_syslog($id, $host, $input)
     icct_backend_require_management(3);
     icct_backend_require_device_access($id);
 
-    $source = trim((string) ($input['source_address'] ?? ''));
-    if ($source === '') {
-        $source = trim((string) ($host['hostname'] ?? ''));
-    }
-    $source = icct_nms_syslog_ip($source);
+    $binding = icct_nms_syslog_assignment($id);
+    $source = icct_nms_syslog_ip($binding['source_address'] ?? $host['hostname'] ?? '');
     $transport = strtolower((string) ($input['transport'] ?? 'both'));
     if (!in_array($transport, ['udp', 'tcp', 'both'], true)) {
         throw new InvalidArgumentException('Select UDP, TCP or Both for Syslog transport.');
