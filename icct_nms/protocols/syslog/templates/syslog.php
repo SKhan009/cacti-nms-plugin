@@ -33,16 +33,14 @@ $syslogHelp = static function ($label, $help) {
 };
 ?>
 <div class="protocol-grid cols-2">
-    <?php if (empty($presetMode)): ?>
-        <label class="field">
-            <span class="field-label">Source IP address <?php $syslogHelp('Source IP address', 'Uses the saved Syslog sender IP or the IP from Basic Information.'); ?></span>
-            <input
-                readonly
-                <?= empty($syslog['source_address']) ? 'data-syslog-device-ip' : '' ?>
-                value="<?= icct_nms_h(filter_var($syslog['source_address'] ?? $host['hostname'] ?? $values['hostname'] ?? $old['hostname'] ?? '', FILTER_VALIDATE_IP) ?: '') ?>"
-                placeholder="Device IP required in Basic Information">
-        </label>
-    <?php endif; ?>
+    <label class="field">
+        <span class="field-label">Source IP address <?php $syslogHelp('Source IP address', 'Uses the saved Syslog sender IP or the IP from Basic Information.'); ?></span>
+        <input
+            readonly
+            <?= empty($presetMode) && empty($syslog['source_address']) ? 'data-syslog-device-ip' : '' ?>
+            value="<?= !empty($presetMode) ? '' : icct_nms_h(filter_var($syslog['source_address'] ?? $host['hostname'] ?? $values['hostname'] ?? $old['hostname'] ?? '', FILTER_VALIDATE_IP) ?: '') ?>"
+            placeholder="<?= !empty($presetMode) ? 'Provided by each device' : 'Device IP required in Basic Information' ?>">
+    </label>
     <?php
         $portAvailable = !empty($syslogPortStatus['available']) && isset($syslogPortStatus['syslog_port']);
         $portJob = $_GET['port_job'] ?? '';
