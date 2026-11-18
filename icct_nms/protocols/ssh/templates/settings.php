@@ -69,22 +69,6 @@
                 ); ?>
                 <div class="ssh-private-key">
                     <div class="protocol-grid cols-3 ssh-key-fields">
-                        <div class="ssh-key-upload">
-                            <h3>Upload files</h3>
-                            <p>Maximum file size is 64 KB. Supported formats are .ppk, PEM and OpenSSH.</p>
-                            <label class="upload-zone">
-                                <span>Upload</span>
-                                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                    <path d="M12 5v14M5 12h14" />
-                                </svg>
-                                <input
-                                    name="key_file"
-                                    type="file"
-                                    accept=".ppk,.pem,.key"
-                                    aria-label="Upload private key" />
-                            </label>
-                            <span class="selected-file" aria-live="polite"></span>
-                        </div>
                         <?php icct_nms_input(
                             'Key Passphrase',
                             'passphrase',
@@ -120,6 +104,22 @@
                     type="checkbox"
                     <?= !empty($ssh['monitoring']) ? 'checked' : '' ?> /> Enable SSH monitoring
             </label>
+            <div class="ssh-key-upload">
+                <h3>Upload files</h3>
+                <p>Maximum file size is 64 KB. Supported formats are .ppk, PEM and OpenSSH.</p>
+                <label class="upload-zone">
+                    <span>Upload</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    <input
+                        name="key_file"
+                        type="file"
+                        accept=".ppk,.pem,.key"
+                        aria-label="Upload private key" />
+                </label>
+                <span class="selected-file" aria-live="polite"></span>
+            </div>
             <div class="protocol-actions">
                 <button class="button primary">Save</button>
             </div>

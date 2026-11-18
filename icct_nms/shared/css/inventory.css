@@ -851,6 +851,13 @@ input[type='radio'] {
     margin: 0;
     align-items: start;
 }
+#protocol-ssh .ssh-key-upload {
+    margin-top: 16px;
+}
+#protocol-ssh form:has(.ssh-private-key[hidden]) > .ssh-key-upload,
+.protocol-defaults #protocol-ssh .ssh-key-upload {
+    display: none;
+}
 #protocol-ssh .ssh-key-upload h3 {
     margin: 0 0 6px;
 }
