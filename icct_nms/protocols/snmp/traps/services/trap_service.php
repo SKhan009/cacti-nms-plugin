@@ -14,9 +14,12 @@ function icct_nms_trap_sender($id)
 function icct_nms_trap_explanation($oid, $source, array $payload)
 {
     $oid = ltrim($oid, '.');
+    $peer = inet_pton($source);
+    $loopback = $peer === inet_pton('::1') ||
+        ($peer !== false && strlen($peer) === 4 && ord($peer[0]) === 127);
     if (
         $oid === '1.3.6.1.4.1.32473.20261105.705' &&
-        in_array($source, ['127.0.0.1', '::1'], true) &&
+        $loopback &&
         in_array('ICCT dashboard loopback test', (array) ($payload[$oid . '.1'] ?? []), true)
     ) {
         return [
@@ -29,7 +32,7 @@ function icct_nms_trap_explanation($oid, $source, array $payload)
     }
     if (
         $oid === '1.3.6.1.4.1.32473.20261105.705' &&
-        in_array($source, ['127.0.0.1', '::1'], true) &&
+        $loopback &&
         in_array(
             'ICCT AgentX repair verification',
             (array) ($payload['1.3.6.1.4.1.32473.1.0'] ?? []),
