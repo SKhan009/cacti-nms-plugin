@@ -33,7 +33,7 @@ function ntpIntegration($condition, $message)
 $id = 2;
 // Reset this fixture's history only after the disposable-database guard above.
 db_execute('DELETE FROM plugin_icct_nms_ntp_monitor_history WHERE host_id=2');
-$preset = icct_nms_protocol_presets()['ntp'];
+$preset = array_replace(icct_nms_protocol_presets()['ntp'], ['method' => 'local']);
 icct_nms_ntp_save($id, $preset);
 ntpIntegration(
     icct_nms_ntp_current($id)['status'] === 'Not collected',
@@ -209,9 +209,10 @@ try {
     $document->loadHTML('<html><body>' . $editor . $pane . '</body></html>');
     $xpath = new DOMXPath($document);
     foreach (icct_nms_ntp_fields() as $field) {
+        $name = $field === 'method' ? 'ntp_method' : $field;
         ntpIntegration(
-            $xpath->query('//*[@name="' . $field . '"]')->length === 1,
-            'Missing or duplicated NTP editor field.',
+            $xpath->query('//*[@name="' . $name . '"]')->length === 1,
+            'Expected exactly one NTP editor field named ' . $name,
         );
     }
     ntpIntegration(

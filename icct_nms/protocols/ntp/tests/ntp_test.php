@@ -242,8 +242,9 @@ foreach (['NTP source addressing', 'Maximum clock offset (ms)', 'Maximum round-t
     checkNtp(str_contains($presetHtml, $label) && str_contains($deviceHtml, $label),
         'Preset and saved device must both show ' . $label);
 }
-checkNtp(!str_contains($deviceHtml, 'Load preset') &&
+checkNtp(str_contains($deviceHtml, 'data-ntp-load-preset=') &&
     !str_contains($deviceHtml, 'name="maximum_offset_ms"') &&
+    !str_contains($deviceHtml, 'name="alarm_unsynchronized"') &&
     str_contains($deviceHtml, 'readonly') && str_contains($deviceHtml, 'value="125"'),
     'Saved device must display its FCAPS limit without posting a replacement.');
 checkNtp(str_contains($presetHtml, 'name="maximum_offset_ms"'),

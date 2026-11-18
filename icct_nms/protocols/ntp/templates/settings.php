@@ -124,7 +124,7 @@ $ntpSshEnabled = empty($presetMode) && !empty($id) && $ntpSsh &&
                     value="<?= icct_nms_h($ntp['maximum_delay_ms'] ?? '') ?>">
             </label>
             <label class="field"><span class="field-label">Alarm when unsynchronized</span>
-                <select name="alarm_unsynchronized" <?= !empty($ntpSaved) ? 'disabled' : '' ?>>
+                <select <?= empty($ntpSaved) ? 'name="alarm_unsynchronized"' : 'disabled' ?>>
                     <?php foreach (['' => $ntpAlarmEmptyLabel, '1' => 'Yes', '0' => 'No'] as $value => $label): ?>
                         <option value="<?= $value ?>" <?= (string) ($ntp['alarm_unsynchronized'] ?? '') === (string) $value ? 'selected' : '' ?>><?= $label ?></option>
                     <?php endforeach; ?>

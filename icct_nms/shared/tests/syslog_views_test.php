@@ -129,17 +129,21 @@ syslog_view_check(
     str_contains($html, 'name="receiver_port"'),
     'Preset exposes editable collector port and refresh fields',
 );
-// Attribute layout may change; assert the rendered field and its value across whitespace.
+function syslog_view_check_sender($html, $expected)
+{
+    $document = new DOMDocument();
+    $document->loadHTML($html, LIBXML_NOERROR | LIBXML_NOWARNING);
+    $fields = (new DOMXPath($document))->query('//input[@data-syslog-device-ip and @readonly and not(@name)]');
+    syslog_view_check($fields->length === 1 && $fields->item(0)->getAttribute('value') === $expected,
+        'Device sender must display its inventory IP in a read-only field.');
+}
 $presetMode = false;
 $syslog = [];
 $id = 0;
 ob_start();
 require $template;
 $html = ob_get_clean();
-syslog_view_check(
-    preg_match('~name="source_address"\s+(?:required\s+)?value=""~', $html) === 1,
-    'Unsaved device renders without a missing-hostname warning',
-);
+syslog_view_check_sender($html, '');
 syslog_view_check(
     str_contains($html, 'Auto-refresh interval (seconds)') &&
     str_contains($html, 'Receiver port (TCP and UDP)') &&
@@ -152,10 +156,7 @@ $host = ['hostname' => '192.0.2.85'];
 ob_start();
 require $template;
 $html = ob_get_clean();
-syslog_view_check(
-    preg_match('~name="source_address"\s+(?:required\s+)?value="192\.0\.2\.85"~', $html) === 1,
-    'A new device uses its saved hostname for source matching',
-);
+syslog_view_check_sender($html, '192.0.2.85');
 $syslog = $binding;
 ob_start();
 require $template;
