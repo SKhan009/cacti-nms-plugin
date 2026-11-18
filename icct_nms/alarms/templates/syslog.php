@@ -5,7 +5,9 @@ $severities = icct_backend_syslog_severity_labels();
 $facilities = icct_backend_syslog_facility_labels();
 $oldest = ($syslogParams['sort'] ?? '') === 'oldest';
 ?>
-<section class="device-panel alarm-page alarm-syslog">
+<section class="device-panel alarm-page alarm-syslog"
+    data-report-site="<?= icct_nms_h($serverStatus['hostname'] ?? 'ICCT NMS') ?>"
+    data-report-user="<?= icct_nms_h($user['username'] ?? 'Cacti user') ?>">
     <?php require __DIR__ . '/list_header.php'; ?>
     <form action="alarms/controllers/alarms.php" method="get" class="alarm-filters alarm-syslog-filters" aria-label="Syslog filters">
         <input type="hidden" name="tab" value="syslog">
@@ -49,7 +51,7 @@ $oldest = ($syslogParams['sort'] ?? '') === 'oldest';
             <a class="button" href="alarms/controllers/alarms.php?tab=syslog">Clear All</a>
         </div>
     </form>
-    <p id="alarm-syslog-refresh-status" role="status">Checking for new Syslog readings every <?= $syslogRefreshSeconds ?> seconds.</p>
+    <p id="alarm-syslog-refresh-status" role="status"></p>
     <?php require __DIR__ . '/syslog_results.php'; ?>
 </section>
 <script src="alarms/js/syslog-console.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../js/syslog-console.js'), 0, 12) ?>" defer></script>

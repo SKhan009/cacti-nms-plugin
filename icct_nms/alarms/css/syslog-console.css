@@ -57,3 +57,5 @@
     .alarm-syslog .alarm-syslog-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .alarm-view-switch a { padding: 8px 10px; font-size: 12px; }
 }
+
+.alarm-syslog #alarm-syslog-refresh-status:empty { display: none; }

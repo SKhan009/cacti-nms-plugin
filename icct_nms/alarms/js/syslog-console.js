@@ -2,11 +2,24 @@
     'use strict';
     const status = document.querySelector('#alarm-syslog-refresh-status');
     let seconds = Number(document.querySelector('#alarm-syslog-results').dataset.refreshSeconds);
-    let normalStatus = status.textContent;
     const url = new URL(location.href);
     url.hash = '';
     url.searchParams.set('fragment', 'syslog_results');
     let busy = false;
+
+    document.querySelector('#alarm-export').addEventListener('click', async () => {
+        const table = document.querySelector('#alarm-syslog-results .alarm-syslog-table');
+        const headers = Array.from(table.tHead.rows[0].cells, cell => cell.innerText.trim());
+        const rows = Array.from(table.tBodies[0].rows)
+            .filter(row => row.cells.length === headers.length)
+            .map(row => Array.from(row.cells, cell => cell.innerText.trim()));
+        const meta = table.closest('.alarm-syslog').dataset;
+        try {
+            await window.icctAlarmPdf.syslog(headers, rows, {site: meta.reportSite, user: meta.reportUser});
+        } catch (error) {
+            status.textContent = error.message || 'Unable to generate the Syslog PDF.';
+        }
+    });
 
     async function refresh() {
         if (busy || document.hidden) return;
@@ -29,14 +42,13 @@
             }
             if (nextSeconds !== seconds) {
                 seconds = nextSeconds;
-                normalStatus = `Checking for new Syslog readings every ${seconds} seconds.`;
                 clearInterval(timer);
                 timer = setInterval(refresh, seconds * 1000);
             }
             if (results.innerHTML !== next.innerHTML || results.dataset.refreshSeconds !== next.dataset.refreshSeconds) {
                 results.replaceWith(next);
             }
-            if (status.textContent !== normalStatus) status.textContent = normalStatus;
+            status.textContent = '';
         } catch {
             if (!document.hidden) status.textContent = 'Unable to refresh Syslog. The page will retry automatically.';
         } finally {

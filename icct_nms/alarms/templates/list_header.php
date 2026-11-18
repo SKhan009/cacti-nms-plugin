@@ -12,24 +12,18 @@
                 <a href="alarms/controllers/alarms.php?tab=syslog" <?= !empty($alarmSyslog) ? 'aria-current="page"' : '' ?>>Syslog</a>
             </nav>
             <span class="alarm-heading-divider" aria-hidden="true"></span>
-            <?php if (!empty($alarmSyslog)): ?>
-                <a class="icon-button" href="<?= icct_nms_h(icct_nms_alarm_syslog_url($syslogConsole, ['export' => 'csv', 'page' => $syslogConsole['page']])) ?>"
-                    aria-label="Export current Syslog page (CSV)" title="Export current Syslog page (CSV)">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m-4 4 4-4 4 4M5 10H3v11h18V10h-2" /></svg>
-                </a>
-            <?php else: ?>
+            <?php $exportLabel = !empty($alarmSyslog) ? 'Export current Syslog page (PDF)' : 'Export alarm report (PDF)'; ?>
             <button
                 type="button"
                 class="icon-button"
                 id="alarm-export"
-                aria-label="Export alarm report (PDF)"
-                title="Export alarm report (PDF)">
+                aria-label="<?= icct_nms_h($exportLabel) ?>"
+                title="<?= icct_nms_h($exportLabel) ?>">
                 <svg
                     viewBox="0 0 24 24"
                     aria-hidden="true">
                     <path d="M12 16V3m-4 4 4-4 4 4M5 10H3v11h18V10h-2" />
                 </svg>
             </button>
-            <?php endif; ?>
         </div>
     </header>
