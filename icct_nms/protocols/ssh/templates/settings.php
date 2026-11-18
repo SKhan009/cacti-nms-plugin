@@ -39,7 +39,7 @@
                     name="preset_protocol"
                     value="<?= 'ssh' ?>" />
             <?php endif; ?>
-            <div class="protocol-grid cols-5">
+            <div class="protocol-grid cols-3">
                 <?php icct_nms_input('Port Number', 'port', $ssh['port'] ?? '', 'number', 'required min="1" max="65535"');
     icct_nms_input(
         'Timeout (Sec)',
@@ -57,17 +57,48 @@
         ],
         $ssh['auth_method'] ?? 'password',
     );
-    icct_nms_input('Username', 'username', $ssh['username'] ?? '', 'text', 'required');
-    icct_nms_input(
-        'Password',
-        'secret',
-        '',
-        'password',
-        'autocomplete="new-password" placeholder="Blank retains saved credential"',
-    ); ?>
+ ?>
             </div>
-            <div class="protocol-grid cols-3 ssh-common-settings">
+            <div class="protocol-grid cols-3 ssh-credentials-grid">
                 <?php icct_nms_input(
+                    'Password',
+                    'secret',
+                    '',
+                    'password',
+                    'autocomplete="new-password" placeholder="Blank retains saved credential"',
+                ); ?>
+                <div class="ssh-private-key">
+                    <div class="protocol-grid cols-3 ssh-key-fields">
+                        <div class="ssh-key-upload">
+                            <h3>Upload files</h3>
+                            <p>Maximum file size is 64 KB. Supported formats are .ppk, PEM and OpenSSH.</p>
+                            <label class="upload-zone">
+                                <span>Upload</span>
+                                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M12 5v14M5 12h14" />
+                                </svg>
+                                <input
+                                    name="key_file"
+                                    type="file"
+                                    accept=".ppk,.pem,.key"
+                                    aria-label="Upload private key" />
+                            </label>
+                            <span class="selected-file" aria-live="polite"></span>
+                        </div>
+                        <?php icct_nms_input(
+                            'Key Passphrase',
+                            'passphrase',
+                            '',
+                            'password',
+                            'autocomplete="new-password"',
+                        ); ?>
+                    </div>
+                </div>
+            </div>
+            <div class="protocol-grid cols-4 ssh-common-settings">
+                <?php
+                icct_nms_input('Username', 'username', $ssh['username'] ?? '', 'text', 'required');
+                icct_nms_input(
                     'Command Timeout (Sec)',
                     'command_timeout',
                     $ssh['command_timeout'] ?? '',
@@ -82,30 +113,6 @@
         'number',
         'required min="0" max="300"',
     ); ?>
-            </div>
-            <div class="ssh-private-key">
-                <div class="protocol-grid cols-4 ssh-key-fields">
-                    <?php icct_nms_input('Key Passphrase', 'passphrase', '', 'password', 'autocomplete="new-password"'); ?>
-                    <div class="ssh-key-upload">
-                        <h3>Upload files <span
-                                class="field-info section-help"
-                                tabindex="0"
-                                role="img"
-                                aria-label="Maximum 64 KB. Supported formats: .ppk, PEM, OpenSSH."
-                                data-tooltip="Maximum 64 KB. Supported formats: .ppk, PEM, OpenSSH.">ⓘ</span>
-                        </h3>
-                        <label class="upload-zone"> Upload +
-                            <input
-                                name="key_file"
-                                type="file"
-                                accept=".ppk,.pem,.key"
-                                aria-label="Upload private key" />
-                        </label>
-                        <span
-                            class="selected-file"
-                            aria-live="polite"></span>
-                    </div>
-                </div>
             </div>
             <label class="check-row">
                 <input

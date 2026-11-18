@@ -844,8 +844,36 @@ input[type='radio'] {
 .diagnostic-child {
     margin-left: 28px;
 }
-.ssh-key-fields > .ssh-key-upload {
-    grid-column: -2 / -1;
+#protocol-ssh .ssh-private-key {
+    grid-column: 1 / -1;
+}
+#protocol-ssh .ssh-key-fields {
+    margin: 0;
+    align-items: start;
+}
+#protocol-ssh .ssh-key-upload h3 {
+    margin: 0 0 6px;
+}
+#protocol-ssh .ssh-key-upload p {
+    margin: 0 0 12px;
+}
+#protocol-ssh .ssh-key-upload .upload-zone {
+    box-sizing: border-box;
+    min-width: 128px;
+    min-height: 40px;
+    padding: 8px 16px;
+    gap: 32px;
+}
+#protocol-ssh .ssh-key-upload .upload-zone svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+}
+#protocol-ssh .selected-file:empty,
+#protocol-ssh .ssh-credentials-grid:has(> .field[hidden]):has(> .ssh-private-key[hidden]) {
+    display: none;
 }
 .ssh-private-key h3 {
     font-size: 14px;
