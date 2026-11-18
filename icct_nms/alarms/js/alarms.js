@@ -100,8 +100,9 @@
     }
     function eventSources() {
         const select = controls.source;
-        const selected = select.value;
-        const sources = [...new Set(rows.map((row) => row.source).filter(Boolean))];
+        const selected = select.value.toLowerCase() === 'syslog' ? '' : select.value;
+        const sources = [...new Set(rows.map((row) => row.source)
+            .filter(source => source && source.toLowerCase() !== 'syslog'))];
         if (selected && !sources.includes(selected)) sources.push(selected);
         sources.sort((a, b) => a.localeCompare(b));
         if (sources.length === select.options.length - 1 &&
