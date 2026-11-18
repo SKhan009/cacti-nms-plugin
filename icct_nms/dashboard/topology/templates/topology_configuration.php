@@ -507,11 +507,22 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                         class="button"
                         href="<?= icct_nms_h($config['url_path']) ?>automation_devices.php">Manage / Add to Cacti</a>
                 <?php endif; ?>
+                <?php if ($management): ?>
+                    <form method="post">
+                        <?php icct_nms_token(); ?>
+                        <input type="hidden" name="action" value="refresh_neighbours">
+                        <button class="button" type="submit" <?= $refreshPending ? 'disabled' : '' ?>>Refresh</button>
+                    </form>
+                <?php else: ?>
                 <a
                     class="button"
                     href="<?= icct_nms_h(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ?>?tab=discovered">Refresh</a>
+                <?php endif; ?>
             </div>
         </div>
+        <?php if ($refreshMessage !== ''): ?>
+            <p role="status" <?= $refreshPending ? 'data-live-discovery' : '' ?>><?= icct_nms_h($refreshMessage) ?></p>
+        <?php endif; ?>
         <div class="topology-discovery-filters">
             <div class="field">
                 <label for="discoveredSearch">Search</label>

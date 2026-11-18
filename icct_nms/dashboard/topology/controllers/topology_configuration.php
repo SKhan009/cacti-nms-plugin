@@ -21,10 +21,16 @@ try {
     }
     $management = is_realm_allowed(3);
     $automation = is_realm_allowed(23);
+    $devices = icct_nms_inventory();
+    $byId = array_column($devices, null, 'id');
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             icct_nms_post();
             $action = $_POST['action'] ?? '';
+            if ($action === 'refresh_neighbours') {
+                $_SESSION['icct_topology_refresh'] = icct_nms_topology_queue_refresh($byId);
+                icct_nms_redirect('dashboard/topology/controllers/topology_configuration.php?tab=discovered');
+            }
             if (in_array($action, ['cancel_scan', 'retry_scan'], true)) {
                 if ($action === 'cancel_scan') {
                     icct_nms_scan_cancel($_POST['job_id'] ?? 0);
@@ -55,8 +61,26 @@ try {
             $error = $failure->getMessage();
         }
     }
-    $devices = icct_nms_inventory();
-    $byId = array_column($devices, null, 'id');
+    $refreshPending = false;
+    $refreshMessage = '';
+    if ($management && $tab === 'discovered' && isset($_SESSION['icct_topology_refresh'])) {
+        $batch = $_SESSION['icct_topology_refresh'];
+        [$total, $finished, $failed] = icct_nms_topology_refresh_progress($batch, $byId);
+        $refreshPending = $finished < $total && time() - $batch['started'] < 1800;
+        if (!$total) {
+            $refreshMessage = 'No devices have active neighbour collection.';
+        } elseif ($refreshPending) {
+            $refreshMessage = "Waiting for assigned collectors. $finished of $total devices finished.";
+        } else {
+            $refreshMessage = "$finished of $total devices finished. Devices with collection errors: $failed.";
+            if ($finished < $total) {
+                $refreshMessage .= ' Timed out waiting for the remaining results.';
+            }
+        }
+        if (!$refreshPending) {
+            unset($_SESSION['icct_topology_refresh']);
+        }
+    }
     $profiles = icct_nms_connections();
     $links = array_filter(
         icct_nms_manual_links(),

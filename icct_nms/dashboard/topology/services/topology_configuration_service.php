@@ -5,6 +5,63 @@ require_once __DIR__ .
     '/../../../protocols/shared/services/backend/discovery_management_addresses.php';
 require_once __DIR__ . '/../../../inventory/services/backend/identity.php';
 
+/** Make each visible, configured device due on its assigned Cacti collector. */
+function icct_nms_topology_queue_refresh($byId)
+{
+    icct_backend_require_management();
+    $targets = [];
+    foreach (icct_backend_nd_hosts() as $host) {
+        $id = (int) $host['id'];
+        if (!isset($byId[$id]) || !$host['enabled'] || !$host['collection_enabled']) {
+            continue;
+        }
+        $methods = icct_backend_nd_host_methods($host);
+        if ($methods) {
+            $targets[$id] = $methods;
+        }
+    }
+    if ($targets) {
+        $ids = array_keys($targets);
+        $slots = implode(',', array_fill(0, count($ids), '?'));
+        icct_backend_category_execute(
+            "UPDATE plugin_icct_nms_discovery_devices SET last_attempt=NULL WHERE host_id IN ($slots)",
+            $ids,
+        );
+    }
+    return ['targets' => $targets, 'started' => time()];
+}
+
+function icct_nms_topology_refresh_progress($batch, $byId)
+{
+    $targets = array_intersect_key($batch['targets'], $byId);
+    $total = count($targets);
+    $finished = 0;
+    $failed = 0;
+    if ($targets) {
+        $ids = array_keys($targets);
+        $slots = implode(',', array_fill(0, count($ids), '?'));
+        $rows = db_fetch_assoc_prepared(
+            "SELECT s.host_id,s.protocol,s.status FROM plugin_icct_nms_discovery_snapshots s
+             JOIN plugin_icct_nms_discovery_devices d ON d.host_id=s.host_id
+             WHERE s.host_id IN ($slots) AND s.attempted_at>=d.last_attempt
+             AND s.status IN ('success','failed')",
+            $ids,
+        );
+        $results = [];
+        foreach ($rows as $row) {
+            $results[$row['host_id']][$row['protocol']] = $row['status'];
+        }
+        foreach ($targets as $id => $methods) {
+            $statuses = array_intersect_key($results[$id] ?? [], array_flip($methods));
+            if (count($statuses) === count($methods)) {
+                $finished++;
+                $failed += (int) in_array('failed', $statuses, true);
+            }
+        }
+    }
+    return [$total, $finished, $failed];
+}
+
 function icct_nms_manual_links()
 {
     $json = db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?', [
