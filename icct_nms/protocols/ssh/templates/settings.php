@@ -68,15 +68,13 @@
                     'autocomplete="new-password" placeholder="Blank retains saved credential"',
                 ); ?>
                 <div class="ssh-private-key">
-                    <div class="protocol-grid cols-3 ssh-key-fields">
-                        <?php icct_nms_input(
-                            'Key Passphrase',
-                            'passphrase',
-                            '',
-                            'password',
-                            'autocomplete="new-password"',
-                        ); ?>
-                    </div>
+                    <?php icct_nms_input(
+                        'Key Passphrase',
+                        'passphrase',
+                        '',
+                        'password',
+                        'autocomplete="new-password"',
+                    ); ?>
                 </div>
             </div>
             <div class="protocol-grid cols-4 ssh-common-settings">
