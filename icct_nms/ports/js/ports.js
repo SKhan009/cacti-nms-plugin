@@ -12,8 +12,7 @@
     settings.ports = Object.fromEntries(
         Object.entries(settings.ports || {}).filter(([, row]) => row !== null),
     );
-    let observation = JSON.parse(document.querySelector('#port-observations').textContent),
-        changedEndpoint = false;
+    let observation = JSON.parse(document.querySelector('#port-observations').textContent);
     const originalHostname = basic.elements.hostname.value,
         originalPoller = basic.elements.poller_id.value;
     function sync() {
@@ -92,7 +91,6 @@
     }
     function render() {
         const changed =
-            changedEndpoint ||
             basic.elements.hostname.value !== originalHostname ||
             basic.elements.poller_id.value !== originalPoller;
         const ports = changed ? [] : observation.ports;
@@ -191,12 +189,6 @@
     });
     basic.elements.hostname.addEventListener('input', render);
     basic.elements.poller_id.addEventListener('change', render);
-    ['#protocol-snmp', '#protocol-ssh'].forEach((selector) =>
-        document.querySelector(selector)?.addEventListener('change', () => {
-            changedEndpoint = true;
-            render();
-        }),
-    );
     let loading = false;
     async function refresh() {
         if (
