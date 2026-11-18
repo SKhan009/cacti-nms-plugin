@@ -248,10 +248,10 @@ $ntpNumber = static function ($value): string {
                                 <th>Observed at</th>
                                 <th>Status</th>
                                 <th>Measured host and method</th>
-                                <th>Observed source IP <?php $ntpHelpText = $ntpMetricHelp['source_address']; require __DIR__ . '/help.php'; ?></th>
-                                <th>Offset (ms) <?php $ntpHelpText = $ntpMetricHelp['offset_ms']; require __DIR__ . '/help.php'; ?></th>
-                                <th>Jitter (ms) <?php $ntpHelpText = $ntpMetricHelp['jitter_ms']; require __DIR__ . '/help.php'; ?></th>
-                                <th>Peer delay (ms) <?php $ntpHelpText = $ntpMetricHelp['peer_delay_ms']; require __DIR__ . '/help.php'; ?></th>
+                                <th>Observed source IP</th>
+                                <th>Offset (ms)</th>
+                                <th>Jitter (ms)</th>
+                                <th>Peer delay (ms)</th>
                                 <th>Collection detail</th>
                             </tr>
                         </thead>
