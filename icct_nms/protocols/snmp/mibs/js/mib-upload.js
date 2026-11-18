@@ -10,7 +10,7 @@
         count = document.querySelector('#mibUploadCount'),
         filename = document.querySelector('#mibUploadFilename'),
         error = document.querySelector('#mibUploadError');
-    const intro = document.querySelector('#mibUploadIntro'),
+    const fileInput = chooser.querySelector('[type=file]'),
         nextStep = document.querySelector('#mibUploadNext'),
         nextForm = document.querySelector('#mibUploadNextForm'),
         proceed = document.querySelector('#mibUploadProceed'),
@@ -105,11 +105,8 @@
         working(false);
         chooser.reset();
         nextForm.reset();
-        chooser.querySelector('[type=submit]').disabled = false;
-        chooser.hidden = false;
         progress.hidden = true;
         nextStep.hidden = true;
-        intro.hidden = false;
         error.hidden = true;
         readNext.hidden = true;
         proceed.disabled = false;
@@ -129,21 +126,13 @@
     });
     dialog.addEventListener('close', discard);
     document.querySelectorAll('[data-mib-upload-open]').forEach((button) =>
-        button.addEventListener('click', (event) => {
-            if (
-                event.metaKey ||
-                event.ctrlKey ||
-                event.shiftKey ||
-                event.altKey ||
-                event.button !== 0
-            )
-                return;
-            event.preventDefault();
+        button.addEventListener('click', () => {
+            if (busy) return;
             returnFocus = button;
-            dialog.showModal();
+            fileInput.click();
         }),
     );
-    if (dialog.dataset.autoOpen === 'true') dialog.showModal();
+    if (dialog.dataset.autoOpen === 'true') document.querySelector('[data-mib-upload-open]')?.focus();
     readNext.addEventListener('click', () => {
         if (!completed || busy) return;
         progress.hidden = true;
@@ -215,11 +204,11 @@
             choice();
         }
     });
-    chooser.addEventListener('submit', (event) => {
-        event.preventDefault();
-        if (busy || !chooser.reportValidity()) return;
-        const files = [...chooser.querySelector('[type=file]').files];
+    fileInput.addEventListener('change', () => {
+        if (busy) return;
+        const files = [...fileInput.files];
         if (!files.length) return;
+        dialog.showModal();
         const fileError =
             files.length !== 1
                 ? 'Select one MIB file.'
@@ -245,10 +234,8 @@
         repositoryWarning(null);
         readNext.hidden = true;
         working(true);
-        chooser.querySelector('[type=submit]').disabled = true;
         title.textContent = 'Reading MIB';
         error.hidden = true;
-        chooser.hidden = true;
         progress.hidden = false;
         bar.max = 100;
         bar.value = 0;
@@ -270,9 +257,7 @@
             if (activeToken !== token) return;
             activeRequest = null;
             working(false);
-            chooser.querySelector('[type=submit]').disabled = false;
             title.textContent = 'Upload MIB';
-            chooser.hidden = false;
             progress.hidden = true;
             showError(message);
         }
@@ -381,8 +366,6 @@
             repositoryWarning(summary.repository_check);
             activeRequest = null;
             working(false);
-            chooser.querySelector('[type=submit]').disabled = false;
-            intro.hidden = true;
             readNext.hidden = false;
             title.textContent = summary.parse_error
                 ? 'MIB Read — Action Required'

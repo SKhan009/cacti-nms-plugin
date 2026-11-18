@@ -1,4 +1,10 @@
-<!-- Upload dialog hooks are shared by client validation and server response handling. -->
+<form id="mibUploadChooser" method="post"
+    action="protocols/snmp/mibs/controllers/mib_repository.php"
+    enctype="multipart/form-data" hidden>
+    <?php icct_nms_token(); ?>
+    <input type="hidden" name="action" value="upload">
+    <input id="mibUploadFile" type="file" name="mibs[]" accept=".mib,.my,.txt" aria-label="Choose MIB file" required>
+</form>
 <dialog
     id="mibUploadDialog"
     class="mib-upload-dialog"
@@ -31,67 +37,6 @@
                 aria-label="Saving keeps a separate entry. Existing files and Cacti templates will not be replaced."
                 data-tooltip="Saving keeps a separate entry. Existing files and Cacti templates will not be replaced.">ⓘ</span>
         </section>
-        <div
-            class="mib-upload-notice"
-            id="mibUploadIntro">
-            <svg
-                viewBox="0 0 20 20"
-                aria-hidden="true">
-                <circle
-                    cx="10"
-                    cy="10"
-                    r="8" />
-                <path d="M10 9v5M10 5.5v.5" />
-            </svg>
-            <span
-                class="field-info section-help"
-                tabindex="0"
-                role="img"
-                aria-label="The application scans the MIB to identify OIDs, check Data Source eligibility, and flag existing Cacti configurations."
-                data-tooltip="The application scans the MIB to identify OIDs, check Data Source eligibility, and flag existing Cacti configurations.">ⓘ</span>
-        </div>
-        <?php if (!empty($uploadChooser)): ?>
-            <form
-                method="post"
-                action="protocols/snmp/mibs/controllers/mib_repository.php"
-                enctype="multipart/form-data"
-                data-mib-upload-form
-                id="mibUploadChooser">
-                <?php icct_nms_token(); ?>
-                <input
-                    type="hidden"
-                    name="action"
-                    value="upload">
-                <label
-                    class="field mib-upload-file-field"
-                    for="mibUploadFile">
-                    <span class="field-label">MIB File *</span>
-                    <input
-                        id="mibUploadFile"
-                        type="file"
-                        name="mibs[]"
-                        accept=".mib,.my,.txt"
-                        aria-describedby="mibUploadFileHelp"
-                        required>
-                </label>
-                <span
-                    class="field-info section-help mib-upload-file-help"
-                    id="mibUploadFileHelp"
-                    tabindex="0"
-                    role="img"
-                    aria-label=".mib, .my or .txt · Maximum 1 MiB"
-                    data-tooltip=".mib, .my or .txt · Maximum 1 MiB">ⓘ</span>
-                <div class="mib-upload-actions">
-                    <button
-                        class="button"
-                        type="button"
-                        data-mib-upload-close>Cancel</button>
-                    <button
-                        class="button primary"
-                        type="submit">Upload</button>
-                </div>
-            </form>
-        <?php endif; ?>
         <section
             id="mibUploadProgress"
             hidden

@@ -71,7 +71,6 @@ if ($simulatorTab) {
     require __DIR__ . '/mib_browser.php';
 }
 if ($management && !$simulatorTab) {
-    $uploadChooser = true;
     require __DIR__ . '/mib_upload_dialog.php';
 }
 return;
