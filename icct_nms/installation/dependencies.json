@@ -173,40 +173,113 @@
         }
     },
     "rhel_package_groups": {
+        "cacti-framework": {
+            "label": "Cacti framework requirements",
+            "packages": [
+                "php-cli",
+                "php-mysqlnd",
+                "php-mbstring",
+                "php-xml",
+                "php-snmp",
+                "php-process",
+                "rrdtool"
+            ],
+            "detail": "Checks the PHP, SNMP extension and RRDTool packages used by the existing Cacti installation.",
+            "category": "Cacti framework requirements"
+        },
+        "network-tools": {
+            "label": "Network probes",
+            "packages": [
+                "iputils",
+                "iproute",
+                "net-tools"
+            ],
+            "detail": "Ping, tracepath, interface and address inspection used by plugin diagnostics.",
+            "category": "Plugin protocols and diagnostics"
+        },
         "neighbor-discovery": {
-            "label": "SNMP polling and LLDP / CDP discovery",
-            "packages": ["php-snmp", "net-snmp-utils"],
-            "detail": "The plugin reads LLDP and CDP neighbor tables from devices through SNMP."
+            "label": "LLDP / CDP discovery",
+            "packages": [
+                "php-snmp",
+                "net-snmp-utils"
+            ],
+            "detail": "Reads remote device neighbor tables through SNMP using the bundled plugin collector and Net-SNMP tools.",
+            "category": "Plugin protocols and diagnostics"
         },
         "path-diagnostics": {
             "label": "Path diagnostics",
-            "packages": ["traceroute", "iputils", "mtr"],
-            "detail": "Traceroute, tracepath, MTR and packet probes."
+            "packages": [
+                "traceroute",
+                "iputils",
+                "mtr"
+            ],
+            "detail": "Traceroute, tracepath, MTR and packet probes.",
+            "category": "Plugin protocols and diagnostics"
         },
         "snmp-traps": {
             "label": "SNMP traps",
-            "packages": ["net-snmp"],
-            "detail": "Provides snmptrapd. Configure the receiver and authorized senders during setup."
+            "packages": [
+                "net-snmp"
+            ],
+            "detail": "Provides snmptrapd. Configure the receiver and authorized senders during setup.",
+            "category": "Plugin protocols and diagnostics"
         },
         "syslog": {
             "label": "Syslog",
-            "packages": ["rsyslog", "logrotate"],
-            "detail": "Provides the Syslog receiver and log rotation."
+            "packages": [
+                "rsyslog",
+                "logrotate"
+            ],
+            "detail": "Provides the Syslog receiver and log rotation.",
+            "category": "Plugin protocols and diagnostics"
         },
         "netflow": {
             "label": "NetFlow / IPFIX",
-            "packages": ["nfdump"],
-            "detail": "Provides the nfcapd receiver and nfdump decoder."
+            "packages": [
+                "nfdump"
+            ],
+            "detail": "Provides the nfcapd receiver and nfdump decoder.",
+            "category": "Plugin protocols and diagnostics"
         },
         "serial-gnss": {
             "label": "Serial / GNSS collection",
-            "packages": ["python3"],
-            "detail": "The Python runtime runs the bundled serial and GNSS collectors."
+            "packages": [
+                "python3"
+            ],
+            "detail": "The Python runtime runs the bundled serial and GNSS collectors.",
+            "category": "Plugin protocols and diagnostics"
         },
         "bandwidth-tests": {
             "label": "Bandwidth diagnostics",
-            "packages": ["iperf3", "netperf"],
-            "detail": "Provides iPerf and Netperf throughput tests."
+            "packages": [
+                "iperf3",
+                "netperf"
+            ],
+            "detail": "Provides iPerf and Netperf throughput tests.",
+            "category": "Plugin protocols and diagnostics"
+        },
+        "collector-runtime": {
+            "label": "Collector runtime requirements",
+            "packages": [
+                "acl",
+                "libssh2",
+                "libjpeg-turbo",
+                "libuuid",
+                "libstdc++",
+                "libcap",
+                "policycoreutils-python-utils",
+                "selinux-policy-devel",
+                "make",
+                "cairo",
+                "pango",
+                "libpng",
+                "fontconfig",
+                "dejavu-sans-mono-fonts",
+                "chrony",
+                "sudo"
+            ],
+            "detail": "Shared system libraries, chrony access and service tools used by plugin collectors.",
+            "category": "Plugin protocols and diagnostics"
         }
     },
     "rhel_package_checks": {
@@ -237,7 +310,8 @@
                 "debian": ["redis-server"]
             },
             "binaries": ["redis-server"],
-            "note": "Cache / messaging dependency. Plugin integration pending."
+            "note": "Cache / messaging dependency. Plugin integration pending.",
+            "category": "Optional services"
         },
         "websocket": {
             "label": "WebSocket runtime",
@@ -245,7 +319,8 @@
                 "rhel": ["python3-websockets"],
                 "debian": ["python3-websockets"]
             },
-            "note": "Python WebSocket library. An application endpoint and HTTPS configuration are separate."
+            "note": "Python WebSocket library. An application endpoint and HTTPS configuration are separate.",
+            "category": "Optional services"
         },
         "ntp": {
             "label": "NTP tools",
@@ -254,7 +329,8 @@
                 "debian": ["ntpsec-ntpdig"]
             },
             "binaries": ["/usr/bin/chronyc"],
-            "note": "RHEL chrony tracking is read-only. Preserve clock configuration and existing service state; the Debian profile remains client-tools only and does not replace its clock daemon."
+            "note": "RHEL chrony tracking is read-only. Preserve clock configuration and existing service state; the Debian profile remains client-tools only and does not replace its clock daemon.",
+            "category": "Plugin protocols and diagnostics"
         },
         "tacacs": {
             "label": "TACACS+ tools",
@@ -266,21 +342,29 @@
                 "rhel": ["tac_plus"],
                 "debian": []
             },
-            "note": "RHEL server tools / Debian client library. Plugin authentication integration pending; no PAM changes."
+            "note": "RHEL server tools / Debian client library. Plugin authentication integration pending; no PAM changes.",
+            "category": "Optional services"
         },
         "pathchar": {
             "label": "Pathchar (pchar)",
             "packages": {"rhel": ["icct-nms-pathchar"], "debian": []},
             "native_binary": "/opt/icct-nms/native/pchar-1.5/sbin/pchar",
             "binaries": ["/opt/icct-nms/native/pchar-1.5/sbin/pchar"],
-            "note": "Path capacity diagnostics supplied by the ICCT NMS RPM."
+            "runtime_feature": "Diagnostics",
+            "runtime_binary": "Pathchar",
+            "note": "Package ownership and the discovered path-capacity runtime are checked separately.",
+            "category": "Plugin protocols and diagnostics"
         },
         "guacamole-strict": {
             "label": "Guacamole strict-auth",
             "packages": {"rhel": ["icct-nms-guacamole-strict"], "debian": []},
             "native_binary": "/opt/icct-nms/native/guacamole-1.6.0/sbin/guacd",
             "binaries": ["/opt/icct-nms/native/guacamole-1.6.0/sbin/guacd"],
-            "note": "The strict-auth SSH daemon requires the broker and HTTPS setup."
+            "runtime_verification": "strict-auth",
+            "runtime_service": "icct-nms-guacd.service",
+            "runtime_component": "guacamole-strict",
+            "note": "The verified strict-auth SSH runtime requires the broker and HTTPS setup.",
+            "category": "Plugin protocols and diagnostics"
         },
         "guacamole": {
             "label": "Guacamole distribution package",
@@ -293,7 +377,8 @@
                 "guacd",
                 "/opt/nms-guacamole/1.6.0/sbin/guacd"
             ],
-            "note": "Native daemon dependency. Strict-auth patch, SSH broker and HTTPS are required separately. Debian requires an approved native build."
+            "note": "Native daemon dependency. Strict-auth patch, SSH broker and HTTPS are required separately. Debian requires an approved native build.",
+            "category": "Optional services"
         },
         "transfer": {
             "label": "FTP / TFTP / SFTP / Telnet tools",
@@ -302,7 +387,8 @@
                 "debian": ["lftp", "tftp-hpa", "openssh-client", "telnet"]
             },
             "binaries": ["lftp", "tftp", "sftp", "telnet"],
-            "note": "Protocol clients only. Device workflows and server configuration are separate."
+            "note": "Protocol clients only. Device workflows and server configuration are separate.",
+            "category": "Optional services"
         }
     },
     "python_min": "3.9.0",

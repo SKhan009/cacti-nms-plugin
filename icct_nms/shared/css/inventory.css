@@ -1019,25 +1019,21 @@ dialog p {
     position: relative;
 }
 .protocol-picker {
-    position: absolute;
-    top: 44px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 290px;
-    max-width: 100%;
-    max-height: max(140px, min(440px, calc(100dvh - 340px)));
-    margin: 0;
-    z-index: 101;
+    width: min(290px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    box-sizing: border-box;
+    margin: auto;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
 }
-.protocol-picker-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 100;
+.protocol-picker::backdrop {
     background: rgb(0 0 0 / 8%);
     backdrop-filter: blur(3px);
     -webkit-backdrop-filter: blur(3px);
 }
-.protocol-picker:not([hidden]) {
+.protocol-picker[open] {
     display: flex;
     flex-direction: column;
 }
@@ -1047,6 +1043,7 @@ dialog p {
     background: #f4f4f4;
     box-shadow: 0 2px 5px #0003;
     padding: 0 16px;
+    overscroll-behavior: contain;
 }
 .protocol-picker .check-row {
     border-bottom: 1px solid #c6c6c6;
@@ -1055,9 +1052,10 @@ dialog p {
     gap: 10px;
 }
 .protocol-picker .check-row > span {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-wrap: anywhere;
+}
+.protocol-picker .check-row > input {
+    flex-shrink: 0;
 }
 .protocol-picker .check-row:has(input:checked) {
     background: #e8e8e8;
@@ -1148,14 +1146,8 @@ dialog p {
     .radio-group label {
         min-height: 32px;
     }
-    .protocol-picker {
-        width: 100%;
-    }
     .protocol-picker .check-row {
         min-height: 44px;
-    }
-    .protocol-picker .check-row > span {
-        white-space: normal;
     }
     .password-toggle {
         height: 36px;
@@ -4355,6 +4347,9 @@ body.icct-inventory:has(.protocol-form) {
 .device-snmp-information p {
     margin: 0 0 12px;
 }
+.device-snmp-information .snmp-reading-error {
+    color: #a2191f;
+}
 .device-snmp-information .device-detail-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
@@ -5179,6 +5174,9 @@ h6 {
     border-radius: 4px;
     background: #fff;
 }
+.fault-rule {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+}
 .fault-rule [hidden] {
     display: none !important;
 }
@@ -5208,29 +5206,35 @@ h6 {
 .fault-rule .field:has([data-parameter-choice]),
 .fault-rule .field:has([data-parameter]),
 .fault-rule .field:has([data-oid]) {
-    grid-column: span 2;
+    grid-column: span 6;
 }
 .fault-rule .field:has([data-reading]) {
-    grid-column: span 3;
+    grid-column: 1 / -1;
 }
 .fault-rule[data-measurement='snmp'] .field:has([data-reading]) {
     grid-column: 1 / -1;
 }
 .fault-rule .field:has([data-condition]) {
-    grid-column: 1;
+    grid-column: span 4;
 }
 .fault-rule .field:has([data-minimum]) {
-    grid-column: 2;
+    grid-column: span 4;
 }
 .fault-rule .field:has([data-maximum]) {
-    grid-column: 3;
+    grid-column: span 4;
 }
 .fault-rule:not([data-condition='outside']) .field:has([data-minimum]),
 .fault-rule:not([data-condition='outside']) .field:has([data-maximum]) {
-    grid-column: 2 / span 2;
+    grid-column: span 4;
 }
 .fault-rule .field:has([data-severity]) {
-    grid-column: 4;
+    grid-column: span 4;
+}
+.fault-rule[data-condition='outside'] .field:has([data-condition]),
+.fault-rule[data-condition='outside'] .field:has([data-minimum]),
+.fault-rule[data-condition='outside'] .field:has([data-maximum]),
+.fault-rule[data-condition='outside'] .field:has([data-severity]) {
+    grid-column: span 3;
 }
 .fault-rule textarea {
     min-height: 76px;
@@ -5301,6 +5305,12 @@ h6 {
     .fault-rule[data-measurement='snmp'] .field:has([data-oid]),
     .fault-rule .field:has([data-reading]) {
         grid-column: 1 / -1;
+    }
+    .fault-rule[data-condition='outside'] .field:has([data-condition]),
+    .fault-rule[data-condition='outside'] .field:has([data-minimum]),
+    .fault-rule[data-condition='outside'] .field:has([data-maximum]),
+    .fault-rule[data-condition='outside'] .field:has([data-severity]) {
+        grid-column: auto;
     }
     .fault-rule:not([data-condition='outside']) .field:has([data-minimum]),
     .fault-rule:not([data-condition='outside']) .field:has([data-maximum]) {
@@ -6895,19 +6905,19 @@ h6 {
     border-bottom: 1px solid #aaa;
 }
 
-/* Shared alarm content fields for MIB-derived and device-owned fault rules. */
-.fault-rule .field.fault-description,
-.fault-rule .field.fault-guidance {
-    grid-column: span 2;
+/* Keep both notes together below the measurement and threshold fields. */
+.fault-rule-notes {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: inherit;
 }
-.fault-rule .fault-description textarea,
-.fault-rule .fault-guidance textarea {
+.fault-rule-notes textarea {
     min-height: 110px;
 }
-@media (max-width: 700px) {
-    .fault-rule .field.fault-description,
-    .fault-rule .field.fault-guidance {
-        grid-column: 1/-1;
+@media (max-width: 1000px) {
+    .fault-rule-notes {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
@@ -8425,6 +8435,26 @@ h6 {
     grid-column: auto;
     flex-wrap: wrap;
 }
+#view-ntp .ntp-history-trends {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    max-width: 1000px;
+    margin: 12px 0 16px;
+}
+#view-ntp .ntp-history-trend {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+#view-ntp .ntp-history-trend h5,
+#view-ntp .ntp-history-trend p {
+    margin: 0;
+}
+#view-ntp .ntp-history-trend svg {
+    display: block;
+    margin: 0;
+}
 @media (max-width: 900px) {
     #view-ntp .ntp-history-filters {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -8432,9 +8462,15 @@ h6 {
     #view-ntp .ntp-history-filters .device-history-actions {
         grid-column: 1 / -1;
     }
+    #view-ntp .ntp-history-trends {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 @media (max-width: 520px) {
     #view-ntp .ntp-history-filters {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    #view-ntp .ntp-history-trends {
         grid-template-columns: minmax(0, 1fr);
     }
 }

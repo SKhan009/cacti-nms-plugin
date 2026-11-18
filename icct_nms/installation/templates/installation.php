@@ -30,7 +30,7 @@
                 </thead>
                 <tbody>
                     <?php foreach ($checks as $check): ?>
-                        <?php $ready = in_array($check['status'], ['Ready', 'Installed'], true); ?>
+                        <?php $ready = in_array($check['status'], ['Ready', 'Installed', 'Available outside package manager'], true); ?>
                         <tr>
                             <td><?= icct_nms_h($check['feature']) ?></td>
                             <td><?= icct_nms_h($check['item']) ?></td>

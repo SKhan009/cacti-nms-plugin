@@ -16,7 +16,8 @@ function icct_mib_simulator_devices()
 
 function icct_mib_simulator_state(): array
 {
-    $content = @file_get_contents(ICCT_MIB_SIM_STATE . '/cycle.json');
+    $path = ICCT_MIB_SIM_STATE . '/cycle.json';
+    $content = is_readable($path) ? file_get_contents($path) : false;
     $state = is_string($content) ? json_decode($content, true) : null;
     return ($state['version'] ?? null) === 1 && !empty($state['objects']) ? $state : [];
 }
@@ -99,8 +100,11 @@ function icct_mib_simulator_objects(array $records): array
 
 function icct_mib_simulator_control(string $action, array $input, array $draft): void
 {
-    if (!is_writable(ICCT_MIB_SIM_STATE)) {
+    if (!is_dir(ICCT_MIB_SIM_STATE)) {
         throw new RuntimeException('The MIB simulator has not been provisioned on this collector.');
+    }
+    if (!is_writable(ICCT_MIB_SIM_STATE)) {
+        throw new RuntimeException('The Cacti PHP account cannot write to the MIB Simulator state directory.');
     }
     $path = ICCT_MIB_SIM_STATE . '/cycle.json';
     if ($action === 'simulator_stop') {

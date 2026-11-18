@@ -10,6 +10,24 @@ function icct_nms_trap_sender($id)
     );
 }
 
+function icct_nms_trap_worker_status($collector): string
+{
+    $row = db_fetch_row_prepared(
+        'SELECT meta_value, TIMESTAMPDIFF(SECOND, updated_at, NOW()) AS age ' .
+            'FROM plugin_icct_nms_meta WHERE meta_key=?',
+        ['trap_worker_status_' . (int) $collector],
+    );
+    if (!$row || $row['age'] === null || (int) $row['age'] < 0 || (int) $row['age'] > 30) {
+        return 'unavailable';
+    }
+    $state = json_decode((string) $row['meta_value'], true);
+    return match ($state['status'] ?? '') {
+        'running' => 'running',
+        'waiting-for-spool' => 'waiting-for-spool',
+        default => 'unavailable',
+    };
+}
+
 /** Explain the notification using only its type and the evidence saved with it. */
 function icct_nms_trap_explanation($oid, $source, array $payload)
 {
@@ -235,6 +253,16 @@ function icct_nms_trap_parse_line($line)
     ];
 }
 
+/** The packet peer must identify exactly one enabled device on its collector. */
+function icct_nms_trap_bound_hosts($collector, $source)
+{
+    return db_fetch_assoc_prepared(
+        "SELECT h.id FROM host h JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT('trap_sender_',h.id) " .
+            "WHERE h.deleted='' AND h.disabled='' AND h.poller_id=? AND INET6_ATON(m.meta_value)=INET6_ATON(?)",
+        [(int) $collector, $source],
+    );
+}
+
 function icct_nms_trap_ingest_line($line, &$reason)
 {
     if (!str_starts_with($line, 'ICCT-TRAP ') && !str_starts_with($line, 'ICCT-TRAP-V1 ')) {
@@ -242,11 +270,7 @@ function icct_nms_trap_ingest_line($line, &$reason)
         return 'dropped';
     }
     $trap = icct_nms_trap_parse_line($line);
-    $hosts = db_fetch_assoc_prepared(
-        "SELECT h.id FROM host h JOIN plugin_icct_nms_meta m ON m.meta_key=CONCAT('trap_sender_',h.id) " .
-            "WHERE h.deleted='' AND h.disabled='' AND h.poller_id=? AND INET6_ATON(m.meta_value)=INET6_ATON(?)",
-        [icct_backend_inventory_collector_id(), $trap['source_ip']],
-    );
+    $hosts = icct_nms_trap_bound_hosts(icct_backend_inventory_collector_id(), $trap['source_ip']);
     if ($hosts === false) {
         throw new IcctSyslogStorageException(
             'SNMP trap binding lookup failed. The spool cursor was retained.',

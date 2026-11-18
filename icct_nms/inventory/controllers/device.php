@@ -81,6 +81,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'fault
     }
     exit();
 }
+if (($_GET['fragment'] ?? '') === 'syslog_history' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    header('Content-Type: text/html; charset=utf-8');
+    header('Cache-Control: no-store');
+    ob_start();
+    try {
+        icct_nms_backend();
+        $id = icct_nms_id($_GET['id'] ?? 0);
+        $old = icct_nms_device($id);
+        require dirname(__DIR__, 2) . '/protocols/syslog/templates/device_view_syslog.php';
+        echo ob_get_clean();
+    } catch (Throwable $failure) {
+        ob_end_clean();
+        http_response_code(400);
+    }
+    return;
+}
 if (($_GET['fragment'] ?? '') === 'ports' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     header('Content-Type: text/html; charset=utf-8');
     header('Cache-Control: no-store');

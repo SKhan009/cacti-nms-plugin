@@ -19,22 +19,44 @@ $traps = isset($options['traps']);
 $ingestLine = $traps ? 'icct_nms_trap_ingest_line' : null;
 $once = isset($options['once']) || !isset($options['follow']);
 try {
-    icct_nms_backend();
+    $initialized = false;
+    $diagnostics = [];
     do {
         if (
             (int) db_fetch_cell_prepared('SELECT status FROM plugin_config WHERE directory=?', [
                 'icct_nms',
             ]) !== 1
         ) {
-            break;
+            if ($once) {
+                break;
+            }
+            // Keep the systemd service alive across a Cacti plugin disable/re-enable.
+            sleep(2);
+            continue;
+        }
+        if (!$initialized) {
+            icct_nms_backend();
+            $heartbeatKey = $traps
+                ? 'trap_worker_status_' . icct_backend_inventory_collector_id()
+                : 'syslog_worker_status';
+            $previous = json_decode((string) db_fetch_cell_prepared(
+                'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
+                [$heartbeatKey],
+            ), true);
+            $diagnostics = icct_backend_syslog_worker_diagnostics(
+                is_array($previous) && ($previous['file'] ?? '') === $file ? $previous : [],
+                null,
+            );
+            $initialized = true;
         }
         clearstatcache(true, $file);
-        $result = is_file($file)
+        $result = is_file($file) && is_readable($file)
             ? icct_backend_syslog_import_spool_once($file, 2000, $ingestLine)
             : null;
         // The durable outbox is drained even when no new packets arrive after an upgrade/restart.
         $faults = icct_backend_syslog_sync_faults();
         [, $state] = icct_backend_syslog_worker_state($file);
+        $diagnostics = icct_backend_syslog_worker_diagnostics($diagnostics, $result);
         icct_backend_syslog_heartbeat(
             [
                 'pid' => getmypid(),
@@ -47,9 +69,8 @@ try {
                 'faults_normalized' => $faults,
                 'last_record_at' => $state['last_record_at'] ?? null,
                 'drop_reasons' => $result['drop_reasons'] ?? [],
-                'last_error' => implode('; ', $result['error_messages'] ?? []),
-            ],
-            $traps ? 'trap_worker_status' : 'syslog_worker_status',
+            ] + $diagnostics,
+            $heartbeatKey,
         );
         if (!$once && ($result['processed'] ?? 0) < 2000 && $faults < 200) {
             usleep((int) ($sleep * 1000000));

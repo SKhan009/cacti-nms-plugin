@@ -25,6 +25,9 @@ if ($trapPage > $trapPages) {
     $trapEvents = $readTraps($trapPage);
 }
 $trapUrl = 'inventory/controllers/device.php?' . http_build_query(['id' => (int) $id, 'view' => 1]);
+$trapSender = icct_nms_trap_sender($id);
+$trapCollector = (int) ($old['poller_id'] ?? 0);
+$trapWorkerStatus = $trapSender !== '' ? icct_nms_trap_worker_status($trapCollector) : '';
 ?>
 <section id="view-traps" data-device-view-panel="traps" hidden>
     <div class="device-history-heading">
@@ -33,6 +36,15 @@ $trapUrl = 'inventory/controllers/device.php?' . http_build_query(['id' => (int)
             class="button"
             href="<?= icct_nms_h($trapUrl . '&' . http_build_query($trapParams + ['trap_page' => $trapPage]) . '#view-traps') ?>">Refresh</a>
     </div>
+    <?php if ($trapSender === ''): ?>
+        <p role="status">Trap collection is disabled for this device. Set its sender IP in Edit Device → Protocol Config → SNMP notifications.</p>
+    <?php else: ?>
+        <?php if ($trapWorkerStatus === 'unavailable'): ?>
+            <p class="site-error" role="status">The trap worker is not reporting on this device’s collector. On RHEL, check <code>icct-nms-trap-receiver.service</code> and <code>icct-nms-trap-worker.service</code>.</p>
+        <?php elseif ($trapWorkerStatus === 'waiting-for-spool'): ?>
+            <p class="site-error" role="status">The trap worker cannot read the receiver log. Check <code>/var/log/icct-nms/traps.log</code> and the worker’s service account on the collector.</p>
+        <?php endif; ?>
+    <?php endif; ?>
     <form
         method="get"
         action="inventory/controllers/device.php#view-traps"

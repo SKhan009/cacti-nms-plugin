@@ -1,6 +1,18 @@
 <?php
 $netflowRules = icct_nms_netflow_rules($id);
 $netflowMetrics = icct_nms_netflow_rule_metrics();
+$netflowHasSynData = $netflowFaultConfig && db_fetch_cell_prepared(
+    "SELECT 1 FROM plugin_icct_nms_netflow_flows WHERE host_id=? AND
+     last_seen>=DATE_SUB(NOW(), INTERVAL 15 MINUTE) AND protocol=6 AND packets>0 AND tcp_flags<>'' LIMIT 1",
+    [(int) $id],
+);
+if (!$netflowHasSynData) {
+    foreach (['syn_rate', 'distributed_syn_rate'] as $synMetric) {
+        if (!in_array($synMetric, array_column($netflowRules, 'metric'), true)) {
+            unset($netflowMetrics[$synMetric]);
+        }
+    }
+}
 $netflowRuleHelp = static function (string $headingHelpText): void {
     require __DIR__ . '/../../../shared/templates/heading_help.php';
 };
@@ -51,7 +63,30 @@ $netflowRuleHelp = static function (string $headingHelpText): void {
                 class="fault-saved-alarms"
                 aria-labelledby="netflow-built-in-title">
                 <h3 id="netflow-built-in-title">Built-in NetFlow anomaly rules</h3>
-                <p class="fault-oid-empty">These rules have built-in detection methods and severities. Set their scan, SYN rate, and bandwidth thresholds in Protocol Config.</p>
+                <?php if ($netflowFaultConfig): ?>
+                    <div class="protocol-grid cols-4">
+                        <?php foreach ([
+                            'bandwidth_limit_mbps' => 'Combined traffic (Mbps, 5-minute average)',
+                            'scan_threshold' => 'Distinct destinations or ports per source (5 minutes)',
+                            'syn_pps_threshold' => 'SYN without ACK (packets/s, 5-minute average)',
+                        ] as $field => $label):
+                            if ($field === 'syn_pps_threshold' && !$netflowHasSynData) {
+                                continue;
+                            }
+                            [$min, $max] = icct_nms_netflow_alarm_ranges()[$field]; ?>
+                            <label class="field">
+                                <span class="field-label"><?= icct_nms_h($label) ?></span>
+                                <input type="number" name="<?= icct_nms_h($field) ?>"
+                                    min="<?= $min ?>" max="<?= $max ?>" required
+                                    value="<?= (int) $netflowFaultConfig[$field] ?>">
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <p>Built-in thresholds cover all exported interfaces and directions. Sampled traffic uses estimated totals. SYN rules require exported TCP flags and packet counts.</p>
+                    <?php if (!$netflowHasSynData): ?>
+                        <p>SYN thresholds become available when recent TCP records include flags and packet counts.</p>
+                    <?php endif; ?>
+                <?php endif; ?>
                 <div class="site-table-wrap">
                     <table class="site-table netflow-built-in-table">
                         <thead>
@@ -72,7 +107,10 @@ $netflowRuleHelp = static function (string $headingHelpText): void {
                                 ['Possible SYN flood / DoS', 'Critical', "One source sends TCP SYN packets without ACK at or above $syn."],
                                 ['Possible distributed SYN flood', 'Critical', "Multiple sources send TCP SYN packets without ACK to one destination. Together they reach $syn, while each stays below it for that destination."],
                                 ['Bandwidth overuse', 'Major', "Traffic reaches $bandwidth or exceeds three times the recent baseline when sufficient traffic history exists."],
-                            ] as [$rule, $severity, $trigger]): ?>
+                            ] as [$rule, $severity, $trigger]):
+                                if (!$netflowHasSynData && str_contains($rule, 'SYN')) {
+                                    continue;
+                                } ?>
                                 <tr>
                                     <th scope="row"><?= icct_nms_h($rule) ?></th>
                                     <td><?= icct_nms_severity_badge($severity) ?></td>

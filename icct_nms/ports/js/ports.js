@@ -95,6 +95,17 @@
             basic.elements.poller_id.value !== originalPoller;
         const ports = changed ? [] : observation.ports;
         rows.replaceChildren();
+        if (!ports.length || observation.interface_count === 0 || !observation.fresh) {
+            const message = changed
+                ? 'Save connection settings to discover interfaces.'
+                : observation.message || (ports.length ? '' : 'No interfaces discovered yet.');
+            if (message) {
+                const status = document.createElement('p');
+                status.className = 'empty-state';
+                status.textContent = message;
+                rows.append(status);
+            }
+        }
         for (const p of ports) {
             const saved = settings.ports[p.index];
             const rule =
@@ -172,14 +183,6 @@
             clearField.classList.add('port-clear-field');
             box.append(clearField);
             rows.append(box);
-        }
-        if (!ports.length) {
-            const empty = document.createElement('p');
-            empty.className = 'empty-state';
-            empty.textContent = changed
-                ? 'Save connection settings to discover interfaces.'
-                : 'No interfaces discovered yet.';
-            rows.append(empty);
         }
         updateValidation();
     }

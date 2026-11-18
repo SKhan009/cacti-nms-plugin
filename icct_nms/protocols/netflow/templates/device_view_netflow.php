@@ -21,10 +21,10 @@
         id="netflow-feedback"
         role="alert"></p>
     <?php $netflowViews = [
-        'overview' => 'Overview',
+        'overview' => 'Current Readings',
         'breakdown' => 'Traffic Breakdown',
         'records' => 'Traffic Records',
-        'anomalies' => 'Anomalies',
+        'anomalies' => 'Alarms / Anomalies',
     ]; ?>
     <div class="fcaps-tabs" role="tablist" aria-label="NetFlow views">
         <?php foreach ($netflowViews as $key => $label): ?>

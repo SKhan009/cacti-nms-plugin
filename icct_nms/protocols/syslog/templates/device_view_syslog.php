@@ -92,10 +92,15 @@ $syslogSizeParams = $syslogPageSize === 10 ? [] : ['syslog_size' => $syslogPageS
 $syslogSeverityNames = icct_backend_syslog_severity_labels();
 $syslogFacilityNames = icct_backend_syslog_facility_labels();
 $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP', 'internal' => 'Internal'];
+$syslogLive = ($old['disabled'] ?? '') === '' && icct_backend_syslog_assignment($id) &&
+    icct_backend_protocol_enabled($id, 'syslog');
+$syslogPoller = db_fetch_cell_prepared('SELECT name FROM poller WHERE id=?', [(int) ($old['poller_id'] ?? 0)]);
 ?>
 <section
     id="view-syslog"
     data-device-view-panel="syslog"
+    data-syslog-live="<?= $syslogLive ? '1' : '0' ?>"
+    data-syslog-page="<?= (int) $syslogPage ?>"
     hidden>
     <div class="device-history-heading">
         <h2 data-field-help="Messages received from this device and availability events recorded by Cacti. Expand a row to see its details.">Syslog Event History</h2>
@@ -121,6 +126,9 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
                 href="<?= icct_nms_h($syslogUrl($syslogFilterParams + $syslogTabParams + $syslogSizeParams + ['syslog_page' => $syslogPage])) ?>">Refresh</a>
         </div>
     </div>
+    <p id="syslog-live-status" role="status"><?= $syslogLive
+        ? 'Checking for readings every 30 seconds on page 1 · ' . icct_nms_h($syslogPoller ?: 'Assigned poller')
+        : 'Enable Syslog in Protocol Config to receive live messages.' ?></p>
     <div
         class="netflow-summary syslog-summary"
         aria-label="Syslog history totals">
@@ -225,6 +233,7 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
                 type="submit">Apply</button>
         </div>
     </form>
+    <div id="syslog-history-results">
     <nav
         class="device-view-tabs"
         aria-label="Syslog history views">
@@ -322,12 +331,15 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
                         <small>Severity</small>
                         <span class="device-syslog-severity severity-<?= icct_nms_h(icct_backend_syslog_nms_severity($event['severity_code'])) ?>"><?= icct_nms_h($syslogSeverityNames[(int) $event['severity_code']] ?? 'Unknown') ?></span>
                     </span>
-                    <span><small data-field-help="Total times this event appears across the filtered history.">Occurrences</small><?= number_format($occurrences) ?></span>
+                    <span><small title="Total times this event appears across the filtered history.">Occurrences</small><?= number_format($occurrences) ?></span>
                 </summary>
                 <div class="device-record-body syslog-event-details">
                     <section class="syslog-event-overview">
                         <h3>What happened</h3>
                         <p class="syslog-event-text"><?= icct_nms_h($explanation) ?></p>
+                        <?php if (!empty($event['alarm_key'])): ?>
+                            <a href="alarms/controllers/alarms.php?view=<?= rawurlencode($event['alarm_key']) ?>">View linked alarm</a>
+                        <?php endif; ?>
                         <?php if (is_string($context['impact'] ?? null) && $context['impact'] !== ''): ?>
                             <p class="syslog-event-text"><strong><?= icct_nms_h($context['impact']) ?></strong></p>
                         <?php endif; ?>
@@ -426,4 +438,5 @@ $syslogTransportLabels = ['both' => 'UDP and TCP', 'udp' => 'UDP', 'tcp' => 'TCP
         <?php require __DIR__ . '/syslog_history_report.php'; ?>
     <?php endif; ?>
     <?php require __DIR__ . '/syslog_history_pager.php'; ?>
+    </div>
 </section>

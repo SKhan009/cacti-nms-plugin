@@ -510,6 +510,7 @@ if (!$viewRules): ?>
         </div>
         <?php $passiveViewRules = icct_nms_passive_fault_rules($id); ?>
         <h3>Received event rules</h3>
+        <p>These rules match incoming events. Open an event’s history to check whether it arrived and has a linked alarm.</p>
         <div class="site-table-wrap">
             <table class="site-table">
                 <thead>
@@ -519,7 +520,14 @@ if (!$viewRules): ?>
                     <?php foreach ($passiveViewRules as $rule): ?>
                         <tr>
                             <td><?= $display($rule['name']) ?></td>
-                            <td><?= $rule['source'] === 'trap' ? 'SNMP Traps' : 'Syslog' ?></td>
+                            <td>
+                                <?php if ($rule['source'] === 'trap'): ?>
+                                    <a class="fault-alarm-link" href="inventory/controllers/device.php?id=<?= (int) $id ?>&amp;view=1#view-traps">SNMP Trap History</a>
+                                    <br><code><?= icct_nms_h($rule['oid']) ?></code>
+                                <?php else: ?>
+                                    Syslog
+                                <?php endif; ?>
+                            </td>
                             <td><span class="device-status" data-log-status="<?= icct_nms_h($rule['severity']) ?>"><?= $display($rule['severity']) ?></span></td>
                             <td><?= $display($rule['group']) ?></td>
                             <td><?= $rule['enabled'] ? 'Yes' : 'No' ?></td>

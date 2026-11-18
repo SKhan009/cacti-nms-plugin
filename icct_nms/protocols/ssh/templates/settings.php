@@ -121,6 +121,5 @@
                 <button class="button primary">Save</button>
             </div>
         </form>
-        <?php require __DIR__ . '/terminal_action.php'; ?>
     </div>
 </details>

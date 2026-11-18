@@ -14,6 +14,8 @@ import sys
 import tarfile
 import tempfile
 
+MEDIA_PATH = Path("icct_nms/installation/bundles/media")
+
 
 def verify_release(directory):
     directory = Path(directory).resolve()
@@ -127,6 +129,10 @@ def copy_source(directory, root, manifest, backup_root=Path("/var/backups/icct-n
         with tarfile.open(backup, "x:gz") as archive:
             archive.add(destination, arcname="icct_nms")
         backup.chmod(0o600)
+    media = Path(root) / "plugins" / MEDIA_PATH
+    if any(name.startswith(MEDIA_PATH.as_posix() + "/") for name in manifest["files"]):
+        media.mkdir(mode=0o700, parents=True, exist_ok=True)
+        media.chmod(0o700)
     for name in manifest["files"]:
         if not name.startswith("icct_nms/"):
             continue
@@ -168,6 +174,11 @@ def main():
         parser.error("--application-only cannot be combined with package or service options.")
     directory = Path(__file__).resolve().parent
     manifest = verify_release(directory)
+    prefix = MEDIA_PATH.as_posix() + "/"
+    embedded = any(name.startswith(prefix) for name in manifest["files"])
+    media = directory / MEDIA_PATH if embedded else directory
+    if not embedded:
+        prefix = ""
     root = Path(args.cacti_root).resolve()
     if not re.fullmatch(r"/[A-Za-z0-9_./-]+", str(root)):
         raise ValueError("Unsupported Cacti path characters.")
@@ -186,9 +197,9 @@ def main():
     if args.application_only:
         pass
     elif manifest["target"]:
-        if args.online or args.no_packages:
-            raise ValueError("A bundled release always uses its verified offline packages.")
-        setup.verify_bundle(directory / "packages", target)
+        if args.online:
+            raise ValueError("A bundled release cannot use online package repositories.")
+        setup.verify_bundle(media / "packages", target)
     elif args.online == args.no_packages:
         raise ValueError("Source-only release requires either --online or --no-packages.")
     package_components = manifest.get("package_components", [])
@@ -196,10 +207,10 @@ def main():
         for component in package_components:
             if (
                 component not in setup.MANIFEST["optional_components"]
-                or "components/" + component + "/bundle.json" not in manifest["files"]
+                or prefix + "components/" + component + "/bundle.json" not in manifest["files"]
             ):
                 raise ValueError("Invalid package component in release.")
-            observed = setup.verify_component_bundle(directory / "components" / component, target)
+            observed = setup.verify_component_bundle(media / "components" / component, target)
             if observed != component:
                 raise ValueError("Package component does not match release directory.")
     components = manifest.get("native_components", [])
@@ -221,10 +232,10 @@ def main():
         for component in components:
             if (
                 component not in native.PROFILES
-                or "native/" + component + "/native.json" not in manifest["files"]
+                or prefix + "native/" + component + "/native.json" not in manifest["files"]
             ):
                 raise ValueError("Invalid release native component.")
-            data = native.verify_bundle(directory / "native" / component, target)
+            data = native.verify_bundle(media / "native" / component, target)
             if data["component"] != component:
                 raise ValueError("Native component does not match release directory.")
     plan = {
@@ -249,6 +260,8 @@ def main():
         raise ValueError(
             "SSH setup requires a release containing the strict Guacamole native bundle."
         )
+    if args.ssh_origin and args.no_packages:
+        raise ValueError("Use the full installer when provisioning SSH from the native bundle.")
     if args.plan:
         plan["ssh_origin"] = args.ssh_origin
         print(json.dumps(plan, indent=2))
@@ -260,6 +273,8 @@ def main():
     if args.application_only or args.no_packages:
         setup.preflight(root)
     destination, backup = copy_source(directory, root, manifest)
+    if embedded:
+        media = destination.parent / MEDIA_PATH
     if shutil.which("restorecon"):
         subprocess.run(["restorecon", "-R", str(destination)], check=True)
     command = [
@@ -271,19 +286,21 @@ def main():
     ]
     if args.application_only:
         command += ["--application-only"]
+    elif args.no_packages:
+        command += ["--no-packages"]
     else:
         command += (
-            ["--bundle", str(directory / "packages")]
+            ["--bundle", str(media / "packages")]
             if manifest["target"]
-            else (["--online"] if args.online else ["--no-packages"])
+            else ["--online"]
         )
-    if not args.application_only:
+    if not args.application_only and not args.no_packages:
         for component in package_components:
-            command += ["--component-bundle", str(directory / "components" / component)]
+            command += ["--component-bundle", str(media / "components" / component)]
         for component in manifest.get("native_components", []):
             if component not in ("guacamole-strict", "pathchar"):
                 raise ValueError("Unsupported native component.")
-            command += ["--native-bundle", str(directory / "native" / component)]
+            command += ["--native-bundle", str(media / "native" / component)]
     if args.ssh_origin:
         command += [
             "--ssh-origin",
@@ -312,9 +329,11 @@ def main():
     subprocess.run(command, check=True)
     if plan["offline_packages_runner"]:
         runner = [sys.executable, str(destination / "installation/cli/package_runner.py"), "provision",
-                  "--cacti-root", str(root), "--web-user", args.web_user or "apache", "--media", str(directory)]
+                  "--cacti-root", str(root), "--web-user", args.web_user or "apache", "--media", str(media)]
         if args.web_group:
             runner += ["--web-group", args.web_group]
+        if args.no_packages:
+            runner += ["--no-packages"]
         subprocess.run(runner, check=True)
 
 

@@ -14,6 +14,25 @@ In **FCAPS → Fault**, save a **Syslog** or **SNMP Traps** rule for messages th
 
 Review the original messages and trap fields in the device history tabs. The linked alarm leads back to its source events. Existing Syslog history and alarm links are preserved. New Syslog messages that pass collection filters stay in history and require a matching Fault rule to raise an alarm.
 
+### RHEL troubleshooting
+
+**FCAPS → Alarm Settings → Received event rules** lists saved rules. Open **SNMP Trap History** from the rule to check the configured sender IP, the worker status, and received notifications. An event in the receiver log still needs a unique matching device binding on the assigned collector. A stored event needs an enabled rule matching its notification OID and any configured field filter to appear in **Triggered Alarms**.
+
+If the receiver log has new traps but device history stays empty, check both services on the device’s RHEL collector:
+
+```sh
+systemctl status icct-nms-trap-receiver.service icct-nms-trap-worker.service
+sudo journalctl -u icct-nms-trap-worker.service -n 30 --no-pager
+```
+
+After deploying updated PHP worker files, restart the worker so it loads the changes:
+
+```sh
+sudo systemctl restart icct-nms-trap-worker.service
+```
+
+If either service is missing, provision it with the offline receiver installer above. For the built-in `authenticationFailure` rule, the notification OID is `1.3.6.1.6.3.1.1.5.5`. A different trap can still appear in history without triggering that rule.
+
 To collect new local RHEL journal messages, first configure the device's loopback Syslog source and TCP receiver, then run `sudo bash protocols/syslog/rhel/enable_local_syslog_rhel.sh`. Choose the device's collection filters in **Protocol Config → Syslog**.
 
 For a device with a saved Modbus equipment profile, open **Protocol Config → Serial → Serial Syslog events** and set register limits and a severity. The serial collector records a Syslog event when a reading crosses a limit and a Notice when the reading returns within range. In **FCAPS → Fault → Syslog**, match the program `icct-serial` and the desired message severity to raise alarms for those readings.

@@ -2,6 +2,10 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Device Mgmt designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
+## Version 1.4.22
+
+Installation accepts Cacti's packaged resource link while rejecting links within plugin-writable paths. Installation Checks reads current NTP observations for this collector, distinguishes native runtimes from package ownership, and verifies strict Guacamole using the installed service's executable. Syslog retains timestamped rejection and error diagnostics across idle batches and restarts. Existing devices, protocol assignments, credentials and local configuration are preserved during source deployment. See [installation instructions](installation/README.md).
+
 ## Version 1.4.2
 
 A release can include the complete plugin and a verified OS/CPU-specific offline package bundle in one installer archive. The bootstrap verifies checksums, backs up existing source, preserves local configuration and uploaded data, copies source atomically and invokes native Cacti setup. Release builds exclude credentials, runtime data and developer tests. Debian offline APT installation uses empty repository sources/lists so local package installation cannot fall back to network repositories.
@@ -250,6 +254,20 @@ Topology Configuration is available from both plugin and Cacti menus. Device Con
 
 
 ### MIB Repository
+
+#### MIB Simulator setup on offline RHEL
+
+From the installed `icct_nms` plugin directory on the Cacti collector, run:
+
+```sh
+sudo bash protocols/snmp/mibs/simulator/install_rhel.sh apache
+```
+
+Replace `apache` with the account serving Cacti's PHP requests if it differs. The installer uses the bundled files and requires Python 3 and systemd. When SELinux is enabled, install `policycoreutils-python-utils` from matching offline RHEL media if needed.
+
+Reload **MIB Repository → Simulator**, load a `.mib` file, select the OIDs, and click **Start**. The simulator serves synthetic SNMP v2c readings at `127.0.0.1:1161`. See the [simulator guide](protocols/snmp/mibs/simulator/README.md) for setup and troubleshooting.
+
+#### MIB files and Cacti templates
 
 New uploads are compared with active repository content using SHA-256, declared module identity and parsed OID definitions. Identical file content is blocked even under another filename. Existing module names or filenames also block the upload, including changed content; acknowledgment cannot create a second active entry. Overlapping OIDs across otherwise distinct modules show a warning and require acknowledgment before Save/Proceed. Undo cannot restore an entry if its module, content or filename is already active. The comparison is repeated under the save lock; newly introduced duplicates are rejected and changed comparisons require fresh acknowledgment. Saved bytes are parsed with the current parser for comparison, without modifying existing uploads or templates. Unresolved OID comparisons are labelled unavailable.
 

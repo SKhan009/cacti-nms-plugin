@@ -29,6 +29,11 @@ if (empty($presetMode)) {
 if (($ntp['method'] ?? '') === 'auto') {
     $ntpHelp['method'] .= ' Choose a method to replace the saved Automatic setting.';
 }
+$ntpAlarmEmptyLabel = 'Use FCAPS default';
+if (!empty($ntpSaved)) {
+    $ntpAlarmEmptyLabel = !empty($ntpLimitMultiple['alarm_unsynchronized'])
+        ? 'Multiple FCAPS rules' : 'No FCAPS rule';
+}
 $ntpStaticSource = ($ntp['server_address'] ?? '') !== '' || ($ntp['expected_source'] ?? '') !== '';
 $ntpDeviceAddress = empty($presetMode) ? ($ntpAssignment['hostname'] ?? $old['hostname'] ?? '') : '';
 $ntpSshVerified = !empty($ntpSsh['enabled']) && !empty($ntpSsh['host_key']) &&
@@ -97,16 +102,30 @@ $ntpSshEnabled = empty($presetMode) && !empty($id) && $ntpSsh &&
             <input name="server_address" maxlength="253" value="<?= icct_nms_h($ntp['server_address'] ?? '') ?>"
                 required>
         </label>
-        <?php if (empty($ntpSaved)): ?>
-            <label class="field"><span class="field-label">Initial maximum offset (ms)</span>
-                <input type="number" name="maximum_offset_ms" min="0" step="any" value="<?= icct_nms_h($ntp['maximum_offset_ms'] ?? '') ?>">
+
+            <label class="field"><span class="field-label">Maximum clock offset (ms)</span>
+                <input
+                    type="number"
+                    <?= empty($ntpSaved) ? 'name="maximum_offset_ms"' : '' ?>
+                    min="0"
+                    step="any"
+                    <?= !empty($ntpSaved) ? 'readonly' : '' ?>
+                    placeholder="<?= !empty($ntpLimitMultiple['maximum_offset_ms']) ? 'Multiple FCAPS rules' : '' ?>"
+                    value="<?= icct_nms_h($ntp['maximum_offset_ms'] ?? '') ?>">
             </label>
-            <label class="field" data-ntp-methods="udp"><span class="field-label">Initial maximum round-trip delay (ms)</span>
-                <input type="number" name="maximum_delay_ms" min="0" step="any" value="<?= icct_nms_h($ntp['maximum_delay_ms'] ?? '') ?>">
+            <label class="field" data-ntp-methods="udp"><span class="field-label">Maximum round-trip delay (ms)</span>
+                <input
+                    type="number"
+                    <?= empty($ntpSaved) ? 'name="maximum_delay_ms"' : '' ?>
+                    min="0"
+                    step="any"
+                    <?= !empty($ntpSaved) ? 'readonly' : '' ?>
+                    placeholder="<?= !empty($ntpLimitMultiple['maximum_delay_ms']) ? 'Multiple FCAPS rules' : '' ?>"
+                    value="<?= icct_nms_h($ntp['maximum_delay_ms'] ?? '') ?>">
             </label>
             <label class="field"><span class="field-label">Alarm when unsynchronized</span>
-                <select name="alarm_unsynchronized">
-                    <?php foreach (['' => 'Use FCAPS default', '1' => 'Yes', '0' => 'No'] as $value => $label): ?>
+                <select name="alarm_unsynchronized" <?= !empty($ntpSaved) ? 'disabled' : '' ?>>
+                    <?php foreach (['' => $ntpAlarmEmptyLabel, '1' => 'Yes', '0' => 'No'] as $value => $label): ?>
                         <option value="<?= $value ?>" <?= (string) ($ntp['alarm_unsynchronized'] ?? '') === (string) $value ? 'selected' : '' ?>><?= $label ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -115,9 +134,8 @@ $ntpSshEnabled = empty($presetMode) && !empty($id) && $ntpSsh &&
                     <?php $ntpHelpText = 'FCAPS checks the selected chrony source against this IP.';
                     require __DIR__ . '/help.php'; ?>
                 </span>
-                <input name="expected_source" maxlength="45" value="<?= icct_nms_h($ntp['expected_source'] ?? '') ?>" required>
+                <input <?= empty($ntpSaved) ? 'name="expected_source"' : '' ?> maxlength="45" <?= !empty($ntpSaved) ? 'readonly' : '' ?> value="<?= icct_nms_h($ntp['expected_source'] ?? '') ?>" required>
             </label>
-        <?php endif; ?>
     </div>
 </div>
 <?php if (empty($presetMode)): ?>

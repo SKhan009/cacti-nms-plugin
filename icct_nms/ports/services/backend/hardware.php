@@ -181,6 +181,7 @@ function icct_nms_usb_panel_ports($hosts, $observed)
 function icct_nms_config_ports_view($host)
 {
     $view = icct_backend_ports_view($host);
+    $view['interface_count'] = count($view['ports']);
     $hardware = icct_nms_hardware_view($host);
     $view['usb_hosts'] = array_values(array_filter($hardware['ports'],
         static fn ($row) => ($row['type'] ?? '') === 'USB host'));

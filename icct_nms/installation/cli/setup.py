@@ -337,6 +337,29 @@ def configure_selinux_writable(paths):
         run([restorecon, "-RF", path])
 
 
+def writable_paths(root):
+    """Resolve the packaged Cacti resource link and validate plugin-owned children."""
+    resource = root / "resource"
+    if not resource.is_dir():
+        raise ValueError("Cacti resource directory is missing or its symlink is broken: " + str(resource))
+    destinations = [
+        (PLUGIN.resolve(strict=True), Path("protocols/snmp/mibs/storage")),
+        (PLUGIN.resolve(strict=True), Path("shared/assets/images/device-types/uploads")),
+        (resource.resolve(strict=True), Path("snmp_queries/icct_nms")),
+    ]
+    writable = []
+    for anchor, relative in destinations:
+        path = anchor
+        for part in relative.parts:
+            path = path / part
+            if path.is_symlink():
+                raise ValueError("Refusing writable directory symlink: " + str(path))
+            if path.exists() and not path.is_dir():
+                raise ValueError("Writable directory path is not a directory: " + str(path))
+        writable.append(path)
+    return writable
+
+
 def services(root, user, group):
     php = shutil.which("php")
     if not php or not shutil.which("systemctl"):
@@ -345,14 +368,8 @@ def services(root, user, group):
     group_id = grp.getgrnam(group).gr_gid
     if account.pw_uid == 0:
         raise ValueError("Worker account must not be root.")
-    writable = [
-        PLUGIN / "protocols/snmp/mibs/storage",
-        PLUGIN / "shared/assets/images/device-types/uploads",
-        root / "resource/snmp_queries/icct_nms",
-    ]
+    writable = writable_paths(root)
     for path in writable:
-        if any(parent.is_symlink() for parent in [path, *path.parents]):
-            raise ValueError("Refusing writable directory symlink.")
         path.mkdir(parents=True, exist_ok=True)
         os.chown(path, account.pw_uid, group_id)
         path.chmod(0o750)

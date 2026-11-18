@@ -18,6 +18,8 @@
         message = document.querySelector('#rackViewMessage'),
         actions = document.querySelector('#rackEditActions');
     const saveButton = document.querySelector('#rackSaveDraft'),
+        cancelButton = document.querySelector('#rackCancelDraft'),
+        editButton = document.querySelector('#rackViewEdit'),
         dialog = document.querySelector('#rackDraftDialog');
     const el = (tag, cls, text) => {
         const n = document.createElement(tag);
@@ -146,12 +148,13 @@
         pool.hidden = !editing;
         actions.hidden = !editing;
         saveButton.disabled = busy || !(changes.size || reservedChanges.size);
-        document.querySelector('#rackViewEdit').hidden = !data.management;
-        document.querySelector('#rackViewEdit').setAttribute('aria-pressed', String(editing));
+        cancelButton.disabled = busy;
+        editButton.hidden = !data.management;
+        editButton.setAttribute('aria-pressed', String(editing));
         const list = document.querySelector('#rackDeviceList');
         list.replaceChildren();
         if (editing) list.append(reservationCard('reserve:new'));
-        devices.forEach((d) => list.append(card(d)));
+        devices.filter((device) => Number(device.rack_id) === 0).forEach((device) => list.append(card(device)));
         droppableOncePool();
         if (!racks.length)
             cabinets.append(
@@ -383,6 +386,7 @@
             changes.clear();
             reservedChanges.clear();
             message.textContent = '';
+            icctToast({ title: 'Saved', text: 'Rack changes saved successfully.' });
             return true;
         } catch (error) {
             message.textContent = error.message;
@@ -424,7 +428,7 @@
         .forEach((button) =>
             button.addEventListener('click', () => dialog.close(button.dataset.rackChoice)),
         );
-    document.querySelector('#rackViewEdit').addEventListener('click', () => {
+    editButton.addEventListener('click', () => {
         if (editing)
             leave(() => {
                 editing = false;
@@ -436,6 +440,12 @@
         }
     });
     saveButton.addEventListener('click', saveDraft);
+    cancelButton.addEventListener('click', () => {
+        if (busy || !editing) return;
+        editing = false;
+        discard();
+        editButton.focus();
+    });
     document.addEventListener(
         'click',
         (event) => {

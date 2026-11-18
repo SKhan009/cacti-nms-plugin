@@ -47,6 +47,10 @@ function icct_backend_diag_arp_interfaces()
     $result = icct_backend_diag_run_command([$ip, '-j', '-d', 'link', 'show'], 5);
     if ($result['exit'] !== 0) return [];
     $links = json_decode($result['stdout'], true);
+    // DMI is optional on the collector, including on some ARM systems.
+    $productPath = '/sys/class/dmi/id/product_name';
+    $product = is_readable($productPath) ? (file_get_contents($productPath) ?: '') : '';
+    $virtualMachine = preg_match('/KVM|VirtualBox|VMware|Virtual Machine|QEMU|Parallels/i', $product);
     $out = [];
     foreach (is_array($links) ? $links : [] as $link) {
         $name = $link['ifname'] ?? '';
@@ -59,9 +63,13 @@ function icct_backend_diag_arp_interfaces()
         $link['usb'] = strpos($device, '/usb') !== false;
         $link['vm_nic'] = in_array($driver, ['virtio_net','vmxnet3','hv_netvsc','xen_netfront'], true) || strpos($device, '/virtio') !== false;
         // Emulated PCI NICs in a VM also use physical-looking drivers.
-        $product = @file_get_contents('/sys/class/dmi/id/product_name') ?: '';
-        if ($device !== '' && preg_match('/KVM|VirtualBox|VMware|Virtual Machine|QEMU|Parallels/i', $product)) $link['vm_nic'] = true;
-        $link['tap'] = ((intval(trim(@file_get_contents($base . '/tun_flags') ?: '0'), 0) & 2) !== 0);
+        if ($device !== '' && $virtualMachine) $link['vm_nic'] = true;
+        // Only TUN/TAP interfaces can expose this optional Linux sysfs attribute.
+        $tunFlagsPath = $base . '/tun_flags';
+        if (($link['linkinfo']['info_kind'] ?? '') === 'tun' && is_readable($tunFlagsPath)) {
+            $tunFlags = file_get_contents($tunFlagsPath) ?: '0';
+            $link['tap'] = (intval(trim($tunFlags), 0) & 2) !== 0;
+        }
         $type = icct_backend_diag_arp_classify($link);
         if ($type) $out[$name] = $type;
     }

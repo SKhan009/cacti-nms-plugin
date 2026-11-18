@@ -157,6 +157,8 @@ foreach (['cdp', 'lldp', 'snmp', 'ssh', 'serial', 'syslog', 'netflow', 'ntp'] as
             class="add-protocol"
             id="add-protocol"
             type="button"
+            aria-haspopup="dialog"
+            aria-controls="protocol-picker"
             aria-expanded="false"> + Add Protocol </button>
         <form
             method="post"
@@ -176,10 +178,10 @@ foreach (['cdp', 'lldp', 'snmp', 'ssh', 'serial', 'syslog', 'netflow', 'ntp'] as
                 name="assignment_revision"
                 value="<?= (int) ($serial['revision'] ?? 0) ?>" />
         </form>
-        <div
+        <dialog
             id="protocol-picker"
             class="protocol-picker"
-            hidden>
+            aria-label="Select protocols">
             <div id="protocol-options">
                 <?php foreach (
                     [
@@ -197,6 +199,7 @@ foreach (['cdp', 'lldp', 'snmp', 'ssh', 'serial', 'syslog', 'netflow', 'ntp'] as
                     <label class="check-row">
                         <input
                             type="checkbox"
+                            <?= $key === 'cdp' ? 'autofocus' : '' ?>
                             data-protocol-target="<?= $key ?>" />
                         <span><?= $label ?></span>
                     </label>
@@ -206,7 +209,7 @@ foreach (['cdp', 'lldp', 'snmp', 'ssh', 'serial', 'syslog', 'netflow', 'ntp'] as
                 class="button"
                 type="button"
                 id="confirm-protocols">Add</button>
-        </div>
+        </dialog>
         <?php
         $savedMethods = $discovery ? icct_backend_nd_host_methods($discovery, false) : [];
 foreach (
@@ -258,7 +261,13 @@ foreach (
                             name="discovery_protocol"
                             value="<?= $protocolKey ?>" />
                         <div class="protocol-grid cols-4">
-                            <?php icct_nms_select('Collection Mode', 'mode', ['snmp' => 'SNMP'], 'snmp', 'disabled');
+                            <?php icct_nms_input(
+                                'Collection Mode',
+                                'mode',
+                                $GLOBALS['input_types'][DATA_INPUT_TYPE_SNMP_QUERY],
+                                'text',
+                                'readonly disabled',
+                            );
     foreach (
         [
             'interval_seconds' => 'Collection Interval (Sec)',
@@ -405,7 +414,7 @@ $readonly = false; ?>
                         <?php require __DIR__ . '/discovery_observations.php'; ?>
                     <?php endif; ?>
                     <div class="protocol-actions">
-                        <button class="button primary"><?= $presetMode ? 'Save discovery defaults' : 'Save' ?></button>
+                        <button class="button primary">Save</button>
                     </div>
                 </form>
             </div>
@@ -579,11 +588,31 @@ $ntpAssignment = $presetMode ? [] : icct_nms_ntp_assignment($id);
 $ntpSaved = (bool) $ntpAssignment;
 $ntpPreset = ($presetMode ? $protocolPresets : icct_nms_protocol_presets())['ntp'] ?? [];
 $ntp = array_replace($ntpPreset, $ntpAssignment);
+$ntpLimitMultiple = [];
+if ($ntpSaved) {
+    $ntpRules = array_filter(icct_nms_fault_rules($id), static fn($rule) => ($rule['source'] ?? '') === 'ntp');
+    foreach ([
+        'maximum_offset_ms' => 'absolute_offset_ms',
+        'maximum_delay_ms' => 'peer_delay_ms',
+        'alarm_unsynchronized' => 'synchronized',
+        'expected_source' => 'source_matches',
+    ] as $field => $parameter) {
+        $matches = array_values(array_filter($ntpRules, static fn($rule) => ($rule['parameter'] ?? '') === $parameter));
+        $ntp[$field] = '';
+        $ntpLimitMultiple[$field] = count($matches) > 1;
+        if (count($matches) === 1) {
+            $rule = $matches[0];
+            $ntp[$field] = $field === 'alarm_unsynchronized'
+                ? (!empty($rule['enabled']) ? '1' : '0')
+                : ($field === 'expected_source' ? $rule['expected_source'] ?? '' : $rule['maximum'] ?? '');
+        }
+    }
+}
 if ($failedProtocol === 'ntp') {
-    $ntp = array_intersect_key(
+    $ntp = array_replace($ntp, array_intersect_key(
         array_filter(icct_nms_ntp_form_values($_POST), 'is_scalar'),
         array_flip(array_merge(icct_nms_ntp_fields(), icct_nms_ntp_optional_fields())),
-    );
+    ));
 }
 ?>
         <details class="protocol-item" id="protocol-ntp" data-saved="<?= $ntpSaved ? '1' : '0' ?>"

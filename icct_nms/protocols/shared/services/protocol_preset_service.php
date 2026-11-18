@@ -156,6 +156,9 @@ function icct_nms_protocol_preset_validate($protocol, $input)
     if ($protocol === 'syslog') {
         $input += ['transport' => 'both'];
     }
+    if ($protocol === 'netflow') {
+        $input += ['no_flow_timeout' => 0];
+    }
     $out = [];
     foreach (icct_nms_protocol_preset_fields($protocol) as $field) {
         if (!isset($input[$field]) && $field !== 'monitoring') {

@@ -46,10 +46,7 @@ REMOVAL_IMPACTS = {
     "telnet": "Telnet client commands",
 }
 NATIVE_EXECUTABLES = {"pathchar": "sbin/pchar", "guacamole-strict": "sbin/guacd"}
-NATIVE_ALTERNATIVES = {
-    "pathchar": ["/usr/local/sbin/pchar", "/usr/local/bin/pchar", "/usr/bin/pchar"],
-    "guacamole-strict": ["/opt/nms-guacamole/1.6.0/sbin/guacd"],
-}
+
 
 
 def write_json(path, data, mode=0o600):
@@ -87,13 +84,72 @@ def native_media(media, target, component):
     return data
 
 
+def require_private_media(media):
+    """The privileged runner must only consume bundled media controlled by root."""
+    for path in [*media.parents, media, *media.rglob("*")]:
+        info = path.lstat()
+        if (info.st_uid != 0 or info.st_mode & 0o022
+                or not (stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode))):
+            raise ValueError("Offline media must be on a root-owned path without symlinks or non-root writes: " + str(path))
+    if media.stat().st_mode & 0o077:
+        raise ValueError("Offline media directory must be private to root: " + str(media))
+
+
+def strict_runtime_verified(binary):
+    """Check the receipt adjacent to the service-selected daemon, never another installation."""
+    try:
+        prefix = Path(binary).resolve(strict=True).parents[1]
+        receipt = prefix / "icct-verified.json"
+        info = receipt.lstat()
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
+            return False
+        data = json.loads(receipt.read_text())
+        profile = native.PROFILES["guacamole-strict"]
+        if (data.get("component") != "guacamole-strict"
+                or data.get("source_sha256") != profile["sha256"]
+                or data.get("patch_sha256") != profile["patch_sha256"]
+                or not {"sbin/guacd", "lib/libguac-client-ssh.so"}.issubset(data.get("files", {}))
+                or (prefix / "sbin/guacd").resolve(strict=True) != Path(binary).resolve(strict=True)):
+            return False
+        for name, details in data["files"].items():
+            relative = Path(name)
+            if relative.is_absolute() or ".." in relative.parts or "\\" in name:
+                return False
+            path = prefix / relative
+            info = path.lstat()
+            if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022
+                    or native.digest(path) != details["sha256"]):
+                return False
+        return True
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
+
+
 def external_installations(target, installed):
     result = {}
-    for component, executable in NATIVE_EXECUTABLES.items():
+    for component in NATIVE_EXECUTABLES:
         packages = component_packages(target, component)
-        prefix = Path(native.PROFILES[component]["prefix"])
-        paths = [prefix / executable, *map(Path, NATIVE_ALTERNATIVES[component])]
-        if packages and packages[0] not in installed and any(path.is_file() for path in paths):
+        if not packages or packages[0] in installed:
+            continue
+        spec = MANIFEST["optional_components"][component]
+        available = False
+        if "runtime_service" in spec:
+            systemctl = shutil.which("systemctl")
+            if systemctl:
+                try:
+                    output = subprocess.check_output(
+                        [systemctl, "show", "--property=ExecStart", "--value", "--", spec["runtime_service"]],
+                        text=True, stderr=subprocess.DEVNULL, timeout=2,
+                    )
+                    match = re.match(r"^\{ path=([^;]+) ;", output.strip())
+                    available = bool(match and strict_runtime_verified(match.group(1).strip()))
+                except (OSError, subprocess.SubprocessError):
+                    available = False
+        elif "runtime_feature" in spec and "runtime_binary" in spec:
+            names = MANIFEST["features"][spec["runtime_feature"]]["binaries"][spec["runtime_binary"]]
+            # Discovery uses this process's executable search path. No alternate installation directories.
+            available = any(shutil.which(name) for name in names if not Path(name).is_absolute())
+        if available:
             result[packages[0]] = "Installed outside RPM"
     return result
 
@@ -105,36 +161,46 @@ def provision(args, target):
     gid = grp.getgrnam(args.web_group).gr_gid if args.web_group else account.pw_gid
     if uid == 0:
         raise ValueError("Use the existing unprivileged PHP service account.")
-    source = Path(args.media).resolve(strict=True)
-
-    media = Path(tempfile.mkdtemp(prefix="media-", dir=STATE))
+    bundled = root / "plugins/icct_nms/installation/bundles/media"
+    source = Path(args.media).absolute() if args.media else bundled
+    use_bundled = source == bundled
+    if use_bundled:
+        require_private_media(bundled)
+        media = bundled
+    else:
+        source = source.resolve(strict=True)
+        media = Path(tempfile.mkdtemp(prefix="media-", dir=STATE))
     try:
         for profile in profiles(target):
             print("Checking offline profile " + profile, flush=True)
             files = verified_media(source, target, profile)
-            destination = bundle_path(media, profile)
-            destination.mkdir(parents=True)
-            shutil.copyfile(bundle_path(source, profile) / "bundle.json", destination / "bundle.json")
-            for file in files:
-                shutil.copyfile(file, destination / file.name)
-            # Verify the private copy before it can become a package source.
-            verified_media(media, target, profile)
+            if not use_bundled:
+                destination = bundle_path(media, profile)
+                destination.mkdir(parents=True)
+                shutil.copyfile(bundle_path(source, profile) / "bundle.json", destination / "bundle.json")
+                for file in files:
+                    shutil.copyfile(file, destination / file.name)
+                verified_media(media, target, profile)
         for component in NATIVE_EXECUTABLES:
             original = source / "native" / component
             if original.exists():
                 data = native_media(source, target, component)
-                destination = media / "native" / component
-                for name in ["native.json", *("payload/" + name for name in data["files"])]:
-                    output = destination / name
-                    output.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copyfile(original / name, output)
-                native_media(media, target, component)
+                if not use_bundled:
+                    destination = media / "native" / component
+                    for name in ["native.json", *("payload/" + name for name in data["files"])]:
+                        output = destination / name
+                        output.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copyfile(original / name, output)
+                    native_media(media, target, component)
         prerequisites = []
         if not shutil.which("setfacl"):
             prerequisites.append("acl")
         if shutil.which("getenforce") and not shutil.which("semanage"):
             prerequisites.append("policycoreutils-python-utils")
         if prerequisites:
+            if args.no_packages:
+                raise ValueError("Install the runner prerequisites from approved RHEL media first: " +
+                                 ", ".join(prerequisites))
             files = verified_media(media, target, "base")
             apply_transaction("install", prerequisites, files, target, lambda *lines: print(*lines))
 
@@ -177,7 +243,8 @@ def provision(args, target):
                    "[Install]\nWantedBy=timers.target\n")
         write_json(STATE / "config.json", {"root": str(root), "uid": uid, "gid": gid, "media": str(media)})
     except BaseException:
-        shutil.rmtree(media)
+        if not use_bundled:
+            shutil.rmtree(media)
         raise
 
     for old in STATE.glob("media-*"):
@@ -457,6 +524,8 @@ def work(target):
         write_json(path, dict(state, root=config["root"], time=int(time.time()), job=job), 0o644)
 
     def refresh():
+        state["target"] = target
+        state["protected"] = sorted(protected)
         actual = installed_packages(names)
         state["installed"] = actual
         state["versions"] = package_versions(media, target, grouped, actual)
@@ -611,10 +680,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="action", required=True)
     install = commands.add_parser("provision")
-    install.add_argument("--media", required=True)
+    install.add_argument("--media", help="Legacy external media directory. Defaults to the bundled plugin media.")
     install.add_argument("--cacti-root", required=True)
     install.add_argument("--web-user", default="apache")
     install.add_argument("--web-group")
+    install.add_argument("--no-packages", action="store_true", help="Require runner prerequisites to be installed already.")
     commands.add_parser("work")
     args = parser.parse_args()
     if os.geteuid() != 0:

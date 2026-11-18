@@ -205,7 +205,20 @@ function icct_nms_netflow_save_rules($id, $input)
     $rules = icct_nms_netflow_validate_rules(
         json_decode((string) ($input['netflow_rules'] ?? ''), true, 16, JSON_THROW_ON_ERROR),
     );
-    return icct_nms_netflow_rule_lock($id, function () use ($id, $input, $rules) {
+    $thresholds = [];
+    foreach (icct_nms_netflow_alarm_ranges() as $field => [$min, $max]) {
+        if (!array_key_exists($field, $input)) {
+            continue;
+        }
+        $threshold = filter_var($input[$field], FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => $min, 'max_range' => $max],
+        ]);
+        if ($threshold === false) {
+            throw new InvalidArgumentException("NetFlow $field must be between $min and $max.");
+        }
+        $thresholds[$field] = $threshold;
+    }
+    return icct_nms_netflow_rule_lock($id, function () use ($id, $input, $rules, $thresholds) {
         $old = icct_nms_netflow_rules($id);
         if (($input['netflow_revision'] ?? '') !== icct_nms_netflow_rule_revision($old)) {
             throw new RuntimeException(
@@ -215,6 +228,18 @@ function icct_nms_netflow_save_rules($id, $input)
         $enabled = array_column(array_filter($rules, static fn($rule) => $rule['enabled']), 'id');
         icct_backend_category_execute('START TRANSACTION');
         try {
+            if ($thresholds) {
+                $assignment = icct_nms_netflow_assignment($id);
+                if (!$assignment) {
+                    throw new RuntimeException('Configure the NetFlow exporter before saving its alarm thresholds.');
+                }
+                $thresholds += array_intersect_key($assignment, icct_nms_netflow_alarm_ranges());
+                icct_backend_category_execute(
+                    'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ' .
+                        'ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+                    ['netflow_alarm_thresholds_' . (int) $id, json_encode($thresholds, JSON_THROW_ON_ERROR)],
+                );
+            }
             icct_backend_category_execute(
                 'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ' .
                     'ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',

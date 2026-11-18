@@ -93,8 +93,26 @@ function icct_backend_ports_ticks($value)
 function icct_backend_ports_parse($columns)
 {
     $ports = [];
-    foreach ($columns['index'] ?? [] as $index => $value) {
-        if (!ctype_digit((string) $index) || (int) $index !== icct_backend_ports_integer($value)) {
+    $reported = $columns['index'] ?? [];
+    // IF-MIB and IF-X-MIB columns use the same ifIndex as their row suffix.
+    // Restricted SNMP views can expose these columns while hiding ifIndex itself.
+    foreach (['name', 'description', 'admin', 'oper', 'type'] as $field) {
+        foreach ($columns[$field] ?? [] as $index => $value) {
+            if (isset($reported[$index])) {
+                continue;
+            }
+            $value = trim((string) $value, " \t\r\n\"");
+            if (in_array($field, ['name', 'description'], true)
+                ? $value !== '' && !preg_match('/^(?:no such |end of mib|endofmibview)/i', $value)
+                : icct_backend_ports_integer($value) > 0
+            ) {
+                $reported[$index] = (string) $index;
+            }
+        }
+    }
+    foreach ($reported as $index => $value) {
+        if (!preg_match('/^[1-9][0-9]{0,9}$/D', (string) $index) ||
+            (int) $index > 2147483647 || (int) $index !== icct_backend_ports_integer($value)) {
             continue;
         }
         $port = ['index' => (int) $index];
@@ -336,12 +354,12 @@ function icct_backend_collect_ports()
                 [
                     'index' => '1.3.6.1.2.1.2.2.1.1',
                     'description' => '1.3.6.1.2.1.2.2.1.2',
+                    'name' => '1.3.6.1.2.1.31.1.1.1.1',
+                    'admin' => '1.3.6.1.2.1.2.2.1.7',
+                    'oper' => '1.3.6.1.2.1.2.2.1.8',
                     'type' => '1.3.6.1.2.1.2.2.1.3',
                     'speed_bps' => '1.3.6.1.2.1.2.2.1.5',
                     'high_speed_mbps' => '1.3.6.1.2.1.31.1.1.1.15',
-                    'admin' => '1.3.6.1.2.1.2.2.1.7',
-                    'oper' => '1.3.6.1.2.1.2.2.1.8',
-                    'name' => '1.3.6.1.2.1.31.1.1.1.1',
                     'connector' => '1.3.6.1.2.1.31.1.1.1.17',
                     'alias' => '1.3.6.1.2.1.31.1.1.1.18',
                     'last_change' => '1.3.6.1.2.1.2.2.1.9',
@@ -376,26 +394,33 @@ function icct_backend_collect_ports()
                         $columns[$field][substr($returned, strlen($prefix))] = $row['value'] ?? '';
                     }
                 }
-                if ($field === 'index' && empty($columns['index'])) {
-                    throw new RuntimeException(
-                        'No interfaces reported. Check saved SNMP settings and IF-MIB access.',
-                    );
+                if ($field === 'type' && !icct_backend_ports_parse($columns)) {
+                    break;
                 }
             }
             $snapshot['uptime_ticks'] = icct_backend_ports_ticks($columns['uptime']['0'] ?? '');
             $snapshot['ports'] = icct_backend_ports_parse($columns);
-            if (!$snapshot['ports']) {
-                throw new RuntimeException('The device did not report valid interface indexes.');
-            }
         } catch (Throwable $error) {
             $snapshot['error'] =
                 'Interface discovery failed. Check saved SNMP settings and device IF-MIB access.';
         }
         $snapshot['time'] = time();
+        if (!$snapshot['ports']) {
+            $snapshot['error'] = $snapshot['error'] ?:
+                'The collector received no readable IF-MIB or IF-X-MIB rows. Check the saved SNMP connection and access to interface tables.';
+            $previous = json_decode((string) db_fetch_cell_prepared(
+                'SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
+                ['ports_snapshot_' . $host['id']],
+            ), true);
+            if (($previous['signature'] ?? '') === $snapshot['signature'] && !empty($previous['ports'])) {
+                // Preserve the last observed identities without presenting them as live readings.
+                $snapshot = array_replace($previous, ['error' => $snapshot['error']]);
+            }
+        }
         icct_backend_category_execute(
             'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
                 'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
-            ['ports_snapshot_' . $host['id'], json_encode($snapshot, JSON_THROW_ON_ERROR)],
+            ['ports_snapshot_' . $host['id'], json_encode($snapshot, JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE)],
         );
     }
 }
@@ -590,7 +615,9 @@ function icct_backend_ports_view($host)
             ? 'Port status from the latest collector observation.'
             : ($same && !empty($snapshot['error'])
                 ? $snapshot['error']
-                : 'Waiting for a current observation. Save SNMP settings; the assigned Cacti poller discovers interfaces automatically.'),
+                : (!$permitted
+                    ? 'Enable SNMP and save valid connection settings to discover interfaces.'
+                    : 'Waiting for the assigned Cacti poller to discover interfaces.')),
     ];
 }
 

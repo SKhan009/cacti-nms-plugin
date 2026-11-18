@@ -42,18 +42,7 @@ try {
     $packagesTab = ($_GET['tab'] ?? '') === 'packages';
     if ($packagesTab) {
         $manifest = icct_nms_installation_manifest();
-        $packages = [
-            'base' => ['label' => 'Core and collector tools', 'packages' => $manifest['packages']],
-        ];
-        foreach ($manifest['rhel_package_groups'] ?? [] as $id => $group) {
-            $packages[$id] = [
-                'label' => $group['label'],
-                'packages' => ['rhel' => $group['packages']],
-                'detail' => $group['detail'],
-                'version_profile' => 'base',
-            ];
-        }
-        $packages += $manifest['optional_components'];
+        $packages = icct_nms_installation_package_catalog($manifest);
         $status = icct_nms_package_status($config['base_path']);
     } else {
         $checks = icct_nms_installation_checks();

@@ -1,20 +1,20 @@
 # MIB Simulator
 
-Run these commands as root on the RHEL test collector from this directory.
-The service requires Python 3 and an unprivileged `snmpsim` system account.
-Substitute the actual Cacti PHP account for `apache`.
+If the Simulator tab says it is not set up, run the bundled installer from
+this directory on the RHEL test collector. It creates the unprivileged
+`snmpsim` account if needed, sets state directory access for Cacti, and
+enables and starts the local systemd service. It requires Python 3 and,
+when SELinux is enabled, `policycoreutils-python-utils`. Use matching
+offline RHEL media if these prerequisites are missing.
 
 ```sh
-install -d -m 2750 -o apache -g snmpsim /var/lib/icct-nms-mib-simulator
-install -d -m 0755 /usr/local/libexec
-install -m 0644 serve.py /usr/local/libexec/icct-nms-mib-simulator.py
-install -m 0644 icct-nms-mib-simulator.service /etc/systemd/system/
-semanage fcontext -a -t httpd_sys_rw_content_t '/var/lib/icct-nms-mib-simulator(/.*)?'
-restorecon -RF /var/lib/icct-nms-mib-simulator
-systemctl daemon-reload
-systemctl enable icct-nms-mib-simulator.service
-systemctl restart icct-nms-mib-simulator.service
+sudo bash install_rhel.sh apache
 ```
+
+Replace `apache` with the account that serves Cacti PHP requests. Reload the
+Simulator tab after setup. If the service fails to start or respond, check
+`systemctl status icct-nms-mib-simulator.service` and
+`sudo journalctl -u icct-nms-mib-simulator.service -n 30 --no-pager`.
 
 Under **MIB Repository → Simulator**, load a `.mib` file, select the OIDs and
 click **Start**. The tab holds the parsed selection in the current browser

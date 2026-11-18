@@ -733,6 +733,28 @@ function icct_backend_syslog_import_spool_once(
     }
 }
 
+/** Retain the latest ingestion problem across idle batches for operator diagnosis. */
+function icct_backend_syslog_worker_diagnostics(array $previous, ?array $result): array
+{
+    $diagnostics = array_intersect_key($previous, array_flip([
+        'last_drop_reasons', 'last_drop_at', 'last_error', 'last_error_at',
+    ]));
+    if (!empty($result['drop_reasons'])) {
+        $diagnostics['last_drop_reasons'] = $result['drop_reasons'];
+        $diagnostics['last_drop_at'] = date('Y-m-d H:i:s');
+    }
+    if (!empty($result['error_messages'])) {
+        $diagnostics['last_error'] = implode('; ', $result['error_messages']);
+        $diagnostics['last_error_at'] = date('Y-m-d H:i:s');
+    }
+    return $diagnostics + [
+        'last_drop_reasons' => [],
+        'last_drop_at' => null,
+        'last_error' => '',
+        'last_error_at' => null,
+    ];
+}
+
 function icct_backend_syslog_heartbeat($payload, $key = 'syslog_worker_status')
 {
     icct_backend_syslog_execute(

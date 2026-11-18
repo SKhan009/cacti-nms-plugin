@@ -88,7 +88,7 @@ $trapHelp = static function (string $headingHelpText): void {
         <div class="protocol-actions">
             <button
                 class="button primary"
-                type="submit"><?= $presetMode ? 'Save notification defaults' : 'Save notifications' ?></button>
+                type="submit">Save</button>
         </div>
     </form>
 </section>

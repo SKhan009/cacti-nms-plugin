@@ -7,9 +7,25 @@
     hidden>
     <button
         type="button"
-        class="button primary"
+        class="rack-icon"
+        id="rackCancelDraft"
+        aria-label="Cancel rack editing"
+        title="Cancel rack editing">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="m6 6 12 12M18 6 6 18" />
+        </svg>
+    </button>
+    <button
+        type="button"
+        class="rack-icon"
         id="rackSaveDraft"
-        disabled>Save</button>
+        aria-label="Save rack changes"
+        title="Save rack changes"
+        disabled>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M4 4h13l3 3v13H4zM8 4v6h8V4M8 20v-6h8v6" />
+        </svg>
+    </button>
 </div>
 <dialog
     id="rackDraftDialog"
