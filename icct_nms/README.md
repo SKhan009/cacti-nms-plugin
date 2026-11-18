@@ -94,7 +94,7 @@ Upgrade through Cacti Plugin Management after copying the plugin so the additive
 3. Grant the **View ICCT NMS Device Mgmt** realm. Cacti's existing device-management permission and device ACLs remain authoritative.
 4. Open **ICCT NMS → Device Mgmt**. On the configured VM: `http://127.0.0.1:8080/cacti/plugins/icct_nms/inventory/controllers/inventory.php`.
 
-Lifecycle setup creates the 40 owned tables from `shared/database/schema.sql`. Normal requests never create, repair or populate tables. Uninstall retains ICCT settings and all Cacti devices for a later reinstall. New installations contain no sample equipment. Native numeric SNMP polling, devices, sites, collectors, templates, graphs and RRD data stay under Cacti's ownership.
+Lifecycle setup creates the plugin-owned tables from `shared/database/schema.sql`. Normal requests never create, repair or populate tables. Uninstall retains ICCT settings and all Cacti devices for a later reinstall. New installations contain no sample equipment. Native numeric SNMP polling, devices, sites, collectors, templates, graphs and RRD data stay under Cacti's ownership.
 
 ## Files
 
@@ -108,7 +108,7 @@ Lifecycle setup creates the 40 owned tables from `shared/database/schema.sql`. N
 - `shared/{services,templates,css,js}/`: Cacti integration, page shell, and cross-feature presentation.
 - `shared/assets/`: fonts, images, map data, MIB assets, and shared third-party browser libraries.
 - `setup.php` is the only root PHP file. Navigation, forms, AJAX and services call feature paths directly. Cacti access realms retain their native filename identifiers.
-- `shared/tests/`: regression tests; `shared/database/`: plugin schema; `shared/deployment/`: service installation files.
+- `shared/database/`: plugin schema; `shared/deployment/`: service installation files.
 - `protocols/snmp/mibs/storage/`: protected temporary MIB working files.
 
 Source uses four-space indentation, LF endings and a final newline. Controllers handle requests, services validate and persist, and templates render. Comments explain credential preservation, device permissions, preset isolation and collector boundaries. Dependencies on Cacti core APIs are explicit.
@@ -225,8 +225,6 @@ Map View draws the configured Cacti pollers at their assigned native sites. Coun
 
 CPU sources are explicit cpu_percent / 5min_cpu or 100 − ssCpuIdle. Memory is memory_percent or (mem_total − mem_free) / mem_total. Reads use only graphs the account can access, fresh AVERAGE data before CDEF/VDEF transformations. Arbitrary graph names, load averages and unknown units are not treated as percentage measurements. Ping output is parsed on the server, checked against its current device/profile/collector signature and retained privately by request owner; no raw output or credentials are sent to the map.
 
-Tests: `plugins/icct_nms/shared/tests/map_service_test.php` covers authorized grouping, hidden devices, unlocated records, counts, coordinate bounds, safe WMS parameters and valid percentage conversion. Browser checks covered the live GeoServer image, Bengaluru and Delhi popups, Fit sites, India overview and error-free console. A restricted interactive account was unavailable; device filtering uses the shared native ACL and is covered by the regression fixture.
-
 Dashboard views use a Topology / Image View / Rack View / Map View switcher. Topology shows authorized connected devices; Image View uses uploaded type images without an icon fallback; Rack View shows saved placements. Map View and Birds Eye View are scoped to LNMS pollers. Map credits remain available through the information control.
 
 
@@ -264,8 +262,6 @@ Upload first reads the file into a temporary session draft. The × button, Cance
 Saved MIB configurations can be edited in place. Save updates the current data source, graph, or device template while retaining its native ID. Linked graph items, templated data source settings, poller caches, and RRD bounds/types are updated without recreating data sources or discarding history. The graph editor’s Save control also persists existing-template changes. Duplicate names and stale edit sessions are rejected. Existing collection methods and graph source groups are retained; changing them requires a new template. A polling profile change on an instantiated data source requires RRD migration and is rejected.
 
 Limits: 8 files, 1 MiB per file, 4 MiB per upload, 512 object definitions and 512 selected metrics. Missing dependencies and duplicate template names are reported before persistence. IF-MIB interface indexes must be provided by the reviewer; this feature does not enumerate live tables; graph threshold lines are separate from alarm/severity rules. This workflow follows BLR pages 4 and 9 requirements for MIB parameter selection and device-type polling/graph templates, using the existing NMS parser/template workflow as its reference.
-
-Native integration QA: `shared/tests/mib_repository_integration_test.php` runs from the installed RHEL plugin using connection-local temporary tables, exercises IF-MIB parsing, all template types and option combinations, metadata/file retention, template linkage, name preservation, indexed-OID validation, expired drafts and replay rejection. It creates no persistent QA templates or hosts. Run with PHP `disable_functions=proc_open,exec,shell_exec` to verify parser independence. `ICCT_QA_RRD=1` additionally reads a local SNMP fixture and creates/updates a native RRD in an isolated temporary folder. `shared/tests/mib_offline_parser_test.php` exercises SMIv1, imported textual conventions, quoted comments, invalid definitions and bundled modules without Cacti or external executables.
 
 Topology cards display the saved device short name, or a generated type code when blank (CORE SW for the named core switch; CSW/SW/SRV/RTR/SNS prefixes for applicable types). Existing manual codes remain intact. Icons are centered above the code and the full device name remains available in the tooltip. The named core switch is selected before a generic switch fallback and is fixed at the canvas center: pointer/keyboard editing excludes it, old saved core coordinates are ignored, and the server normalizes its stored coordinates on layout saves. Other cards retain editable positions.
 
@@ -325,11 +321,11 @@ The base schema contract remains 1.2.0; this release adds three plugin-owned Sys
 
 Page implementations live in their feature's `controllers/` folder. Diagnostic workers live in `inventory/diagnostics/cli/`. HTTP navigation, forms and AJAX use those feature controller paths directly. `setup.php` and `INFO` are Cacti plugin metadata and remain at the root.
 
-Feature folders own their CSS, JavaScript, templates, and services. Cross-feature code belongs in `shared/`. `shared/assets/` contains fonts, icons, MIBs, maps, and third-party browser libraries. `protocols/snmp/mibs/storage/` contains protected MIB working files; `shared/database/` contains the schema. All general service installation files belong in `shared/deployment/`. Tests remain in `shared/tests/`.
+Feature folders own their CSS, JavaScript, templates, and services. Cross-feature code belongs in `shared/`. `shared/assets/` contains fonts, icons, MIBs, maps, and third-party browser libraries. `protocols/snmp/mibs/storage/` contains protected MIB working files; `shared/database/` contains the schema. All general service installation files belong in `shared/deployment/`.
 
 ## Folder structure
 
-The root contains only `setup.php`, `INFO`, `README.md` and the feature folders: `protocols/`, `dashboard/`, `inventory/`, `graphs/`, `ports/`, `fcaps/`, `presets/`, `configuration/` and `shared/`. Feature controllers are the HTTP routes; CLI workers live with their feature. Shared assets, database schema, deployment files and regression tests live under `shared/`.
+The root contains only `setup.php`, `INFO`, `README.md` and the feature folders: `protocols/`, `dashboard/`, `inventory/`, `graphs/`, `ports/`, `fcaps/`, `presets/`, `configuration/` and `shared/`. Feature controllers are the HTTP routes; CLI workers live with their feature. Shared assets, database schema, and deployment files live under `shared/`.
 
 The old root PHP wrappers have been removed. The root `.htaccess` internally maps existing page URLs to feature controllers, preserving query strings, fragments and POST bodies. On Apache installations with `AllowOverride None`, install `shared/deployment/apache-routes.conf` in Apache’s `conf.d` directory (adjust its plugin path if needed), validate with `httpd -t`, and reload Apache. The live RHEL instance uses this configuration.
 

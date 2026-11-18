@@ -12,7 +12,6 @@ endif; ?>
     return;
 endif; ?>
 <?php if ($mode === 'list'): ?>
-    <?php $simulatorTab = $simulatorTab ?? false; ?>
     <div class="titlebar mib-browser-titlebar">
         <div>
             <nav class="breadcrumb" aria-label="Breadcrumb">
@@ -31,7 +30,7 @@ endif; ?>
                     class="button"
                     href="protocols/snmp/mibs/controllers/mib_repository.php">Back to Repository</a>
             <?php endif;
-    if ($management && !$simulatorTab): ?>
+    if ($management): ?>
                 <button
                     class="button primary"
                     type="button"
@@ -40,12 +39,6 @@ endif; ?>
     ?>
         </div>
     </div>
-    <nav class="mib-repo-tabs" aria-label="MIB Repository">
-        <a href="protocols/snmp/mibs/controllers/mib_repository.php"
-            <?= !$simulatorTab ? 'aria-current="page"' : '' ?>>MIB Files</a>
-        <a href="protocols/snmp/mibs/controllers/mib_repository.php?tab=simulator"
-            <?= $simulatorTab ? 'aria-current="page"' : '' ?>>Simulator</a>
-    </nav>
     <?php if (
         $deletedId
     ): ?>
@@ -65,14 +58,12 @@ endif; ?>
         </form>
     <?php endif; ?>
 <?php
-if ($simulatorTab) {
-    require __DIR__ . '/mib_simulator.php';
-} elseif ($bundles) {
+if ($bundles) {
     require __DIR__ . '/mib_repository_list.php';
 } else {
     require __DIR__ . '/mib_browser.php';
 }
-if ($management && !$simulatorTab) {
+if ($management) {
     $uploadChooser = true;
     require __DIR__ . '/mib_upload_dialog.php';
 }
