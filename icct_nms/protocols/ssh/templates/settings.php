@@ -39,7 +39,7 @@
                     name="preset_protocol"
                     value="<?= 'ssh' ?>" />
             <?php endif; ?>
-            <div class="protocol-grid cols-3">
+            <div class="protocol-grid cols-5">
                 <?php icct_nms_input('Port Number', 'port', $ssh['port'] ?? '', 'number', 'required min="1" max="65535"');
     icct_nms_input(
         'Timeout (Sec)',
@@ -57,16 +57,16 @@
         ],
         $ssh['auth_method'] ?? 'password',
     );
- ?>
-            </div>
-            <div class="protocol-grid cols-3 ssh-credentials-grid">
-                <?php icct_nms_input(
-                    'Password',
-                    'secret',
-                    '',
-                    'password',
-                    'autocomplete="new-password" placeholder="Blank retains saved credential"',
-                ); ?>
+    icct_nms_input('Username', 'username', $ssh['username'] ?? '', 'text', 'required');
+    icct_nms_input(
+        'Password',
+        'secret',
+        '',
+        $presetMode ? 'text' : 'password',
+        $presetMode
+            ? 'disabled placeholder="Set on each device"'
+            : 'autocomplete="new-password" placeholder="Blank retains saved credential"',
+    ); ?>
                 <div class="ssh-private-key">
                     <?php icct_nms_input(
                         'Key Passphrase',
@@ -77,9 +77,8 @@
                     ); ?>
                 </div>
             </div>
-            <div class="protocol-grid cols-4 ssh-common-settings">
+            <div class="protocol-grid cols-3 ssh-common-settings">
                 <?php
-                icct_nms_input('Username', 'username', $ssh['username'] ?? '', 'text', 'required');
                 icct_nms_input(
                     'Command Timeout (Sec)',
                     'command_timeout',
