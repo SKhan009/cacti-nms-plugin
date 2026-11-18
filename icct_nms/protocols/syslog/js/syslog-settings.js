@@ -1,6 +1,28 @@
 'use strict';
 // Hidden JSON controls keep presets and device drafts compatible with one validated format.
 (() => {
+    const deviceIp = document.querySelector('#device-form [name="hostname"]');
+    const sourceIp = document.querySelector('[data-syslog-device-ip]');
+    if (deviceIp && sourceIp) {
+        const showDeviceIp = () => {
+            const address = deviceIp.value.trim();
+            const ipv4 = address.split('.');
+            const isV4 = ipv4.length === 4 && ipv4.every(
+                part => /^(0|[1-9][0-9]{0,2})$/.test(part) && Number(part) <= 255
+            );
+            let isV6 = false;
+            if (address.includes(':') && /^[a-f0-9:.]+$/i.test(address)) {
+                try {
+                    isV6 = Boolean(new URL('http://[' + address + ']').hostname);
+                } catch {
+                    // An incomplete IPv6 address stays blank while the user types.
+                }
+            }
+            sourceIp.value = isV4 || isV6 ? address : '';
+        };
+        deviceIp.addEventListener('input', showDeviceIp);
+        showDeviceIp();
+    }
     const menus = [...document.querySelectorAll('.syslog-select-menu')];
     document.querySelectorAll('[data-syslog-selection]').forEach((section) => {
         const hidden = section.querySelector('input[type=hidden]'),

@@ -35,11 +35,12 @@ $syslogHelp = static function ($label, $help) {
 <div class="protocol-grid cols-2">
     <?php if (empty($presetMode)): ?>
         <label class="field">
-            <span class="field-label">Source IP address <?php $syslogHelp('Source IP address', 'Leave blank to use the saved Cacti device IP. Override only when the device sends from a different IP. A hostname requires an explicit numeric sender IP; no internet lookup is used. Shared sender IPs use the first matching device by device ID after transport and message filters; each event and alarm has one owner.'); ?></span>
+            <span class="field-label">Source IP address <?php $syslogHelp('Source IP address', 'Uses the saved Syslog sender IP or the IP from Basic Information.'); ?></span>
             <input
-                name="source_address"
-                value="<?= icct_nms_h($syslog['source_address'] ?? ($host['hostname'] ?? ($values['hostname'] ?? ($old['hostname'] ?? '')))) ?>"
-                placeholder="Uses the saved device IP if blank">
+                readonly
+                <?= empty($syslog['source_address']) ? 'data-syslog-device-ip' : '' ?>
+                value="<?= icct_nms_h(filter_var($syslog['source_address'] ?? $host['hostname'] ?? $values['hostname'] ?? $old['hostname'] ?? '', FILTER_VALIDATE_IP) ?: '') ?>"
+                placeholder="Device IP required in Basic Information">
         </label>
     <?php endif; ?>
     <?php
