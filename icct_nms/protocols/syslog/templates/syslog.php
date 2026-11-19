@@ -42,7 +42,14 @@ $syslogHelp = static function ($label, $help) {
             placeholder="<?= !empty($presetMode) ? 'Provided by each device' : 'Device IP required in Basic Information' ?>">
     </label>
     <?php
-        $portAvailable = !empty($syslogPortStatus['available']) && isset($syslogPortStatus['syslog_port']);
+        $port = filter_var($syslogPortStatus['syslog_port'] ?? null, FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 1, 'max_range' => 65535]]);
+        $portAvailable = !empty($syslogPortStatus['available']) && $port !== false;
+        if (!$portAvailable) {
+            $marker = @file_get_contents('/etc/icct-nms-syslog-port', false, null, 0, 16);
+            $port = filter_var(trim((string) $marker), FILTER_VALIDATE_INT,
+                ['options' => ['min_range' => 1, 'max_range' => 65535]]);
+        }
         $portJob = $_GET['port_job'] ?? '';
         $watchPort = $syslogPortEditable && is_string($portJob) && preg_match('/^[a-f0-9]{32}$/D', $portJob);
         ?>
@@ -60,12 +67,12 @@ $syslogHelp = static function ($label, $help) {
                 max="65535"
                 step="1"
                 placeholder="Not reported"
-                value="<?= isset($syslogPortStatus['syslog_port']) ? (int) $syslogPortStatus['syslog_port'] : '' ?>"
+                value="<?= $port !== false ? $port : '' ?>"
                 <?= $syslogPortEditable && $portAvailable ? 'required' : 'readonly' ?>>
             <?php if ($watchPort): ?>
                 <small data-syslog-save-job="<?= icct_nms_h($portJob) ?>" role="status">Waiting for the offline runner to apply the port…</small>
-            <?php elseif (!$portAvailable): ?>
-                <small>Changing the port requires Installation permission and an available offline runner.</small>
+            <?php elseif ($syslogPortEditable && !$portAvailable): ?>
+                <small>The receiver port is read-only until the offline runner reports its configuration.</small>
             <?php endif; ?>
         </div>
     <label class="field">

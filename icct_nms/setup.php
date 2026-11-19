@@ -7,7 +7,7 @@ function plugin_icct_nms_version()
 {
     return [
         'name' => 'icct_nms',
-        'version' => '1.4.22',
+        'version' => '1.4.23',
         'longname' => 'ICCT NMS Device Mgmt',
         'author' => 'NMS Project',
         'homepage' => 'https://www.cacti.net/',
@@ -76,6 +76,12 @@ function icct_nms_setup_registration()
         'poller_bottom',
         'icct_nms_poller_bottom',
         'shared/services/polling.php',
+    );
+    api_plugin_register_hook(
+        'icct_nms',
+        'logout_pre_session_destroy',
+        'icct_nms_auth_logout',
+        'protocols/syslog/services/cacti_auth.php',
     );
     api_plugin_register_realm(
         'icct_nms',

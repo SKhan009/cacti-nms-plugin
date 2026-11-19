@@ -46,6 +46,13 @@ function icct_nms_poller_bottom()
     }
 
     try {
+        require_once __DIR__ . '/../../protocols/syslog/services/cacti_auth.php';
+        icct_nms_auth_collect();
+    } catch (Throwable $error) {
+        cacti_log('ICCT NMS authentication audit: ' . $error->getMessage(), false, 'ICCT NMS');
+    }
+
+    try {
         require_once __DIR__ . '/../../protocols/netflow/services/netflow_faults.php';
         icct_nms_netflow_sync_faults();
     } catch (Throwable $error) {

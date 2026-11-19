@@ -191,6 +191,12 @@ if ! systemctl restart rsyslog ||
     exit 1
 fi
 
+# Expose the validated port without giving the web process access to rsyslog configuration.
+port_marker=$(mktemp /etc/.icct-nms-syslog-port.XXXXXXXX)
+printf '%s\n' "$port" > "$port_marker"
+chmod 0644 "$port_marker"
+mv -fT "$port_marker" /etc/icct-nms-syslog-port
+
 if [[ "${SYSLOG_RECEIVER_ONLY:-0}" == "1" ]]; then
     echo "Syslog receiver listening on TCP and UDP port $port."
     exit 0
