@@ -32,7 +32,7 @@ function icct_backend_diag_arp_classify(array $link)
     $kind = $link['linkinfo']['info_kind'] ?? '';
     $types = ['vlan'=>8,'bridge'=>16,'bond'=>32,'veth'=>64,'macvlan'=>512,'vxlan'=>1024];
     if (isset($types[$kind])) return $types[$kind];
-    if ($kind === 'tun') return !empty($link['tap']) ? 256 : 0;
+    if ($kind === 'tun') return ($link['linkinfo']['info_data']['type'] ?? '') === 'tap' ? 256 : 0;
     if ($kind !== '') return 0; // Unknown tunnel/device kinds are not guessed from names.
     if (!empty($link['wireless'])) return 2;
     if (!empty($link['usb'])) return 4;
@@ -64,12 +64,6 @@ function icct_backend_diag_arp_interfaces()
         $link['vm_nic'] = in_array($driver, ['virtio_net','vmxnet3','hv_netvsc','xen_netfront'], true) || strpos($device, '/virtio') !== false;
         // Emulated PCI NICs in a VM also use physical-looking drivers.
         if ($device !== '' && $virtualMachine) $link['vm_nic'] = true;
-        // Only TUN/TAP interfaces can expose this optional Linux sysfs attribute.
-        $tunFlagsPath = $base . '/tun_flags';
-        if (($link['linkinfo']['info_kind'] ?? '') === 'tun' && is_readable($tunFlagsPath)) {
-            $tunFlags = file_get_contents($tunFlagsPath) ?: '0';
-            $link['tap'] = (intval(trim($tunFlags), 0) & 2) !== 0;
-        }
         $type = icct_backend_diag_arp_classify($link);
         if ($type) $out[$name] = $type;
     }

@@ -2,9 +2,9 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Device Mgmt designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
-## Version 1.4.23
+## Version 1.4.24
 
-The main collector imports Cacti login outcomes into Syslog under program `cacti-auth`. The first collection includes the preceding 24 hours. Explicit logouts are recorded by a Cacti hook. Enable Syslog for a single inventory device representing the main server to receive these events. The event source is that device and the browser IP appears in the message. A Syslog fault rule with program `cacti-auth`, warning severity (4) and message containing `login failed` selects failed logins. The receiver installer also publishes its validated port for read-only display when the offline package runner is unavailable.
+Devices send Syslog to the collector’s rsyslog TCP or UDP listener. The ICCT Syslog worker matches the sender IP to an enabled device on the assigned poller, then applies its transport, severity, facility and keyword selections. The offline package runner applies receiver-port changes. The receiver installer publishes the validated port for read-only display when the runner is unavailable. ARP diagnostics identify TAP interfaces from the collector’s detailed link information.
 
 ## Version 1.4.22
 
