@@ -82,6 +82,7 @@ function icct_nms_package_status($root)
     $fresh = $age >= 0 && $age < ($running ? 930 : 40);
     $writable = is_writable(ICCT_NMS_PACKAGE_STATE . '/requests');
     $status['available'] = $fresh && $writable;
+    $status['syslog_available'] = $status['available'];
     if (!$fresh) {
         $status['message'] = 'The Offline Packages runner has stopped reporting its status.';
         $status += $runnerCheck;
@@ -89,6 +90,9 @@ function icct_nms_package_status($root)
         $status['message'] = 'The PHP service account cannot submit requests to the Offline Packages runner.';
         $status['next_step'] = 'Reprovision the runner using the account that serves Cacti’s PHP requests. The command uses the current PHP service account and discovered Python executable.';
         $status['command'] = $provision;
+    } elseif (!empty($status['syslog_only'])) {
+        $status['available'] = false;
+        $status['message'] = 'Syslog port management is ready. Package operations require verified offline media.';
     } else {
         $status['message'] = 'Offline packages are ready on this collector.';
     }
@@ -103,7 +107,7 @@ function icct_nms_valid_syslog_port($port)
 function icct_nms_package_submit($root, $action, $target, $preview = '')
 {
     $status = icct_nms_package_status($root);
-    if (!$status['available']) {
+    if (!($action === 'syslog-port' ? ($status['syslog_available'] ?? false) : $status['available'])) {
         throw new RuntimeException($status['message']);
     }
     if (($status['job']['status'] ?? '') === 'running') {

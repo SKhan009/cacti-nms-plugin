@@ -58,7 +58,7 @@ unset($_SESSION['icct_nms_alarm_action_success'], $_SESSION['icct_nms_alarm_ack_
             <span class="sr-only">Search alarms</span>
             <input
                 name="search"
-                placeholder="Search With Device Name or IP Address or Alarm Name"
+                placeholder="Device name, IP or alarm name"
                 type="search">
         </label>
     </form>

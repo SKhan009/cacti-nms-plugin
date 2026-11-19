@@ -164,41 +164,48 @@ def provision(args, target):
     bundled = root / "plugins/icct_nms/installation/bundles/media"
     source = Path(args.media).absolute() if args.media else bundled
     use_bundled = source == bundled
-    if use_bundled:
+    # Receiver setup also runs on air-gapped hosts without RPM bundles.
+    # Preserve the verified package media on upgrades of full installations.
+    if args.syslog_only:
+        previous = STATE / "config.json"
+        saved = json.loads(previous.read_text()) if previous.exists() else {}
+        media = Path(saved["media"]) if saved.get("media") else None
+    elif use_bundled:
         require_private_media(bundled)
         media = bundled
     else:
         source = source.resolve(strict=True)
         media = Path(tempfile.mkdtemp(prefix="media-", dir=STATE))
     try:
-        for profile in profiles(target):
-            print("Checking offline profile " + profile, flush=True)
-            files = verified_media(source, target, profile)
-            if not use_bundled:
-                destination = bundle_path(media, profile)
-                destination.mkdir(parents=True)
-                shutil.copyfile(bundle_path(source, profile) / "bundle.json", destination / "bundle.json")
-                for file in files:
-                    shutil.copyfile(file, destination / file.name)
-                verified_media(media, target, profile)
-        for component in NATIVE_EXECUTABLES:
-            original = source / "native" / component
-            if original.exists():
-                data = native_media(source, target, component)
+        if not args.syslog_only:
+            for profile in profiles(target):
+                print("Checking offline profile " + profile, flush=True)
+                files = verified_media(source, target, profile)
                 if not use_bundled:
-                    destination = media / "native" / component
-                    for name in ["native.json", *("payload/" + name for name in data["files"])]:
-                        output = destination / name
-                        output.parent.mkdir(parents=True, exist_ok=True)
-                        shutil.copyfile(original / name, output)
-                    native_media(media, target, component)
+                    destination = bundle_path(media, profile)
+                    destination.mkdir(parents=True)
+                    shutil.copyfile(bundle_path(source, profile) / "bundle.json", destination / "bundle.json")
+                    for file in files:
+                        shutil.copyfile(file, destination / file.name)
+                    verified_media(media, target, profile)
+            for component in NATIVE_EXECUTABLES:
+                original = source / "native" / component
+                if original.exists():
+                    data = native_media(source, target, component)
+                    if not use_bundled:
+                        destination = media / "native" / component
+                        for name in ["native.json", *("payload/" + name for name in data["files"])]:
+                            output = destination / name
+                            output.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.copyfile(original / name, output)
+                        native_media(media, target, component)
         prerequisites = []
         if not shutil.which("setfacl"):
             prerequisites.append("acl")
         if shutil.which("getenforce") and not shutil.which("semanage"):
             prerequisites.append("policycoreutils-python-utils")
         if prerequisites:
-            if args.no_packages:
+            if args.no_packages or args.syslog_only:
                 raise ValueError("Install the runner prerequisites from approved RHEL media first: " +
                                  ", ".join(prerequisites))
             files = verified_media(media, target, "base")
@@ -241,14 +248,14 @@ def provision(args, target):
         write_unit(UNIT + ".timer", "[Unit]\nDescription=Check for ICCT NMS package jobs\n"
                    "[Timer]\nOnBootSec=3s\nOnUnitInactiveSec=4s\nAccuracySec=1s\n"
                    "[Install]\nWantedBy=timers.target\n")
-        write_json(STATE / "config.json", {"root": str(root), "uid": uid, "gid": gid, "media": str(media)})
+        write_json(STATE / "config.json", {"root": str(root), "uid": uid, "gid": gid, "media": str(media) if media else None})
     except BaseException:
-        if not use_bundled:
+        if not args.syslog_only and not use_bundled:
             shutil.rmtree(media)
         raise
 
     for old in STATE.glob("media-*"):
-        if old != media:
+        if not args.syslog_only and old != media:
             shutil.rmtree(old)
     run(["/usr/bin/systemctl", "daemon-reload"])
     run(["/usr/bin/systemctl", "enable", "--now", UNIT + ".timer"])
@@ -511,7 +518,7 @@ def work(target):
     config = json.loads((STATE / "config.json").read_text())
     grouped, tools, protected = package_scope(target)
     groups = MANIFEST.get("rhel_package_groups", {})
-    media = Path(config["media"])
+    media = Path(config["media"]) if config.get("media") else None
     names = set().union(*map(set, grouped.values()))
     path = STATE / "public/status.json"
     pending = STATE / "requests/pending.json"
@@ -526,15 +533,20 @@ def work(target):
     def refresh():
         state["target"] = target
         state["protected"] = sorted(protected)
-        actual = installed_packages(names)
-        state["installed"] = actual
-        state["versions"] = package_versions(media, target, grouped, actual)
-        state.pop("native", None)
         try:
             state["syslog_port"] = current_syslog_port()
         except (OSError, subprocess.SubprocessError) as error:
             LOGGER.warning("Could not read the Syslog port: %s", error)
             state["syslog_port"] = None
+        state["syslog_only"] = media is None
+        if media is None:
+            for key in ("installed", "versions", "external", "removable", "native"):
+                state.pop(key, None)
+            return
+        actual = installed_packages(names)
+        state["installed"] = actual
+        state["versions"] = package_versions(media, target, grouped, actual)
+        state.pop("native", None)
         state["external"] = external_installations(target, actual)
         state["removable"] = sorted(
             name for name, versions in actual.items()
@@ -577,6 +589,8 @@ def work(target):
             job["status"] = "complete"
             step(f"TCP, UDP and enabled local forwarding use Syslog port {selection}.")
             return
+        if media is None:
+            raise ValueError("Package operations require verified offline media.")
         if job["action"] == "verify":
             if selection != "media":
                 raise ValueError("Unknown media verification request.")
@@ -680,6 +694,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="action", required=True)
     install = commands.add_parser("provision")
+    install.add_argument("--syslog-only", action="store_true", help="Provision receiver-port management using installed prerequisites, preserving existing RPM media.")
     install.add_argument("--media", help="Legacy external media directory. Defaults to the bundled plugin media.")
     install.add_argument("--cacti-root", required=True)
     install.add_argument("--web-user", default="apache")

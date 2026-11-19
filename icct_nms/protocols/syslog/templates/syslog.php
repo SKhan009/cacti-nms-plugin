@@ -44,7 +44,7 @@ $syslogHelp = static function ($label, $help) {
     <?php
         $port = filter_var($syslogPortStatus['syslog_port'] ?? null, FILTER_VALIDATE_INT,
             ['options' => ['min_range' => 1, 'max_range' => 65535]]);
-        $portAvailable = !empty($syslogPortStatus['available']) && $port !== false;
+        $portAvailable = ($syslogPortStatus['syslog_available'] ?? $syslogPortStatus['available'] ?? false) && $port !== false;
         if (!$portAvailable) {
             $marker = @file_get_contents('/etc/icct-nms-syslog-port', false, null, 0, 16);
             $port = filter_var(trim((string) $marker), FILTER_VALIDATE_INT,

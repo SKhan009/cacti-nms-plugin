@@ -107,7 +107,7 @@ try {
                         }
                         if ((int) $requestedPort !== $syslogPortStatus['syslog_port']) {
                             if (
-                                !$syslogPortStatus['available'] ||
+                                empty($syslogPortStatus['syslog_available']) ||
                                 ($syslogPortStatus['job']['status'] ?? '') === 'running'
                             ) {
                                 throw new RuntimeException(

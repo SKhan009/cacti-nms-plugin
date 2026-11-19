@@ -1,5 +1,7 @@
 # ICCT NMS Device Mgmt
 
+[RHEL administrator commands for installation, protocols and diagnostics](READ.md).
+
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Device Mgmt designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
 ## Version 1.4.24

@@ -49,13 +49,31 @@
 .alarm-syslog-priority[data-priority='6'] { background: #d0e2ff; color: #003a85; }
 .alarm-syslog-priority[data-priority='7'] { background: #dcefea; color: #125349; }
 
+/* Keep both native date/time editors readable when the alarm filters wrap. */
+@media (max-width: 1350px) {
+    #alarm-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    #alarm-filters .alarm-date-range { grid-column: span 2; }
+    #alarm-filters .alarm-search { grid-column: 1 / -1; }
+}
+
 @media (max-width: 1100px) {
     .alarm-syslog .alarm-syslog-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .alarm-syslog-filters .alarm-search { grid-column: auto; }
 }
 
 @media (max-width: 620px) {
     .alarm-syslog .alarm-syslog-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #alarm-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #alarm-filters .alarm-date-range, .alarm-syslog-filter-actions { grid-column: 1 / -1; }
+    .alarm-syslog-filters .alarm-search { grid-column: 1 / -1; }
     .alarm-view-switch a { padding: 8px 10px; font-size: 12px; }
 }
 
 .alarm-syslog #alarm-syslog-refresh-status:empty { display: none; }
+
+@media (max-width: 480px) {
+    #alarm-filters .alarm-date-range-inputs { flex-direction: column; align-items: stretch; }
+    #alarm-filters .alarm-date-range-inputs input { flex: none; }
+    #alarm-filters .alarm-date-range-inputs span { display: none; }
+    .alarm-syslog-filters .field:has(input[type="datetime-local"]) { grid-column: 1 / -1; }
+}

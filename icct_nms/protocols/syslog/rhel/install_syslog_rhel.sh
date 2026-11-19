@@ -228,6 +228,13 @@ systemctl restart icct-nms-syslog-worker.service
 systemctl is-active --quiet icct-nms-syslog-worker.service
 systemctl enable --now icct-nms-syslog-retention.timer
 
+# Receiver-only port jobs exit above. Provision the offline runner on a full
+# RHEL receiver install, including installs with no package media.
+if [[ -f /etc/redhat-release && "${ICCT_DEFER_RUNNER_TO_FULL_INSTALLER:-0}" != 1 ]]; then
+    /usr/bin/python3 "$PLUGIN/installation/cli/package_runner.py" provision \
+        --cacti-root "$CACTI_ROOT" --web-user "$WEB_USER" --web-group "$WEB_GROUP" --syslog-only
+fi
+
 if [[ "$OPEN_FIREWALL" == "1" ]] && systemctl is-active --quiet firewalld; then
     firewall-cmd --permanent --add-port="$port"/udp
     firewall-cmd --permanent --add-port="$port"/tcp

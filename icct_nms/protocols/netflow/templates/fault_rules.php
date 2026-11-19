@@ -64,7 +64,7 @@ $netflowRuleHelp = static function (string $headingHelpText): void {
                 aria-labelledby="netflow-built-in-title">
                 <h3 id="netflow-built-in-title">Built-in NetFlow anomaly rules</h3>
                 <?php if ($netflowFaultConfig): ?>
-                    <div class="protocol-grid cols-4">
+                    <div class="netflow-threshold-fields">
                         <?php foreach ([
                             'bandwidth_limit_mbps' => 'Combined traffic (Mbps, 5-minute average)',
                             'scan_threshold' => 'Distinct destinations or ports per source (5 minutes)',
@@ -82,9 +82,8 @@ $netflowRuleHelp = static function (string $headingHelpText): void {
                             </label>
                         <?php endforeach; ?>
                     </div>
-                    <p>Built-in thresholds cover all exported interfaces and directions. Sampled traffic uses estimated totals. SYN rules require exported TCP flags and packet counts.</p>
                     <?php if (!$netflowHasSynData): ?>
-                        <p>SYN thresholds become available when recent TCP records include flags and packet counts.</p>
+                        <p class="netflow-threshold-hint">SYN thresholds become available when recent TCP records include flags and packet counts.</p>
                     <?php endif; ?>
                 <?php endif; ?>
                 <div class="site-table-wrap">

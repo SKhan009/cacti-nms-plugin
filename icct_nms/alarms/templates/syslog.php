@@ -43,7 +43,7 @@ $oldest = ($syslogParams['sort'] ?? '') === 'oldest';
             <input type="datetime-local" name="syslog_since" value="<?= icct_nms_h($syslogParams['syslog_since'] ?? '') ?>">
         </label>
         <label class="field alarm-search"><span class="sr-only">Search Syslog</span>
-            <input type="search" name="syslog_search" maxlength="200" placeholder="Search message, program, or facility"
+            <input type="search" name="syslog_search" maxlength="200" placeholder="Search message or facility"
                 value="<?= icct_nms_h($syslogParams['syslog_search'] ?? '') ?>">
         </label>
         <div class="alarm-syslog-filter-actions">

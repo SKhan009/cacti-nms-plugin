@@ -182,13 +182,11 @@
         <?php require __DIR__ . '/passive_faults.php'; ?>
         <?php $netflowFaultConfig = icct_nms_netflow_assignment($id); ?>
         <section id="fault-netflow-summary" hidden aria-label="NetFlow fault rules">
-            <p><?php if (!$netflowFaultConfig): ?>
-                    Add a NetFlow exporter in Protocol Config to evaluate these rules for this device.
-                <?php elseif (!icct_backend_protocol_enabled($id, 'netflow')): ?>
-                    NetFlow collection is disabled for this device. Enable it in Protocol Config to evaluate these rules.
-                <?php else: ?>
-                    The collector evaluates five-minute traffic windows. Matching findings appear in the Alarms console.
-                <?php endif; ?></p>
+            <?php if (!$netflowFaultConfig): ?>
+                <p>Add a NetFlow exporter in Protocol Config to evaluate these rules for this device.</p>
+            <?php elseif (!icct_backend_protocol_enabled($id, 'netflow')): ?>
+                <p>NetFlow collection is disabled for this device. Enable it in Protocol Config to evaluate these rules.</p>
+            <?php endif; ?>
             <?php require __DIR__ . '/../../protocols/netflow/templates/fault_rules.php'; ?>
         </section>
         <?php $faultCatalogue = icct_nms_fault_catalogue();

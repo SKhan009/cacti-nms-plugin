@@ -140,9 +140,19 @@ def build_archive(root, output, bundle=None, native_bundles=None, component_bund
                 archive.write(path, name)
                 manifest["files"][name] = hashlib.sha256(path.read_bytes()).hexdigest()
             archive.writestr("release.json", json.dumps(manifest, indent=2) + "\n")
+            install_options = "" if target else " --no-packages"
+            media_note = (
+                "The installer automatically locates offline media in " + MEDIA_PREFIX + "."
+                if target else
+                "This source-only archive contains no RPM media. The offline command requires installed dependencies."
+            )
             archive.writestr(
                 "INSTALL.txt",
-                "Extract outside the web root.\nRead-only verification: python3 install.py --cacti-root /path/to/cacti --plan\nInstall: sudo python3 install.py --cacti-root /path/to/cacti\nSource-only archives require --online or --no-packages.\nOffline media is in icct_nms/installation/bundles/media and is private to the installer. Existing local configuration and uploads are retained.\nSHA-256 hashes detect transport changes; obtain this archive from your trusted build system.\n",
+                "Extract the entire ZIP outside the web root. Run these commands from the extracted directory.\n"
+                f"Read-only verification: python3 install.py --cacti-root /path/to/cacti{install_options} --plan\n"
+                f"Install: sudo python3 install.py --cacti-root /path/to/cacti{install_options}\n"
+                f"{media_note} Existing local configuration and uploads are retained.\n"
+                "SHA-256 hashes detect transport changes; obtain this archive from your trusted build system.\n",
             )
     except BaseException:
         output.unlink(missing_ok=True)

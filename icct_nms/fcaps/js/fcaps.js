@@ -860,6 +860,7 @@
     function field(row, label, kind, key) {
         const wrapper = document.createElement('label');
         wrapper.className = 'field';
+        wrapper.dataset.ruleField = key;
         const caption = document.createElement('span');
         caption.className = 'field-label';
         const title = document.createElement('span');

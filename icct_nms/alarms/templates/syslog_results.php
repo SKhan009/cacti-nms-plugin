@@ -24,7 +24,7 @@ $oldest = ($syslogParams['sort'] ?? '') === 'oldest';
                     <th scope="col">Device name &amp; short name</th>
                     <th scope="col">Source IP &amp; received via</th>
                     <th scope="col">Severity</th>
-                    <th scope="col">Facility / Program</th>
+                    <th scope="col">Facility</th>
                     <th scope="col">Event message (count) &amp; what happened</th>
                     <th scope="col">Last received</th>
                 </tr>
@@ -42,8 +42,7 @@ $oldest = ($syslogParams['sort'] ?? '') === 'oldest';
                             <?php if (!empty($device['short_name'])): ?><small><?= icct_nms_h($device['short_name']) ?></small><?php endif; ?></td>
                         <td><?= icct_nms_h($event['source_ip']) ?><small><?= icct_nms_h(strtoupper($event['transport'])) ?></small></td>
                         <td><span class="alarm-syslog-priority" data-priority="<?= $priority ?>"><?= icct_nms_h($severities[$priority] ?? 'Unknown') ?></span></td>
-                        <td><?= icct_nms_h($facilities[(int) $event['facility_code']] ?? $event['facility']) ?>
-                            <?php if ($event['program'] !== ''): ?><small><?= icct_nms_h($event['program']) ?></small><?php endif; ?></td>
+                        <td><?= icct_nms_h($facilities[(int) $event['facility_code']] ?? $event['facility']) ?></td>
                         <td><div class="alarm-syslog-message"><?= icct_nms_h($event['message']) ?> (<?= number_format((int) $event['repeat_count']) ?>)</div>
                             <?php if ($explanation): ?><small><?= icct_nms_h($explanation[1]) ?></small><?php endif; ?>
                             <?php if (!empty($event['alarm_key'])): ?><small><a href="alarms/controllers/alarms.php?view=<?= rawurlencode($event['alarm_key']) ?>">View linked alarm</a></small><?php endif; ?></td>

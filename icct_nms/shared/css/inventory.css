@@ -5199,41 +5199,41 @@ h6 {
     height: 48px;
     min-height: 48px;
 }
-.fault-rule .field:has([data-name]),
-.fault-rule .field:has([data-source]),
-.fault-rule .field:has([data-template]),
-.fault-rule .field:has([data-metric]),
-.fault-rule .field:has([data-parameter-choice]),
-.fault-rule .field:has([data-parameter]),
-.fault-rule .field:has([data-oid]) {
+.fault-rule .field[data-rule-field="name"],
+.fault-rule .field[data-rule-field="source"],
+.fault-rule .field[data-rule-field="template"],
+.fault-rule .field[data-rule-field="metric"],
+.fault-rule .field[data-rule-field="parameter-choice"],
+.fault-rule .field[data-rule-field="parameter"],
+.fault-rule .field[data-rule-field="oid"] {
     grid-column: span 6;
 }
-.fault-rule .field:has([data-reading]) {
+.fault-rule .field[data-rule-field="reading"] {
     grid-column: 1 / -1;
 }
-.fault-rule[data-measurement='snmp'] .field:has([data-reading]) {
+.fault-rule[data-measurement='snmp'] .field[data-rule-field="reading"] {
     grid-column: 1 / -1;
 }
-.fault-rule .field:has([data-condition]) {
+.fault-rule .field[data-rule-field="condition"] {
     grid-column: span 4;
 }
-.fault-rule .field:has([data-minimum]) {
+.fault-rule .field[data-rule-field="minimum"] {
     grid-column: span 4;
 }
-.fault-rule .field:has([data-maximum]) {
+.fault-rule .field[data-rule-field="maximum"] {
     grid-column: span 4;
 }
-.fault-rule:not([data-condition='outside']) .field:has([data-minimum]),
-.fault-rule:not([data-condition='outside']) .field:has([data-maximum]) {
+.fault-rule:not([data-condition='outside']) .field[data-rule-field="minimum"],
+.fault-rule:not([data-condition='outside']) .field[data-rule-field="maximum"] {
     grid-column: span 4;
 }
-.fault-rule .field:has([data-severity]) {
+.fault-rule .field[data-rule-field="severity"] {
     grid-column: span 4;
 }
-.fault-rule[data-condition='outside'] .field:has([data-condition]),
-.fault-rule[data-condition='outside'] .field:has([data-minimum]),
-.fault-rule[data-condition='outside'] .field:has([data-maximum]),
-.fault-rule[data-condition='outside'] .field:has([data-severity]) {
+.fault-rule[data-condition='outside'] .field[data-rule-field="condition"],
+.fault-rule[data-condition='outside'] .field[data-rule-field="minimum"],
+.fault-rule[data-condition='outside'] .field[data-rule-field="maximum"],
+.fault-rule[data-condition='outside'] .field[data-rule-field="severity"] {
     grid-column: span 3;
 }
 .fault-rule textarea {
@@ -5241,7 +5241,7 @@ h6 {
     resize: vertical;
     line-height: 1.5;
 }
-.fault-rule .field:has([data-enabled]),
+.fault-rule .field[data-rule-field="enabled"],
 .passive-rule .fault-enabled-field {
     display: flex;
     flex-direction: row;
@@ -5249,7 +5249,7 @@ h6 {
     gap: 12px;
     align-self: center;
 }
-.fault-rule .field:has([data-enabled]) .field-label,
+.fault-rule .field[data-rule-field="enabled"] .field-label,
 .passive-rule .fault-enabled-field .field-label {
     margin: 0;
 }
@@ -5286,34 +5286,34 @@ h6 {
     .passive-rule > .field {
         grid-column: auto;
     }
-    .fault-rule .field:has([data-name]),
-    .fault-rule .field:has([data-source]),
-    .fault-rule .field:has([data-template]),
-    .fault-rule .field:has([data-metric]),
-    .fault-rule .field:has([data-parameter-choice]),
-    .fault-rule .field:has([data-parameter]) {
+    .fault-rule .field[data-rule-field="name"],
+    .fault-rule .field[data-rule-field="source"],
+    .fault-rule .field[data-rule-field="template"],
+    .fault-rule .field[data-rule-field="metric"],
+    .fault-rule .field[data-rule-field="parameter-choice"],
+    .fault-rule .field[data-rule-field="parameter"] {
         grid-column: auto;
     }
-    .fault-rule .field:has([data-oid]),
-    .fault-rule .field:has([data-reading]),
-    .fault-rule .field:has([data-condition]),
-    .fault-rule .field:has([data-minimum]),
-    .fault-rule .field:has([data-maximum]),
-    .fault-rule .field:has([data-severity]) {
+    .fault-rule .field[data-rule-field="oid"],
+    .fault-rule .field[data-rule-field="reading"],
+    .fault-rule .field[data-rule-field="condition"],
+    .fault-rule .field[data-rule-field="minimum"],
+    .fault-rule .field[data-rule-field="maximum"],
+    .fault-rule .field[data-rule-field="severity"] {
         grid-column: auto;
     }
-    .fault-rule[data-measurement='snmp'] .field:has([data-oid]),
-    .fault-rule .field:has([data-reading]) {
+    .fault-rule[data-measurement='snmp'] .field[data-rule-field="oid"],
+    .fault-rule .field[data-rule-field="reading"] {
         grid-column: 1 / -1;
     }
-    .fault-rule[data-condition='outside'] .field:has([data-condition]),
-    .fault-rule[data-condition='outside'] .field:has([data-minimum]),
-    .fault-rule[data-condition='outside'] .field:has([data-maximum]),
-    .fault-rule[data-condition='outside'] .field:has([data-severity]) {
+    .fault-rule[data-condition='outside'] .field[data-rule-field="condition"],
+    .fault-rule[data-condition='outside'] .field[data-rule-field="minimum"],
+    .fault-rule[data-condition='outside'] .field[data-rule-field="maximum"],
+    .fault-rule[data-condition='outside'] .field[data-rule-field="severity"] {
         grid-column: auto;
     }
-    .fault-rule:not([data-condition='outside']) .field:has([data-minimum]),
-    .fault-rule:not([data-condition='outside']) .field:has([data-maximum]) {
+    .fault-rule:not([data-condition='outside']) .field[data-rule-field="minimum"],
+    .fault-rule:not([data-condition='outside']) .field[data-rule-field="maximum"] {
         grid-column: auto;
     }
 }
@@ -5325,25 +5325,29 @@ h6 {
     }
     .fault-rule .field,
     .passive-rule > .field,
-    .fault-rule:not([data-condition='outside']) .field:has([data-minimum]),
-    .fault-rule:not([data-condition='outside']) .field:has([data-maximum]) {
+    .fault-rule:not([data-condition='outside']) .field[data-rule-field="minimum"],
+    .fault-rule:not([data-condition='outside']) .field[data-rule-field="maximum"] {
         grid-column: 1 / -1 !important;
     }
 }
 
-.fault-rule[data-measurement='snmp'] .field:has([data-units]) {
+.fault-rule[data-measurement='snmp'] .field[data-rule-field="units"] {
     grid-column: span 2;
 }
 @media (max-width: 1000px) {
-    .fault-rule[data-measurement='snmp'] .field:has([data-units]) {
+    .fault-rule[data-measurement='snmp'] .field[data-rule-field="units"] {
         grid-column: auto;
     }
 }
 
+.fault-rule .field[data-rule-field="expected-source"] {
+    grid-column: 1 / -1;
+}
+
 /* Automatically derived units appear beside the reading, not as a separate field. */
-.fault-rule .field:has([data-reading]),
-.fault-rule[data-measurement='ntp'] .field:has([data-parameter-choice]),
-.fault-rule[data-measurement='snmp'] .field:has([data-oid]) {
+.fault-rule .field[data-rule-field="reading"],
+.fault-rule[data-measurement='ntp'] .field[data-rule-field="parameter-choice"],
+.fault-rule[data-measurement='snmp'] .field[data-rule-field="oid"] {
     grid-column: 1 / -1;
 }
 
@@ -5465,7 +5469,7 @@ h6 {
 #fault-alarm-empty[hidden] {
     display: none !important;
 }
-.fault-alarm-editor .field:has([data-name]) {
+.fault-alarm-editor .field[data-rule-field="name"] {
     grid-column: 1 / -1;
 }
 @media (max-width: 800px) {
@@ -5602,6 +5606,22 @@ h6 {
     margin: 0;
     padding: 16px;
     font-size: 13px;
+}
+.netflow-threshold-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+    gap: 16px 24px;
+    padding: 16px;
+}
+.netflow-threshold-fields .field {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-width: 0;
+    margin: 0;
+}
+.netflow-threshold-hint {
+    margin: 0 16px 16px;
 }
 .netflow-built-in-table thead th:first-child {
     width: 29%;

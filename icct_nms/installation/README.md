@@ -1,5 +1,7 @@
 # Installation and dependency setup
 
+[RHEL administrator commands for installation, protocols and diagnostics](../READ.md).
+
 Install Cacti itself first, then copy the complete `icct_nms` directory into its `plugins` directory. All application pages, PHP vendor libraries, browser scripts, fonts and standard MIB files are shipped locally. No npm/composer/CDN download runs during page use.
 
 Cacti 1.2.31 is the tested release. Other Cacti 1.2 releases can install when their native database and plugin APIs are available. PHP 8.0 or newer and the required PHP extensions are needed by the application. Installation errors identify the detected PHP runtime and missing extensions or Cacti APIs.
@@ -268,6 +270,8 @@ packager's `--media` option so the RPMs are carried inside
 **Checks** reports application and collector readiness. **Offline Packages** is the RHEL package manager. The page stays read-only on Windows WAMP and other hosts without the RHEL runner.
 
 The complete installer keeps its media in `icct_nms/installation/bundles/media`. It has `packages/` for core dependencies and `components/<profile>/` for the individual verified bundles. See the bundle commands above to build media for a different OS release or CPU. Native Guacamole and Pathchar bundles, when supplied in `native/`, use the native installer described above.
+
+The RHEL Syslog receiver installer provisions port management offline using the installed system Python, ACL and SELinux tools. On an existing RHEL collector with rsyslog, run `sudo bash /usr/share/cacti/plugins/icct_nms/protocols/syslog/rhel/install_syslog_rhel.sh /usr/share/cacti` (adjust both paths for your Cacti installation). Syslog port changes work without RPM bundles. An existing package runner retains its verified media. The application-only installation continues to skip OS services.
 
 The complete installer provisions the runner automatically. To reprovision it, run the command below as a system administrator. The media directory must be root-owned with mode `0700`. Its files and all parent directories must be root-owned and writable only by root.
 

@@ -245,6 +245,7 @@ def main():
         "offline": not args.online,
         "package_components": package_components,
         "native_components": components,
+        "syslog_port_runner": target["family"] == "rhel" and not args.application_only,
         "offline_packages_runner": complete_media and target["family"] == "rhel" and not args.application_only,
         "trap_listener": args.trap_listener,
         "source_files": sum(name.startswith("icct_nms/") for name in manifest["files"]),
@@ -326,7 +327,10 @@ def main():
         ),
         flush=True,
     )
-    subprocess.run(command, check=True)
+    environment = os.environ.copy()
+    if plan["offline_packages_runner"]:
+        environment["ICCT_DEFER_RUNNER_TO_FULL_INSTALLER"] = "1"
+    subprocess.run(command, check=True, env=environment)
     if plan["offline_packages_runner"]:
         runner = [sys.executable, str(destination / "installation/cli/package_runner.py"), "provision",
                   "--cacti-root", str(root), "--web-user", args.web_user or "apache", "--media", str(media)]
