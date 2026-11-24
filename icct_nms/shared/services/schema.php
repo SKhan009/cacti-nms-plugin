@@ -200,6 +200,8 @@ function icct_nms_schema_install()
     require_once __DIR__ . '/ntp_fault_migration.php';
     icct_nms_schema_ntp_faults();
     icct_nms_seed_protocol_presets();
+    require_once __DIR__ . '/../../presets/services/preset_seed.php';
+    icct_nms_seed_inventory_presets();
     if (
         !db_fetch_cell("SHOW COLUMNS FROM plugin_icct_nms_ntp_monitors LIKE 'method'") ||
         !db_fetch_cell("SHOW COLUMNS FROM plugin_icct_nms_ntp_monitor_state LIKE 'sample_json'")

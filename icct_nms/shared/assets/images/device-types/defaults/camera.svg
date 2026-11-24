@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" role="img" aria-label="camera device illustration">
+<defs><linearGradient id="panel" x2="0" y2="1"><stop stop-color="#f4f7fb"/><stop offset="1" stop-color="#dbe5f2"/></linearGradient></defs>
+<rect x="6" y="6" width="228" height="148" rx="18" fill="url(#panel)" stroke="#adbed3" stroke-width="2"/>
+<ellipse cx="120" cy="132" rx="60" ry="7" fill="#c3d0e1"/>
+<g transform="translate(72 25) scale(3)" fill="none" stroke="#17365e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h20v16H2z M22 13l8-5v16l-8-5"/></g>
+</svg>

@@ -84,7 +84,7 @@ function openTypeEditor(type = {}) {
     typeSaveButton.textContent = type.type_id ? 'Save' : 'Add';
     typeEditor.hidden = false;
     const preview = document.querySelector('#type-upload-preview');
-    const validImage = /^uploads\/[a-f0-9]{32}\.(png|jpg|webp)$/.test(type.image ?? '');
+    const validImage = /^(?:uploads\/[a-f0-9]{32}\.(?:png|jpg|webp)|defaults\/[a-z0-9][a-z0-9_-]*\.svg)$/.test(type.image ?? '');
     preview.hidden = !validImage;
     document.querySelector('#type-remove-image').hidden = !validImage;
     if (validImage)

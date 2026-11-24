@@ -235,7 +235,7 @@ Map View draws the configured Cacti pollers at their assigned native sites. Coun
 
 CPU sources are explicit cpu_percent / 5min_cpu or 100 − ssCpuIdle. Memory is memory_percent or (mem_total − mem_free) / mem_total. Reads use only graphs the account can access, fresh AVERAGE data before CDEF/VDEF transformations. Arbitrary graph names, load averages and unknown units are not treated as percentage measurements. Ping output is parsed on the server, checked against its current device/profile/collector signature and retained privately by request owner; no raw output or credentials are sent to the map.
 
-Dashboard views use a Topology / Image View / Rack View / Map View switcher. Topology shows authorized connected devices; Image View uses uploaded type images without an icon fallback; Rack View shows saved placements. Map View and Birds Eye View are scoped to LNMS pollers. Map credits remain available through the information control.
+Dashboard views use a Topology / Image View / Rack View / Map View switcher. Topology shows authorized connected devices; Image View uses saved type images (uploaded or bundled) without an icon fallback; Rack View shows saved placements. Map View and Birds Eye View are scoped to LNMS pollers. Map credits remain available through the information control.
 
 
 Add/Edit Device keeps only Rack Name and Placement in the Rack. Reusable rack presets appear at the selected site even before they are instantiated. Selecting a preset limits placement choices to its units-per-rack count. On save, the preset is instantiated directly at that site; existing matching racks are reused. Capacity and occupied-unit checks remain authoritative.
@@ -389,3 +389,18 @@ Configure GNSS through **Presets → Site → Configure GNSS** beside the approp
 For file input, place a current checksum-valid NMEA file under `/var/lib/icct-nms/gnss/` and grant the service read access. For serial, allow the service user access to the receiver device; the supplied RHEL unit uses the `dialout` group. Allow only the configured receiver/collector traffic through the existing firewall. SNMP uses the selected Device Mgmt device's credentials. A GNSS device must belong to that collector. Real hardware and remote receiver connectivity require site-specific verification.
 
 Map/Birds Eye contain native LNMS/pollers only. Cross-collector connections are derived from existing manual or fresh CDP/LLDP device links; link Up/Down comes from collected interface readings. Missing readings are not shown as a healthy link. Dashboard refresh is saved per user (5–3600 seconds).
+
+
+### Segment and device type starter presets (1.4.25)
+
+Install/upgrade supplies 10 editable segments and 19 device type profiles, using the existing
+classification and preset tables. IDs are resolved from saved segments; no Cacti device or
+segment ID is assumed. Existing matching profiles retain their icon, shape, physical port
+count, visibility settings and uploaded images. Missing images receive one of 15 bundled SVG
+illustrations based on the established icon catalogue. Port counts remain unknown unless saved
+by the operator; a starter does not invent observed hardware ports.
+
+The one-time seed marker prevents later upgrades from recreating deleted starters, undoing
+renames or restoring intentionally removed images. All assets are shipped locally, including
+Image View, preset thumbnails/edit previews and Device Image. Custom uploads remain PNG,
+JPEG or WebP; bundled SVG support does not permit SVG uploads.

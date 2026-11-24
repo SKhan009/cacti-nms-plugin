@@ -144,27 +144,46 @@ function icct_nms_device_types()
     unset($type);
     return $types;
 }
+/** Uploaded raster images or trusted illustrations shipped with the plugin. */
+function icct_nms_type_image_asset($image)
+{
+    if (!is_string($image)) {
+        return '';
+    }
+    if (preg_match('/^uploads\/[a-f0-9]{32}\.(png|jpg|webp)$/D', $image)) {
+        return 'shared/assets/images/device-types/' . $image;
+    }
+    if (preg_match('/^defaults\/[a-z0-9][a-z0-9_-]*\.svg$/D', $image)) {
+        $folder = __DIR__ . '/../../shared/assets/images/device-types/defaults';
+        $path = __DIR__ . '/../../shared/assets/images/device-types/' . $image;
+        if (is_dir($folder) && !is_link($folder) && is_file($path) && !is_link($path)) {
+            return 'shared/assets/images/device-types/' . $image;
+        }
+    }
+    return '';
+}
 function icct_nms_type_asset($type, $view = 'network')
 {
-    // Image View uses uploaded type images only; other views keep their configured visibility.
+    $image = icct_nms_type_image_asset($type['image'] ?? '');
     if ($view === 'image') {
-        return preg_match('/^uploads\/[a-f0-9]{32}\.(png|jpg|webp)$/D', $type['image'] ?? '')
-            ? 'shared/assets/images/device-types/' . $type['image']
-            : '';
+        return $image;
     }
     $mode = $type['display_modes'][$view] ?? 'icon';
     if ($mode === 'none') {
         return '';
     }
-    if (
-        $mode === 'image' &&
-        preg_match('/^uploads\/[a-f0-9]{32}\.(png|jpg|webp)$/D', $type['image'] ?? '')
-    ) {
-        return 'shared/assets/images/device-types/' . $type['image'];
+    if ($mode === 'image' && $image !== '') {
+        return $image;
     }
     $icon = isset(icct_nms_type_icons()[$type['icon'] ?? '']) ? $type['icon'] : 'device';
     return icct_nms_type_icon_asset($icon);
 }
+
+function icct_nms_type_catalogue_lock()
+{
+    return 'icct_device_types_' . substr(sha1((string) db_fetch_cell('SELECT DATABASE()')), 0, 20);
+}
+
 function icct_nms_type_image_upload($file)
 {
     if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
@@ -223,7 +242,7 @@ function icct_nms_type_image_upload($file)
 }
 function icct_nms_save_device_type($input, $file = null, $ownTransaction = true)
 {
-    $lock = 'icct_device_types_' . substr(sha1((string) db_fetch_cell('SELECT DATABASE()')), 0, 20);
+    $lock = icct_nms_type_catalogue_lock();
     if ((int) db_fetch_cell_prepared('SELECT GET_LOCK(?,5)', [$lock]) !== 1) {
         throw new RuntimeException('Device types are busy. Please retry.');
     }
@@ -340,6 +359,9 @@ function icct_nms_save_device_type($input, $file = null, $ownTransaction = true)
                 'image' => $savedImage,
                 'display_modes' => $modes,
             ];
+            if (isset($old['seed_key'])) {
+                $types[$id]['seed_key'] = $old['seed_key'];
+            }
         }
         $json = json_encode($types, JSON_THROW_ON_ERROR);
         if (strlen($json) > 60000) {

@@ -1,0 +1,131 @@
+{
+  "format": 1,
+  "segments": {
+    "general": "General",
+    "network": "Network",
+    "computers": "Computers",
+    "security": "Security",
+    "voice-video": "Voice / Video",
+    "power": "Power",
+    "timing": "Timing",
+    "los": "LOS",
+    "fire-prevention": "Fire Prevention",
+    "sensors": "Sensors & Instrumentation"
+  },
+  "device_types": {
+    "generic": {
+      "name": "Generic device",
+      "segment": null,
+      "icon": "device",
+      "shape": "rectangle"
+    },
+    "core-switch": {
+      "name": "Core Switch",
+      "segment": "network",
+      "icon": "switch",
+      "shape": "wide"
+    },
+    "switch": {
+      "name": "Switch",
+      "segment": "network",
+      "icon": "switch",
+      "shape": "wide"
+    },
+    "router": {
+      "name": "Router",
+      "segment": "network",
+      "icon": "router",
+      "shape": "wide"
+    },
+    "server": {
+      "name": "Server",
+      "segment": "computers",
+      "icon": "server",
+      "shape": "rectangle"
+    },
+    "workstation": {
+      "name": "PC / desktop",
+      "segment": "computers",
+      "icon": "workstation",
+      "shape": "rectangle"
+    },
+    "laptop": {
+      "name": "Laptop",
+      "segment": "computers",
+      "icon": "laptop",
+      "shape": "rectangle"
+    },
+    "phone": {
+      "name": "Phone",
+      "segment": "voice-video",
+      "icon": "phone",
+      "shape": "tall"
+    },
+    "ipphone": {
+      "name": "Desk phone",
+      "segment": "voice-video",
+      "icon": "ipphone",
+      "shape": "rectangle"
+    },
+    "ups": {
+      "name": "UPS / battery",
+      "segment": "power",
+      "icon": "ups",
+      "shape": "tall"
+    },
+    "sensor": {
+      "name": "Sensor",
+      "segment": "sensors",
+      "icon": "sensor",
+      "shape": "square"
+    },
+    "printer": {
+      "name": "Printer",
+      "segment": "computers",
+      "icon": "printer",
+      "shape": "rectangle"
+    },
+    "camera": {
+      "name": "Camera",
+      "segment": "security",
+      "icon": "camera",
+      "shape": "square"
+    },
+    "wireless": {
+      "name": "Wireless AP",
+      "segment": "network",
+      "icon": "wireless",
+      "shape": "square"
+    },
+    "firewall": {
+      "name": "Firewall",
+      "segment": "security",
+      "icon": "firewall",
+      "shape": "wide"
+    },
+    "satellite": {
+      "name": "Satellite / VSAT",
+      "segment": "los",
+      "icon": "satellite",
+      "shape": "square"
+    },
+    "ntp-server": {
+      "name": "NTP Server",
+      "segment": "timing",
+      "icon": "server",
+      "shape": "rectangle"
+    },
+    "los-radio": {
+      "name": "LOS Radio",
+      "segment": "los",
+      "icon": "wireless",
+      "shape": "square"
+    },
+    "fire-alarm": {
+      "name": "Fire Alarm",
+      "segment": "fire-prevention",
+      "icon": "sensor",
+      "shape": "square"
+    }
+  }
+}

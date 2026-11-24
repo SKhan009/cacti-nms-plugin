@@ -321,11 +321,8 @@ $display = static function ($value) {
         <section class="device-view-section">
             <h2>Device Image</h2>
             <?php
-            $image = icct_nms_type_asset(array_replace($profile, ['display_modes' => ['network' => 'image']]));
-if (
-    !empty($profile['image']) &&
-    str_contains($image, '/uploads/')
-): ?>
+            $image = icct_nms_type_image_asset($profile['image'] ?? '');
+            if ($image !== ''): ?>
                 <img
                     class="device-view-image"
                     src="<?= icct_nms_h($image) ?>"

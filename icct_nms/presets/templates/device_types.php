@@ -259,17 +259,8 @@ $pageUrl = static fn ($n) => 'presets/controllers/presets.php?tab=device-type&pe
                     <td><?= $type['physical_ports'] === null ? 'Not set' : (int) $type['physical_ports'] ?></td>
                     <td>
                         <?php
-                        $image = icct_nms_type_asset(
-                            array_replace($type, [
-                                'display_modes' => [
-                                    'network' => 'image',
-                                ],
-                            ]),
-                        );
-                if (
-                    !empty($type['image']) &&
-                    str_contains($image, '/uploads/')
-                ): ?>
+                        $image = icct_nms_type_image_asset($type['image'] ?? '');
+                        if ($image !== ''): ?>
                             <img
                                 class="type-thumbnail"
                                 src="<?= icct_nms_h($image) ?>"
