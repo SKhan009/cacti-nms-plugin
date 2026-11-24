@@ -1,0 +1,16 @@
+{
+  "format": 1,
+  "target": {
+    "family": "rhel",
+    "id": "rhel",
+    "version": "9.8",
+    "arch": "aarch64"
+  },
+  "component": "pathchar",
+  "packages": [
+    "icct-nms-pathchar"
+  ],
+  "files": {
+    "icct-nms-pathchar-1.5-1.el9.aarch64.rpm": "9152e00358d1bd9cf22d4f6be30921a457f586f5435f0fee7e9acdd9c158eba6"
+  }
+}

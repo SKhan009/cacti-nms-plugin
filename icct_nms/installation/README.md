@@ -369,3 +369,21 @@ no 32-bit fallback or separate polling job was introduced.
 
 Regression checks: `php shared/tests/topology_interfaces_test.php` and
 `php shared/tests/topology_interface_direction_test.php` from the plugin directory.
+
+
+### Offline media in the GitHub main ZIP
+
+The `main` branch includes `installation/bundles/media/packages`, `components` and `native`,
+with their verified manifests and package payloads. GitHub's Download ZIP includes these files
+as ordinary Git content; Git LFS is not required. The included media targets **RHEL 9.8 aarch64**.
+It does not support RHEL 9.4 x86_64 or other releases/architectures.
+
+From the extracted repository root, generate the complete offline installer without downloading
+packages again:
+
+```sh
+python3 icct_nms/installation/cli/package.py --output icct-nms-complete-offline.zip --media icct_nms/installation/bundles/media
+```
+
+Extract the generated ZIP and follow its `INSTALL.txt`. Source-only builds remain available by
+omitting `--media`. Keep the Apache access restriction on `installation/bundles`.

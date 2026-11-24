@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "component": "pathchar",
+  "version": "1.5",
+  "target": {
+    "family": "rhel",
+    "id": "rhel",
+    "version": "9.8",
+    "arch": "aarch64"
+  },
+  "source_sha256": "7019297084f1000557a019501532ecae67772851717329cc02227f5c17e36d27",
+  "patch_sha256": "0dc1829dbeb4d87292a5b30d9cbaf368080a6b36affc19fdd115800c3316812d",
+  "files": {
+    "sbin/pchar": {
+      "sha256": "9ef7f78895fbe6b531f38ea048e38cc683d42f06449feb729c9d3a674c3a8c10",
+      "mode": 493
+    },
+    "share/doc/CHANGES": {
+      "sha256": "b524df42835473c30917e6df9796da0b484126593ee612ffb2b0e13edd2ef125",
+      "mode": 420
+    },
+    "share/doc/README": {
+      "sha256": "51885dd7625d2f940f140740f98f8311a21e2936fa8e0e1613c683ef388280db",
+      "mode": 420
+    }
+  }
+}

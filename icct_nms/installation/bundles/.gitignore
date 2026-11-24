@@ -1,3 +1,13 @@
 *
 !.htaccess
 !.gitignore
+
+# Include verified offline media in GitHub source archives.
+!media/
+!media/**/
+!media/**/bundle.json
+!media/**/native.json
+!media/**/*.rpm
+!media/**/payload/**
+media/**/.DS_Store
+media/**/._*

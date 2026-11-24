@@ -1,0 +1,67 @@
+{
+  "format": 1,
+  "component": "guacamole-strict",
+  "version": "1.6.0",
+  "target": {
+    "family": "rhel",
+    "id": "rhel",
+    "version": "9.8",
+    "arch": "aarch64"
+  },
+  "source_sha256": "8bc45675da96d7b6f39728160181e3d4ff3c08f460f6d26de5805b642bf13f2b",
+  "patch_sha256": "68d40413442fd99a9d97ba8741ea806806a284147a196a94d319d1c571d91e3c",
+  "files": {
+    "lib/libguac-client-ssh.so": {
+      "sha256": "ec1aa5c60b69fa6f274595311d36b8c94f21a9a58477b4d64a26aef8091368cb",
+      "mode": 493
+    },
+    "lib/libguac-client-ssh.so.0": {
+      "sha256": "ec1aa5c60b69fa6f274595311d36b8c94f21a9a58477b4d64a26aef8091368cb",
+      "mode": 493
+    },
+    "lib/libguac-client-ssh.so.0.0.0": {
+      "sha256": "ec1aa5c60b69fa6f274595311d36b8c94f21a9a58477b4d64a26aef8091368cb",
+      "mode": 493
+    },
+    "lib/libguac-terminal.so": {
+      "sha256": "4a951016e349a4a4ace2dba1e35834b8cbad759db0508044cae3af67b4629a1e",
+      "mode": 493
+    },
+    "lib/libguac-terminal.so.2": {
+      "sha256": "4a951016e349a4a4ace2dba1e35834b8cbad759db0508044cae3af67b4629a1e",
+      "mode": 493
+    },
+    "lib/libguac-terminal.so.2.0.0": {
+      "sha256": "4a951016e349a4a4ace2dba1e35834b8cbad759db0508044cae3af67b4629a1e",
+      "mode": 493
+    },
+    "lib/libguac.so": {
+      "sha256": "91994cd5dfbcd90b529e400177178571387d51b10f9dae24526138c2e59cba10",
+      "mode": 493
+    },
+    "lib/libguac.so.25": {
+      "sha256": "91994cd5dfbcd90b529e400177178571387d51b10f9dae24526138c2e59cba10",
+      "mode": 493
+    },
+    "lib/libguac.so.25.0.0": {
+      "sha256": "91994cd5dfbcd90b529e400177178571387d51b10f9dae24526138c2e59cba10",
+      "mode": 493
+    },
+    "sbin/guacd": {
+      "sha256": "90da15dc1f60d228cb3ba64b548670fb6c91be587891335bc35b5af93a5b1f1c",
+      "mode": 493
+    },
+    "share/doc/LICENSE": {
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "mode": 420
+    },
+    "share/doc/NOTICE": {
+      "sha256": "b081db94e1cf4408518b76c4f582c9585040dd9409a331666fbb08a20d4997b9",
+      "mode": 420
+    },
+    "share/doc/README": {
+      "sha256": "c83223d0069e7895d4d34d8e2ff0dd7cdd3bd0c6fb32f3e6184ab739cdd99f94",
+      "mode": 420
+    }
+  }
+}

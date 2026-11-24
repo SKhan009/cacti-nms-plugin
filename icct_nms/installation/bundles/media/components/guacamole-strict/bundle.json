@@ -1,0 +1,16 @@
+{
+  "format": 1,
+  "target": {
+    "family": "rhel",
+    "id": "rhel",
+    "version": "9.8",
+    "arch": "aarch64"
+  },
+  "component": "guacamole-strict",
+  "packages": [
+    "icct-nms-guacamole-strict"
+  ],
+  "files": {
+    "icct-nms-guacamole-strict-1.6.0-1.el9.aarch64.rpm": "b84881b714514fb21e4c0b79008e7a88a980fddc2e919ee21656d87588a89de5"
+  }
+}

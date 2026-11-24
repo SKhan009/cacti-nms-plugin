@@ -3,3 +3,7 @@ icct_nms/installation/native-source/KEYS -whitespace
 icct_nms/installation/native-source/*.patch -whitespace
 # Keep the existing VM template's trailing blank line unchanged.
 icct_nms/inventory/templates/list.php whitespace=-blank-at-eof
+
+# Preserve verified offline media bytes across platform-specific Git checkouts.
+icct_nms/installation/bundles/media/** -text
+icct_nms/installation/bundles/media/native/**/payload/share/doc/** -whitespace
