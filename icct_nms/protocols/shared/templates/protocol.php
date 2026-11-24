@@ -523,7 +523,7 @@ if (!$presetMode) {
                     <?php endif; ?>
                     <?php require __DIR__ . '/../../syslog/templates/syslog.php'; ?>
                 </form>
-                <?php if ($presetMode && !empty($canManageSyslogPort) && isset($_GET['port_job'])): ?>
+                <?php if ($presetMode && !empty($canManageSyslogPort)): ?>
                     <script src="installation/js/installation.js?v=<?= substr(hash_file('sha256', __DIR__ . '/../../../installation/js/installation.js'), 0, 12) ?>" defer></script>
                 <?php endif; ?>
             </div>

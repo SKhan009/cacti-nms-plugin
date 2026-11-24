@@ -36,6 +36,32 @@ class RuntimeInventory(unittest.TestCase):
             self.assertNotIn('stale', result['versions'])
             self.assertEqual(result['target'], target)
 
+    def test_initial_readiness_does_not_consume_a_queued_operation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            (state / 'public').mkdir()
+            (state / 'requests').mkdir()
+            pending = state / 'requests/pending.json'
+            queued = '{"action":"install","target":"redis"}'
+            pending.write_text(queued)
+            (state / 'config.json').write_text(json.dumps({'root': '/cacti', 'media': None}))
+            target = dict(family='rhel', id='rhel', version='9.8', arch='aarch64')
+            with (
+                patch.object(runner, 'STATE', state),
+                patch.object(runner, 'package_scope', return_value=({'base': []}, {}, set())),
+                patch.object(runner, 'installed_packages', return_value={}),
+                patch.object(runner, 'external_installations', return_value={}),
+                patch.object(runner, 'current_syslog_port', return_value=1514),
+                patch.object(runner, 'read_request', side_effect=AssertionError('Setup must not consume queued operations')),
+            ):
+                runner.work(target, inventory_only=True)
+            result = json.loads((state / 'public/status.json').read_text())
+            self.assertEqual(result['syslog_port'], 1514)
+            self.assertTrue(result['syslog_only'])
+            self.assertEqual(result['root'], '/cacti')
+            self.assertGreater(result['time'], 0)
+            self.assertEqual(pending.read_text(), queued)
+
     def test_inventory_versions_without_media_preserves_epoch_and_multiple_arches(self):
         result = runner.inventory_versions(
             {'base': ['php-cli', 'netperf']},

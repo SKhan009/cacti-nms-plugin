@@ -260,6 +260,10 @@ def provision(args, target):
     for old in STATE.glob("media-*"):
         if not syslog_only and old != media:
             shutil.rmtree(old)
+    # Publish readiness while provisioning holds the runner lock. Starting the
+    # service here cannot publish yet because its work process uses that lock.
+    # Never consume an existing queued operation during setup.
+    work(target, inventory_only=True)
     run(["/usr/bin/systemctl", "daemon-reload"])
     run(["/usr/bin/systemctl", "enable", "--now", UNIT + ".timer"])
     run(["/usr/bin/systemctl", "start", "--no-block", UNIT + ".service"])
@@ -537,7 +541,7 @@ def removal_plan(config, requested, state, receipts, protected):
     }
 
 
-def work(target):
+def work(target, inventory_only=False):
     config = json.loads((STATE / "config.json").read_text())
     grouped, tools, protected = package_scope(target)
     groups = MANIFEST.get("rhel_package_groups", {})
@@ -575,6 +579,11 @@ def work(target):
             name for name, versions in actual.items()
             if name not in protected and versions == receipts.get(name)
         )
+
+    if inventory_only:
+        refresh()
+        publish()
+        return
 
     interrupted = job and job["status"] == "running"
     if interrupted:

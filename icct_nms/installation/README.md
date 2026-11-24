@@ -387,3 +387,15 @@ python3 icct_nms/installation/cli/package.py --output icct-nms-complete-offline.
 
 Extract the generated ZIP and follow its `INSTALL.txt`. Source-only builds remain available by
 omitting `--media`. Keep the Apache access restriction on `installation/bundles`.
+
+
+### Automatic Syslog receiver-port readiness
+
+The existing RHEL installer provisions the root-owned package runner and enables its systemd
+timer at boot, including Syslog-only installations without RPM media. Provisioning now
+publishes initial inventory/receiver readiness before returning, without processing a queued
+package operation. Presets → Protocols → Syslog monitors that same runner automatically:
+authorized fields become editable as soon as its status is fresh, and recover without a page
+reload after temporary unavailability. Entered port values are preserved during refreshes.
+Cacti management/installation permissions and the allowlisted privileged request path remain
+required. Ordinary page requests do not install services or obtain administrator privileges.

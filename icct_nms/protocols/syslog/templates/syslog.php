@@ -61,6 +61,7 @@ $syslogHelp = static function ($label, $help) {
             </label>
             <input
                 id="syslog-receiver-port"
+                <?= $syslogPortEditable ? 'data-syslog-runner' : '' ?>
                 <?= !empty($presetMode) && $syslogPortEditable && $portAvailable ? 'name="receiver_port"' : '' ?>
                 type="number"
                 min="1"
@@ -69,10 +70,12 @@ $syslogHelp = static function ($label, $help) {
                 placeholder="Not reported"
                 value="<?= $port !== false ? $port : '' ?>"
                 <?= $syslogPortEditable && $portAvailable ? 'required' : 'readonly' ?>>
-            <?php if ($watchPort): ?>
-                <small data-syslog-save-job="<?= icct_nms_h($portJob) ?>" role="status">Waiting for the offline runner to apply the port…</small>
-            <?php elseif ($syslogPortEditable && !$portAvailable): ?>
-                <small>The receiver port is read-only until the offline runner reports its configuration.</small>
+            <?php if ($syslogPortEditable): ?>
+                <small data-syslog-runner-status
+                    <?= $watchPort ? 'data-syslog-save-job="' . icct_nms_h($portJob) . '"' : '' ?>
+                    <?= !$watchPort && $portAvailable ? 'hidden' : '' ?> role="status"><?= $watchPort
+                        ? 'Waiting for the local runner to apply the port…'
+                        : 'Waiting for the local runner…' ?></small>
             <?php endif; ?>
         </div>
     <label class="field">

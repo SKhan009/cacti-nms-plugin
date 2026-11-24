@@ -2,31 +2,66 @@
 (function () {
     'use strict';
 
-    const portSave = document.querySelector('[data-syslog-save-job]');
-    if (portSave) {
-        const receiverPort = document.querySelector('#syslog-receiver-port');
-        const initialPort = receiverPort.value;
-        const deadline = Date.now() + 90000;
+    const receiverPort = document.querySelector('[data-syslog-runner]');
+    if (receiverPort) {
+        const note = document.querySelector('[data-syslog-runner-status]');
+        const watchedPortJob = note?.dataset.syslogSaveJob;
+        const portJobDeadline = Date.now() + 90000;
+        let watchedJobFinished = false;
+        let jobResult = '';
+        let dirty = false;
+        let ready = false;
+        let busy = false;
+        let editable = false;
+        receiverPort.addEventListener('input', () => { dirty = true; jobResult = ''; });
+        receiverPort.form.addEventListener('submit', (event) => {
+            if (dirty && !editable) {
+                event.preventDefault();
+                note.hidden = false;
+                note.textContent = 'Wait for the local runner before saving the receiver port.';
+            }
+        });
+        const setReady = (available) => {
+            editable = available;
+            receiverPort.readOnly = !available;
+            receiverPort.required = available;
+            if (available) receiverPort.name = 'receiver_port';
+            else receiverPort.removeAttribute('name');
+        };
         const pollPort = async () => {
             try {
-                const response = await fetch('installation/controllers/installation.php?view=package-job');
+                const response = await fetch('installation/controllers/installation.php?view=package-job', { cache: 'no-store' });
                 if (!response.ok) throw new Error();
                 const state = await response.json();
-                const job = state.job;
-                if (job?.id === portSave.dataset.syslogSaveJob && job.status !== 'running') {
-                    if (job.status === 'complete' && receiverPort.value === initialPort) {
-                        receiverPort.value = state.syslog_port;
+                const port = state.syslog_port;
+                const validPort = Number.isInteger(port) && port > 0 && port <= 65535;
+                ready = Boolean(state.syslog_available && validPort);
+                busy = state.job?.status === 'running';
+                if (watchedPortJob && !watchedJobFinished) {
+                    if (state.job?.id === watchedPortJob && !busy) {
+                        watchedJobFinished = true;
+                        jobResult = state.job.status === 'complete'
+                            ? 'Receiver port updated to ' + port + '.'
+                            : (state.job.steps?.at(-1) || 'The receiver port change failed.');
+                    } else if (Date.now() >= portJobDeadline && !busy) {
+                        watchedJobFinished = true;
+                        jobResult = 'The receiver port change could not be confirmed.';
                     }
-                    portSave.textContent = job.status === 'complete'
-                        ? 'Receiver port updated to ' + state.syslog_port + '.'
-                        : (job.steps.at(-1) || 'The receiver port change failed.');
-                    return;
                 }
+                const waitingJob = watchedPortJob && !watchedJobFinished;
+                setReady(ready && !busy && !waitingJob);
+                if (ready && !dirty && !waitingJob) receiverPort.value = String(port);
+                note.hidden = ready && !busy && !waitingJob && !jobResult;
+                note.textContent = busy || waitingJob
+                    ? 'Waiting for the local runner to finish…'
+                    : (!ready ? 'Waiting for the local runner…' : jobResult);
             } catch {
-                // Retry briefly while the local runner starts.
+                ready = false;
+                setReady(false);
+                note.hidden = false;
+                note.textContent = 'Waiting for the local runner…';
             }
-            if (Date.now() < deadline) window.setTimeout(pollPort, 1500);
-            else portSave.textContent = 'The port change could not be confirmed. Check Installation → Offline Packages.';
+            window.setTimeout(pollPort, 5000);
         };
         pollPort();
     }
