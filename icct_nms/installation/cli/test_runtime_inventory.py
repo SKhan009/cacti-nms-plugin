@@ -10,6 +10,44 @@ import package_runner as runner
 
 
 class RuntimeInventory(unittest.TestCase):
+    def test_worker_publishes_inventory_and_clears_stale_media_versions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory)
+            (state / 'public').mkdir()
+            (state / 'requests').mkdir()
+            (state / 'config.json').write_text(json.dumps({'root': '/cacti', 'media': None}))
+            (state / 'public/status.json').write_text(json.dumps({
+                'time': 0, 'versions': {'stale': {}}, 'removable': ['php-cli'],
+            }))
+            target = dict(family='rhel', id='rhel', version='9.4', arch='x86_64')
+            with (
+                patch.object(runner, 'STATE', state),
+                patch.object(runner, 'package_scope', return_value=({'base': ['php-cli']}, {}, set())),
+                patch.object(runner, 'installed_packages', return_value={'php-cli': ['0:8.0.30-1.el9.x86_64:123']}),
+                patch.object(runner, 'external_installations', return_value={}),
+                patch.object(runner, 'current_syslog_port', return_value=514),
+                patch.object(runner, 'package_versions', side_effect=AssertionError('No media to compare')),
+            ):
+                runner.work(target)
+            result = json.loads((state / 'public/status.json').read_text())
+            self.assertTrue(result['syslog_only'])
+            self.assertEqual(result['versions']['base']['php-cli']['installed'], ['8.0.30-1.el9.x86_64'])
+            self.assertEqual(result['removable'], [])
+            self.assertNotIn('stale', result['versions'])
+            self.assertEqual(result['target'], target)
+
+    def test_inventory_versions_without_media_preserves_epoch_and_multiple_arches(self):
+        result = runner.inventory_versions(
+            {'base': ['php-cli', 'netperf']},
+            {'php-cli': ['0:8.0.30-1.el9.aarch64:123', '2:8.0.31-2.el9.aarch64:456']},
+        )['base']
+        self.assertEqual(result['php-cli']['installed'],
+                         ['2:8.0.31-2.el9.aarch64', '8.0.30-1.el9.aarch64'])
+        self.assertEqual(result['php-cli']['bundled'], [])
+        self.assertEqual(result['php-cli']['status'], 'Offline media unavailable')
+        self.assertEqual(result['netperf']['status'], 'Missing')
+        self.assertEqual(result['netperf']['installed'], [])
+
     def test_discovered_pathchar_does_not_claim_rpm_ownership(self):
         target = dict(family='rhel', id='rhel', version='9.8', arch='aarch64')
         with patch.object(runner.shutil, 'which', side_effect=lambda name: '/custom/tools/pchar' if name == 'pchar' else None):

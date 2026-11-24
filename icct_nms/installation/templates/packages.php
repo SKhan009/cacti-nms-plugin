@@ -10,6 +10,7 @@
     <div class="installation-package-toolbar">
         <p
             data-package-availability
+            <?= empty($status['message']) ? 'hidden' : '' ?>
             data-state="<?= $status['available'] ? 'ready' : 'unavailable' ?>"
             role="status"><?= icct_nms_h($status['message']) ?></p>
         <div class="installation-package-actions">
@@ -31,11 +32,6 @@
         <p data-package-next-step><?= icct_nms_h($status['next_step'] ?? '') ?></p>
         <pre data-package-command <?= empty($status['command']) ? 'hidden' : '' ?>><code><?= icct_nms_h($status['command'] ?? '') ?></code></pre>
     </div>
-    <p data-package-platform><?php if (!empty($status['target'])): ?>
-        <?= icct_nms_h('Collector platform · ' . strtoupper($status['target']['id']) . ' ' .
-            $status['target']['version'] . ' · ' . $status['target']['arch']) ?>
-    <?php else: ?>Collector platform will appear when the package runner reports its status.<?php endif; ?></p>
-    <p>Install adds the missing dependencies for the selected feature from matching offline RPMs. LLDP and CDP use SNMP access to devices. Configure protocol credentials and receivers after installing their dependencies.</p>
     <div class="installation-table-wrap">
         <table class="action-table site-table installation-table">
             <thead>
@@ -115,7 +111,7 @@
                                     <?php foreach ($names as $name): ?>
                                         <?php
                                         $present = in_array($name, $installed, true);
-                                        $version = $status['available'] ? ($versions[$name] ?? []) : [];
+                                        $version = !empty($status['inventory_available']) ? ($versions[$name] ?? []) : [];
                                         $external = !empty($status['inventory_available']) ? ($status['external'][$name] ?? '') : '';
                                         ?>
                                         <tr data-rpm="<?= icct_nms_h($name) ?>">

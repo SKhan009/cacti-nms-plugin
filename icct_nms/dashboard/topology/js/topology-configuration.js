@@ -4,6 +4,51 @@
         setInterval(() => {
             if (!document.hidden) location.reload();
         }, 5000);
+    document.querySelectorAll('[data-interface-picker]').forEach((select) => {
+        const end = select.dataset.interfacePicker;
+        const device = document.getElementById(end);
+        const identity = select.form.elements[end + '_identity'];
+        const help = select.parentElement.querySelector('[data-interface-help]');
+        let request = 0;
+        const updateIdentity = () => {
+            identity.value = select.selectedOptions[0]?.dataset.identity || '';
+        };
+        select.addEventListener('change', updateIdentity);
+        const load = async () => {
+            const current = ++request;
+            const id = device.value;
+            select.replaceChildren(new Option('Interface not mapped', '0'));
+            identity.value = '';
+            select.setCustomValidity(id ? 'Wait for discovered interfaces to load.' : '');
+            help.textContent = id ? 'Loading discovered interfaces…' : 'Select a device first.';
+            help.hidden = false;
+            if (!id) return;
+            try {
+                const url = new URL(location.href);
+                url.search = '';
+                url.searchParams.set('interface_device', id);
+                const response = await fetch(url, { headers: { Accept: 'application/json' } });
+                if (!response.ok) throw new Error();
+                const data = await response.json();
+                if (current !== request || device.value !== id) return;
+                for (const port of data.interfaces) {
+                    const option = new Option(port.name + ' · ifIndex ' + port.index +
+                        (port.alias ? ' · ' + port.alias : ''), String(port.index));
+                    option.dataset.identity = port.identity;
+                    select.append(option);
+                }
+                help.textContent = data.message || '';
+                help.hidden = !help.textContent;
+                select.setCustomValidity('');
+            } catch {
+                if (current !== request) return;
+                help.textContent = 'Interfaces unavailable. Check collection and reload.';
+                // Keep the explicit unmapped choice available; never reuse another device’s port.
+                select.setCustomValidity('');
+            }
+        };
+        device.addEventListener('change', load);
+    });
     document.querySelectorAll('.connection-device-select').forEach((select) => {
         const picker = document.createElement('div');
         picker.className = 'connection-picker';

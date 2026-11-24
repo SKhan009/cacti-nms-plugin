@@ -73,19 +73,16 @@
         const verify = page.querySelector('[data-package-action="verify"]');
         if (availability.textContent !== state.message) availability.textContent = state.message;
         availability.dataset.state = state.available ? 'ready' : 'unavailable';
+        availability.hidden = !state.message;
         packageHelp.hidden = !state.next_step;
         nextStep.textContent = state.next_step || '';
         command.hidden = !state.command;
         command.querySelector('code').textContent = state.command || '';
         if (verify) verify.disabled = busy || !state.available;
-        const platform = page.querySelector('[data-package-platform]');
-        if (platform && state.target) {
-            platform.textContent = `Collector platform · ${state.target.id.toUpperCase()} ${state.target.version} · ${state.target.arch}`;
-        }
         page.querySelectorAll('[data-package-profile]').forEach((profile) => {
             const rows = Array.from(profile.querySelectorAll('[data-rpm]'));
             const names = rows.map((row) => row.dataset.rpm);
-            const versions = state.available ? (state.versions?.[profile.dataset.packageVersionProfile] || {}) : {};
+            const versions = state.inventory_available ? (state.versions?.[profile.dataset.packageVersionProfile] || {}) : {};
             const hasPackage = (name) => Object.prototype.hasOwnProperty.call(installed, name);
             const count = names.filter(hasPackage).length;
             profile.querySelector('[data-profile-count]').textContent =

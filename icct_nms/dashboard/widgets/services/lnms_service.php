@@ -249,8 +249,10 @@ function icct_nms_lnms_links($nodes, $hosts, $physicalLinks)
                 $a['id'],
                 $link['source_port'] ?? '',
                 (int) ($link['source_ifindex'] ?? 0),
+                $link['source_identity'] ?? '',
             ),
-            icct_nms_link_reading($b['id'], $link['target_port'] ?? ''),
+            icct_nms_link_reading($b['id'], $link['target_port'] ?? '',
+                (int) ($link['target_ifindex'] ?? 0), $link['target_identity'] ?? ''),
         ];
         $states = array_column($readings, 'status');
         $status = in_array('Down', $states, true)

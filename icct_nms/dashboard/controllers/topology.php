@@ -84,11 +84,13 @@ try {
                 $a,
                 $selected['source_port'] ?? '',
                 (int) ($selected['source_ifindex'] ?? 0),
+                $selected['source_identity'] ?? '',
             ),
             icct_nms_link_reading(
                 $b,
                 $selected['target_port'] ?? '',
                 (int) ($selected['target_ifindex'] ?? 0),
+                $selected['target_identity'] ?? '',
             ),
         ];
         $selected['mtr'] = [icct_nms_link_mtr($a), icct_nms_link_mtr($b)];

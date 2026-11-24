@@ -435,6 +435,8 @@
                                     (reading.port === 'Not specified' ? '' : ' · ' + reading.port),
                             ),
                         );
+                        if (reading.measurement_message)
+                            section.append(el('p', '', reading.measurement_message));
                         if (!reading.available)
                             section.append(el('p', '', 'Bandwidth: unavailable'));
                         else {
@@ -445,6 +447,10 @@
                                 Inbound: bandwidth(reading.in_bps),
                                 Outbound: bandwidth(reading.out_bps),
                                 Updated: reading.collected,
+                                'Sample interval': reading.sample_seconds === null ? '—' : reading.sample_seconds + ' seconds',
+                                'Interface index': reading.ifindex,
+                                'Sample start': reading.sample_started ? new Date(reading.sample_started * 1000).toLocaleString() : '—',
+                                'Sample end': reading.sample_ended ? new Date(reading.sample_ended * 1000).toLocaleString() : '—',
                             };
                             if (reading.capacity_bps > 0) {
                                 for (const dir of ['in', 'out'])
@@ -457,7 +463,7 @@
                                             (
                                                 (reading[dir + '_bps'] / reading.capacity_bps) *
                                                 100
-                                            ).toFixed(1) + '%';
+                                            ).toLocaleString(undefined, { maximumSignificantDigits: 3 }) + '%';
                             }
                             Object.entries(values).forEach(([name, value]) => {
                                 rows.append(el('dt', '', name), el('dd', '', value));

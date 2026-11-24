@@ -171,20 +171,44 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <?php foreach (['source_port' => 'Source Port', 'target_port' => 'Target Port'] as $key => $label): ?>
+                    <?php foreach (['source' => 'Source Port', 'target' => 'Target Port'] as $end => $label): ?>
+                        <?php
+                        $deviceId = (int) ($edit[$end] ?? 0);
+                        $choices = $deviceId && isset($byId[$deviceId])
+                            ? icct_nms_link_interface_choices($deviceId) : ['interfaces' => [], 'message' => 'Select a device first.'];
+                        $index = (int) ($edit[$end . '_ifindex'] ?? 0);
+                        $identity = $edit[$end . '_identity'] ?? '';
+                        // Upgrade legacy labels only when the current snapshot contains one exact match.
+                        if (!$index && !empty($edit[$end . '_port'])) {
+                            $matches = array_values(array_filter($choices['interfaces'],
+                                fn($port) => in_array($edit[$end . '_port'], [$port['name'], $port['description']], true)));
+                            if (count($matches) === 1) {
+                                $index = $matches[0]['index'];
+                                $identity = $matches[0]['identity'];
+                            }
+                        }
+                        $mapped = false;
+                        ?>
                         <div class="field">
-                            <label for="<?= $key ?>"><?= $label ?> <?php $connectionFieldHelp(
-                                $label,
-                                'Optional. Enter the interface on the ' .
-                                    ($key === 'source_port' ? 'Source' : 'Target') .
-                                    ' Device, for example Gi1/0/1, Ethernet1 or port number 1. Leave blank if unknown. Maximum 100 characters.',
+                            <label for="<?= $end ?>_port"><?= $label ?> <?php $connectionFieldHelp(
+                                $label, 'Select an interface from the latest successful device collection. Leave unmapped when unknown. Changed or stale interfaces must be selected again.',
                             ); ?></label>
-                            <input
-                                id="<?= $key ?>"
-                                name="<?= $key ?>"
-                                maxlength="100"
-                                value="<?= icct_nms_h($edit[$key] ?? '') ?>"
-                                placeholder="Interface name or port number">
+                            <select id="<?= $end ?>_port" name="<?= $end ?>_ifindex"
+                                data-interface-picker="<?= $end ?>"
+                                data-selected-index="<?= $index ?>"
+                                data-selected-identity="<?= icct_nms_h($identity) ?>">
+                                <option value="0">Interface not mapped</option>
+                                <?php foreach ($choices['interfaces'] as $port): ?>
+                                    <?php $selected = $index === $port['index'] && $identity === $port['identity']; $mapped = $mapped || $selected; ?>
+                                    <option value="<?= $port['index'] ?>" data-identity="<?= icct_nms_h($port['identity']) ?>"
+                                        <?= $selected ? 'selected' : '' ?>><?= icct_nms_h($port['name'] . ' · ifIndex ' . $port['index'] . ($port['alias'] !== '' ? ' · ' . $port['alias'] : '')) ?></option>
+                                <?php endforeach; ?>
+                                <?php if ($index && !$mapped): ?>
+                                    <option value="<?= $index ?>" selected disabled>Saved interface changed or unavailable — select again</option>
+                                <?php endif; ?>
+                            </select>
+                            <input type="hidden" name="<?= $end ?>_identity" value="<?= icct_nms_h($identity) ?>">
+                            <small data-interface-help="<?= $end ?>" <?= $choices['message'] === '' ? 'hidden' : '' ?>><?= icct_nms_h($choices['message']) ?></small>
                         </div>
                     <?php endforeach; ?>
                 </div>

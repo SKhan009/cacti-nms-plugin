@@ -3,6 +3,7 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -12,6 +13,30 @@ spec.loader.exec_module(setup)
 
 
 class BundleSafety(unittest.TestCase):
+    def test_failed_bundle_download_is_retryable_and_never_publishes_manifest(self):
+        with tempfile.TemporaryDirectory() as parent:
+            directory = Path(parent) / 'out'
+            target = dict(family='rhel', id='rhel', version='9.4', arch='x86_64')
+
+            def failed_download(command):
+                staging = Path(command[command.index('--destdir') + 1])
+                (staging / 'partial.rpm').write_bytes(b'incomplete')
+                raise subprocess.CalledProcessError(1, command)
+
+            with patch.object(setup, 'run', side_effect=failed_download):
+                with self.assertRaises(subprocess.CalledProcessError):
+                    setup.download_bundle(directory, target)
+            self.assertEqual(list(directory.iterdir()), [])
+            self.assertEqual(list(Path(parent).iterdir()), [directory])
+
+            def successful_download(command):
+                staging = Path(command[command.index('--destdir') + 1])
+                (staging / 'resolved.rpm').write_bytes(b'complete')
+
+            with patch.object(setup, 'run', side_effect=successful_download):
+                setup.download_bundle(directory, target)
+            self.assertEqual(len(setup.verify_bundle(directory, target)), 1)
+
     def fixture(self, directory):
         target = dict(family="rhel", id="rhel", version="9.4", arch="aarch64")
         package = Path(directory) / "test.rpm"
@@ -110,7 +135,7 @@ class BundleSafety(unittest.TestCase):
             def fake_run(command):
                 self.assertIn("--alldeps", command)
                 self.assertIn("--resolve", command)
-                (directory / "resolved.rpm").write_bytes(b"complete package fixture")
+                (Path(command[command.index("--destdir") + 1]) / "resolved.rpm").write_bytes(b"complete package fixture")
 
             with patch.object(setup, "run", side_effect=fake_run):
                 setup.download_bundle(directory, target)

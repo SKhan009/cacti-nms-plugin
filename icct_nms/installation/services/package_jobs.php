@@ -95,7 +95,7 @@ function icct_nms_package_status($root)
         $status['available'] = false;
         $status['message'] = 'Offline RPM media is unavailable. Service readiness is shown under Checks.';
     } else {
-        $status['message'] = 'Offline packages are ready on this collector.';
+        $status['message'] = '';
     }
     return $status;
 }

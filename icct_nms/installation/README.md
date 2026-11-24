@@ -326,3 +326,46 @@ it. The change requires no repository or internet access.
 Run standalone unit tests without connecting to the live Cacti database. Database integration entry points require explicit `--cacti-root` and `--database` arguments. The root must be an isolated Cacti copy with a `.icct-disposable-qa.json` marker identifying its disposable database, and its configuration must connect to that exact database. The guard exits before Cacti startup when the marker is absent. Do not run integration tests against the live installation or alter live database credentials for testing.
 
 Source permission checks inspect the source file and every parent directory within the detected Cacti root. Read-only files in a writable source directory still require correction because the web account could replace them.
+
+
+### November 24 runner follow-up
+
+Inventory mode reports installed RPM versions without offline media or Python RPM bindings.
+Bundle downloads use temporary staging; a failed download leaves the requested output empty for retry.
+An explicit `package_runner.py provision --media /path/to/media` verifies and snapshots the
+media into private runner storage, including when the source is the plugin's bundled media.
+
+Directory mode `0777` allows any local user to replace source files and intentionally remains
+`Needs setup` in permission checks. It cannot be used for privileged runner state, active
+package media, credentials or verified native runtimes. Before changing plugin directories,
+provision an explicit media snapshot outside the plugin. Folder modes are filesystem settings;
+Git does not retain them. Restore protected plugin source directories to `0755` for deployment.
+
+The RHEL 9.4 x86_64 collector requires packages built for that exact target. RHEL 9.8 aarch64
+media from the development VM cannot supply its missing nfdump/NetFlow, SSH or other RPMs.
+A successful repository metadata refresh does not establish package availability. No empty
+manifest or architecture substitution can complete that installation.
+
+
+### Topology interface measurements
+
+Device Connections uses discovered-interface selectors. Each mapped endpoint retains the Cacti
+host ID, ifIndex, displayed name and a fingerprint of the collected index/name/MAC/description.
+Both save and read paths require fresh snapshots with matching device settings. Changed or
+reused interfaces must be selected again. A legacy label is resolved only by one exact match.
+An unmapped endpoint is allowed and is displayed explicitly; no interface is guessed.
+
+Collection reuses the existing assigned Cacti poller and `cacti_snmp_session` settings. The
+existing Counter64 rate calculator rejects restarts, discontinuities, changed identities,
+counter decreases and excessive sample gaps. It reports both sample timestamps, elapsed
+seconds and valid zero traffic. Link popups distinguish unmapped interfaces, inaccessible
+counters, waiting for another sample and stale collection from valid measurements.
+Interface capacity comes from collected IF-MIB values; connection presets do not supply rates.
+
+For the local SNMP agent, its administrator can include `.1.3.6.1.2.1.31` in the existing
+permitted SNMP view. Enabling collection does not create a physical connection. Choose the
+actual device and discovered port at both ends. The current tested agent supplies Counter64;
+no 32-bit fallback or separate polling job was introduced.
+
+Regression checks: `php shared/tests/topology_interfaces_test.php` and
+`php shared/tests/topology_interface_direction_test.php` from the plugin directory.

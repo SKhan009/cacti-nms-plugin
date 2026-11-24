@@ -4,6 +4,7 @@
 require_once __DIR__ .
     '/../../../protocols/shared/services/backend/discovery_management_addresses.php';
 require_once __DIR__ . '/../../../inventory/services/backend/identity.php';
+require_once __DIR__ . '/topology_link_service.php';
 
 /** Make each visible, configured device due on its assigned Cacti collector. */
 function icct_nms_topology_queue_refresh($byId)
@@ -89,12 +90,34 @@ function icct_nms_connection_save($input)
         throw new InvalidArgumentException('Select a network connection preset.');
     }
     $ports = [];
-    foreach (['source_port', 'target_port'] as $key) {
-        $v = $input[$key] ?? '';
-        if (!is_string($v) || strlen($v) > 100 || preg_match('/[\x00-\x1f\x7f]/', $v)) {
-            throw new InvalidArgumentException('Port names must be at most 100 characters.');
+    foreach (['source' => $source, 'target' => $target] as $end => $id) {
+        $index = icct_backend_topology_integer($input[$end . '_ifindex'] ?? '0', 0, 2147483647, 'Interface index');
+        $ports[$end . '_ifindex'] = $index;
+        $ports[$end . '_identity'] = '';
+        $ports[$end . '_port'] = '';
+        if (!$index) {
+            if (!empty($input[$end . '_identity'])) {
+                throw new InvalidArgumentException('The saved interface is unavailable. Select it again or explicitly leave it unmapped.');
+            }
+            continue;
         }
-        $ports[$key] = trim($v);
+        $identity = $input[$end . '_identity'] ?? '';
+        if (!is_string($identity) || !preg_match('/^[a-f0-9]{64}$/D', $identity)) {
+            throw new InvalidArgumentException('Select a discovered interface for each mapped endpoint.');
+        }
+        $choices = icct_nms_link_interface_choices($id);
+        $selected = null;
+        foreach ($choices['interfaces'] as $port) {
+            if ($port['index'] === $index && hash_equals($port['identity'], $identity)) {
+                $selected = $port;
+                break;
+            }
+        }
+        if (!$selected) {
+            throw new InvalidArgumentException('Interface collection changed or is stale. Refresh and select the interface again.');
+        }
+        $ports[$end . '_port'] = $selected['name'];
+        $ports[$end . '_identity'] = $identity;
     }
     $lock = 'icct_topology_connections';
     if ((int) db_fetch_cell_prepared('SELECT GET_LOCK(?,10)', [$lock]) !== 1) {

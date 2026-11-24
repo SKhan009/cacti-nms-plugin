@@ -23,6 +23,17 @@ try {
     $automation = is_realm_allowed(23);
     $devices = icct_nms_inventory();
     $byId = array_column($devices, null, 'id');
+    if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['interface_device'])) {
+        $id = icct_nms_id($_GET['interface_device']);
+        icct_backend_require_device_access($id);
+        if (!isset($byId[$id])) {
+            throw new InvalidArgumentException('Device is unavailable.');
+        }
+        header('Content-Type: application/json');
+        header('Cache-Control: no-store');
+        echo json_encode(icct_nms_link_interface_choices($id), JSON_THROW_ON_ERROR);
+        exit();
+    }
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             icct_nms_post();

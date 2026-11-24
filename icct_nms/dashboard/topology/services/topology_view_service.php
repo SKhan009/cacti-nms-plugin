@@ -65,6 +65,9 @@ function icct_nms_topology_store_link(&$links, $link)
             $link['target_ifindex'] ?? 0,
             $link['source_ifindex'] ?? 0,
         ];
+        [$link['source_identity'], $link['target_identity']] = [
+            $link['target_identity'] ?? '', $link['source_identity'] ?? '',
+        ];
         $prefix = explode(' · ', $link['label'], 2)[0];
         $link['label'] =
             $prefix . ' · ' . ($link['source_port'] ?: '?') . ' / ' . ($link['target_port'] ?: '?');
@@ -241,6 +244,10 @@ function icct_nms_topology_data($mapData)
             'protocol' => 'manual',
             'source_port' => $link['source_port'],
             'target_port' => $link['target_port'],
+            'source_ifindex' => (int) ($link['source_ifindex'] ?? 0),
+            'target_ifindex' => (int) ($link['target_ifindex'] ?? 0),
+            'source_identity' => $link['source_identity'] ?? '',
+            'target_identity' => $link['target_identity'] ?? '',
             'color' => $profile['color'],
             'label' =>
                 $profile['name'] .

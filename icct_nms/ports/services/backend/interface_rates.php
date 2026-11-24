@@ -29,6 +29,16 @@ function icct_backend_interface_counter_delta($current, $previous)
     return (float) $result;
 }
 
+/** The same identity guards both consecutive samples and saved endpoint mappings. */
+function icct_backend_interface_identity(array $port): string
+{
+    $identity = [];
+    foreach (['index', 'name_hex', 'mac_hex', 'description_hex'] as $key) {
+        $identity[$key] = $port[$key] ?? null;
+    }
+    return hash('sha256', json_encode($identity, JSON_THROW_ON_ERROR));
+}
+
 function icct_backend_interface_rates(array $current, array $previous, int $maxAge): array
 {
     $elapsed = (int) ($current['collected'] ?? 0) - (int) ($previous['collected'] ?? 0);
@@ -44,6 +54,14 @@ function icct_backend_interface_rates(array $current, array $previous, int $maxA
     foreach ($current['interfaces'] as $index => &$port) {
         $port['in_bps'] = $port['out_bps'] = null;
         $port['sample_seconds'] = null;
+        $port['sample_started'] = $port['sample_ended'] = null;
+        $port['measurement_state'] = 'waiting_for_second_sample';
+        $port['measurement_message'] = 'Waiting for the second sample.';
+        if (!isset($port['in_octets'], $port['out_octets'], $port['discontinuity'])) {
+            $port['measurement_state'] = 'counters_inaccessible';
+            $port['measurement_message'] = 'Counters inaccessible. Check the SNMP view and IF-MIB support.';
+            continue;
+        }
         $old = $previous['interfaces'][$index] ?? [];
         if (
             !$valid ||
@@ -53,10 +71,9 @@ function icct_backend_interface_rates(array $current, array $previous, int $maxA
         ) {
             continue;
         }
-        foreach (['index', 'name_hex', 'mac_hex', 'description_hex'] as $key) {
-            if (($port[$key] ?? null) !== ($old[$key] ?? null)) {
-                continue 2;
-            }
+        if (icct_backend_interface_identity($port) !== icct_backend_interface_identity($old)) {
+            $port['measurement_message'] = 'Interface identity changed. Waiting for two consistent samples.';
+            continue;
         }
         foreach (['in', 'out'] as $direction) {
             $delta = icct_backend_interface_counter_delta(
@@ -67,6 +84,16 @@ function icct_backend_interface_rates(array $current, array $previous, int $maxA
                 $port[$direction . '_bps'] = ($delta * 8) / $elapsed;
                 $port['sample_seconds'] = $elapsed;
             }
+        }
+        if ($port['in_bps'] !== null && $port['out_bps'] !== null) {
+            $port['measurement_state'] = 'valid';
+            $port['measurement_message'] = 'Valid measurement.';
+            $port['sample_started'] = (int) $previous['collected'];
+            $port['sample_ended'] = (int) $current['collected'];
+        } else {
+            $port['in_bps'] = $port['out_bps'] = null;
+            $port['sample_seconds'] = null;
+            $port['measurement_message'] = 'Counters changed or reset. Waiting for two consistent samples.';
         }
     }
     unset($port);

@@ -163,7 +163,9 @@ def provision(args, target):
         raise ValueError("Use the existing unprivileged PHP service account.")
     bundled = root / "plugins/icct_nms/installation/bundles/media"
     source = Path(args.media).absolute() if args.media else bundled
-    use_bundled = source == bundled
+    # Explicit media is always verified and copied to the runner's private state.
+    # This also permits a durable snapshot before changing plugin folder modes.
+    use_bundled = not args.media and source == bundled
     # Receiver setup also runs on air-gapped hosts without RPM bundles.
     # Preserve the verified package media on upgrades of full installations.
     syslog_only = args.syslog_only or (args.no_packages and not args.media and not bundled.exists())
@@ -274,6 +276,26 @@ def installed_packages(names):
         if name in names:
             installed.setdefault(name, []).append(version)
     return {name: sorted(versions) for name, versions in installed.items()}
+
+
+
+def inventory_versions(grouped, installed):
+    """Display installed NEVRA without needing offline media or Python RPM bindings."""
+    def display(receipt):
+        version = receipt.rsplit(":", 1)[0]
+        return version[2:] if version.startswith("0:") else version
+
+    return {
+        profile: {
+            name: {
+                "installed": sorted({display(value) for value in installed.get(name, [])}),
+                "bundled": [],
+                "status": "Offline media unavailable" if name in installed else "Missing",
+            }
+            for name in names
+        }
+        for profile, names in grouped.items()
+    }
 
 
 def package_versions(media, target, grouped, installed):
@@ -545,7 +567,7 @@ def work(target):
         state["external"] = external_installations(target, actual)
         state.pop("native", None)
         if media is None:
-            state["versions"] = {}
+            state["versions"] = inventory_versions(grouped, actual)
             state["removable"] = []
             return
         state["versions"] = package_versions(media, target, grouped, actual)
@@ -696,7 +718,7 @@ def main():
     commands = parser.add_subparsers(dest="action", required=True)
     install = commands.add_parser("provision")
     install.add_argument("--syslog-only", action="store_true", help="Provision receiver-port management using installed prerequisites, preserving existing RPM media.")
-    install.add_argument("--media", help="Legacy external media directory. Defaults to the bundled plugin media.")
+    install.add_argument("--media", help="Verify and copy this media into private runner storage. Defaults to using bundled plugin media directly.")
     install.add_argument("--cacti-root", required=True)
     install.add_argument("--web-user", default="apache")
     install.add_argument("--web-group")

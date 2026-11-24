@@ -126,57 +126,63 @@ def verify_component_bundle(directory, target):
 
 
 def download_bundle(directory, target, component=None):
-    dest = Path(directory).resolve()
-    if dest.exists() and any(dest.iterdir()):
+    output = Path(directory).resolve()
+    if output.exists() and any(output.iterdir()):
         raise ValueError("Use an empty bundle directory; never mix OS versions or architectures.")
-    dest.mkdir(parents=True, exist_ok=True)
-    packages = component_packages(target, component)
-    if target["family"] == "rhel":
-        # dnf-plugins-core provides download; --alldeps includes already installed dependencies.
-        run(["dnf", "download", "--resolve", "--alldeps", "--destdir", dest, *packages])
-    else:
-        # Empty dpkg status makes apt include dependencies already installed on the build machine.
-        cache = dest / "cache"
-        (cache / "partial").mkdir(parents=True)
-        status = dest / "empty-status"
-        status.touch()
-        run(
-            [
-                "apt-get",
-                "-y",
-                "--download-only",
-                "-o",
-                "Dir::State::status=" + str(status),
-                "-o",
-                "Dir::Cache::archives=" + str(cache),
-                "install",
-                *packages,
-            ]
+    output.mkdir(parents=True, exist_ok=True)
+    # Failed downloads never leave a partial bundle in the requested output.
+    with tempfile.TemporaryDirectory(prefix=".icct-bundle-", dir=output.parent) as staging:
+        dest = Path(staging)
+        packages = component_packages(target, component)
+        if target["family"] == "rhel":
+            # dnf-plugins-core provides download; --alldeps includes already installed dependencies.
+            run(["dnf", "download", "--resolve", "--alldeps", "--destdir", dest, *packages])
+        else:
+            # Empty dpkg status makes apt include dependencies already installed on the build machine.
+            cache = dest / "cache"
+            (cache / "partial").mkdir(parents=True)
+            status = dest / "empty-status"
+            status.touch()
+            run(
+                [
+                    "apt-get",
+                    "-y",
+                    "--download-only",
+                    "-o",
+                    "Dir::State::status=" + str(status),
+                    "-o",
+                    "Dir::Cache::archives=" + str(cache),
+                    "install",
+                    *packages,
+                ]
+            )
+            for package in cache.glob("*.deb"):
+                shutil.move(str(package), dest / package.name)
+            shutil.rmtree(cache)
+            status.unlink()
+        suffix = "*.rpm" if target["family"] == "rhel" else "*.deb"
+        files = {
+            path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in sorted(dest.glob(suffix))
+        }
+        if not files:
+            raise ValueError("Package manager produced no packages.")
+        (dest / "bundle.json").write_text(
+            json.dumps(
+                dict(
+                    format=1,
+                    target=target,
+                    component=component,
+                    packages=packages,
+                    files=files,
+                ),
+                indent=2,
+            )
+            + "\n"
         )
-        for package in cache.glob("*.deb"):
-            shutil.move(str(package), dest / package.name)
-        shutil.rmtree(cache)
-        status.unlink()
-    suffix = "*.rpm" if target["family"] == "rhel" else "*.deb"
-    files = {
-        path.name: hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in sorted(dest.glob(suffix))
-    }
-    if not files:
-        raise ValueError("Package manager produced no packages.")
-    (dest / "bundle.json").write_text(
-        json.dumps(
-            dict(
-                format=1,
-                target=target,
-                component=component,
-                packages=packages,
-                files=files,
-            ),
-            indent=2,
-        )
-        + "\n"
-    )
+        verify_bundle(dest, target, component)
+        for path in dest.iterdir():
+            path.replace(output / path.name)
     print("Bundle built for exactly: " + json.dumps(target))
 
 
