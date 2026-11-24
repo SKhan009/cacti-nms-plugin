@@ -33,23 +33,18 @@ def source_files(root):
             continue
         if (
             path.name.startswith(("._", ".env"))
-            or path.name in ("config.local.json", "ssh.config.local.json")
+            or path.name in (".gitignore", "config.local.json", "ssh.config.local.json")
             or path.suffix in (".pyc", ".log", ".pem", ".key")
         ):
             continue
-        if relative.parts[:2] == ("installation", "bundles") and relative.as_posix() not in (
-            "installation/bundles/.htaccess", "installation/bundles/.gitignore",
-        ):
+        if relative.parts[:2] == ("installation", "bundles") and relative.as_posix() != "installation/bundles/.htaccess":
             continue
         private = [
             "protocols/snmp/mibs/storage",
             "protocols/snmp/mibs/queries",
             "shared/assets/images/device-types/uploads",
         ]
-        if any(str(relative).startswith(prefix + "/") for prefix in private) and path.name not in (
-            ".htaccess",
-            ".gitignore",
-        ):
+        if any(str(relative).startswith(prefix + "/") for prefix in private) and path.name != ".htaccess":
             continue
         files.append((path, relative.as_posix()))
     return files

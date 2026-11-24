@@ -166,7 +166,8 @@ def provision(args, target):
     use_bundled = source == bundled
     # Receiver setup also runs on air-gapped hosts without RPM bundles.
     # Preserve the verified package media on upgrades of full installations.
-    if args.syslog_only:
+    syslog_only = args.syslog_only or (args.no_packages and not args.media and not bundled.exists())
+    if syslog_only:
         previous = STATE / "config.json"
         saved = json.loads(previous.read_text()) if previous.exists() else {}
         media = Path(saved["media"]) if saved.get("media") else None
@@ -177,7 +178,7 @@ def provision(args, target):
         source = source.resolve(strict=True)
         media = Path(tempfile.mkdtemp(prefix="media-", dir=STATE))
     try:
-        if not args.syslog_only:
+        if not syslog_only:
             for profile in profiles(target):
                 print("Checking offline profile " + profile, flush=True)
                 files = verified_media(source, target, profile)
@@ -205,7 +206,7 @@ def provision(args, target):
         if shutil.which("getenforce") and not shutil.which("semanage"):
             prerequisites.append("policycoreutils-python-utils")
         if prerequisites:
-            if args.no_packages or args.syslog_only:
+            if args.no_packages or syslog_only:
                 raise ValueError("Install the runner prerequisites from approved RHEL media first: " +
                                  ", ".join(prerequisites))
             files = verified_media(media, target, "base")
@@ -250,12 +251,12 @@ def provision(args, target):
                    "[Install]\nWantedBy=timers.target\n")
         write_json(STATE / "config.json", {"root": str(root), "uid": uid, "gid": gid, "media": str(media) if media else None})
     except BaseException:
-        if not args.syslog_only and not use_bundled:
+        if not syslog_only and not use_bundled:
             shutil.rmtree(media)
         raise
 
     for old in STATE.glob("media-*"):
-        if not args.syslog_only and old != media:
+        if not syslog_only and old != media:
             shutil.rmtree(old)
     run(["/usr/bin/systemctl", "daemon-reload"])
     run(["/usr/bin/systemctl", "enable", "--now", UNIT + ".timer"])
@@ -539,15 +540,15 @@ def work(target):
             LOGGER.warning("Could not read the Syslog port: %s", error)
             state["syslog_port"] = None
         state["syslog_only"] = media is None
-        if media is None:
-            for key in ("installed", "versions", "external", "removable", "native"):
-                state.pop(key, None)
-            return
         actual = installed_packages(names)
         state["installed"] = actual
-        state["versions"] = package_versions(media, target, grouped, actual)
-        state.pop("native", None)
         state["external"] = external_installations(target, actual)
+        state.pop("native", None)
+        if media is None:
+            state["versions"] = {}
+            state["removable"] = []
+            return
+        state["versions"] = package_versions(media, target, grouped, actual)
         state["removable"] = sorted(
             name for name, versions in actual.items()
             if name not in protected and versions == receipts.get(name)

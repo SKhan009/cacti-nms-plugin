@@ -55,7 +55,7 @@ function icct_nms_package_status($root)
         return [
             'available' => false,
             'message' => 'Offline Packages is unavailable because the runner has not been set up on this collector.',
-            'next_step' => 'Use complete offline media for this RHEL release and CPU architecture. The complete installer sets up the runner. If the media and runner prerequisites are already installed, run the command below as an administrator. The command uses the current PHP service account and discovered Python executable. If it is unavailable, run provisioning from the command line with the actual PHP account and interpreter.',
+            'next_step' => 'Use complete offline media for this RHEL release and CPU architecture. The complete installer sets up the runner. With prerequisites already installed, the command below enables local inventory and Syslog port management even without RPM media. The command uses the current PHP service account and discovered Python executable. If it is unavailable, run provisioning from the command line with the actual PHP account and interpreter.',
             'command' => $provision,
         ];
     }
@@ -82,7 +82,8 @@ function icct_nms_package_status($root)
     $fresh = $age >= 0 && $age < ($running ? 930 : 40);
     $writable = is_writable(ICCT_NMS_PACKAGE_STATE . '/requests');
     $status['available'] = $fresh && $writable;
-    $status['syslog_available'] = $status['available'];
+    $status['inventory_available'] = $fresh && isset($status['installed']);
+    $status['syslog_available'] = $status['available'] && isset($status['syslog_port']);
     if (!$fresh) {
         $status['message'] = 'The Offline Packages runner has stopped reporting its status.';
         $status += $runnerCheck;
@@ -92,7 +93,7 @@ function icct_nms_package_status($root)
         $status['command'] = $provision;
     } elseif (!empty($status['syslog_only'])) {
         $status['available'] = false;
-        $status['message'] = 'Syslog port management is ready. Package operations require verified offline media.';
+        $status['message'] = 'Offline RPM media is unavailable. Service readiness is shown under Checks.';
     } else {
         $status['message'] = 'Offline packages are ready on this collector.';
     }

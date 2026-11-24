@@ -390,7 +390,9 @@ function icct_nms_installation_checks()
                     : ($state === 'Not checked'
                         ? 'Not checked'
                         : 'Needs setup'),
-                $state . $observed . ' · applies to this server/collector only.',
+                $feature === 'SNMP Traps' && $installed === false && $state !== 'active'
+                    ? 'Configure trap authorization and listener using --trap-auth-file and --trap-listener.'
+                    : $state . $observed . ' · applies to this server/collector only.',
             );
             $checks[count($checks) - 1]['installed'] = $installed;
         }

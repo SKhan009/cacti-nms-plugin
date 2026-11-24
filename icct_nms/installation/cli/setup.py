@@ -741,6 +741,13 @@ def main():
              trap_auth, args.trap_listener],
             env=dict(os.environ, ICCT_WEB_USER=user, ICCT_WEB_GROUP=group),
         )
+    elif target["family"] == "rhel":
+        units = ["icct-nms-trap-receiver.service", "icct-nms-trap-worker.service"]
+        if all((Path("/etc/systemd/system") / unit).is_file() for unit in units):
+            run(["systemctl", "enable", "--now", *units])
+            run(["systemctl", "is-active", *units])
+        else:
+            print("Configure trap authorization and listener with --trap-auth-file and --trap-listener.")
     if args.ssh_origin:
         configure_ssh(
             root,

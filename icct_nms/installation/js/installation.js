@@ -89,13 +89,13 @@
             const hasPackage = (name) => Object.prototype.hasOwnProperty.call(installed, name);
             const count = names.filter(hasPackage).length;
             profile.querySelector('[data-profile-count]').textContent =
-                state.available ? count + ' / ' + names.length : 'Not checked';
+                state.inventory_available ? count + ' / ' + names.length : 'Not checked';
             rows.forEach((row) => {
                 const name = row.dataset.rpm;
                 const version = versions[name];
-                const external = state.available ? state.external?.[name] : null;
+                const external = state.inventory_available ? state.external?.[name] : null;
                 row.querySelector('[data-rpm-installed]').textContent =
-                    external || version?.installed.join(', ') || (state.available && !hasPackage(name) ? 'Missing' : '—');
+                    external || version?.installed.join(', ') || (state.inventory_available ? (hasPackage(name) ? 'Installed' : 'Missing') : '—');
                 row.querySelector('[data-rpm-bundled]').textContent = version?.bundled.join(', ') || '—';
                 row.querySelector('[data-rpm-status]').textContent =
                     external ? 'Managed outside RPM' : (version?.status || 'Not checked');
@@ -118,6 +118,7 @@
                         reason = 'Cacti or collector dependencies are protected from removal.';
                     else reason = 'Uninstall requires an eligible RPM managed by this runner.';
                 }
+                if (install) button.textContent = state.inventory_available && !missing.length ? 'Installed' : 'Install';
                 button.hidden = false;
                 button.disabled = reason !== '';
                 button.title = reason || (install ? 'Install missing packages' : 'Review package removal');

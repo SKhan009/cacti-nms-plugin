@@ -75,7 +75,7 @@
                                 <?php endif; ?>
                             </button>
                         </td>
-                        <td data-profile-count><?= $status['available'] ? count($installed) . ' / ' . count($names) : 'Not checked' ?></td>
+                        <td data-profile-count><?= !empty($status['inventory_available']) ? count($installed) . ' / ' . count($names) : 'Not checked' ?></td>
                         <td>
                             <div class="installation-package-actions">
                                 <button
@@ -84,7 +84,7 @@
                                     data-package-action="install"
                                     data-target="<?= icct_nms_h($id) ?>"
                                     aria-label="Install <?= icct_nms_h($profile['label']) ?>"
-                                    <?= !$status['available'] || !$canInstall ? 'disabled' : '' ?>>Install</button>
+                                    <?= !$status['available'] || !$canInstall ? 'disabled' : '' ?>><?= !$missing && !empty($status['inventory_available']) ? 'Installed' : 'Install' ?></button>
                                 <button
                                     type="button"
                                     class="button"
@@ -116,11 +116,11 @@
                                         <?php
                                         $present = in_array($name, $installed, true);
                                         $version = $status['available'] ? ($versions[$name] ?? []) : [];
-                                        $external = $status['available'] ? ($status['external'][$name] ?? '') : '';
+                                        $external = !empty($status['inventory_available']) ? ($status['external'][$name] ?? '') : '';
                                         ?>
                                         <tr data-rpm="<?= icct_nms_h($name) ?>">
                                             <th scope="row"><?= icct_nms_h($name) ?></th>
-                                            <td data-rpm-installed><?= icct_nms_h($external ?: (implode(', ', $version['installed'] ?? []) ?: ($status['available'] && !$present ? 'Missing' : '—'))) ?></td>
+                                            <td data-rpm-installed><?= icct_nms_h($external ?: (implode(', ', $version['installed'] ?? []) ?: (!empty($status['inventory_available']) ? ($present ? 'Installed' : 'Missing') : '—'))) ?></td>
                                             <td data-rpm-bundled><?= icct_nms_h(implode(', ', $version['bundled'] ?? []) ?: '—') ?></td>
                                             <td data-rpm-status><?= icct_nms_h($external ? 'Managed outside RPM' : ($version['status'] ?? 'Not checked')) ?></td>
                                             <td>
@@ -131,7 +131,7 @@
                                                         data-package-action="install"
                                                         data-target="rpm:<?= icct_nms_h($name) ?>"
                                                         aria-label="Install <?= icct_nms_h($name) ?>"
-                                                        <?= !$status['available'] || $present || empty($version['bundled']) ? 'disabled' : '' ?>>Install</button>
+                                                        <?= !$status['available'] || $present || empty($version['bundled']) ? 'disabled' : '' ?>><?= $present && !empty($status['inventory_available']) ? 'Installed' : 'Install' ?></button>
                                                     <button
                                                         type="button"
                                                         class="button"

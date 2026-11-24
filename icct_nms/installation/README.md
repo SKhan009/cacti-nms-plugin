@@ -287,7 +287,9 @@ Alternatively, run the complete installer's `install.py --no-packages` to
 deploy and configure the plugin and runner together. Use the account actually
 running Cacti's PHP requests if it differs from `apache`.
 
-The runner verifies all bundles, installs missing runner prerequisites from the local media, uses the bundled media directly and starts a systemd timer. The target needs Cacti, PHP and the RHEL system Python/DNF runtime for this initial provisioning. The browser submits only an allowlisted operation through Cacti's authenticated Installation/Upgrades page. It shows the runner's actual RPM checks, transaction selection and verification. RPM operations use local media only and stop if installation would replace an installed package. Service configuration and plugin activation are separate.
+Without bundled media, provisioning with `--no-packages` enables installed RPM inventory and Syslog port management using existing prerequisites. For an existing configured trap receiver and worker, setup enables both units at boot. First-time trap setup requires the site authorization file and listener. Device polling uses the SNMP settings saved in Cacti.
+
+With complete media the runner verifies all bundles, installs missing runner prerequisites from the local media, uses the bundled media directly and starts a systemd timer. The target needs Cacti, PHP and the RHEL system Python/DNF runtime for this initial provisioning. The browser submits only an allowlisted operation through Cacti's authenticated Installation/Upgrades page. It shows the runner's actual RPM checks, transaction selection and verification. RPM operations use local media only and stop if installation would replace an installed package. Service configuration and plugin activation are separate.
 
 **Uninstall** applies to eligible tools installed by this runner. It protects pre-existing packages and core dependencies and rejects transactions that would remove additional packages. Runner failures appear in the progress dialog and in `journalctl -u icct-nms-package-runner.service`.
 
