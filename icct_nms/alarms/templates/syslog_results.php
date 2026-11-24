@@ -55,7 +55,7 @@ $oldest = ($syslogParams['sort'] ?? '') === 'oldest';
             </tbody>
         </table>
     </div>
-    <form class="alarm-pagination" action="alarms/controllers/alarms.php" method="get" aria-label="Syslog pagination">
+    <form class="alarm-pagination" data-syslog-pagination action="alarms/controllers/alarms.php" method="get" aria-label="Syslog pagination">
         <input type="hidden" name="tab" value="syslog">
         <?php foreach ($syslogParams as $key => $value): ?>
             <?php foreach ((array) $value as $item): ?>

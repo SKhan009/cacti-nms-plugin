@@ -7,6 +7,14 @@
     url.searchParams.set('fragment', 'syslog_results');
     let busy = false;
 
+    // Results are replaced by live refreshes, so keep the listener outside the fragment.
+    document.addEventListener('change', (event) => {
+        if (!event.target.matches('#alarm-syslog-results [data-syslog-pagination] select[name="size"]')) return;
+        // Without a page-button submitter, the server starts at page one and
+        // preserves the current filters and sort order from the form.
+        event.target.form.requestSubmit();
+    });
+
     document.querySelector('#alarm-export').addEventListener('click', async () => {
         const table = document.querySelector('#alarm-syslog-results .alarm-syslog-table');
         const headers = Array.from(table.tHead.rows[0].cells, cell => cell.innerText.trim());
