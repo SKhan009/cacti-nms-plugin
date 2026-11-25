@@ -46,3 +46,13 @@ Fresh untransformed query-cache input fields are matched using native query defi
 Query reindex values are not live Counter64 samples. Formatted labels also cannot prove raw octets, so the original byte-accurate interface identity checks still collect raw bytes where Cacti has not retained them. Standard MIB OIDs and ASN.1 syntax remain protocol definitions; device IDs, query IDs, indexes, paths, credentials and polling settings are never inferred from example devices. No additional worker or daemon is introduced.
 
 Source timestamps, real zero traffic, reboot/discontinuity checks, stale states, interface mappings and native Cacti authorization are retained. Existing graphs, protocol settings and page behavior are unchanged.
+
+## Discovery evidence reuse (1.4.28)
+
+Extended network discovery waits for native Cacti automation to finish before enriching its results. Native scheduling, notification and automatic device creation remain in charge. Jobs bind the network and credential configuration by signature, wait through native startup, and report a timed-out or changed native run without launching a competing scan. Per-network locks prevent concurrent Discover Now requests; scheduled-run markers prevent a second enrichment job for the same run.
+
+Existing devices are matched by an unambiguous endpoint on the assigned collector and checked against native device permissions. Compatible native identities, ICMP observations and completed automation results are consulted before additional requests. Discovery requests only missing identity fields, requested TCP scans and neighbour information that has no assigned collector. Fresh assigned CDP/LLDP snapshots are reused; pending, failed or stale assigned snapshots remain owned by that collector. Native absence is not fabricated into a successful discovery. Data that native Cacti has discarded or never retained may still require collection; explicit retries and different SNMP security contexts are separate observations.
+
+GNSS SNMP readings use the same native sample bridge, retaining the oldest actual source timestamp for each fix. A faster configured GNSS interval collects only the cadence that the native source cannot supply. The existing location worker refreshes its in-memory evidence each iteration. Inventory observers serialize change detection per collector to prevent duplicate events.
+
+The discovery UI and native template matching rules are unchanged. Unknown device models still require appropriate native matching rules/templates. Physical GNSS receivers and a second remote collector require site-specific acceptance testing; fixture tests do not replace hardware validation.

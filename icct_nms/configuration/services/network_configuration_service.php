@@ -339,55 +339,61 @@ function icct_nms_network_run($id)
 {
     icct_backend_require_management(23);
     global $config;
-    require_once $config['base_path'] . '/lib/poller.php';
-    $network = icct_nms_network_get($id);
-    if ($network['enabled'] !== 'on') {
-        throw new InvalidArgumentException('Enable this network before running discovery.');
-    }
-    if (
-        db_fetch_cell_prepared('SELECT COUNT(*) FROM automation_processes WHERE network_id=?', [
-            $network['id'],
-        ])
-    ) {
-        throw new InvalidArgumentException(
-            'Discovery is already running or finishing for this network.',
-        );
-    }
-    if (!empty($network['scan_methods'])) {
-        if (
-            db_fetch_cell_prepared(
-                "SELECT id FROM plugin_icct_nms_scan_jobs WHERE network_id=? AND state IN ('queued','running') LIMIT 1",
-                [$network['id']],
-            )
-        ) {
-            throw new InvalidArgumentException('Discovery is already running for this network.');
+    $lock = 'icct_discovery_network_' . (int) $id;
+    if ((int) db_fetch_cell_prepared('SELECT GET_LOCK(?,0)', [$lock]) !== 1) throw new RuntimeException('Discovery is already starting for this network.');
+    try {
+        require_once $config['base_path'] . '/lib/poller.php';
+        $network = icct_nms_network_get($id);
+        if ($network['enabled'] !== 'on') {
+            throw new InvalidArgumentException('Enable this network before running discovery.');
         }
-        icct_nms_scan_queue([
-            'name' => $network['name'],
-            'ranges' => $network['subnet_range'],
-            'methods' => $network['scan_methods'],
-            'ports' => $network['scan_ports'] ?? '',
-            'timeout_ms' => $network['scan_timeout'] ?? 500,
-            'run_limit' => min(14400, (int) $network['run_limit']),
-            'poller_id' => $network['poller_id'],
-            'site_id' => $network['site_id'],
-            'snmp_id' => $network['snmp_id'],
-            'network_id' => $network['id'],
-        ]);
-    }
-    if ((int) $config['poller_id'] === (int) $network['poller_id']) {
-        $script = read_config_option('path_webroot') . '/poller_automation.php';
-        exec_background(
-            read_config_option('path_php_binary'),
-            '-q ' . escapeshellarg($script) . ' --network=' . (int) $network['id'] . ' --force',
-        );
-    } else {
-        call_remote_data_collector(
-            $network['poller_id'],
-            $config['url_path'] .
-                'remote_agent.php?action=discover&network=' .
-                (int) $network['id'],
-            'AUTOM8',
-        );
+        if (
+            db_fetch_cell_prepared('SELECT COUNT(*) FROM automation_processes WHERE network_id=?', [
+                $network['id'],
+            ])
+        ) {
+            throw new InvalidArgumentException(
+                'Discovery is already running or finishing for this network.',
+            );
+        }
+        if (!empty($network['scan_methods'])) {
+            if (
+                db_fetch_cell_prepared(
+                    "SELECT id FROM plugin_icct_nms_scan_jobs WHERE network_id=? AND state IN ('queued','running') LIMIT 1",
+                    [$network['id']],
+                )
+            ) {
+                throw new InvalidArgumentException('Discovery is already running for this network.');
+            }
+            icct_nms_scan_queue([
+                'name' => $network['name'],
+                'ranges' => $network['subnet_range'],
+                'methods' => $network['scan_methods'],
+                'ports' => $network['scan_ports'] ?? '',
+                'timeout_ms' => $network['scan_timeout'] ?? 500,
+                'run_limit' => min(14400, (int) $network['run_limit']),
+                'poller_id' => $network['poller_id'],
+                'site_id' => $network['site_id'],
+                'snmp_id' => $network['snmp_id'],
+                'network_id' => $network['id'],
+            ]);
+        }
+        if ((int) $config['poller_id'] === (int) $network['poller_id']) {
+            $script = read_config_option('path_webroot') . '/poller_automation.php';
+            exec_background(
+                read_config_option('path_php_binary'),
+                '-q ' . escapeshellarg($script) . ' --network=' . (int) $network['id'] . ' --force',
+            );
+        } else {
+            call_remote_data_collector(
+                $network['poller_id'],
+                $config['url_path'] .
+                    'remote_agent.php?action=discover&network=' .
+                    (int) $network['id'],
+                'AUTOM8',
+            );
+        }
+    } finally {
+        db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)', [$lock]);
     }
 }

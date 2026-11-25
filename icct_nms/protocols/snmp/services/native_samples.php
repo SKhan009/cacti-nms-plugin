@@ -150,6 +150,23 @@ function icct_nms_snmp_read(array $host, $oid, callable $collect, $format = null
     return $value;
 }
 
+/** Faster consumers reuse a current native observation, then collect only the missing cadence. */
+function icct_nms_snmp_read_interval(array $host, string $oid, int $interval, callable $collect)
+{
+    $oid = icct_nms_snmp_oid($oid);
+    $sample = icct_nms_snmp_known($host,$oid);
+    $state = &icct_nms_snmp_samples($host);
+    $steps = array_column($state['owners'][$oid] ?? [],'rrd_step');
+    $step = (int) ($sample['step'] ?? ($steps ? min($steps) : 0));
+    if ($sample && ($step > 0 && $step <= $interval ||
+        (int) $sample['time'] > 0 && time() - (int) $sample['time'] <= $interval)) return $sample['value'] ?? false;
+    // Mark only observations actually consumed; a rejected old sample must not age a new fix.
+    if ($sample && (int) $sample['time'] > 0) array_pop($state['used']);
+    $value = $collect();
+    if ($oid) icct_nms_snmp_remember($host,$oid,$value);
+    return $value;
+}
+
 /** Convert only representations whose original value is retained by the native source. */
 function icct_nms_snmp_wire(array $sample, int $type): ?array
 {

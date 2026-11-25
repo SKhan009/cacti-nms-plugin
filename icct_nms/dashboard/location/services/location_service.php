@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../../protocols/snmp/services/native_samples.php';
+
 /** Configurable GNSS sources owned by native pollers. No receiver secrets are copied here. */
 function icct_nms_gnss_transports()
 {
@@ -202,17 +204,22 @@ function icct_nms_gnss_probe($v, $poller)
         $session = icct_backend_nd_discovery_session($host);
         $deadline = microtime(true) + $v['timeout'];
         try {
-            $quality = icct_backend_nd_snmp_scalar($session, $v['fix_oid'], $deadline)['value'];
+            $observation = icct_nms_snmp_observation_start($host);
+            $read = static fn($oid) => icct_nms_snmp_read_interval($host, $oid, (int) $v['interval'],
+                static fn() => icct_backend_nd_snmp_scalar($session, $oid, $deadline)['value']);
+            $quality = $read($v['fix_oid']);
             if (!in_array((string) $quality, $v['fix_values'], true)) {
                 throw new RuntimeException('GNSS receiver reports no valid fix.');
             }
-            $lat = icct_backend_nd_snmp_scalar($session, $v['latitude_oid'], $deadline)['value'];
-            $lon = icct_backend_nd_snmp_scalar($session, $v['longitude_oid'], $deadline)['value'];
+            $lat = $read($v['latitude_oid']);
+            $lon = $read($v['longitude_oid']);
             [$lat, $lon] = icct_nms_gnss_coordinates(
                 is_numeric($lat) ? $lat / $v['scale'] : null,
                 is_numeric($lon) ? $lon / $v['scale'] : null,
             );
-            return ['latitude' => $lat, 'longitude' => $lon, 'source_time' => time()];
+            $sourceTime = icct_nms_snmp_observation_time($host,$observation);
+            if (time() - $sourceTime > (int) $v['max_age']) throw new RuntimeException('GNSS source observation is stale.');
+            return ['latitude' => $lat, 'longitude' => $lon, 'source_time' => $sourceTime];
         } finally {
             $session->close();
         }

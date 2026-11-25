@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/discovery_reuse.php';
+
 /** Unified discovery orchestration. Native Cacti owns ranges, credentials and monitored devices. */
 function icct_nms_scan_methods()
 {
@@ -167,6 +169,13 @@ function icct_nms_scan_queue($input)
 {
     icct_backend_require_management(23);
     $v = icct_nms_scan_validate($input);
+    if (!empty($input['network_id'])) {
+        $network = db_fetch_row_prepared('SELECT *,UNIX_TIMESTAMP(last_started) AS native_started FROM automation_networks WHERE id=?', [(int) $input['network_id']]);
+        if (!$network || (int) $network['poller_id'] !== (int) $v['poller_id']) throw new InvalidArgumentException('Discovery network does not belong to this collector.');
+        $v['native_after'] = isset($input['native_run']) ? (int) $input['native_run'] - 1 : (int) $network['native_started'];
+        if (isset($input['native_run'])) $v['native_run'] = (int) $input['native_run'];
+        $v['native_signature'] = icct_nms_scan_native_signature($network);
+    }
     $addresses = $v['addresses'];
     unset($v['addresses']);
     icct_backend_category_execute('START TRANSACTION');

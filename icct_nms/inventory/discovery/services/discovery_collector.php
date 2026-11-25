@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/discovery_reuse.php';
+
 /** CLI collector; scans never run inside a web request and never create monitored devices. */
 function icct_nms_scan_stop($id, $deadline)
 {
@@ -212,11 +214,14 @@ function icct_nms_scan_probe($row, $v, $deadline)
     ];
     $credential = 0;
     $suggested = 0;
+    $reuse = icct_nms_scan_reuse($address, $v, $deadline);
     if (in_array('icmp', $v['methods'], true)) {
         require_once $config['base_path'] . '/lib/ping.php';
         $ping = new Net_Ping();
         $ping->host['hostname'] = $address;
-        $e['icmp'] = (bool) $ping->ping(AVAIL_PING, PING_ICMP, $v['timeout_ms'], 1);
+        $e['icmp'] = $reuse['icmp_owned'] ? $reuse['icmp'] :
+            ($reuse['icmp'] ?? (bool) $ping->ping(AVAIL_PING, PING_ICMP, $v['timeout_ms'], 1));
+        if ($reuse['icmp_owned'] && $e['icmp'] === null) $e['method_errors']['icmp'] = 'Native Cacti discovery returned no current ICMP evidence.';
         $e['reachable'] = $e['icmp'];
     }
     icct_nms_scan_stop($job, $deadline);
@@ -228,7 +233,7 @@ function icct_nms_scan_probe($row, $v, $deadline)
     }
     if (array_intersect($v['methods'], ['snmp', 'cdp', 'lldp'])) {
         try {
-            $s = icct_nms_scan_snmp($address, $v, $deadline);
+            $s = $reuse['snmp'] ?? icct_nms_scan_snmp($address, $v, $deadline);
         } catch (Throwable $error) {
             $s = ['ok' => false];
             $e['method_errors']['snmp'] = 'SNMP probe failed. Check the saved credential set.';
@@ -254,7 +259,7 @@ function icct_nms_scan_probe($row, $v, $deadline)
             $match = automation_find_os($e['sysDescr'], $e['sysObjectID'], $e['sysName']);
             $suggested = (int) ($match['host_template'] ?? 0);
             $e['device_type'] = $match['name'] ?? 'Unmatched';
-            $host = array_replace($s['credential'], [
+            $host = $s['host'] ?? array_replace($s['credential'], [
                 'id' => 0,
                 'hostname' => $address,
                 'disabled' => '',
@@ -264,7 +269,7 @@ function icct_nms_scan_probe($row, $v, $deadline)
             foreach (array_intersect($v['methods'], ['cdp', 'lldp']) as $method) {
                 icct_nms_scan_stop($job, $deadline);
                 try {
-                    $data = icct_backend_nd_collect_direct($host, $method, $deadline);
+                    $data = icct_nms_scan_neighbours($host, $method, $deadline);
                     $e['neighbors'][$method] = $data['neighbors'] ?? [];
                     // Empty neighbor lists must retain the collector's explanation of missing tables.
                     if (!empty($data['warning'])) {
@@ -309,6 +314,10 @@ function icct_nms_scan_work($poller)
             return 0;
         }
         $id = (int) $job['id'];
+        if (!empty($job['cancel_requested'])) {
+            icct_backend_category_execute("UPDATE plugin_icct_nms_scan_jobs SET state='cancelled',finished_at=NOW(),heartbeat=NOW(),last_error='Discovery cancelled.' WHERE id=?",[$id]);
+            return $id;
+        }
         $_SESSION = ['sess_user_id' => (int) $job['requested_by']];
         if (
             !db_fetch_cell_prepared("SELECT id FROM user_auth WHERE id=? AND enabled='on'", [
@@ -325,6 +334,22 @@ function icct_nms_scan_work($poller)
             return $id;
         }
         $v = json_decode($job['config_json'], true, 32, JSON_THROW_ON_ERROR);
+        try {
+            $native = icct_nms_scan_native_context($job, $v);
+            if ($native === null) return 0;
+            if ($native) {
+                $v['native_run'] = (int) $native['native_started'];
+                icct_backend_category_execute('UPDATE plugin_icct_nms_scan_jobs SET config_json=? WHERE id=?',
+                    [json_encode($v,JSON_THROW_ON_ERROR),$id]);
+            }
+            $v['native_context'] = $native;
+            if ($native) icct_backend_category_execute(
+                'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+                ['discovery_native_run_'.(int) $native['id'],$native['last_started']]);
+        } catch (RuntimeException $error) {
+            icct_backend_category_execute("UPDATE plugin_icct_nms_scan_jobs SET state=IF(cancel_requested=1,'cancelled','partial'),last_error=?,finished_at=NOW() WHERE id=?", [$error->getMessage(),$id]);
+            return $id;
+        }
         $deadline = microtime(true) + (int) $v['run_limit'];
         icct_backend_category_execute(
             "UPDATE plugin_icct_nms_scan_jobs SET state='running',started_at=COALESCE(started_at,NOW()),heartbeat=NOW() WHERE id=?",
@@ -410,43 +435,51 @@ function icct_nms_scan_native_runs($poller)
             if (empty($network['scan_methods']) || empty($network['scan_requested_by'])) {
                 continue;
             }
-            // A manual Discover Now request already created the matching extended job.
-            $job = db_fetch_row_prepared(
-                'SELECT created_at FROM plugin_icct_nms_scan_jobs WHERE network_id=? ORDER BY id DESC LIMIT 1',
-                [$n['id']],
-            );
-            if (!$job || abs(strtotime($n['last_started']) - strtotime($job['created_at'])) > 15) {
-                $_SESSION = ['sess_user_id' => (int) $network['scan_requested_by']];
-                if (
-                    !db_fetch_cell_prepared(
-                        "SELECT id FROM user_auth WHERE id=? AND enabled='on'",
-                        [$network['scan_requested_by']],
-                    ) ||
-                    !is_realm_allowed(23)
-                ) {
-                    continue;
-                }
-                if (
-                    !db_fetch_cell_prepared(
-                        "SELECT id FROM plugin_icct_nms_scan_jobs WHERE network_id=? AND state IN ('queued','running') LIMIT 1",
-                        [$n['id']],
-                    )
-                ) {
-                    icct_nms_scan_queue([
-                        'name' => $network['name'],
-                        'ranges' => $network['subnet_range'],
-                        'methods' => $network['scan_methods'],
-                        'ports' => $network['scan_ports'] ?? '',
-                        'timeout_ms' => $network['scan_timeout'] ?? 500,
-                        'run_limit' => min(14400, (int) $network['run_limit']),
-                        'poller_id' => $poller,
-                        'site_id' => $network['site_id'],
-                        'snmp_id' => $network['snmp_id'],
-                        'network_id' => $n['id'],
-                    ]);
-                } else {
-                    continue;
-                }
+            $job = db_fetch_row_prepared('SELECT id,config_json,UNIX_TIMESTAMP(created_at) AS created FROM plugin_icct_nms_scan_jobs WHERE network_id=? ORDER BY id DESC LIMIT 1',[$n['id']]);
+            $settings = $job ? json_decode($job['config_json'],true) : [];
+            $run = strtotime($n['last_started']);
+            // Bind even a cancelled manual job to its run: cancellation must not queue it again.
+            if ($job && (int) $job['created'] <= $run && isset($settings['native_after'],$settings['native_signature']) &&
+                (int) $settings['native_after'] < $run && (!isset($settings['native_run']) || (int) $settings['native_run'] === $run) &&
+                hash_equals($settings['native_signature'],icct_nms_scan_native_signature($network))) {
+                $settings['native_run'] = $run;
+                icct_backend_category_execute('UPDATE plugin_icct_nms_scan_jobs SET config_json=? WHERE id=?',
+                    [json_encode($settings,JSON_THROW_ON_ERROR),$job['id']]);
+                icct_backend_category_execute('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',[$key,$n['last_started']]);
+                continue;
+            }
+            // Active jobs attach themselves to the exact native run when the barrier opens.
+            $_SESSION = ['sess_user_id' => (int) $network['scan_requested_by']];
+            if (
+                !db_fetch_cell_prepared(
+                    "SELECT id FROM user_auth WHERE id=? AND enabled='on'",
+                    [$network['scan_requested_by']],
+                ) ||
+                !is_realm_allowed(23)
+            ) {
+                continue;
+            }
+            if (
+                !db_fetch_cell_prepared(
+                    "SELECT id FROM plugin_icct_nms_scan_jobs WHERE network_id=? AND state IN ('queued','running') LIMIT 1",
+                    [$n['id']],
+                )
+            ) {
+                icct_nms_scan_queue([
+                    'name' => $network['name'],
+                    'ranges' => $network['subnet_range'],
+                    'methods' => $network['scan_methods'],
+                    'ports' => $network['scan_ports'] ?? '',
+                    'timeout_ms' => $network['scan_timeout'] ?? 500,
+                    'run_limit' => min(14400, (int) $network['run_limit']),
+                    'poller_id' => $poller,
+                    'site_id' => $network['site_id'],
+                    'snmp_id' => $network['snmp_id'],
+                    'network_id' => $n['id'],
+                    'native_run' => strtotime($n['last_started']),
+                ]);
+            } else {
+                continue;
             }
             icct_backend_category_execute(
                 'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .

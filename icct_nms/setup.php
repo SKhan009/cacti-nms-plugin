@@ -7,7 +7,7 @@ function plugin_icct_nms_version()
 {
     return [
         'name' => 'icct_nms',
-        'version' => '1.4.27',
+        'version' => '1.4.28',
         'longname' => 'ICCT NMS Device Mgmt',
         'author' => 'NMS Project',
         'homepage' => 'https://www.cacti.net/',
