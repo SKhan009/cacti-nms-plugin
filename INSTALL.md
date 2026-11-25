@@ -6,7 +6,42 @@ The launcher detects the destination Linux distribution, release and CPU archite
 
 The currently supplied RPMs and native binaries target **RHEL 9.8 aarch64 (ARM64)**. Other supported RHEL-family and Debian-family Linux systems use their own repositories unless matching offline media is supplied. Wrong-OS or wrong-CPU bundles are never installed. Windows, macOS and unrecognized Linux families are rejected; automatic selection does not create missing native builds or enable unsupported integrations. The plan lists `repository_components` and `native_components_not_bundled`. Existing verified native runtimes can still be reused; strict-auth Guacamole and Pathchar need matching builds when they are absent.
 
-From the extracted main ZIP:
+## Installation steps for `/var/www/html/cacti`
+
+Use these steps on the Linux collector where Cacti is already installed at `/var/www/html/cacti`. Python 3 and an administrator account with `sudo` are required. Run the commands from the extracted download, outside the Cacti web root.
+
+1. Download the latest main ZIP and extract the complete archive, including offline media:
+
+   ```sh
+   unzip cacti-nms-plugin-main.zip
+   cd cacti-nms-plugin-main
+   ```
+
+2. Preview the detected OS, architecture, selected packages and destination:
+
+   ```sh
+   python3 install.py --cacti-root /var/www/html/cacti --plan
+   ```
+
+   This is a read-only installation plan. Review whether matching offline media or configured repositories will be used.
+
+3. Install or upgrade the plugin and configure its supported collector services:
+
+   ```sh
+   sudo python3 install.py --cacti-root /var/www/html/cacti
+   ```
+
+   To require matching offline media without repository access, use this command instead:
+
+   ```sh
+   sudo python3 install.py --cacti-root /var/www/html/cacti --offline
+   ```
+
+4. Wait for the installer to finish successfully. It backs up the existing plugin, preserves local configuration/uploads, and uses Cacti's plugin lifecycle commands to install and enable ICCT NMS.
+
+5. Open Cacti, then **ICCT NMS → Settings → Installation**. Review Checks and Offline Packages for worker, receiver and media readiness. Configure the actual device credentials and any receiver authorization still marked **Needs setup**. Native components absent from the selected media require a matching build; automatic OS detection does not supply one.
+
+For a Cacti installation at `/usr/share/cacti`, run the equivalent commands from the extracted main ZIP:
 
 ```sh
 python3 install.py --cacti-root /usr/share/cacti --plan
