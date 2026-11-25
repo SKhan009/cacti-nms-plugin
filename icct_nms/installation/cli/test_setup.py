@@ -13,6 +13,66 @@ spec.loader.exec_module(setup)
 
 
 class BundleSafety(unittest.TestCase):
+    def test_receivers_start_before_the_trap_worker_and_reuse_authorization(self):
+        with tempfile.TemporaryDirectory() as directory:
+            authorization = Path(directory) / 'senders'
+            authorization.write_text('authCommunity log test-only 127.0.0.1\n')
+            for family in ('rhel', 'debian'):
+                target = {'family': family}
+                listener = 'udp:127.0.0.1:162'
+                self.assertEqual(setup.validate_trap_settings(authorization, listener, target), authorization.resolve())
+                with patch.object(setup, 'run') as run:
+                    setup.receiver_services(Path('/cacti'), 'worker', 'worker', target, authorization, listener)
+                    commands = [call.args[0] for call in run.call_args_list]
+                    self.assertIn('syslog', str(commands[0][1]))
+                    self.assertIn('traps', str(commands[1][1]))
+                    self.assertEqual(commands[1][-2:], [authorization, listener])
+
+    def test_receiver_upgrade_discovers_saved_trap_configuration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            auth = base / 'authorized-senders'
+            auth.write_text('authCommunity log test-only 127.0.0.1\n')
+            listener = base / 'listener'
+            listener.write_text('udp:127.0.0.1:162\n')
+            def local_path(value):
+                return base / Path(value).name if str(value).startswith('/etc/icct-nms/traps/') else Path(value)
+            with patch.object(setup, 'Path', side_effect=local_path), patch.object(setup, 'run') as run:
+                setup.receiver_services(Path('/cacti'), 'worker', 'worker', {'family':'rhel'})
+                command = run.call_args_list[-1].args[0]
+                self.assertEqual(command[-2:], [auth.resolve(), 'udp:127.0.0.1:162'])
+
+    def test_full_installer_provisions_runner_before_unrelated_collectors(self):
+        events = []
+        def command(args, **kwargs):
+            if any(str(part).endswith('package_runner.py') for part in args):
+                events.append('runner')
+        def unrelated(*args):
+            events.append('other collectors')
+            raise ValueError('unrelated collector failed')
+        with (patch.object(setup.sys, 'argv', ['setup.py', 'install', '--no-packages']),
+              patch.object(setup.os, 'geteuid', return_value=0),
+              patch.dict(setup.os.environ, {'ICCT_DEFER_RUNNER_TO_FULL_INSTALLER':'1'}),
+              patch.object(setup, 'os_info', return_value=dict(family='rhel', id='rhel', version='9.8', arch='aarch64')),
+              patch.object(setup, 'validate_root', return_value=Path('/cacti')),
+              patch.object(setup, 'check_cacti_lifecycle'),
+              patch.object(setup, 'preflight', return_value='/usr/bin/php'),
+              patch.object(setup, 'run', side_effect=command),
+              patch.object(setup, 'receiver_services', side_effect=lambda *args: events.append('receivers')),
+              patch.object(setup, 'services', side_effect=unrelated)):
+            with self.assertRaisesRegex(ValueError, 'unrelated collector failed'):
+                setup.main()
+        self.assertEqual(events, ['receivers', 'runner', 'other collectors'])
+
+    def test_syslog_socket_check_rejects_an_unrelated_listener(self):
+        helper = setup.PLUGIN / 'protocols/syslog/rhel/syslog_port.sh'
+        for owner, expected in (('123', 0), ('999', 1)):
+            result = subprocess.run(['bash', '-c',
+                'source "$1"; systemctl() { echo 123; }; '
+                'ss() { echo "LISTEN users:((daemon,pid=' + owner + ',fd=7))"; }; '
+                'icct_syslog_owned_listener tcp 514', 'test', str(helper)], capture_output=True)
+            self.assertEqual(result.returncode, expected, result.stderr)
+
     def test_failed_bundle_download_is_retryable_and_never_publishes_manifest(self):
         with tempfile.TemporaryDirectory() as parent:
             directory = Path(parent) / 'out'

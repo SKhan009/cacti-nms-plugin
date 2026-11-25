@@ -30,6 +30,19 @@ icct_syslog_listening() {
     [[ -n "$sockets" ]]
 }
 
+# Setup must verify the receiver's sockets, not a different process using this port.
+icct_syslog_owned_listener() {
+    local pid sockets
+    pid=$(systemctl show rsyslog.service --property=MainPID --value)
+    [[ "$pid" =~ ^[1-9][0-9]*$ ]] || return 1
+    case "$1" in
+        tcp) sockets=$(ss -H -ltnp "sport = :$2") ;;
+        udp) sockets=$(ss -H -lunp "sport = :$2") ;;
+        *) return 1 ;;
+    esac
+    grep -F "pid=$pid," <<< "$sockets" >/dev/null
+}
+
 icct_syslog_write_forwarder() {
     local port=$1
     cat > "$ICCT_SYSLOG_LOCAL" <<RSYSLOG

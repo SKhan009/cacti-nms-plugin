@@ -416,9 +416,6 @@ def services(root, user, group):
         if updated:
             run(["systemctl", "restart", name])
         run(["systemctl", "is-active", "--quiet", name])
-    # Reuse the capture-tested receiver adapter; it preserves existing logging rules.
-    env = dict(os.environ, WEB_USER=user, WEB_GROUP=group, PHP_BINARY=php)
-    run(["bash", PLUGIN / "protocols/syslog/rhel/install_syslog_rhel.sh", root], env=env)
     if shutil.which("restorecon"):
         run(
             [
@@ -431,9 +428,34 @@ def services(root, user, group):
         )
 
 
+def receiver_services(root, user, group, target, authorization=None, listener=None):
+    """Start receivers before unrelated collectors; preserve the collector's authorization."""
+    php = shutil.which("php")
+    env = dict(os.environ, WEB_USER=user, WEB_GROUP=group, PHP_BINARY=php,
+               ICCT_WEB_USER=user, ICCT_WEB_GROUP=group)
+    run(["bash", PLUGIN / "protocols/syslog/rhel/install_syslog_rhel.sh", root], env=env)
+    saved_auth = Path("/etc/icct-nms/traps/authorized-senders")
+    saved_listener = Path("/etc/icct-nms/traps/listener")
+    if not authorization and saved_auth.is_file() and saved_listener.is_file():
+        listener = saved_listener.read_text().strip()
+        authorization = validate_trap_settings(saved_auth, listener, target)
+    if authorization:
+        run(["bash", PLUGIN / "protocols/snmp/traps/rhel/install_traps_rhel.sh",
+             root, authorization, listener], env=env)
+    else:
+        units = ["icct-nms-trap-receiver.service", "icct-nms-trap-worker.service"]
+        if all((Path("/etc/systemd/system") / unit).is_file() for unit in units):
+            run(["systemctl", "enable", "--now", *units])
+            run(["systemctl", "restart", *units])
+            run(["systemctl", "is-active", *units])
+        else:
+            print("SNMP traps need this collector's authorized senders and listener. "
+                  "Provide --trap-auth-file and --trap-listener once; future upgrades reuse them.")
+
+
 def validate_trap_settings(authorization, listener, target):
-    if target["family"] != "rhel" or not authorization or not listener:
-        raise ValueError("RHEL trap setup requires both --trap-auth-file and --trap-listener.")
+    if target["family"] not in ("rhel", "debian") or not authorization or not listener:
+        raise ValueError("Trap setup requires both --trap-auth-file and --trap-listener.")
     address = re.fullmatch(r"udp:([0-9.]+):([0-9]+)", listener)
     family = 4
     if not address:
@@ -533,8 +555,8 @@ def main():
     parser.add_argument("--ssh-service-user", default="icct-nms-ssh")
     parser.add_argument("--ssh-state-directory", default="/var/lib/icct-nms-ssh")
     parser.add_argument("--ssh-guacd-port", type=int, default=4823)
-    parser.add_argument("--trap-auth-file", help="Local Net-SNMP authorization file for RHEL trap setup")
-    parser.add_argument("--trap-listener", help="Explicit RHEL UDP listener, for example udp:127.0.0.1:162")
+    parser.add_argument("--trap-auth-file", help="Local Net-SNMP authorization file for trap setup")
+    parser.add_argument("--trap-listener", help="Explicit UDP listener, for example udp:127.0.0.1:162")
     parser.add_argument(
         "--all-components",
         action="store_true",
@@ -737,23 +759,19 @@ def main():
                 group,
             ]
         )
+    receiver_services(root, user, group, target, trap_auth, args.trap_listener)
+    # Full releases provision the runner before unrelated collectors can fail.
+    if target["family"] == "rhel" and os.environ.get("ICCT_DEFER_RUNNER_TO_FULL_INSTALLER") == "1":
+        runner = [sys.executable, PLUGIN / "installation/cli/package_runner.py", "provision",
+                  "--cacti-root", root, "--web-user", user, "--web-group", group,
+                  "--media", PLUGIN / "installation/bundles/media"]
+        if args.no_packages:
+            runner.append("--no-packages")
+        run(runner)
     if target["family"] == "rhel":
         # Only the collector account gets this fixed read command; no daemon or clock edits.
         run([sys.executable, PLUGIN / "installation/cli/ntp_access.py", "install", "--user", user])
     services(root, user, group)
-    if trap_auth:
-        run(
-            ["bash", PLUGIN / "protocols/snmp/traps/rhel/install_traps_rhel.sh", root,
-             trap_auth, args.trap_listener],
-            env=dict(os.environ, ICCT_WEB_USER=user, ICCT_WEB_GROUP=group),
-        )
-    elif target["family"] == "rhel":
-        units = ["icct-nms-trap-receiver.service", "icct-nms-trap-worker.service"]
-        if all((Path("/etc/systemd/system") / unit).is_file() for unit in units):
-            run(["systemctl", "enable", "--now", *units])
-            run(["systemctl", "is-active", *units])
-        else:
-            print("Configure trap authorization and listener with --trap-auth-file and --trap-listener.")
     if args.ssh_origin:
         configure_ssh(
             root,

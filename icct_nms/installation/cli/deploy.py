@@ -331,14 +331,7 @@ def main():
     if plan["offline_packages_runner"]:
         environment["ICCT_DEFER_RUNNER_TO_FULL_INSTALLER"] = "1"
     subprocess.run(command, check=True, env=environment)
-    if plan["offline_packages_runner"]:
-        runner = [sys.executable, str(destination / "installation/cli/package_runner.py"), "provision",
-                  "--cacti-root", str(root), "--web-user", args.web_user or "apache", "--media", str(media)]
-        if args.web_group:
-            runner += ["--web-group", args.web_group]
-        if args.no_packages:
-            runner += ["--no-packages"]
-        subprocess.run(runner, check=True)
+
 
 
 if __name__ == "__main__":

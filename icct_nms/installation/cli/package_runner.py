@@ -541,8 +541,31 @@ def removal_plan(config, requested, state, receipts, protected):
     }
 
 
+def adopt_bundled_media(config, target):
+    """Inventory-only runners may adopt verified, administrator-owned media without a shell job."""
+    if config.get("media"):
+        return
+    candidate = Path(config["root"]) / "plugins/icct_nms/installation/bundles/media"
+    if not (candidate / "packages/bundle.json").is_file():
+        return
+    require_private_media(candidate)
+    for profile in profiles(target):
+        verified_media(candidate, target, profile)
+    for component in NATIVE_EXECUTABLES:
+        native_media(candidate, target, component)
+    updated = dict(config, media=str(candidate))
+    write_json(STATE / "config.json", updated)
+    config.update(updated)
+
+
 def work(target, inventory_only=False):
     config = json.loads((STATE / "config.json").read_text())
+    media_error = None
+    try:
+        adopt_bundled_media(config, target)
+    except (OSError, ValueError, KeyError) as error:
+        media_error = "Bundled media could not be verified: " + str(error)
+        LOGGER.warning("%s", media_error)
     grouped, tools, protected = package_scope(target)
     groups = MANIFEST.get("rhel_package_groups", {})
     media = Path(config["media"]) if config.get("media") else None
@@ -559,6 +582,9 @@ def work(target, inventory_only=False):
 
     def refresh():
         state["target"] = target
+        state.pop("media_error", None)
+        if media_error:
+            state["media_error"] = media_error
         state["protected"] = sorted(protected)
         try:
             state["syslog_port"] = current_syslog_port()

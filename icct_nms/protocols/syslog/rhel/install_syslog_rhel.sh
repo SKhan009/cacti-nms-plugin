@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export PATH="${PATH:-/usr/bin:/bin}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/sbin"
 
 CACTI_ROOT="${1:-/usr/share/cacti}"
 OPEN_FIREWALL="${OPEN_FIREWALL:-0}"
@@ -184,7 +185,7 @@ if [[ "${SYSLOG_RECEIVER_ONLY:-0}" != "1" ]]; then
     systemctl enable rsyslog || { rollback_rsyslog; exit 1; }
 fi
 if ! systemctl restart rsyslog ||
-    ! icct_syslog_listening udp "$port" || ! icct_syslog_listening tcp "$port"; then
+    ! icct_syslog_owned_listener udp "$port" || ! icct_syslog_owned_listener tcp "$port"; then
     echo "rsyslog could not listen on TCP and UDP port $port; restoring the previous ICCT configuration." >&2
     echo "Check socket ownership and SELinux syslogd_port_t for the configured port." >&2
     rollback_rsyslog
@@ -231,8 +232,12 @@ systemctl enable --now icct-nms-syslog-retention.timer
 # Receiver-only port jobs exit above. Provision the offline runner on a full
 # RHEL receiver install, including installs with no package media.
 if [[ -f /etc/redhat-release && "${ICCT_DEFER_RUNNER_TO_FULL_INSTALLER:-0}" != 1 ]]; then
+    runner_media=(--syslog-only)
+    if [[ -f "$PLUGIN/installation/bundles/media/packages/bundle.json" ]]; then
+        runner_media=(--media "$PLUGIN/installation/bundles/media")
+    fi
     /usr/bin/python3 "$PLUGIN/installation/cli/package_runner.py" provision \
-        --cacti-root "$CACTI_ROOT" --web-user "$WEB_USER" --web-group "$WEB_GROUP" --syslog-only
+        --cacti-root "$CACTI_ROOT" --web-user "$WEB_USER" --web-group "$WEB_GROUP" "${runner_media[@]}"
 fi
 
 if [[ "$OPEN_FIREWALL" == "1" ]] && systemctl is-active --quiet firewalld; then

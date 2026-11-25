@@ -8,7 +8,10 @@ function icct_nms_installation_binary($names, $executable = true)
         if (strpos($name, '/') === 0 && is_file($name) && (!$executable || is_executable($name))) {
             return $name;
         }
-        foreach (explode(PATH_SEPARATOR, (string) getenv('PATH')) as $dir) {
+        foreach (array_unique(array_merge(
+            explode(PATH_SEPARATOR, (string) getenv('PATH')),
+            ['/usr/local/sbin', '/usr/local/bin', '/usr/sbin', '/usr/bin', '/sbin', '/bin'],
+        )) as $dir) {
             if ($dir === '' || $dir[0] !== DIRECTORY_SEPARATOR) {
                 continue;
             }
@@ -22,6 +25,15 @@ function icct_nms_installation_binary($names, $executable = true)
     }
     return '';
 }
+/** Caller supplies only the host-matched, freshness-validated collector snapshot. */
+function icct_nms_installation_receiver_report($spec, $label, $saved): string
+{
+    if (!in_array($label, $spec['root_binaries'] ?? [], true)) return '';
+    $unit = $spec['binary_services'][$label] ?? '';
+    return $unit && ($saved['services'][$unit] ?? '') === 'active'
+        ? 'Receiver available · latest collector check confirms ' . $unit . ' is active.' : '';
+}
+
 function icct_nms_installation_service($unit)
 {
     if (PHP_SAPI !== 'cli') {
@@ -357,17 +369,18 @@ function icct_nms_installation_checks()
             if ($feature === 'SSH' && $label === 'SSH terminal backend') {
                 $path = icct_nms_installation_native_binary($manifest['optional_components']['guacamole-strict']);
             }
+            $report = !$path ? icct_nms_installation_receiver_report($spec, $label, $saved) : '';
             $present = $path ?: icct_nms_installation_binary($names, false);
             $add(
                 $feature,
                 $label,
-                $path ? 'Ready' : ($present ? 'Needs setup' : 'Missing'),
-                $path ?:
+                ($path || $report) ? 'Ready' : ($present ? 'Needs setup' : 'Missing'),
+                $path ?: $report ?:
                 ($present
                     ? $present . ' · installed; check execution permissions for the collector.'
                     : 'Install ' . implode(' / ', (array) $names) . ' on this collector.'),
             );
-            if ($present) {
+            if ($present || $report) {
                 $checks[count($checks) - 1]['installed'] = true;
             }
         }

@@ -10,6 +10,46 @@ import package_runner as runner
 
 
 class RuntimeInventory(unittest.TestCase):
+    def test_inventory_runner_adopts_only_fully_verified_media(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            media = root / 'plugins/icct_nms/installation/bundles/media'
+            (media / 'packages').mkdir(parents=True)
+            (media / 'packages/bundle.json').write_text('{}')
+            config = {'root': str(root), 'media': None}
+            target = dict(family='rhel', id='rhel', version='9.8', arch='aarch64')
+            with (patch.object(runner, 'STATE', root),
+                  patch.object(runner, 'require_private_media') as private,
+                  patch.object(runner, 'profiles', return_value={'base': [], 'redis': []}),
+                  patch.object(runner, 'verified_media') as verify,
+                  patch.object(runner, 'native_media') as native):
+                runner.adopt_bundled_media(config, target)
+                private.assert_called_once_with(media)
+                self.assertEqual(verify.call_count, 2)
+                self.assertEqual(native.call_count, 2)
+                self.assertEqual(json.loads((root / 'config.json').read_text())['media'], str(media))
+                runner.adopt_bundled_media(config, target)
+                private.assert_called_once()  # Already verified media is not repeatedly imported.
+
+    def test_rejected_media_never_enables_package_actions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            media = root / 'plugins/icct_nms/installation/bundles/media'
+            (media / 'packages').mkdir(parents=True)
+            (media / 'packages/bundle.json').write_text('{}')
+            config = {'root': str(root), 'media': None}
+            for boundary in ('require_private_media', 'verified_media', 'native_media'):
+                with (patch.object(runner, 'STATE', root),
+                      patch.object(runner, 'require_private_media'),
+                      patch.object(runner, 'profiles', return_value={'base': []}),
+                      patch.object(runner, 'verified_media'),
+                      patch.object(runner, 'native_media'),
+                      patch.object(runner, boundary, side_effect=ValueError('invalid media'))):
+                    with self.assertRaisesRegex(ValueError, 'invalid media'):
+                        runner.adopt_bundled_media(config, {})
+                    self.assertIsNone(config['media'])
+                    self.assertFalse((root / 'config.json').exists())
+
     def test_worker_publishes_inventory_and_clears_stale_media_versions(self):
         with tempfile.TemporaryDirectory() as directory:
             state = Path(directory)

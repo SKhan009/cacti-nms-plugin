@@ -16,6 +16,17 @@ readiness_assert(icct_nms_installation_component_status(['installed'=>false, 'ru
 readiness_assert(icct_nms_installation_component_status(['installed'=>false, 'runtime_available'=>false]) === 'Missing', 'Unavailable runtimes must not pass.');
 readiness_assert(icct_nms_installation_component_status([]) === 'Not checked', 'Unknown package inventory must not become missing.');
 readiness_assert(!icct_nms_installation_component_runtime(['runtime_verification'=>'strict-auth'], [__FILE__])['runtime_available'], 'An executable without a trusted receipt must not count as strict-auth.');
+$receiverSpec = icct_nms_installation_manifest()['features']['Syslog'];
+$report = ['hostname'=>'collector', 'time'=>1000, 'services'=>['rsyslog.service'=>'active']];
+$fresh = icct_nms_installation_snapshot(json_encode($report), 'collector', 1001, 600);
+readiness_assert(str_contains(icct_nms_installation_receiver_report($receiverSpec, 'Receiver', $fresh), 'rsyslog.service'), 'A fresh active receiver observation must resolve an inaccessible web binary.');
+foreach ([['other-host',1001], ['collector',2000]] as [$host,$now]) {
+    $invalid = icct_nms_installation_snapshot(json_encode($report), $host, $now, 600);
+    readiness_assert(icct_nms_installation_receiver_report($receiverSpec, 'Receiver', $invalid) === '', 'A stale or other-host observation must not mark a receiver ready.');
+}
+$report['services']['rsyslog.service'] = 'failed';
+readiness_assert(icct_nms_installation_receiver_report($receiverSpec, 'Receiver', $report) === '', 'Failed receivers must not pass.');
+readiness_assert(icct_nms_installation_receiver_report($receiverSpec, 'Other tool', $fresh) === '', 'Service fallback applies only to declared receiver binaries.');
 $oldPath = getenv('PATH');
 $directory = sys_get_temp_dir() . '/icct-readiness-' . bin2hex(random_bytes(8));
 mkdir($directory, 0700);
@@ -38,6 +49,9 @@ try {
     readiness_assert(icct_nms_installation_binary('runtime-probe') === $binary, 'Binary discovery must use the process PATH.');
     chmod($binary, 0600); clearstatcache(true, $binary);
     readiness_assert(icct_nms_installation_binary('runtime-probe') === '', 'A non-executable tool must not be ready.');
+    readiness_assert(icct_nms_installation_binary('runtime-probe', false) === $binary, 'Receiver presence checks need not grant PHP execution permission.');
+    putenv('PATH=/no-such-icct-directory');
+    readiness_assert(icct_nms_installation_binary('sh') !== '', 'Standard system binaries must be found with a restricted web PATH.');
     readiness_assert(icct_nms_installation_native_binary(['runtime_service' => 'absent.service']) === '', 'Missing service observations must not use a guessed daemon path.');
 } finally {
     putenv('PATH=' . $oldPath);

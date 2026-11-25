@@ -84,7 +84,8 @@
             "binaries": {"Trap receiver": ["snmptrapd"]},
             "services": ["icct-nms-trap-receiver.service", "icct-nms-trap-worker.service"],
             "files": [],
-            "root_binaries": ["Trap receiver"]
+            "root_binaries": ["Trap receiver"],
+            "binary_services": {"Trap receiver": "icct-nms-trap-receiver.service"}
         },
         "Discovery": {
             "binaries": {
@@ -103,7 +104,8 @@
                 "icct-nms-syslog-retention.timer"
             ],
             "files": [],
-            "root_binaries": ["Receiver"]
+            "root_binaries": ["Receiver"],
+            "binary_services": {"Receiver": "rsyslog.service"}
         },
         "NetFlow / IPFIX": {
             "binaries": {

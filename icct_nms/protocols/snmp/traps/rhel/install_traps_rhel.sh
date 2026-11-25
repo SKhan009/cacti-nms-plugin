@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export PATH="${PATH:-/usr/bin:/bin}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/sbin"
+trap_binary=$(command -v snmptrapd || true)
+php_binary=${PHP_BINARY:-$(command -v php || true)}
 
 # The authorization file is supplied by the collector administrator from local configuration.
 if [[ $# != 3 || $EUID != 0 ]]; then
@@ -13,8 +16,8 @@ listener=$3
 if [[ ! $cacti_root =~ ^/[a-zA-Z0-9_/.-]+$ ||
     ( ! $listener =~ ^udp:[0-9.]+:[0-9]+$ && ! $listener =~ ^udp6:\[[0-9a-fA-F:]+\]:[0-9]+$ ) ||
     ! -r "$authorization" ||
-    ! -x /usr/sbin/snmptrapd ||
-    ! -x /usr/bin/php ||
+    ! -x "$trap_binary" ||
+    ! -x "$php_binary" ||
     ! -r "$cacti_root/plugins/icct_nms/protocols/syslog/cli/syslog_worker.php" ]]; then
     echo 'Provide a local Cacti installation, an authorization file, Net-SNMP, PHP and an explicit UDP listener.' >&2
     exit 2
@@ -24,7 +27,7 @@ if ! grep -Ei '^[[:space:]]*auth(Community|User)[[:space:]]' "$authorization" >/
     echo 'Use explicit authCommunity or authUser entries in a dedicated receiver authorization file.' >&2
     exit 2
 fi
-web_user=${ICCT_WEB_USER:-apache}
+web_user=${ICCT_WEB_USER:-${WEB_USER:-apache}}
 web_group=${ICCT_WEB_GROUP:-$(id -gn "$web_user")}
 install -d -m 0750 -o root -g "$web_group" /var/log/icct-nms
 install -d -m 0700 /etc/icct-nms/traps
@@ -56,7 +59,7 @@ Environment=SNMPCONFPATH=/etc/icct-nms/traps
 StateDirectory=icct-nms-traps
 Environment=SNMP_PERSISTENT_DIR=/var/lib/icct-nms-traps
 # ICCT NMS reads the spool directly, so the receiver does not need AgentX registration.
-ExecStart=/usr/sbin/snmptrapd -X -f -n -On -Ox -Oe -Ih --hexOutputLength=0 -A -Lf /var/log/icct-nms/traps.log $listener
+ExecStart=$trap_binary -X -f -n -On -Ox -Oe -Ih --hexOutputLength=0 -A -Lf /var/log/icct-nms/traps.log $listener
 Restart=on-failure
 UMask=0027
 NoNewPrivileges=true
@@ -75,7 +78,7 @@ Requires=icct-nms-trap-receiver.service
 [Service]
 User=$web_user
 Group=$web_group
-ExecStart=/usr/bin/php $cacti_root/plugins/icct_nms/protocols/syslog/cli/syslog_worker.php --file=/var/log/icct-nms/traps.log --traps --follow
+ExecStart=$php_binary $cacti_root/plugins/icct_nms/protocols/syslog/cli/syslog_worker.php --file=/var/log/icct-nms/traps.log --traps --follow
 Restart=on-failure
 RestartSec=2
 NoNewPrivileges=true
@@ -100,7 +103,11 @@ cat > /etc/logrotate.d/icct-nms-traps <<EOF
     endscript
 }
 EOF
-restorecon -RF /etc/logrotate.d/icct-nms-traps /etc/icct-nms/traps /var/log/icct-nms /etc/systemd/system/icct-nms-trap-{receiver,worker}.service
+printf '%s\n' "$listener" > /etc/icct-nms/traps/listener
+chmod 0600 /etc/icct-nms/traps/listener
+if command -v restorecon >/dev/null 2>&1; then
+    restorecon -RF /etc/logrotate.d/icct-nms-traps /etc/icct-nms/traps /var/log/icct-nms /etc/systemd/system/icct-nms-trap-{receiver,worker}.service
+fi
 systemd-analyze verify /etc/systemd/system/icct-nms-trap-{receiver,worker}.service
 systemctl daemon-reload
 systemctl enable icct-nms-trap-{receiver,worker}.service

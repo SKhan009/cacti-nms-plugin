@@ -93,7 +93,7 @@ function icct_nms_package_status($root)
         $status['command'] = $provision;
     } elseif (!empty($status['syslog_only'])) {
         $status['available'] = false;
-        $status['message'] = 'Offline RPM media is unavailable. Service readiness is shown under Checks.';
+        $status['message'] = $status['media_error'] ?? 'Matching offline media has not been provisioned. The runner automatically verifies administrator-owned bundled media; use the complete installer to deploy its private media snapshot.';
     } else {
         $status['message'] = '';
     }
