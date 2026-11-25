@@ -1,6 +1,6 @@
 <?php
 
-/** ICCT-owned discovery snmp services, derived from the existing ICCT NMS implementation. */
+require_once __DIR__ . '/../native_samples.php';
 
 function icct_backend_nd_collect_battery($session, $deadline)
 {
@@ -14,7 +14,7 @@ function icct_backend_nd_collect_battery($session, $deadline)
     $out = ['supported' => false];
     foreach ($oids as $name => $oid) {
         try {
-            $value = icct_backend_nd_snmp_scalar($session, $oid, $deadline);
+            $value = icct_backend_nd_snmp_scalar($session, $oid, $deadline, false, 2);
             if (is_numeric($value['value'])) {
                 $out[$name] = (float) $value['value'];
                 $out['supported'] = true;
@@ -43,28 +43,11 @@ function icct_backend_nd_collect_direct($host, $protocol, $jobDeadline)
     try {
         $uptime = '1.3.6.1.2.1.1.3.0';
         try {
-            $before = icct_backend_nd_snmp_scalar($session, $uptime, $deadline);
+            $before = icct_backend_nd_snmp_scalar($session, $uptime, $deadline, false, 67);
         } catch (RuntimeException $e) {
             $before = null;
         }
-        // IF-MIB and IFX-MIB are both optional: LLDP port labels can still be collected without them.
-        $values += icct_backend_nd_snmp_optional_subtree(
-            $session,
-            '1.3.6.1.2.1.2.2.1',
-            $deadline,
-            $budget,
-        );
-        foreach (
-            [
-                '1.3.6.1.2.1.2.2.1.5',
-                '1.3.6.1.2.1.31.1.1.1.1',
-                '1.3.6.1.2.1.31.1.1.1.15',
-                '1.3.6.1.2.1.31.1.1.1.18',
-            ]
-            as $root
-        ) {
-            $values += icct_backend_nd_snmp_optional_subtree($session, $root, $deadline, $budget);
-        }
+        $values = icct_backend_nd_interface_values($session, $deadline, $budget, false);
         $interfaces = icct_backend_nd_snmp_interfaces($values);
         if ($protocol === 'lldp') {
             $values += icct_backend_nd_snmp_optional_subtree(
@@ -159,7 +142,7 @@ function icct_backend_nd_collect_direct($host, $protocol, $jobDeadline)
             throw new RuntimeException('Unknown discovery protocol.');
         }
         try {
-            $after = icct_backend_nd_snmp_scalar($session, $uptime, $deadline);
+            $after = icct_backend_nd_snmp_scalar($session, $uptime, $deadline, true, 67);
         } catch (RuntimeException $e) {
             $after = null;
         }
@@ -175,12 +158,7 @@ function icct_backend_nd_collect_direct($host, $protocol, $jobDeadline)
         // Optional inventory uses the same authenticated session.
         // Its failure must not turn successful neighbour evidence into an empty success.
         try {
-            $entity = icct_backend_nd_snmp_subtree(
-                $session,
-                '1.3.6.1.2.1.47.1.1.1.1',
-                $deadline,
-                $budget,
-            );
+            $entity = icct_backend_nd_entity_values($session, $deadline, $budget);
             $data['hardware'] = icct_backend_nd_hardware($entity);
         } catch (RuntimeException $e) {
             $data['hardware'] = ['error' => $e->getMessage()];
@@ -201,36 +179,15 @@ function icct_backend_nd_collect_identity($host, $jobDeadline)
     try {
         $uptime = '1.3.6.1.2.1.1.3.0';
         try {
-            $before = icct_backend_nd_snmp_scalar($session, $uptime, $deadline);
+            $before = icct_backend_nd_snmp_scalar($session, $uptime, $deadline, false, 67);
         } catch (RuntimeException $e) {
             $before = null;
         }
-        foreach (
-            [
-                '1.3.6.1.2.1.31.1.1.1.6',
-                '1.3.6.1.2.1.31.1.1.1.10',
-                '1.3.6.1.2.1.31.1.1.1.19',
-                '1.3.6.1.2.1.2.2.1',
-                '1.3.6.1.2.1.31.1.1.1.1',
-                '1.3.6.1.2.1.31.1.1.1.15',
-                '1.3.6.1.2.1.31.1.1.1.18',
-            ]
-            as $root
-        ) {
-            try {
-                $values += icct_backend_nd_snmp_subtree($session, $root, $deadline, $budget);
-            } catch (RuntimeException $e) {
-            }
-        }
+        $values = icct_backend_nd_interface_values($session, $deadline, $budget, true);
         $counterCollected = time();
 
         try {
-            $entity = icct_backend_nd_snmp_subtree(
-                $session,
-                '1.3.6.1.2.1.47.1.1.1.1',
-                $deadline,
-                $budget,
-            );
+            $entity = icct_backend_nd_entity_values($session, $deadline, $budget);
         } catch (RuntimeException $e) {
             $entity = [];
             $hardware_error = $e->getMessage();
@@ -249,6 +206,16 @@ function icct_backend_nd_collect_identity($host, $jobDeadline)
         $interface_error = '';
         try {
             $interfaces = icct_backend_nd_interfaces($values);
+            $contextHost = $GLOBALS['icct_nms_snmp_sessions'][$session] ?? null;
+            if ($contextHost) foreach ($interfaces as $index => &$port) {
+                foreach (['1.3.6.1.2.1.31.1.1.1.6.', '1.3.6.1.2.1.31.1.1.1.10.'] as $root) {
+                    $native = icct_nms_snmp_known($contextHost, $root . $index);
+                    if (($native['reason'] ?? '') === 'stale') $port['_native_counter_stale'] = true;
+                    if (($native['reason'] ?? '') === 'missing') $port['_native_counter_pending'] = true;
+                }
+            }
+            unset($port);
+
         } catch (RuntimeException $e) {
             $interface_error = $e->getMessage();
         }
@@ -257,7 +224,7 @@ function icct_backend_nd_collect_identity($host, $jobDeadline)
             $hardware['error'] = $hardware_error;
         }
         try {
-            $after = icct_backend_nd_snmp_scalar($session, $uptime, $deadline);
+            $after = icct_backend_nd_snmp_scalar($session, $uptime, $deadline, true, 67);
         } catch (RuntimeException $e) {
             $after = null;
         }
@@ -364,6 +331,8 @@ function icct_backend_nd_discovery_session($host)
     $session->enum_print = true;
     // Retain our own numeric OID guard while accepting devices whose agent does not advertise ordered OIDs.
     $session->oid_increasing_check = false;
+    $GLOBALS['icct_nms_snmp_sessions'] ??= new WeakMap();
+    $GLOBALS['icct_nms_snmp_sessions'][$session] = $host;
     return $session;
 }
 
@@ -454,18 +423,27 @@ function icct_backend_nd_snmp_optional_subtree($session, $root, $deadline, &$bud
     }
 }
 
-function icct_backend_nd_snmp_scalar($session, $oid, $deadline)
+function icct_backend_nd_snmp_scalar($session, $oid, $deadline, $fresh = false, $type = null)
 {
-    if (microtime(true) > $deadline) {
-        throw new RuntimeException('Discovery time limit reached.');
+    if (microtime(true) > $deadline) throw new RuntimeException('Discovery time limit reached.');
+    $host = $GLOBALS['icct_nms_snmp_sessions'][$session] ?? null;
+    $normalized = icct_nms_snmp_oid($oid);
+    if ($host && !$fresh && $type !== null) {
+        $sample = icct_nms_snmp_known($host, $normalized);
+        $wire = $sample ? icct_nms_snmp_wire($sample, $type) : null;
+        if ($wire) return $wire;
+        $state = &icct_nms_snmp_samples($host);
+        if ($sample && (isset($state['owners'][$normalized]) || in_array($sample['value'] ?? null, [null,false,'U'], true))) {
+            throw new RuntimeException('Native Cacti sample is unavailable: ' . $normalized);
+        }
     }
+    // The post-collection uptime is deliberately a new observation: it guards mid-collection resets.
     $response = @$session->get($oid);
     if ($response === false || $session->getErrno()) {
-        throw new RuntimeException(
-            'SNMP request failed or the required MIB object is not readable: ' . $oid,
-        );
+        throw new RuntimeException('SNMP request failed or the required MIB object is not readable: ' . $oid);
     }
-    return icct_backend_nd_snmp_value($response, $oid);
+    $wire = icct_backend_nd_snmp_value($response, $oid);
+    return $host ? icct_nms_snmp_remember_wire($host, $normalized, $wire) : $wire;
 }
 
 function icct_backend_nd_snmp_security($host)
@@ -518,7 +496,76 @@ function icct_backend_nd_snmp_security($host)
     return $hasPriv ? 'authPriv' : ($hasAuth ? 'authNoPriv' : 'noAuthNoPriv');
 }
 
-function icct_backend_nd_snmp_subtree($session, $root, $deadline, &$budget)
+/** Standard IF-MIB syntax comes from the protocol, while devices, indexes and samples stay dynamic. */
+function icct_backend_nd_interface_values($session, $deadline, &$budget, $counters)
+{
+    $columns = [
+        '1.3.6.1.2.1.2.2.1.1'=>2, '1.3.6.1.2.1.2.2.1.2'=>4,
+        '1.3.6.1.2.1.2.2.1.3'=>2, '1.3.6.1.2.1.2.2.1.5'=>66,
+        '1.3.6.1.2.1.2.2.1.6'=>4, '1.3.6.1.2.1.2.2.1.7'=>2,
+        '1.3.6.1.2.1.2.2.1.8'=>2, '1.3.6.1.2.1.31.1.1.1.1'=>4,
+        '1.3.6.1.2.1.31.1.1.1.15'=>66, '1.3.6.1.2.1.31.1.1.1.18'=>4,
+    ];
+    if ($counters) $columns += ['1.3.6.1.2.1.31.1.1.1.6'=>70,
+        '1.3.6.1.2.1.31.1.1.1.10'=>70, '1.3.6.1.2.1.31.1.1.1.19'=>67];
+    $values = [];
+    $indexes = [];
+    foreach ($columns as $root => $type) {
+        try {
+            $rows = icct_backend_nd_snmp_subtree($session, $root, $deadline, $budget, $type, $indexes);
+            $values += $rows;
+            if (!$indexes) foreach ($rows as $oid => $row) {
+                $index = substr($oid, strlen($root) + 1);
+                if (ctype_digit($index)) $indexes[] = $index;
+            }
+        } catch (RuntimeException $error) {
+            // Preserve restricted-view behavior and the existing per-field unavailable states.
+        }
+    }
+    return $values;
+}
+
+function icct_backend_nd_entity_values($session, $deadline, &$budget)
+{
+    $values = [];
+    $indexes = [];
+    foreach ([5=>2, 7=>4, 6=>2, 4=>2, 11=>4, 13=>4] as $column => $type) {
+        $root = '1.3.6.1.2.1.47.1.1.1.1.' . $column;
+        $rows = icct_backend_nd_snmp_subtree($session, $root, $deadline, $budget, $type, $indexes);
+        $values += $rows;
+        if (!$indexes) foreach ($rows as $oid => $row) $indexes[] = substr($oid, strlen($root) + 1);
+    }
+    return $values;
+}
+
+function icct_backend_nd_snmp_subtree($session, $root, $deadline, &$budget, $type = null, $indexes = [])
+{
+    $host = $GLOBALS['icct_nms_snmp_sessions'][$session] ?? null;
+    if (!$host) return icct_backend_nd_snmp_subtree_live($session, $root, $deadline, $budget);
+    $state = &icct_nms_snmp_samples($host);
+    if ($type === null) {
+        foreach ($state['walks'] as $key => $rows) {
+            if (str_starts_with($key, 'wire:')) {
+                $ancestor = substr($key, 5);
+                if ($ancestor === $root || str_starts_with($root, $ancestor . '.')) {
+                    return array_filter($rows, static fn($oid)=>str_starts_with($oid, $root . '.'), ARRAY_FILTER_USE_KEY);
+                }
+            }
+        }
+    }
+    $walk = static function () use ($session, $root, $deadline, &$budget, $host) {
+        $rows = icct_backend_nd_snmp_subtree_live($session, $root, $deadline, $budget);
+        foreach ($rows as $oid => &$wire) $wire = icct_nms_snmp_remember_wire($host, $oid, $wire);
+        unset($wire);
+        return $rows;
+    };
+    if ($type === null) return $state['walks']['wire:' . $root] = $walk();
+    return icct_nms_snmp_column($host, $root, $walk,
+        static fn($oid)=>icct_backend_nd_snmp_scalar($session, $oid, $deadline, false, $type),
+        $indexes, $type);
+}
+
+function icct_backend_nd_snmp_subtree_live($session, $root, $deadline, &$budget)
 {
     $values = [];
     $cursor = $root;

@@ -1,6 +1,6 @@
 <?php
 
-/** ICCT-owned inventory services, derived from the existing ICCT NMS implementation. */
+require_once __DIR__ . '/../../../protocols/snmp/services/native_samples.php';
 
 function icct_backend_collect_inventory_values($only_host_id = 0)
 {
@@ -14,11 +14,7 @@ function icct_backend_collect_inventory_values($only_host_id = 0)
         $params[] = (int) $only_host_id;
     }
     $definitions = db_fetch_assoc_prepared(
-        "SELECT h.id AS host_id, h.hostname, h.status,
-		h.snmp_community, h.snmp_version, h.snmp_username, h.snmp_password,
-		h.snmp_auth_protocol, h.snmp_priv_passphrase, h.snmp_priv_protocol,
-		h.snmp_context, h.snmp_engine_id, h.snmp_port, h.snmp_timeout,
-		o.inventory_key, o.oid, i.id AS import_id
+        "SELECT h.*,h.id AS host_id,o.inventory_key,o.oid,i.id AS import_id
 		FROM host AS h
 		INNER JOIN plugin_icct_nms_snmprec_imports AS i ON i.host_template_id = h.host_template_id
 		INNER JOIN plugin_icct_nms_snmprec_oids AS o ON o.import_id = i.id AND o.inventory_key != ''
@@ -72,23 +68,29 @@ function icct_backend_collect_inventory_values($only_host_id = 0)
         }
 
         $snmp_error = '';
-        $value = cacti_snmp_get(
-            $definition['hostname'],
-            $definition['snmp_community'],
+        $reuseHost = array_replace($definition, ['id'=>(int) $definition['host_id']]);
+        $observation = icct_nms_snmp_observation_start($reuseHost);
+        $value = icct_nms_snmp_read(
+            $reuseHost,
             $definition['oid'],
-            $definition['snmp_version'],
-            $definition['snmp_username'],
-            $definition['snmp_password'],
-            $definition['snmp_auth_protocol'],
-            $definition['snmp_priv_passphrase'],
-            $definition['snmp_priv_protocol'],
-            $definition['snmp_context'],
-            $definition['snmp_port'],
-            $definition['snmp_timeout'],
-            $snmp_retries,
-            'ICCT NMS Device Mgmt',
-            $definition['snmp_engine_id'],
-            SNMP_STRING_OUTPUT_ASCII,
+            static fn() => cacti_snmp_get(
+                $definition['hostname'],
+                $definition['snmp_community'],
+                $definition['oid'],
+                $definition['snmp_version'],
+                $definition['snmp_username'],
+                $definition['snmp_password'],
+                $definition['snmp_auth_protocol'],
+                $definition['snmp_priv_passphrase'],
+                $definition['snmp_priv_protocol'],
+                $definition['snmp_context'],
+                $definition['snmp_port'],
+                $definition['snmp_timeout'],
+                $snmp_retries,
+                'ICCT NMS Device Mgmt',
+                $definition['snmp_engine_id'],
+                SNMP_STRING_OUTPUT_ASCII,
+            ),
         );
 
         if (icct_backend_inventory_snmp_failed($value)) {
@@ -129,10 +131,10 @@ function icct_backend_collect_inventory_values($only_host_id = 0)
         icct_backend_category_execute(
             "INSERT INTO plugin_icct_nms_device_inventory\n\t\t\t(host_id, inventory_key, oid, " .
                 "display_name, baseline_value, observed_value,\n\t\t\t status, last_attempt, last_success, " .
-                "last_error)\n\t\t\tVALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), '')\n\t\t\tON DUPLICATE KEY " .
+                "last_error)\n\t\t\tVALUES (?, ?, ?, ?, ?, ?, ?, NOW(), FROM_UNIXTIME(?), '')\n\t\t\tON DUPLICATE KEY " .
                 "UPDATE oid = VALUES(oid), display_name = VALUES(display_name),\n\t\t\t\tbaseline_value = " .
                 "VALUES(baseline_value), observed_value = VALUES(observed_value),\n\t\t\t\tstatus = " .
-                "VALUES(status), last_attempt = NOW(), last_success = NOW(), last_error = ''",
+                "VALUES(status), last_attempt = NOW(), last_success = VALUES(last_success), last_error = ''",
             [
                 $definition['host_id'],
                 $definition['inventory_key'],
@@ -141,6 +143,7 @@ function icct_backend_collect_inventory_values($only_host_id = 0)
                 $baseline,
                 $value,
                 $status,
+                icct_nms_snmp_observation_time($reuseHost, $observation),
             ],
         );
     }

@@ -7,7 +7,7 @@ function plugin_icct_nms_version()
 {
     return [
         'name' => 'icct_nms',
-        'version' => '1.4.26',
+        'version' => '1.4.27',
         'longname' => 'ICCT NMS Device Mgmt',
         'author' => 'NMS Project',
         'homepage' => 'https://www.cacti.net/',
@@ -75,6 +75,12 @@ function icct_nms_setup_registration()
         'icct_nms',
         'poller_bottom',
         'icct_nms_poller_bottom',
+        'shared/services/polling.php',
+    );
+    api_plugin_register_hook(
+        'icct_nms',
+        'poller_output',
+        'icct_nms_poller_output',
         'shared/services/polling.php',
     );
     // Retire the login bridge registered in 1.4.23 on existing installations.

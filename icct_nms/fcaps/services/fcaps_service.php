@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../protocols/snmp/services/native_samples.php';
 
 require_once __DIR__ . '/../../ports/services/port_monitoring_service.php';
 require_once __DIR__ . '/ntp_fault_service.php';
@@ -690,7 +691,7 @@ function icct_backend_collect_faults()
                     'graph_id' => 0,
                     'graph' => $rule['parameter'],
                     'value' => $value,
-                    'sample_time' => $value !== null ? $now : 0,
+                    'sample_time' => $value !== null ? (int) (icct_nms_snmp_known($host, icct_nms_snmp_oid($rule['oid']))['time'] ?? $now) : 0,
                     'state' => icct_nms_fault_state($rule, $value),
                 ];
                 continue;
@@ -956,7 +957,7 @@ function icct_nms_fault_numeric($value)
 function icct_nms_fault_snmp_read($host, $oid)
 {
     return icct_nms_fault_numeric(
-        cacti_snmp_get(
+        icct_nms_snmp_read($host, $oid, static fn() => cacti_snmp_get(
             $host['hostname'],
             $host['snmp_community'],
             $oid,
@@ -973,7 +974,7 @@ function icct_nms_fault_snmp_read($host, $oid)
             'ICCT Fault',
             $host['snmp_engine_id'],
             SNMP_STRING_OUTPUT_ASCII,
-        ),
+        )),
     );
 }
 

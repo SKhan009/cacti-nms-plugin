@@ -88,3 +88,19 @@ $snapshot['succeeded_at']=date('Y-m-d H:i:s',time()-901);
 try { icct_nms_connection_save($input); throw new LogicException('Stale mapping accepted'); }
 catch (InvalidArgumentException $expected) {}
 echo "PASS: Save uses observed identity and rejects changed, missing, forged and stale endpoints.\n";
+
+// Native sampling times can differ from the plugin job's wall clock.
+$nativePrevious=$previous; $nativeCurrent=$current;
+foreach (['in','out'] as $direction) {
+    $nativePrevious['interfaces'][7][$direction.'_sample_time']=900;
+    $nativeCurrent['interfaces'][7][$direction.'_sample_time']=1200;
+}
+$nativeCurrent['collected']=1350; $nativeCurrent['uptime']=135000;
+$nativeRates=icct_backend_interface_rates($nativeCurrent,$nativePrevious,900);
+verifyInterface($nativeRates['interfaces'][7]['in_bps']===1000.0 && $nativeRates['interfaces'][7]['sample_ended']===1200,
+    'Native counter timestamps, not collector execution times, determine rate intervals.');
+$repeat=$nativeRates; $repeat['collected']=1400; $repeat['uptime']=140000;
+$repeat=icct_backend_interface_rates($repeat,$nativeRates,900);
+verifyInterface($repeat['interfaces'][7]['in_bps']===1000.0 && $repeat['interfaces'][7]['sample_ended']===1200,
+    'Re-reading one native sample must not report false zero traffic or advance its timestamp.');
+echo "PASS: Native counter timing and repeated-sample preservation.\n";

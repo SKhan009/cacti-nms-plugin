@@ -2,35 +2,14 @@
 
 /** Read-only IF-MIB/IF-X-MIB observations; preset capacity never creates observed ports. */
 require_once __DIR__ . '/../port_evidence.php';
+require_once __DIR__ . '/../../../protocols/snmp/services/native_samples.php';
 require_once __DIR__ . '/hardware.php';
 require_once __DIR__ .
     '/../../../protocols/shared/services/backend/discovery_management_addresses.php';
 
 function icct_backend_ports_signature($host)
 {
-    $fields = [
-        'id',
-        'hostname',
-        'poller_id',
-        'disabled',
-        'snmp_version',
-        'snmp_port',
-        'snmp_context',
-        'snmp_engine_id',
-        'snmp_username',
-        'snmp_community',
-        'snmp_password',
-        'snmp_auth_protocol',
-        'snmp_priv_passphrase',
-        'snmp_priv_protocol',
-        'snmp_timeout',
-        'max_oids',
-    ];
-    $values = [];
-    foreach ($fields as $field) {
-        $values[$field] = (string) ($host[$field] ?? '');
-    }
-    return hash('sha256', json_encode($values, JSON_THROW_ON_ERROR));
+    return icct_nms_snmp_profile($host);
 }
 function icct_backend_ports_integer($value)
 {
@@ -341,6 +320,7 @@ function icct_backend_collect_ports()
         ) {
             continue;
         }
+        $observation = icct_nms_snmp_observation_start($host);
         $snapshot = [
             'signature' => icct_backend_ports_signature($host),
             'time' => time(),
@@ -369,29 +349,47 @@ function icct_backend_collect_ports()
                 ]
                 as $field => $oid
             ) {
-                $rows = cacti_snmp_walk(
-                    $host['hostname'],
-                    $host['snmp_community'],
-                    '.' . $oid,
-                    $host['snmp_version'],
-                    $host['snmp_username'],
-                    $host['snmp_password'],
-                    $host['snmp_auth_protocol'],
-                    $host['snmp_priv_passphrase'],
-                    $host['snmp_priv_protocol'],
-                    $host['snmp_context'],
-                    $host['snmp_port'],
-                    $host['snmp_timeout'],
-                    (int) read_config_option('snmp_retries'),
-                    (int) $host['max_oids'],
-                    'ICCT Ports',
-                    $host['snmp_engine_id'],
-                );
-                foreach (is_array($rows) ? $rows : [] as $row) {
-                    $returned = ltrim((string) ($row['oid'] ?? ''), '.');
+                if ($field === 'uptime') {
+                    $value = icct_nms_snmp_get($host, $oid . '.0');
+                    if ($value !== false) $columns[$field]['0'] = $value;
+                    continue;
+                }
+                $indexes = in_array($field, ['index','bridge_ifindex','pvid'], true)
+                    ? [] : array_keys($columns['index'] ?? []);
+                $rows = icct_nms_snmp_column($host, $oid,
+                    static function () use ($host, $oid) {
+                        $rows = cacti_snmp_walk(
+                            $host['hostname'],
+                            $host['snmp_community'],
+                            '.' . $oid,
+                            $host['snmp_version'],
+                            $host['snmp_username'],
+                            $host['snmp_password'],
+                            $host['snmp_auth_protocol'],
+                            $host['snmp_priv_passphrase'],
+                            $host['snmp_priv_protocol'],
+                            $host['snmp_context'],
+                            $host['snmp_port'],
+                            $host['snmp_timeout'],
+                            (int) read_config_option('snmp_retries'),
+                            (int) $host['max_oids'],
+                            'ICCT Ports',
+                            $host['snmp_engine_id'],
+                        );
+                        $values = [];
+                        foreach (is_array($rows) ? $rows : [] as $row) {
+                            $returned = icct_nms_snmp_oid($row['oid'] ?? '');
+                            if ($returned && str_starts_with($returned, $oid . '.')) {
+                                $values[$returned] = $row['value'] ?? '';
+                                icct_nms_snmp_remember($host, $returned, $values[$returned]);
+                            }
+                        }
+                        return $values;
+                    }, static fn($missing) => icct_nms_snmp_get($host, $missing), $indexes);
+                foreach ($rows as $returned => $value) {
                     $prefix = $oid . '.';
                     if (str_starts_with($returned, $prefix)) {
-                        $columns[$field][substr($returned, strlen($prefix))] = $row['value'] ?? '';
+                        $columns[$field][substr($returned, strlen($prefix))] = $value;
                     }
                 }
                 if ($field === 'type' && !icct_backend_ports_parse($columns)) {
@@ -404,7 +402,7 @@ function icct_backend_collect_ports()
             $snapshot['error'] =
                 'Interface discovery failed. Check saved SNMP settings and device IF-MIB access.';
         }
-        $snapshot['time'] = time();
+        $snapshot['time'] = icct_nms_snmp_observation_time($host, $observation);
         if (!$snapshot['ports']) {
             $snapshot['error'] = $snapshot['error'] ?:
                 'The collector received no readable IF-MIB or IF-X-MIB rows. Check the saved SNMP connection and access to interface tables.';

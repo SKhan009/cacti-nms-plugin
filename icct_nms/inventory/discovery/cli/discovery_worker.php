@@ -14,6 +14,7 @@ try {
     require_once __DIR__ . '/../services/inventory_events.php';
     $options = getopt('', ['once']);
     do {
+        icct_nms_snmp_reuse_reset();
         if (
             (int) db_fetch_cell_prepared('SELECT status FROM plugin_config WHERE directory=?', [
                 'icct_nms',

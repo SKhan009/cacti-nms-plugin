@@ -36,3 +36,13 @@ python3 icct_nms/installation/cli/package.py --media /matching/media --output /o
 ```
 
 An explicit `--online` installation uses the destination's configured repositories. It is never an automatic fallback from an incompatible offline archive. `--application-only` installs the application without provisioning collector services.
+
+## Cacti data reuse (1.4.27)
+
+The plugin observes Cacti's native `poller_output` hook without changing its update array or consuming its output tables. Exact raw samples are associated dynamically with the owning device, collector, SNMP connection, data source and numeric OID. Fresh compatible samples are reused by inventory, interface collection and direct SNMP alarm reads. Native `rrdtool_function_fetch()` remains the source for graph-based readings.
+
+Fresh untransformed query-cache input fields are matched using native query definitions and actual indexes. Rows predating an observed SNMP connection/security change are excluded; filtered index queries are not treated as complete interface inventories. Partially covered columns request only missing instances. Additional observations are shared across plugin collectors within one collection cycle. Unknown or late samples owned by a compatible native polling item remain unknown/stale; they do not cause a second poll or become zero. Sources with a slower cadence than the requested collection, ambiguous values, or lost Counter64 precision do not replace the required measurement.
+
+Query reindex values are not live Counter64 samples. Formatted labels also cannot prove raw octets, so the original byte-accurate interface identity checks still collect raw bytes where Cacti has not retained them. Standard MIB OIDs and ASN.1 syntax remain protocol definitions; device IDs, query IDs, indexes, paths, credentials and polling settings are never inferred from example devices. No additional worker or daemon is introduced.
+
+Source timestamps, real zero traffic, reboot/discontinuity checks, stale states, interface mappings and native Cacti authorization are retained. Existing graphs, protocol settings and page behavior are unchanged.

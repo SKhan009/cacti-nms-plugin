@@ -7,6 +7,7 @@ function icct_nms_poller_bottom()
     require_once __DIR__ . '/bootstrap.php';
     try {
         icct_nms_backend();
+        icct_nms_snmp_reuse_reset();
         icct_backend_diag_dispatch();
         icct_backend_collect_inventory_values();
         icct_backend_collect_identity();
@@ -72,4 +73,17 @@ function icct_nms_poller_bottom()
     } catch (Throwable $error) {
         cacti_log('ICCT inventory events: ' . $error->getMessage(), false, 'ICCT NMS');
     }
+}
+
+/** Native Cacti raw-output hook. Never alter or consume Cacti's samples. */
+function icct_nms_poller_output($updates)
+{
+    require_once __DIR__ . '/bootstrap.php';
+    try {
+        icct_nms_backend();
+        if (is_array($updates)) icct_nms_snmp_capture($updates);
+    } catch (Throwable $error) {
+        cacti_log('ICCT native sample observation failed: ' . $error->getMessage(), false, 'ICCT NMS');
+    }
+    return $updates;
 }

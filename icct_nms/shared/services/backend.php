@@ -30,6 +30,7 @@ require_once __DIR__ . '/../../configuration/services/backend/configuration_serv
 require_once __DIR__ . '/../../configuration/services/backend/configuration_validation.php';
 require_once __DIR__ . '/../../presets/services/backend/core_form_options.php';
 require_once __DIR__ . '/backend/database.php';
+require_once __DIR__ . '/../../protocols/snmp/services/native_samples.php';
 require_once __DIR__ . '/../../inventory/services/backend/device_manager.php';
 require_once __DIR__ . '/../../inventory/services/backend/device_metadata.php';
 require_once __DIR__ . '/../../inventory/diagnostics/services/backend/diagnostic_bandwidth.php';

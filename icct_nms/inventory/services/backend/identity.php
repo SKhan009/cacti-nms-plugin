@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../../protocols/snmp/services/native_samples.php';
+
 /** Protocol identity belongs to collector observations, never to manual metadata. */
 function icct_backend_identity_mac($value)
 {
@@ -176,8 +178,9 @@ function icct_backend_collect_identity($only_host_id = 0)
     );
     $count = 0;
     foreach ($hosts as $host) {
+        $observation = icct_nms_snmp_observation_start($host);
         $get = function ($oid, $format = SNMP_STRING_OUTPUT_ASCII) use ($host) {
-            return cacti_snmp_get(
+            return icct_nms_snmp_read($host, $oid, static fn() => cacti_snmp_get(
                 $host['hostname'],
                 $host['snmp_community'],
                 $oid,
@@ -194,7 +197,7 @@ function icct_backend_collect_identity($only_host_id = 0)
                 'ICCT Identity',
                 $host['snmp_engine_id'],
                 $format,
-            );
+            ), $format);
         };
         $values = [];
         if (icct_backend_identity_local_endpoint($host['hostname'], $host['snmp_port'])) {
@@ -272,24 +275,38 @@ function icct_backend_collect_identity($only_host_id = 0)
             }
             // ENTITY-MIB can contain many component serials: accept exactly one physical chassis.
             if (empty($values['serial_number'])) {
-                $classes = cacti_snmp_walk(
-                    $host['hostname'],
-                    $host['snmp_community'],
-                    '.1.3.6.1.2.1.47.1.1.1.1.5',
-                    $host['snmp_version'],
-                    $host['snmp_username'],
-                    $host['snmp_password'],
-                    $host['snmp_auth_protocol'],
-                    $host['snmp_priv_passphrase'],
-                    $host['snmp_priv_protocol'],
-                    $host['snmp_context'],
-                    $host['snmp_port'],
-                    $host['snmp_timeout'],
-                    (int) read_config_option('snmp_retries'),
-                    (int) $host['max_oids'],
-                    'ICCT Identity',
-                    $host['snmp_engine_id'],
-                );
+                $classesByOid = icct_nms_snmp_column($host, '.1.3.6.1.2.1.47.1.1.1.1.5',
+                    static function () use ($host) {
+                        $rows = cacti_snmp_walk(
+                            $host['hostname'],
+                            $host['snmp_community'],
+                            '.1.3.6.1.2.1.47.1.1.1.1.5',
+                            $host['snmp_version'],
+                            $host['snmp_username'],
+                            $host['snmp_password'],
+                            $host['snmp_auth_protocol'],
+                            $host['snmp_priv_passphrase'],
+                            $host['snmp_priv_protocol'],
+                            $host['snmp_context'],
+                            $host['snmp_port'],
+                            $host['snmp_timeout'],
+                            (int) read_config_option('snmp_retries'),
+                            (int) $host['max_oids'],
+                            'ICCT Identity',
+                            $host['snmp_engine_id'],
+                        );
+                        $values = [];
+                        foreach (is_array($rows) ? $rows : [] as $row) {
+                            $oid = icct_nms_snmp_oid($row['oid'] ?? '');
+                            if ($oid) {
+                                $values[$oid] = $row['value'];
+                                icct_nms_snmp_remember($host, $oid, $row['value']);
+                            }
+                        }
+                        return $values;
+                    }, static fn($oid) => $get('.' . $oid));
+                $classes = [];
+                foreach ($classesByOid as $oid => $value) $classes[] = ['oid'=>'.' . $oid, 'value'=>$value];
                 $chassisRows = array_filter(is_array($classes) ? $classes : [], function ($row) {
                     return preg_match('/^(?:3|chassis(?:\(3\))?)$/i', trim((string) $row['value']));
                 });
@@ -316,7 +333,7 @@ function icct_backend_collect_identity($only_host_id = 0)
                 json_encode(
                     [
                         'signature' => icct_backend_identity_signature($host),
-                        'time' => time(),
+                        'time' => icct_nms_snmp_observation_time($host, $observation),
                         'values' => $values,
                     ],
                     JSON_THROW_ON_ERROR,

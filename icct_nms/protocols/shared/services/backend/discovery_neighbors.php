@@ -49,6 +49,8 @@ function icct_backend_nd_interfaces($values)
                 70,
                 false,
             ),
+            'in_sample_time' => $values['1.3.6.1.2.1.31.1.1.1.6.' . $index]['_sample_time'] ?? null,
+            'out_sample_time' => $values['1.3.6.1.2.1.31.1.1.1.10.' . $index]['_sample_time'] ?? null,
             'discontinuity' => icct_backend_nd_value(
                 $values,
                 '1.3.6.1.2.1.31.1.1.1.19.' . $index,

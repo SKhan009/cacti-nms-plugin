@@ -57,6 +57,12 @@ function icct_backend_interface_rates(array $current, array $previous, int $maxA
         $port['sample_started'] = $port['sample_ended'] = null;
         $port['measurement_state'] = 'waiting_for_second_sample';
         $port['measurement_message'] = 'Waiting for the second sample.';
+        if (!empty($port['_native_counter_stale'])) {
+            $port['measurement_state'] = 'collection_stale';
+            $port['measurement_message'] = 'Collection stale. Waiting for a fresh interface snapshot.';
+            continue;
+        }
+        if (!empty($port['_native_counter_pending'])) continue;
         if (!isset($port['in_octets'], $port['out_octets'], $port['discontinuity'])) {
             $port['measurement_state'] = 'counters_inaccessible';
             $port['measurement_message'] = 'Counters inaccessible. Check the SNMP view and IF-MIB support.';
@@ -75,21 +81,38 @@ function icct_backend_interface_rates(array $current, array $previous, int $maxA
             $port['measurement_message'] = 'Interface identity changed. Waiting for two consistent samples.';
             continue;
         }
+        // Re-reading the same native sample is not a second sample or zero traffic.
+        $sameSample = !empty($port['in_sample_time']) && !empty($port['out_sample_time']) &&
+            $port['in_sample_time'] === ($old['in_sample_time'] ?? null) &&
+            $port['out_sample_time'] === ($old['out_sample_time'] ?? null) &&
+            (string) $port['in_octets'] === (string) $old['in_octets'] &&
+            (string) $port['out_octets'] === (string) $old['out_octets'];
+        if ($sameSample && ($old['measurement_state'] ?? '') === 'valid') {
+            foreach (['in_bps','out_bps','sample_seconds','sample_started','sample_ended',
+                'measurement_state','measurement_message'] as $field) $port[$field] = $old[$field];
+            continue;
+        }
+        $starts = $ends = [];
         foreach (['in', 'out'] as $direction) {
             $delta = icct_backend_interface_counter_delta(
                 $port[$direction . '_octets'] ?? null,
                 $old[$direction . '_octets'] ?? null,
             );
-            if ($delta !== null) {
-                $port[$direction . '_bps'] = ($delta * 8) / $elapsed;
-                $port['sample_seconds'] = $elapsed;
+            $end = (int) ($port[$direction . '_sample_time'] ?? $current['collected']);
+            $start = (int) ($old[$direction . '_sample_time'] ?? $previous['collected']);
+            $seconds = $end - $start;
+            if ($delta !== null && $seconds > 0 && $seconds <= $maxAge) {
+                $port[$direction . '_bps'] = ($delta * 8) / $seconds;
+                $port['sample_seconds'] = $seconds;
+                $starts[] = $start;
+                $ends[] = $end;
             }
         }
         if ($port['in_bps'] !== null && $port['out_bps'] !== null) {
             $port['measurement_state'] = 'valid';
             $port['measurement_message'] = 'Valid measurement.';
-            $port['sample_started'] = (int) $previous['collected'];
-            $port['sample_ended'] = (int) $current['collected'];
+            $port['sample_started'] = min($starts);
+            $port['sample_ended'] = max($ends);
         } else {
             $port['in_bps'] = $port['out_bps'] = null;
             $port['sample_seconds'] = null;
