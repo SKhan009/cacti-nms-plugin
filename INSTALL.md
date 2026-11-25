@@ -2,7 +2,9 @@
 
 The GitHub main ZIP contains the plugin, `install.py`, and all bundled offline media under `icct_nms/installation/bundles/media/{packages,components,native}`. Extract the whole ZIP outside the Cacti web root. Do not copy only the plugin folder when installing or upgrading collector services.
 
-The supplied RPMs and native binaries target **RHEL 9.8 aarch64 (ARM64)**. The source supports RHEL-family and Debian-family package selection; offline bundles must match the destination OS ID, release and architecture exactly. This archive is not an x86_64 or universal binary installer. A mismatched offline target is rejected before deployment.
+The launcher detects the destination Linux distribution, release and CPU architecture using the existing installer detection. It searches bundled media manifests for an exact match, including media trees in subdirectories. Folder names do not determine compatibility. When no matching offline bundle exists, the launcher uses the destination's configured DNF/APT repositories and requests only missing packages, including repository-supported optional component profiles; it reuses installed dependencies and Cacti's existing installation and lifecycle APIs. It does not add another Cacti instance or poller.
+
+The currently supplied RPMs and native binaries target **RHEL 9.8 aarch64 (ARM64)**. Other supported RHEL-family and Debian-family Linux systems use their own repositories unless matching offline media is supplied. Wrong-OS or wrong-CPU bundles are never installed. Windows, macOS and unrecognized Linux families are rejected; automatic selection does not create missing native builds or enable unsupported integrations. The plan lists `repository_components` and `native_components_not_bundled`. Existing verified native runtimes can still be reused; strict-auth Guacamole and Pathchar need matching builds when they are absent.
 
 From the extracted main ZIP:
 
@@ -10,6 +12,15 @@ From the extracted main ZIP:
 python3 install.py --cacti-root /usr/share/cacti --plan
 sudo python3 install.py --cacti-root /usr/share/cacti
 ```
+
+Require offline installation or select a directory containing matching media:
+
+```sh
+sudo python3 install.py --cacti-root /usr/share/cacti --offline
+sudo python3 install.py --cacti-root /usr/share/cacti --media /approved/offline-media --offline
+```
+
+`--online` explicitly skips bundled media. `--no-packages` retains pre-provisioned dependencies. `--application-only` deploys the application without setting up services. Selection is also shown by `--plan`; it does not install packages or modify Cacti.
 
 Use the actual Cacti path, for example `/var/www/html/cacti`. The main-ZIP launcher detects a unique installation at these standard paths when `--cacti-root` is omitted. Release ZIPs include the prepared manifest and use the same installation process without rebuilding it.
 
@@ -35,7 +46,7 @@ For another supported target, build its offline package and native bundles on th
 python3 icct_nms/installation/cli/package.py --media /matching/media --output /outside/plugin/installer.zip
 ```
 
-An explicit `--online` installation uses the destination's configured repositories. It is never an automatic fallback from an incompatible offline archive. `--application-only` installs the application without provisioning collector services.
+The main-ZIP launcher selects matching media or the destination repositories automatically. Prepared target-specific release ZIPs still reject mismatched targets and require explicit `--online` on source-only releases. `--offline` on the main-ZIP launcher prevents all repository fallback. `--application-only` installs the application without provisioning collector services.
 
 ## Cacti data reuse (1.4.27)
 

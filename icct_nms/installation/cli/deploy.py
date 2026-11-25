@@ -217,8 +217,8 @@ def main():
     complete_media = manifest.get("complete_media", False)
     if complete_media and not args.application_only:
         expected = {
-            name for name in setup.MANIFEST["optional_components"]
-            if setup.component_packages(target, name)
+            name for name, spec in setup.MANIFEST["optional_components"].items()
+            if spec["packages"][target["family"]]
         }
         if (not manifest["target"] or set(package_components) != expected
                 or set(components) != {"guacamole-strict", "pathchar"}):
@@ -244,6 +244,9 @@ def main():
         "target": target,
         "offline": not args.online,
         "package_components": package_components,
+        "repository_components": setup.repository_components(target) if args.online else [],
+        "native_components_not_bundled": [name for name, spec in setup.MANIFEST['optional_components'].items()
+                                   if spec.get('native_binary')] if args.online else [],
         "native_components": components,
         "syslog_port_runner": target["family"] == "rhel" and not args.application_only,
         "offline_packages_runner": complete_media and target["family"] == "rhel" and not args.application_only,
@@ -293,7 +296,7 @@ def main():
         command += (
             ["--bundle", str(media / "packages")]
             if manifest["target"]
-            else ["--online"]
+            else ["--online", "--all-components"]
         )
     if not args.application_only and not args.no_packages:
         for component in package_components:

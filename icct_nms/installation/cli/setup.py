@@ -186,6 +186,28 @@ def download_bundle(directory, target, component=None):
     print("Bundle built for exactly: " + json.dumps(target))
 
 
+def repository_components(target):
+    return [name for name, spec in MANIFEST['optional_components'].items()
+            if spec['packages'][target['family']] and not spec.get('native_binary')]
+
+
+def missing_packages(target, packages):
+    """Ask the destination package database before requesting repository packages."""
+    executable = shutil.which('rpm' if target['family'] == 'rhel' else 'dpkg-query')
+    if not executable:
+        return list(packages)
+    missing = []
+    for package in packages:
+        command = ([executable, '-q', package] if target['family'] == 'rhel' else
+                   [executable, '-W', '-f=${Status}', package])
+        result = subprocess.run(command, capture_output=True, text=True)
+        installed = result.returncode == 0 and (target['family'] == 'rhel' or
+                                               result.stdout.strip() == 'install ok installed')
+        if not installed:
+            missing.append(package)
+    return missing
+
+
 def install_packages(target, bundle, online=False, component=None):
     if bundle and online:
         raise ValueError("--online cannot be combined with --bundle.")
@@ -237,8 +259,12 @@ def install_packages(target, bundle, online=False, component=None):
                     env=dict(os.environ, DEBIAN_FRONTEND="noninteractive"),
                 )
     elif online:
+        packages = missing_packages(target, component_packages(target, component))
+        if not packages:
+            print('Required packages already installed; reusing existing dependencies.')
+            return
         if target["family"] == "rhel":
-            run(["dnf", "-y", "install", *component_packages(target, component)])
+            run(["dnf", "-y", "install", *packages])
         else:
             run(["apt-get", "update"])
             run(
@@ -247,7 +273,7 @@ def install_packages(target, bundle, online=False, component=None):
                     "-y",
                     "--no-remove",
                     "install",
-                    *component_packages(target, component),
+                    *packages,
                 ],
                 env=dict(os.environ, DEBIAN_FRONTEND="noninteractive"),
             )
@@ -654,10 +680,10 @@ def main():
         component_bundles[component] = directory
     selected_components = list(component_bundles)
     if args.all_components:
-        selected_components = [
+        selected_components = repository_components(target) if args.online else [
             name
             for name, spec in MANIFEST["optional_components"].items()
-            if spec["packages"][target["family"]] and not (args.online and spec.get("native_binary"))
+            if spec["packages"][target["family"]]
         ]
         if not args.online and set(selected_components) - set(component_bundles):
             raise ValueError(

@@ -68,8 +68,8 @@ def build_archive(root, output, bundle=None, native_bundles=None, component_bund
         target = json.loads((bundle / "bundle.json").read_text())["target"]
         component_bundles = [
             media / "components" / component
-            for component in setup.MANIFEST["optional_components"]
-            if setup.component_packages(target, component)
+            for component, spec in setup.MANIFEST["optional_components"].items()
+            if spec["packages"][target["family"]]
         ]
         native_bundles = [media / "native" / name for name in ("guacamole-strict", "pathchar")]
     packages, target = [], None
