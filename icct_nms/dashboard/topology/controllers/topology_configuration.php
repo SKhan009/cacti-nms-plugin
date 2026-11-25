@@ -48,6 +48,8 @@ try {
                 } else {
                     icct_nms_scan_retry($_POST['job_id'] ?? 0);
                 }
+            } elseif (in_array($action, ['enable_network', 'disable_network', 'cancel_network'], true)) {
+                icct_nms_network_action($_POST['network_id'] ?? '', $action);
             } elseif (in_array($action, ['save_network', 'run_network'], true)) {
                 if ($action === 'save_network') {
                     icct_nms_network_save($_POST);

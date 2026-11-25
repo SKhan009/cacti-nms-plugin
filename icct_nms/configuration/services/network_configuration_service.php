@@ -335,6 +335,27 @@ function icct_nms_network_save($input)
     }
     return (int) $result;
 }
+/** Match native Automation actions without loading its page controller. */
+function icct_nms_network_action($id, $action)
+{
+    icct_backend_require_management(23);
+    if (!in_array($action, ['enable_network', 'disable_network', 'cancel_network'], true)) {
+        throw new InvalidArgumentException('Unknown network action.');
+    }
+    $network = icct_nms_network_get($id);
+    if ($action === 'cancel_network') {
+        // Cacti's task master owns native discovery cancellation.
+        db_execute_prepared('UPDATE IGNORE automation_processes SET command=? WHERE task=? AND network_id=?',
+            ['cancel', 'tmaster', $network['id']]);
+        foreach (db_fetch_assoc_prepared("SELECT id FROM plugin_icct_nms_scan_jobs WHERE network_id=? AND state IN ('queued','running')", [$network['id']]) as $job) {
+            icct_nms_scan_cancel($job['id']);
+        }
+    } else {
+        db_execute_prepared('UPDATE automation_networks SET enabled=? WHERE id=?',
+            [$action === 'enable_network' ? 'on' : '', $network['id']]);
+    }
+}
+
 function icct_nms_network_run($id)
 {
     icct_backend_require_management(23);

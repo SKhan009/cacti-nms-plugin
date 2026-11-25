@@ -8,7 +8,10 @@
         const end = select.dataset.interfacePicker;
         const device = document.getElementById(end);
         const identity = select.form.elements[end + '_identity'];
-        const help = select.parentElement.querySelector('[data-interface-help]');
+        const describe = (message) => {
+            select.title = message;
+            select.setAttribute('aria-description', message);
+        };
         let request = 0;
         const updateIdentity = () => {
             identity.value = select.selectedOptions[0]?.dataset.identity || '';
@@ -20,8 +23,7 @@
             select.replaceChildren(new Option('Interface not mapped', '0'));
             identity.value = '';
             select.setCustomValidity(id ? 'Wait for discovered interfaces to load.' : '');
-            help.textContent = id ? 'Loading discovered interfaces…' : 'Select a device first.';
-            help.hidden = false;
+            describe(id ? 'Loading discovered interfaces…' : 'Select a device first.');
             if (!id) return;
             try {
                 const url = new URL(location.href);
@@ -37,12 +39,11 @@
                     option.dataset.identity = port.identity;
                     select.append(option);
                 }
-                help.textContent = data.message || '';
-                help.hidden = !help.textContent;
+                describe(data.message || '');
                 select.setCustomValidity('');
             } catch {
                 if (current !== request) return;
-                help.textContent = 'Interfaces unavailable. Check collection and reload.';
+                describe('Interfaces unavailable. Check collection and reload.');
                 // Keep the explicit unmapped choice available; never reuse another device’s port.
                 select.setCustomValidity('');
             }
@@ -247,7 +248,8 @@
     }
     const search = document.querySelector('#discoveredSearch');
     if (!search) return;
-    const method = document.querySelector('#discoveredProtocol'),
+    const source = document.querySelector('#discoveredSource'),
+        method = document.querySelector('#discoveredProtocol'),
         network = document.querySelector('#discoveredNetwork'),
         size = document.querySelector('#discoveredSize'),
         previous = document.querySelector('#discoveredPrevious'),
@@ -283,13 +285,15 @@
         page = 1;
         filtered = rows.filter(
             (row) =>
+                (!source.value || row.dataset.source === source.value) &&
                 (!method.value || row.dataset.method.split('|').includes(method.value)) &&
                 (!network.value || row.dataset.network === network.value) &&
                 row.textContent.toLowerCase().includes(search.value.trim().toLowerCase()),
         );
         render();
     }
-    [search, method, network, size].forEach((control) => control.addEventListener('input', filter));
+    search.addEventListener('input', filter);
+    [source, method, network, size].forEach((control) => control.addEventListener('change', filter));
     previous.addEventListener('click', () => {
         page--;
         render();

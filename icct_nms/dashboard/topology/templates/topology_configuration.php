@@ -27,6 +27,7 @@ $rowIcon = static function ($name) {
         'view' => '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
         'add' => '<path d="M12 5v14M5 12h14"/>',
         'run' => '<path d="m8 4 12 8-12 8Z"/>',
+        'pause' => '<path d="M7 4h3v16H7ZM14 4h3v16h-3Z"/>',
         'cancel' => '<path d="m6 6 12 12M18 6 6 18"/>',
         'retry' => '<path d="M3 10a9 9 0 1 1 1 7M3 4v6h6"/>',
     ];
@@ -194,6 +195,8 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                                 $label, 'Select an interface from the latest successful device collection. Leave unmapped when unknown. Changed or stale interfaces must be selected again.',
                             ); ?></label>
                             <select id="<?= $end ?>_port" name="<?= $end ?>_ifindex"
+                                title="<?= icct_nms_h($choices['message']) ?>"
+                                aria-description="<?= icct_nms_h($choices['message']) ?>"
                                 data-interface-picker="<?= $end ?>"
                                 data-selected-index="<?= $index ?>"
                                 data-selected-identity="<?= icct_nms_h($identity) ?>">
@@ -208,7 +211,6 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                                 <?php endif; ?>
                             </select>
                             <input type="hidden" name="<?= $end ?>_identity" value="<?= icct_nms_h($identity) ?>">
-                            <small data-interface-help="<?= $end ?>" <?= $choices['message'] === '' ? 'hidden' : '' ?>><?= icct_nms_h($choices['message']) ?></small>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -448,68 +450,43 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <div class="topology-row-actions">
-                                        <a
-                                            class="icon-button"
+                                    <div class="topology-row-actions network-row-actions">
+                                        <a class="icon-button"
                                             href="<?= icct_nms_h(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ?>?tab=networks&amp;network_edit=<?= (int) $network['id'] ?>"
-                                            aria-label="Configure"
-                                            title="Configure">
-                                            <?php $rowIcon('edit'); ?>
-                                        </a>
-                                        <a
-                                            class="icon-button"
-                                            href="<?= icct_nms_h(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)) ?>?tab=discovered&amp;network=<?= (int) $network['id'] ?>"
-                                            aria-label="Discovered Devices"
-                                            title="Discovered Devices">
-                                            <?php $rowIcon('view'); ?>
-                                        </a>
-                                        <form
-                                            method="post"
-                                            class="topology-inline-form">
+                                            aria-label="Configure" title="Configure"><?php $rowIcon('edit'); ?></a>
+                                        <?php $discoveryBusy = $nativeBusy || ($job && in_array($job['state'], ['queued', 'running'], true)); ?>
+                                        <form method="post" class="topology-inline-form">
                                             <?php icct_nms_token(); ?>
-                                            <input
-                                                type="hidden"
-                                                name="action"
-                                                value="run_network">
-                                            <input
-                                                type="hidden"
-                                                name="network_id"
-                                                value="<?= (int) $network['id'] ?>">
-                                            <button
-                                                class="icon-button"
-                                                aria-label="Discover Now"
-                                                title="Discover Now"
-                                                <?= $network['enabled'] !== 'on' ||
-                                                $nativeBusy ||
-                                                ($job && in_array($job['state'], ['queued', 'running'], true))
-                                                    ? 'disabled'
-                                                    : '' ?>>
-                                                <?php $rowIcon('run'); ?>
-                                            </button>
+                                            <input type="hidden" name="action" value="<?= $discoveryBusy ? 'cancel_network' : 'run_network' ?>">
+                                            <input type="hidden" name="network_id" value="<?= (int) $network['id'] ?>">
+                                            <button type="submit" class="icon-button"
+                                                aria-label="<?= $discoveryBusy ? 'Cancel Discovery' : 'Discover Now' ?>"
+                                                title="<?= $discoveryBusy ? 'Cancel Discovery' : 'Discover Now' ?>"
+                                                <?= !$discoveryBusy && $network['enabled'] !== 'on' ? 'disabled' : '' ?>><?php $rowIcon($discoveryBusy ? 'pause' : 'run'); ?></button>
                                         </form>
-                                        <?php if (
-                                            $job && in_array($job['state'], ['queued', 'running', 'partial', 'failed', 'cancelled'], true)
-                                        ): ?>
-                                            <form
-                                                method="post"
-                                                class="topology-inline-form">
-                                                <?php icct_nms_token(); ?>
-                                                <input
-                                                    type="hidden"
-                                                    name="action"
-                                                    value="<?= in_array($job['state'], ['queued', 'running'], true) ? 'cancel_scan' : 'retry_scan' ?>">
-                                                <input
-                                                    type="hidden"
-                                                    name="job_id"
-                                                    value="<?= (int) $job['id'] ?>">
-                                                <button
-                                                    class="icon-button"
-                                                    aria-label="<?= in_array($job['state'], ['queued', 'running'], true) ? 'Cancel discovery' : 'Retry discovery' ?>"
-                                                    title="<?= in_array($job['state'], ['queued', 'running'], true) ? 'Cancel discovery' : 'Retry discovery' ?>">
-                                                    <?php $rowIcon(in_array($job['state'], ['queued', 'running'], true) ? 'cancel' : 'retry'); ?>
-                                                </button>
-                                            </form>
-                                        <?php endif; ?>
+                                        <details class="row-menu">
+                                            <summary aria-label="Network actions" title="Network actions" aria-expanded="false">&#8942;</summary>
+                                            <div class="row-menu-panel">
+                                                <?php foreach (['enable_network' => 'Enable', 'disable_network' => 'Disable'] as $networkAction => $networkLabel): ?>
+                                                    <form method="post">
+                                                        <?php icct_nms_token(); ?>
+                                                        <input type="hidden" name="action" value="<?= $networkAction ?>">
+                                                        <input type="hidden" name="network_id" value="<?= (int) $network['id'] ?>">
+                                                        <button type="submit" <?=
+                                                            ($networkAction === 'enable_network' && $network['enabled'] === 'on') ||
+                                                            ($networkAction === 'disable_network' && $network['enabled'] !== 'on')
+                                                            ? 'disabled' : '' ?>><?= $networkLabel ?></button>
+                                                    </form>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </details>
+                                        <form method="post" action="<?= icct_nms_h($config['url_path']) ?>automation_networks.php" class="topology-inline-form">
+                                            <?php icct_nms_token(); ?>
+                                            <input type="hidden" name="action" value="actions">
+                                            <input type="hidden" name="drp_action" value="1">
+                                            <input type="hidden" name="chk_<?= (int) $network['id'] ?>" value="on">
+                                            <button type="submit" class="icon-button" aria-label="Delete network" title="Delete network" <?= $nativeBusy || ($job && in_array($job['state'], ['queued', 'running'], true)) ? 'disabled' : '' ?>><?php $rowIcon('remove'); ?></button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>
@@ -524,7 +501,12 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
         <?php endif; endif; ?>
     <?php else: ?>
         <div class="titlebar">
-            <h2>Discovered devices and neighbours</h2>
+            <h2 class="discovery-heading">Discovered devices and neighbours <span
+            class="field-info section-help"
+            tabindex="0"
+            role="img"
+            aria-label="Current LLDP/CDP neighbours that uniquely match an accessible Cacti device appear as dashboard connections. ARP/FDB entries remain observations. Add unknown devices to Cacti before including them in the device topology."
+            data-tooltip="Current LLDP/CDP neighbours that uniquely match an accessible Cacti device appear as dashboard connections. ARP/FDB entries remain observations. Add unknown devices to Cacti before including them in the device topology.">ⓘ</span></h2>
             <div class="topology-heading-actions">
                 <?php if ($automation): ?>
                     <a
@@ -555,6 +537,15 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                     id="discoveredSearch"
                     placeholder="Device, IP, MAC, reporter or port"
                     value="<?= icct_nms_h(is_string($_GET['mac'] ?? null) ? $_GET['mac'] : '') ?>">
+            </div>
+            <div class="field">
+                <label for="discoveredSource">Source</label>
+                <select id="discoveredSource">
+                    <option value="">All sources</option>
+                    <option value="cacti">Cacti discovery</option>
+                    <option value="scan">Discovery scan</option>
+                    <option value="observation">Neighbour observation</option>
+                </select>
             </div>
             <div class="field">
                 <label for="discoveredProtocol">Method</label>
@@ -590,7 +581,7 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                         <th>Address</th>
                         <th>MAC Address</th>
                         <th>Network / Reporting Device</th>
-                        <th>Method</th>
+                        <th>Source / Method</th>
                         <th>Local / Remote Port</th>
                         <th>Status</th>
                         <th>Last Check</th>
@@ -600,13 +591,14 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                 <tbody>
                     <?php foreach ($scanResults as $d): ?>
                         <tr
+                            data-source="scan"
                             data-method="IP scan"
                             data-network="<?= (int) $d['network_id'] ?>">
                             <td><?= icct_nms_h($d['name']) ?></td>
                             <td><?= icct_nms_h($d['address']) ?></td>
                             <td>—</td>
                             <td><?= icct_nms_h($d['scan_name'] . ' / ' . $d['collector']) ?></td>
-                            <td><?= icct_nms_h($d['method']) ?></td>
+                            <td>Discovery scan<div><?= icct_nms_h($d['method']) ?></div></td>
                             <td>—</td>
                             <td>
                                 <span class="device-status <?= $d['reachable'] ? 'online' : 'other' ?>"><?= $d['reachable'] ? 'Detected' : 'No response' ?></span>
@@ -621,13 +613,14 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                     <?php foreach ($coreDevices as $d):
                         $status = $d['up'] ? 'Up' : 'Down'; ?>
                         <tr
+                            data-source="cacti"
                             data-method="Cacti Network"
                             data-network="<?= (int) $d['network_id'] ?>">
                             <td><?= icct_nms_h($d['sysName'] ?: ($d['hostname'] ?: 'Not detected')) ?></td>
                             <td><?= icct_nms_h($d['ip']) ?></td>
                             <td>—</td>
                             <td><?= icct_nms_h($d['network']) ?></td>
-                            <td>Cacti Network</td>
+                            <td>Cacti discovery</td>
                             <td>—</td>
                             <td>
                                 <span class="device-status <?= icct_nms_status_class($status) ?>"><?= $status ?></span>
@@ -647,6 +640,7 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                             }
                         } ?>
                         <tr
+                            data-source="observation"
                             data-method="<?= icct_nms_h($fdbMatches ? 'ARP|FDB' : $d['protocol']) ?>"
                             data-network="">
                             <td><?= icct_nms_h($d['name']) ?></td>
@@ -657,7 +651,7 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                                     <div><?= icct_nms_h(($sourceLabels[$i] ?? '') . $source['reporter']) ?></div>
                                 <?php endforeach; ?>
                             </td>
-                            <td><?= icct_nms_h($fdbMatches ? 'ARP + FDB' : $d['protocol']) ?></td>
+                            <td>Neighbour observation<div><?= icct_nms_h($fdbMatches ? 'ARP + FDB' : $d['protocol']) ?></div></td>
                             <td>
                                 <?php foreach ($sources as $i => $source):
                                     $port = ($source['learned_port'] ?? '') ?: $source['port'];
@@ -669,7 +663,7 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                             </td>
                             <td>
                                 <?php foreach ($sources as $i => $source): ?>
-                                    <div><?= icct_nms_h($sourceLabels[$i] ?? '') ?><span class="device-status <?= $source['status'] === 'Current' ? 'online' : 'other' ?>"><?= icct_nms_h($source['status']) ?></span></div>
+                                    <div><?= icct_nms_h($sourceLabels[$i] ?? '') ?><span class="device-status <?= $source['status'] === 'Current' ? 'online' : 'other' ?>"><?= $source['status'] === 'Current' ? 'Fresh observation' : 'Stale observation' ?></span></div>
                                 <?php endforeach; ?>
                             </td>
                             <td>
@@ -692,6 +686,7 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
             class="inventory-pagination discovery-pagination"
             aria-label="Discovery results pages">
             <label>Items per page: <select id="discoveredSize">
+                    <option>5</option>
                     <option>10</option>
                     <option selected>25</option>
                     <option>50</option>
@@ -734,11 +729,6 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                 </button>
             </div>
         </nav>
-        <span
-            class="field-info section-help"
-            tabindex="0"
-            role="img"
-            aria-label="Current LLDP/CDP neighbours that uniquely match an accessible Cacti device appear as dashboard connections. ARP/FDB entries remain observations. Add unknown devices to Cacti before including them in the device topology."
-            data-tooltip="Current LLDP/CDP neighbours that uniquely match an accessible Cacti device appear as dashboard connections. ARP/FDB entries remain observations. Add unknown devices to Cacti before including them in the device topology.">ⓘ</span>
+
     <?php endif; ?>
 </section>

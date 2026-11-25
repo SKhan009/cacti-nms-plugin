@@ -1258,12 +1258,13 @@
 .dashboard-toolbar select {
     width: clamp(240px, 26vw, 390px);
     min-height: 36px;
-    padding: 6px 12px;
-    background: #f4f4f4;
+    padding: 6px 42px 6px 12px;
+    background-color: #f4f4f4;
     border: 0;
     border-bottom: 1px solid #aaa;
     font: inherit;
     font-size: 13px;
+    cursor: pointer;
 }
 .dashboard-add-widget {
     border: 0;

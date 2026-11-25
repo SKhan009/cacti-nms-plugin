@@ -456,7 +456,8 @@ h1 {
     pointer-events: none;
 }
 /* Local SVG gives unwrapped single selects the same chevron as select-wrap. */
-.field select:not([multiple]):not([size]) {
+.field select:not([multiple]):not([size]),
+.dashboard-toolbar select:not([multiple]):not([size]) {
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M1 2.5 5 6.5 9 2.5' fill='none' stroke='%23222' stroke-width='1'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
@@ -3622,8 +3623,17 @@ body.icct-inventory:has(.protocol-form) {
 }
 .topology-discovery-filters {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-columns: 2fr repeat(3, minmax(0, 1fr));
     gap: 20px;
+}
+.topology-configuration .discovery-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.discovery-heading .field-info {
+    flex: none;
+    font-weight: normal;
 }
 .topology-table-scroll {
     overflow-x: auto;
@@ -3660,11 +3670,27 @@ body.icct-inventory:has(.protocol-form) {
 .topology-configuration .field select {
     width: 100%;
     padding: 12px 16px;
-    background: #f4f4f4;
+    background-color: #f4f4f4;
     border: 0;
     border-bottom: 1px solid #999;
     box-sizing: border-box;
     font: inherit;
+}
+.topology-config-form .form-grid {
+    align-items: start;
+}
+.topology-config-form .field > label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 20px;
+    margin: 0;
+}
+.topology-config-form .field > select,
+.topology-config-form .connection-picker-toggle {
+    height: 48px;
+    min-height: 48px;
+    padding: 12px 42px 12px 16px;
 }
 
 .topology-configuration .inventory-pagination {
@@ -3925,12 +3951,26 @@ body.icct-inventory:has(.protocol-form) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px 24px;
 }
-.network-editor .network-check {
+.network-editor .network-check,
+.network-editor .field > .network-check {
     margin: 0;
     padding: 0 16px;
+    min-height: 48px;
+    gap: 10px;
     background: #f4f4f4;
     border-bottom: 1px solid #8d8d8d;
     box-sizing: border-box;
+}
+.network-editor .network-check input[type='checkbox'] {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    padding: 0;
+    align-self: center;
+}
+.network-editor .network-toggle-grid + .form-grid {
+    margin-top: 24px;
 }
 .network-editor h3 {
     margin-top: 32px;
@@ -4159,6 +4199,11 @@ body.icct-inventory:has(.protocol-form) {
     width: max-content;
     min-width: 0;
     max-width: none;
+}
+.topology-row-actions.network-row-actions {
+    flex-wrap: wrap;
+    width: auto;
+    max-width: 100%;
 }
 .topology-configuration .topology-row-actions form {
     display: flex;
