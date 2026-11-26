@@ -430,15 +430,17 @@
         const view = activeView;
         const filters = applied.get(view);
         const requestedPage = page;
+        const requestedSize = document.querySelector('#netflow-size').value;
         const isCurrent = () =>
             activeView === view &&
             applied.get(view) === filters &&
-            (view !== 'records' || page === requestedPage);
+            (view !== 'records' || (page === requestedPage &&
+                document.querySelector('#netflow-size').value === requestedSize));
         const query = filterQuery(filters);
         if (view === 'overview') query.set('live', '1');
         if (view === 'records') {
             query.set('page', String(requestedPage));
-            query.set('size', document.querySelector('#netflow-size').value);
+            query.set('size', requestedSize);
         }
         try {
             const response = await fetch('protocols/netflow/controllers/netflow.php?' + query, {

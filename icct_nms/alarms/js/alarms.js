@@ -422,9 +422,15 @@
             }
         }
     });
-    form.addEventListener('input', () => {
+    const applyFilters = () => {
         page = 1;
         render();
+    };
+    form.addEventListener('input', (event) => {
+        if (!event.target.matches('select')) applyFilters();
+    });
+    form.addEventListener('change', (event) => {
+        if (event.target.matches('select')) applyFilters();
     });
     deviceSearch.addEventListener('input', (event) => {
         event.stopPropagation();

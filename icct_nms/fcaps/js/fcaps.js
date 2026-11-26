@@ -199,9 +199,15 @@
             render();
             field(selected, 'name').focus();
         };
-        editors.addEventListener('input', () => {
+        const updateNetflowRule = () => {
             sync();
             render();
+        };
+        editors.addEventListener('input', (event) => {
+            if (!event.target.matches('select, input[type=checkbox]')) updateNetflowRule();
+        });
+        editors.addEventListener('change', (event) => {
+            if (event.target.matches('select, input[type=checkbox]')) updateNetflowRule();
         });
         editors.addEventListener('click', (event) => {
             const button = event.target.closest('[data-netflow-rule-remove]');
@@ -633,7 +639,7 @@
             }
             syncPassive();
         });
-        passiveForm.addEventListener('input', (event) => {
+        const updatePassiveRule = (event) => {
             const row = event.target.closest('.passive-rule');
             if (!row) return;
             if (row === untouchedTrapDraft) untouchedTrapDraft = null;
@@ -641,6 +647,12 @@
                 updateTrapPayload(row, row.querySelector('[data-field="varbind"]').value);
             }
             syncPassive();
+        };
+        passiveForm.addEventListener('input', (event) => {
+            if (!event.target.matches('select, input[type=checkbox]')) updatePassiveRule(event);
+        });
+        passiveForm.addEventListener('change', (event) => {
+            if (event.target.matches('select, input[type=checkbox]')) updatePassiveRule(event);
         });
         addTrapRule = () => {
             if (atRuleLimit()) return;

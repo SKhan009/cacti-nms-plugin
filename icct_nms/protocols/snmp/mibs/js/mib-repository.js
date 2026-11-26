@@ -652,7 +652,7 @@
                 if (field.type === 'checkbox') field.checked = !!rule[field.dataset.rule];
                 else if (rule[field.dataset.rule] !== undefined)
                     field.value = rule[field.dataset.rule];
-                field.addEventListener('input', () => {
+                field.addEventListener(field.matches('select, input[type=checkbox]') ? 'change' : 'input', () => {
                     display(card);
                     sync();
                 });
@@ -918,7 +918,7 @@
             if (key === 'color') input.pattern = '[a-fA-F0-9]{6}';
         }
         input.value = value(source, key);
-        input.addEventListener('input', () => set(source, key, input.value));
+        input.addEventListener(choices ? 'change' : 'input', () => set(source, key, input.value));
         return input;
     }
     function extraItems(source) {
@@ -1349,7 +1349,7 @@
                     input.value = current;
                     input.maxLength = definition.max_length;
                 }
-                input.addEventListener('input', () => {
+                input.addEventListener(choices || input.type === 'checkbox' ? 'change' : 'input', () => {
                     options[key] =
                         input.type === 'checkbox' ? (input.checked ? 'on' : '') : input.value;
                     group.sources.forEach((source) =>
