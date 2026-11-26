@@ -41,25 +41,163 @@ Use these steps on the Linux collector where Cacti is already installed at `/var
 
 5. Open Cacti, then **ICCT NMS → Settings → Installation**. Review Checks and Offline Packages for worker, receiver and media readiness. Configure the actual device credentials and any receiver authorization still marked **Needs setup**. Native components absent from the selected media require a matching build; automatic OS detection does not supply one.
 
-For a Cacti installation at `/usr/share/cacti`, run the equivalent commands from the extracted main ZIP:
+## Install from inside `icct_nms` on `/usr/share/cacti`
+
+Run these commands on the RHEL collector where Cacti is already working at `/usr/share/cacti`. Use the latest [main ZIP](https://github.com/SKhan009/cacti-nms-plugin/archive/refs/heads/main.zip). The commands assume the ZIP is saved as `$HOME/Downloads/cacti-nms-plugin-main.zip`.
+
+1. Extract the complete download outside the web root and enter the plugin folder:
+
+   ```sh
+   ICCT_INSTALL_DIR="$HOME/icct-nms-install-$(date +%Y%m%d-%H%M%S)"
+   mkdir -p "$ICCT_INSTALL_DIR"
+   unzip "$HOME/Downloads/cacti-nms-plugin-main.zip" -d "$ICCT_INSTALL_DIR"
+   cd "$ICCT_INSTALL_DIR/cacti-nms-plugin-main/icct_nms"
+   ls install.py installation/cli/launcher.py
+   ```
+
+2. Preview installation from inside `icct_nms`:
+
+   ```sh
+   python3 install.py --cacti-root /usr/share/cacti --plan
+   ```
+
+   Review the detected OS, release, architecture, package source and destination. The bundled ARM64 RPMs cannot be used on x86_64. If matching offline media is absent, automatic selection uses the server's configured repositories.
+
+   For an offline-only plan, run:
+
+   ```sh
+   python3 install.py --cacti-root /usr/share/cacti --offline --plan
+   ```
+
+   If matching media is stored elsewhere, replace `/path/to/matching-media` with its actual directory:
+
+   ```sh
+   python3 install.py --cacti-root /usr/share/cacti --media /path/to/matching-media --offline --plan
+   ```
+
+3. Install or upgrade using automatic package selection:
+
+   ```sh
+   sudo python3 install.py --cacti-root /usr/share/cacti
+   ```
+
+   Alternatively, install using the matching offline media reviewed in step 2:
+
+   ```sh
+   sudo python3 install.py --cacti-root /usr/share/cacti --media /path/to/matching-media --offline
+   ```
+
+   Choose one installation command. Wait for successful completion before verification. The installer retains existing local configuration and uploads, uses Cacti's lifecycle APIs and provisions supported collector services. If provisioning times out waiting for the runner lock, allow the current job to finish before retrying; do not delete its lock.
+
+4. Save fresh installation observations and print every check:
+
+   ```sh
+   sudo php /usr/share/cacti/plugins/icct_nms/installation/cli/check.php --save > "$HOME/icct-install-checks.json"
+   ```
+
+   ```sh
+   python3 - <<'PY'
+   import json
+   from pathlib import Path
+
+   checks = json.loads((Path.home() / "icct-install-checks.json").read_text())
+   for row in checks:
+       print(f"{row['feature']} | {row['item']} | {row['status']} | {row['detail']}")
+   PY
+   ```
+
+5. Verify common workers, the Syslog receiver and timers:
+
+   ```sh
+   sudo systemctl is-active \
+     icct-nms-diagnostics.service \
+     icct-nms-discovery.service \
+     icct-nms-location.service \
+     icct-nms-netflow.service \
+     rsyslog.service \
+     icct-nms-syslog-worker.service \
+     icct-nms-syslog-retention.timer \
+     icct-nms-package-runner.timer
+   ```
+
+   Each listed unit should report `active`. Inspect all ICCT NMS services, timer schedules and failed units:
+
+   ```sh
+   sudo systemctl list-units --all --type=service 'icct-nms-*' --no-pager
+   sudo systemctl list-timers --all 'icct-nms-*' --no-pager
+   sudo systemctl list-units --all --state=failed 'icct-nms-*' --no-pager
+   ```
+
+   `icct-nms-package-runner.service` is a oneshot and can be `inactive` between runs. Its timer and fresh status report are the health indicators. Syslog port-application instance services are also short-lived and need not stay active.
+
+6. Verify that package-runner status belongs to this Cacti installation and is fresh:
+
+   ```sh
+   sudo python3 - <<'PY'
+   import json
+   import time
+   from pathlib import Path
+
+   path = Path("/var/lib/icct-nms-package-runner/public/status.json")
+   status = json.loads(path.read_text())
+   age = time.time() - status.get("time", 0)
+   job = status.get("job") or {}
+   limit = 930 if job.get("status") == "running" else 40
+
+   print("Cacti root:", status.get("root"))
+   print("Platform:", status.get("target"))
+   print("Status age:", round(age, 1), "seconds")
+   print("Syslog port:", status.get("syslog_port"))
+   print("Inventory-only mode:", status.get("syslog_only"))
+   print("Media error:", status.get("media_error") or "None")
+   print("Job:", job.get("status", "None"))
+
+   if Path(status.get("root", "")).resolve() != Path("/usr/share/cacti").resolve():
+       raise SystemExit("FAIL: runner belongs to a different Cacti installation")
+   if age < 0 or age >= limit:
+       raise SystemExit("FAIL: runner status is stale or invalid")
+   print("PASS: runner status is fresh and matches this Cacti installation")
+   PY
+   ```
+
+   A missing status file means runner provisioning has not completed. `Inventory-only mode: True` means offline package operations are unavailable; inspect the media error and Installation page. Fresh status does not establish that every optional bundle is present.
+
+7. Verify optional services after configuring their features:
+
+   ```sh
+   sudo systemctl is-active \
+     icct-nms-trap-receiver.service \
+     icct-nms-trap-worker.service \
+     icct-nms-ssh.service \
+     icct-nms-guacd.service
+   ```
+
+   Configured services should be `active`. Fresh installations may still require Trap sender authorization/listener settings and SSH origin/native-runtime setup. See the Trap configuration instructions below. If the MIB simulator is configured, check it separately:
+
+   ```sh
+   sudo systemctl status icct-nms-mib-simulator.service --no-pager
+   ```
+
+8. Inspect recent runner logs and confirm results in the UI:
+
+   ```sh
+   sudo journalctl \
+     -u icct-nms-package-runner.service \
+     -u icct-nms-diagnostics.service \
+     -u icct-nms-discovery.service \
+     -u icct-nms-location.service \
+     -u icct-nms-netflow.service \
+     -u icct-nms-syslog-worker.service \
+     -u icct-nms-trap-worker.service \
+     -n 100 --no-pager
+   ```
+
+   Open **ICCT NMS → Settings → Installation**, refresh Checks and inspect Offline Packages. Resolve any reported failure or **Needs setup** item for an enabled feature. Verify an authorized test Syslog message and SNMP trap appear in the plugin; active services alone do not prove delivery. Netperf and Pathchar also require suitable destinations and execution tests, beyond binary detection.
+
+For an already-installed plugin with root-private media, its read-only plan can be run using:
 
 ```sh
-python3 install.py --cacti-root /usr/share/cacti --plan
-sudo python3 install.py --cacti-root /usr/share/cacti
-```
-
-The installer also works directly from the complete `icct_nms` folder:
-
-```sh
-cd icct_nms
-python3 install.py --cacti-root /var/www/html/cacti --plan
-sudo python3 install.py --cacti-root /var/www/html/cacti
-```
-
-For an already-installed plugin, use its absolute installer path. If its media is private to root, run even the read-only plan with `sudo` so it can inspect that media:
-
-```sh
-sudo python3 /var/www/html/cacti/plugins/icct_nms/install.py --cacti-root /var/www/html/cacti --offline --plan
+sudo python3 /usr/share/cacti/plugins/icct_nms/install.py --cacti-root /usr/share/cacti --offline --plan
 ```
 
 Receiver detection is permanent in the plugin: standard executable directories are searched, receiver presence is distinct from execution permissions, and the web UI can reuse fresh collector observations. No manual JSON path substitutions are needed. Package fields must contain package names, not executable paths; the installer validates every platform's lists before packaging or setup.
