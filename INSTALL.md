@@ -1,6 +1,6 @@
 # ICCT NMS complete installation
 
-The GitHub main ZIP contains the plugin, `install.py`, and all bundled offline media under `icct_nms/installation/bundles/media/{packages,components,native}`. Extract the whole ZIP outside the Cacti web root. Do not copy only the plugin folder when installing or upgrading collector services.
+The GitHub main ZIP contains the plugin, installer entry points at `install.py` and `icct_nms/install.py`, and bundled offline media under `icct_nms/installation/bundles/media/{packages,components,native}`. Both entry points use `icct_nms/installation/cli/launcher.py`; there is one installer implementation. Extract the whole ZIP outside the Cacti web root. Retain the complete plugin folder, including its installer and media; copying PHP files alone cannot provision collector services.
 
 The launcher detects the destination Linux distribution, release and CPU architecture using the existing installer detection. It searches bundled media manifests for an exact match, including media trees in subdirectories. Folder names do not determine compatibility. When no matching offline bundle exists, the launcher uses the destination's configured DNF/APT repositories and requests only missing packages, including repository-supported optional component profiles; it reuses installed dependencies and Cacti's existing installation and lifecycle APIs. It does not add another Cacti instance or poller.
 
@@ -47,6 +47,48 @@ For a Cacti installation at `/usr/share/cacti`, run the equivalent commands from
 python3 install.py --cacti-root /usr/share/cacti --plan
 sudo python3 install.py --cacti-root /usr/share/cacti
 ```
+
+The installer also works directly from the complete `icct_nms` folder:
+
+```sh
+cd icct_nms
+python3 install.py --cacti-root /var/www/html/cacti --plan
+sudo python3 install.py --cacti-root /var/www/html/cacti
+```
+
+For an already-installed plugin, use its absolute installer path. If its media is private to root, run even the read-only plan with `sudo` so it can inspect that media:
+
+```sh
+sudo python3 /var/www/html/cacti/plugins/icct_nms/install.py --cacti-root /var/www/html/cacti --offline --plan
+```
+
+Receiver detection is permanent in the plugin: standard executable directories are searched, receiver presence is distinct from execution permissions, and the web UI can reuse fresh collector observations. No manual JSON path substitutions are needed. Package fields must contain package names, not executable paths; the installer validates every platform's lists before packaging or setup.
+
+Reinstalling the runner waits up to 60 seconds for an existing runner lock without interrupting its job or replacing the lock. If it remains busy, retry after the operation completes. A direct `package_runner.py provision` invocation can adjust this using `--lock-timeout` (0–900 seconds).
+
+## Building installer ZIPs
+
+The package builder automatically includes bundled media when no media options are supplied:
+
+```sh
+python3 icct_nms/installation/cli/package.py --output /outside/plugin/icct-nms-offline.zip
+```
+
+For a deliberately partial media set, include only available verified profiles:
+
+```sh
+python3 icct_nms/installation/cli/package.py --media /approved/offline-media --allow-partial-media --output /outside/plugin/icct-nms-partial.zip
+```
+
+Matching base media remains required. Missing optional bundles leave only their affected Install actions unavailable. Present but corrupt, malformed or mismatched bundles are rejected. The installer retains existing runtimes; it does not claim an absent profile was installed. Verify media checks included profiles and reports absent optional ones.
+
+To intentionally build without packages, select source-only explicitly:
+
+```sh
+python3 icct_nms/installation/cli/package.py --source-only --output /outside/plugin/icct-nms-source.zip
+```
+
+The builder reports `archive_type`, target and included components. A source-only archive is not a complete offline installer.
 
 Require offline installation or select a directory containing matching media:
 

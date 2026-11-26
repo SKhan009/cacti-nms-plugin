@@ -70,14 +70,24 @@ def check_python_runtime(version=None):
             + MANIFEST["python_min"]
             + " or newer is required for setup and collectors; use a supported Python runtime."
         )
+    # Validate every platform before distributing a manifest, not only this host's list.
+    for family in MANIFEST['packages']:
+        component_packages({'family': family})
+    for component, spec in MANIFEST['optional_components'].items():
+        for family, packages in spec['packages'].items():
+            if packages:
+                component_packages({'family': family}, component)
 
 
 def component_packages(target, component=None):
-    packages = list(
+    packages = (
         MANIFEST["packages"][target["family"]]
         if component is None
         else MANIFEST["optional_components"][component]["packages"][target["family"]]
     )
+    if not isinstance(packages, list):
+        raise ValueError('Package definitions must be lists of package names.')
+    packages = list(packages)
     if not packages:
         raise ValueError(
             "No supported repository package for this component on this OS; use the approved native build guide."
@@ -87,6 +97,10 @@ def component_packages(target, component=None):
         minimum = tuple(int(part) for part in rule.get("min_version", "0").split("."))
         if rule["id"] == target.get("id") and version >= minimum:
             packages = [rule["replacements"].get(package, package) for package in packages]
+    for package in packages:
+        if not isinstance(package, str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9+_.:-]*', package):
+            raise ValueError('Invalid package name in dependencies.json: ' + repr(package) +
+                             '. Executable paths belong in binary definitions, not package lists.')
     return packages
 
 

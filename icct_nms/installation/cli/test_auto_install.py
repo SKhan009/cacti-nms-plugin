@@ -16,11 +16,65 @@ def load(name, path):
     return module
 
 
-launcher = load('icct_auto_launcher', Path(__file__).resolve().parents[3] / 'install.py')
+launcher = load('icct_auto_launcher', Path(__file__).with_name('launcher.py'))
 setup = load('icct_auto_setup', Path(__file__).with_name('setup.py'))
 
 
 class AutoInstallation(unittest.TestCase):
+    def test_package_lists_reject_binary_paths_and_options(self):
+        for invalid in ('/usr/sbin/snmptrapd', '../receiver', '--assumeyes', 'pkg name'):
+            with patch.dict(setup.MANIFEST['packages'], {'rhel': [invalid]}):
+                with self.assertRaisesRegex(ValueError, 'Invalid package name'):
+                    setup.component_packages({'family': 'rhel'})
+        with patch.dict(setup.MANIFEST['packages'], {'debian': ['libstdc++6', 'php-cli', 'libc6:amd64']}):
+            self.assertEqual(len(setup.component_packages({'family': 'debian'})), 3)
+        with patch.dict(setup.MANIFEST['packages'], {'debian': ['/sbin/snmptrapd']}):
+            with self.assertRaisesRegex(ValueError, 'Invalid package name'):
+                setup.check_python_runtime()
+
+    def test_both_entry_points_use_the_same_installer(self):
+        root = Path(__file__).resolve().parents[3]
+        for entry in (root / 'install.py', root / 'icct_nms/install.py'):
+            result = subprocess.run([setup.sys.executable, str(entry), '--help'], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('--cacti-root', result.stdout)
+
+    def test_package_command_includes_existing_media_unless_source_only_is_explicit(self):
+        package = load('icct_cli_package', Path(__file__).with_name('package.py'))
+        result = dict(files={}, target=None, complete_media=False, package_components=[], native_components=[])
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            media = root / 'installation/bundles/media'
+            (media / 'packages').mkdir(parents=True)
+            (media / 'packages/bundle.json').write_text('{}')
+            for flags, expected in [([], str(media)), (['--source-only'], None)]:
+                with patch.object(package, 'ROOT', root), patch.object(setup.sys, 'argv',
+                        ['package.py', '--output', str(root.parent / 'fixture.zip'), *flags]), patch.object(
+                        package, 'build_archive', return_value=result) as build:
+                    package.main()
+                    self.assertEqual(build.call_args.kwargs['media'], expected)
+
+    def test_partial_bundle_accepts_absence_but_rejects_corruption(self):
+        package = load('icct_partial_package', Path(__file__).with_name('package.py'))
+        root = Path(__file__).resolve().parents[2]
+        target = self.target()
+        with tempfile.TemporaryDirectory() as temp:
+            media = Path(temp) / 'media'
+            directory = media / 'packages'
+            directory.mkdir(parents=True)
+            payload = directory / 'fixture.rpm'
+            payload.write_bytes(b'fixture never installed')
+            (directory / 'bundle.json').write_text(json.dumps(dict(
+                format=1, target=target, component=None, packages=setup.component_packages(target),
+                files={payload.name: hashlib.sha256(payload.read_bytes()).hexdigest()})))
+            result = package.build_archive(root, Path(temp) / 'partial.zip', media=media, allow_partial=True)
+            self.assertTrue(result['partial_media'])
+            self.assertFalse(result['complete_media'])
+            self.assertEqual(result['package_components'], [])
+            payload.write_bytes(b'corrupt')
+            with self.assertRaisesRegex(ValueError, 'changed offline package'):
+                package.build_archive(root, Path(temp) / 'bad.zip', media=media, allow_partial=True)
+
     def test_existing_os_detector_reads_distribution_family_release_and_cpu(self):
         for os_release, family, identifier, version, arch in [
             ('ID=rocky\nID_LIKE="rhel centos fedora"\nVERSION_ID="9.4"', 'rhel', 'rocky', '9.4', 'x86_64'),

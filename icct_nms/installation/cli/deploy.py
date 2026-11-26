@@ -243,13 +243,14 @@ def main():
         "destination": str(destination),
         "target": target,
         "offline": not args.online,
+        "partial_media": manifest.get('partial_media', False),
         "package_components": package_components,
         "repository_components": setup.repository_components(target) if args.online else [],
         "native_components_not_bundled": [name for name, spec in setup.MANIFEST['optional_components'].items()
-                                   if spec.get('native_binary')] if args.online else [],
+                                         if spec.get('native_binary') and name not in components],
         "native_components": components,
         "syslog_port_runner": target["family"] == "rhel" and not args.application_only,
-        "offline_packages_runner": complete_media and target["family"] == "rhel" and not args.application_only,
+        "offline_packages_runner": (complete_media or manifest.get('partial_media', False)) and target["family"] == "rhel" and not args.application_only,
         "trap_listener": args.trap_listener,
         "source_files": sum(name.startswith("icct_nms/") for name in manifest["files"]),
     }

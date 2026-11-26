@@ -50,7 +50,7 @@ def source_files(root):
     return files
 
 
-def build_archive(root, output, bundle=None, native_bundles=None, component_bundles=None, media=None):
+def build_archive(root, output, bundle=None, native_bundles=None, component_bundles=None, media=None, allow_partial=False):
     setup.check_python_runtime()
     root, output = Path(root).resolve(), Path(output).resolve()
     if root in output.parents:
@@ -69,9 +69,11 @@ def build_archive(root, output, bundle=None, native_bundles=None, component_bund
         component_bundles = [
             media / "components" / component
             for component, spec in setup.MANIFEST["optional_components"].items()
-            if spec["packages"][target["family"]]
+            if spec["packages"][target["family"]] and
+            (not allow_partial or (media / "components" / component).exists() or (media / "components" / component).is_symlink())
         ]
-        native_bundles = [media / "native" / name for name in ("guacamole-strict", "pathchar")]
+        native_bundles = [media / "native" / name for name in ("guacamole-strict", "pathchar")
+                          if not allow_partial or (media / "native" / name).exists() or (media / "native" / name).is_symlink()]
     packages, target = [], None
     if bundle:
         bundle = Path(bundle).resolve()
@@ -108,12 +110,16 @@ def build_archive(root, output, bundle=None, native_bundles=None, component_bund
             native_components.append(component)
             for name in ["native.json"] + ["payload/" + name for name in data["files"]]:
                 native_files.append((directory / name, "native/" + component + "/" + name))
+    expected = {name for name, spec in setup.MANIFEST['optional_components'].items()
+                if target and spec['packages'][target['family']]}
+    complete = bool(media) and set(package_components) == expected and set(native_components) == {'guacamole-strict', 'pathchar'}
     manifest = {
         "format": 1,
         "target": target,
         "native_components": native_components,
         "package_components": package_components,
-        "complete_media": bool(media),
+        "complete_media": complete,
+        "partial_media": bool(media) and not complete,
         "files": {},
     }
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -141,6 +147,8 @@ def build_archive(root, output, bundle=None, native_bundles=None, component_bund
                 if target else
                 "This source-only archive contains no RPM media. The offline command requires installed dependencies."
             )
+            if manifest['partial_media']:
+                media_note += ' Partial media: absent optional profiles remain unavailable; existing runtimes are retained.'
             archive.writestr(
                 "INSTALL.txt",
                 "Extract the entire ZIP outside the web root. Run these commands from the extracted directory.\n"
@@ -160,11 +168,21 @@ def main():
     parser.add_argument("--output", required=True)
     parser.add_argument("--bundle")
     parser.add_argument("--media", help="Build a complete installer from packages/, components/ and native/")
+    parser.add_argument("--allow-partial-media", action="store_true", help="Include available verified profiles; never ignore invalid bundles.")
+    parser.add_argument("--source-only", action="store_true", help="Explicitly omit all offline media.")
     parser.add_argument("--component-bundle", action="append", default=[])
     parser.add_argument("--native-bundle", action="append", default=[])
     args = parser.parse_args()
+    if args.source_only and (args.media or args.bundle or args.component_bundle or args.native_bundle or args.allow_partial_media):
+        parser.error('--source-only cannot be combined with media options.')
+    if not args.source_only and not (args.media or args.bundle or args.component_bundle or args.native_bundle):
+        bundled = ROOT / 'installation/bundles/media'
+        if not (bundled / 'packages/bundle.json').is_file():
+            parser.error('No bundled base media found. Supply --media or explicitly select --source-only.')
+        args.media = str(bundled)
     result = build_archive(
-        ROOT, args.output, args.bundle, args.native_bundle, args.component_bundle, media=args.media
+        ROOT, args.output, args.bundle, args.native_bundle, args.component_bundle, media=args.media,
+        allow_partial=args.allow_partial_media
     )
     print(
         json.dumps(
@@ -172,6 +190,9 @@ def main():
                 "archive": str(Path(args.output).resolve()),
                 "files": len(result["files"]),
                 "target": result["target"],
+                "archive_type": 'complete-offline' if result['complete_media'] else ('partial-offline' if result['target'] else 'source-only'),
+                "package_components": result['package_components'],
+                "native_components": result['native_components'],
             },
             indent=2,
         )

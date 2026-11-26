@@ -1,6 +1,8 @@
 import hashlib
 import json
 import os
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import unittest
@@ -10,12 +12,51 @@ import package_runner as runner
 
 
 class RuntimeInventory(unittest.TestCase):
+    def test_provision_waits_for_the_existing_lock_without_replacing_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'lock'
+            code = ('import fcntl,sys,time; f=open(sys.argv[1],"w"); '
+                    'fcntl.flock(f,fcntl.LOCK_EX); print("locked",flush=True); time.sleep(0.3)')
+            process = subprocess.Popen([sys.executable, '-c', code, str(path)], stdout=subprocess.PIPE, text=True)
+            try:
+                self.assertEqual(process.stdout.readline().strip(), 'locked')
+                inode = path.stat().st_ino
+                with path.open('a') as lock:
+                    self.assertFalse(runner.acquire_runner_lock(lock, 0))
+                    self.assertFalse(runner.acquire_runner_lock(lock, 0.03))
+                    self.assertTrue(runner.acquire_runner_lock(lock, 2))
+                self.assertEqual(path.stat().st_ino, inode)
+                process.wait(timeout=2)
+            finally:
+                process.stdout.close()
+                if process.poll() is None:
+                    process.terminate()
+                    process.wait()
+
+    def test_partial_profiles_remain_verified_and_missing_profiles_are_not_invented(self):
+        with tempfile.TemporaryDirectory() as directory:
+            media = Path(directory)
+            (media / 'packages').mkdir()
+            with patch.object(runner, 'profiles', return_value={'base': [], 'redis': []}), patch.object(runner, 'verified_media') as verify:
+                self.assertEqual(runner.verify_available_media(media, {}), ['base'])
+                verify.assert_called_once_with(media, {}, 'base')
+                (media / 'components/redis').mkdir(parents=True)
+                def corrupt_optional(media, target, profile):
+                    if profile == 'redis':
+                        raise ValueError('corrupt redis')
+                verify.side_effect = corrupt_optional
+                with self.assertRaisesRegex(ValueError, 'corrupt redis'):
+                    runner.verify_available_media(media, {})
+
     def test_inventory_runner_adopts_only_fully_verified_media(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             media = root / 'plugins/icct_nms/installation/bundles/media'
             (media / 'packages').mkdir(parents=True)
             (media / 'packages/bundle.json').write_text('{}')
+            (media / 'components/redis').mkdir(parents=True)
+            for component in runner.NATIVE_EXECUTABLES:
+                (media / 'native' / component).mkdir(parents=True)
             config = {'root': str(root), 'media': None}
             target = dict(family='rhel', id='rhel', version='9.8', arch='aarch64')
             with (patch.object(runner, 'STATE', root),
@@ -37,6 +78,9 @@ class RuntimeInventory(unittest.TestCase):
             media = root / 'plugins/icct_nms/installation/bundles/media'
             (media / 'packages').mkdir(parents=True)
             (media / 'packages/bundle.json').write_text('{}')
+            (media / 'components/redis').mkdir(parents=True)
+            for component in runner.NATIVE_EXECUTABLES:
+                (media / 'native' / component).mkdir(parents=True)
             config = {'root': str(root), 'media': None}
             for boundary in ('require_private_media', 'verified_media', 'native_media'):
                 with (patch.object(runner, 'STATE', root),

@@ -65,7 +65,7 @@ def write_json(path, data, mode=0o600):
 def profiles(target):
     return {"base": component_packages(target), **{
         name: component_packages(target, name)
-        for name in MANIFEST["optional_components"]
+        for name, spec in MANIFEST["optional_components"].items() if spec['packages'][target['family']]
     }}
 
 
@@ -82,6 +82,39 @@ def native_media(media, target, component):
     if data["component"] != component:
         raise ValueError("Native bundle does not match its directory.")
     return data
+
+
+def media_profiles(media, target):
+    """Absent optional bundles are distinct from present but invalid bundles."""
+    return [profile for profile in profiles(target)
+            if bundle_path(media, profile).exists() or bundle_path(media, profile).is_symlink()]
+
+
+def verify_available_media(media, target):
+    available = media_profiles(media, target)
+    if 'base' not in available:
+        raise ValueError('Matching base package media is required.')
+    for profile in available:
+        verified_media(media, target, profile)
+    for component in NATIVE_EXECUTABLES:
+        if (media / 'native' / component).exists() or (media / 'native' / component).is_symlink():
+            native_media(media, target, component)
+    return available
+
+
+def acquire_runner_lock(lock, timeout=0):
+    if not 0 <= timeout <= 900:
+        raise ValueError('Runner lock timeout must be between 0 and 900 seconds.')
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return True
+        except BlockingIOError:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return False
+            time.sleep(min(0.2, remaining))
 
 
 def require_private_media(media):
@@ -181,7 +214,10 @@ def provision(args, target):
         media = Path(tempfile.mkdtemp(prefix="media-", dir=STATE))
     try:
         if not syslog_only:
-            for profile in profiles(target):
+            available = media_profiles(source, target)
+            if 'base' not in available:
+                raise ValueError('Matching base package media is required.')
+            for profile in available:
                 print("Checking offline profile " + profile, flush=True)
                 files = verified_media(source, target, profile)
                 if not use_bundled:
@@ -193,7 +229,7 @@ def provision(args, target):
                     verified_media(media, target, profile)
             for component in NATIVE_EXECUTABLES:
                 original = source / "native" / component
-                if original.exists():
+                if original.exists() or original.is_symlink():
                     data = native_media(source, target, component)
                     if not use_bundled:
                         destination = media / "native" / component
@@ -331,6 +367,9 @@ def package_versions(media, target, grouped, installed):
         candidates = {}
         readable = True
         directory = bundle_path(media, profile)
+        if not directory.exists() and not directory.is_symlink():
+            result[profile] = inventory_versions({profile: names}, installed)[profile]
+            continue
         try:
             manifest = json.loads((directory / "bundle.json").read_text())
             if (manifest["format"] != 1 or manifest["target"] != target or manifest["packages"] != names
@@ -549,10 +588,7 @@ def adopt_bundled_media(config, target):
     if not (candidate / "packages/bundle.json").is_file():
         return
     require_private_media(candidate)
-    for profile in profiles(target):
-        verified_media(candidate, target, profile)
-    for component in NATIVE_EXECUTABLES:
-        native_media(candidate, target, component)
+    verify_available_media(candidate, target)
     updated = dict(config, media=str(candidate))
     write_json(STATE / "config.json", updated)
     config.update(updated)
@@ -653,8 +689,12 @@ def work(target, inventory_only=False):
             if selection != "media":
                 raise ValueError("Unknown media verification request.")
             native_components = [name for name in NATIVE_EXECUTABLES if (media / "native" / name).exists()]
-            job["total"] = len(grouped) + len(native_components)
-            for profile in grouped:
+            available = media_profiles(media, target)
+            job["total"] = len(available) + len(native_components)
+            absent = sorted(set(grouped) - set(available))
+            if absent:
+                job['steps'].append('Optional profiles not bundled: ' + ', '.join(absent))
+            for profile in available:
                 files = verified_media(Path(config["media"]), target, profile)
                 step(f"{profile}: verified {len(files)} local RPMs.")
             for component in native_components:
@@ -758,6 +798,7 @@ def main():
     install.add_argument("--web-user", default="apache")
     install.add_argument("--web-group")
     install.add_argument("--no-packages", action="store_true", help="Require runner prerequisites to be installed already.")
+    install.add_argument('--lock-timeout', type=float, default=60, help='Wait up to this many seconds for an existing runner operation; never interrupt it.')
     commands.add_parser("work")
     args = parser.parse_args()
     if os.geteuid() != 0:
@@ -767,12 +808,10 @@ def main():
         parser.error("This offline RPM runner requires a RHEL-family host with systemd.")
     STATE.mkdir(mode=0o755, exist_ok=True)
     with (STATE / "lock").open("w") as lock:
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
+        if not acquire_runner_lock(lock, args.lock_timeout if args.action == 'provision' else 0):
             if args.action == "work":
                 return
-            raise ValueError("The package runner is busy. Wait for the current job to finish.")
+            raise ValueError('The package runner is still busy after waiting. Its operation was not interrupted; retry provisioning when it finishes.')
         if args.action == "provision":
             provision(args, target)
         else:
