@@ -13,25 +13,38 @@
             select.setAttribute('aria-description', message);
         };
         let request = 0;
+        let loadedDevice = select.dataset.interfaceDevice || '';
+        let pending;
         const updateIdentity = () => {
             identity.value = select.selectedOptions[0]?.dataset.identity || '';
         };
         select.addEventListener('change', updateIdentity);
         const load = async () => {
-            const current = ++request;
             const id = device.value;
+            // Browsers may restore devices after navigation without firing change.
+            // Re-selecting the same device must not discard an existing mapping.
+            if (id === loadedDevice) return;
+            loadedDevice = id;
+            const current = ++request;
+            pending?.abort();
+            pending = new AbortController();
+            const controller = pending;
             select.replaceChildren(new Option('Interface not mapped', '0'));
             identity.value = '';
             select.setCustomValidity(id ? 'Wait for discovered interfaces to load.' : '');
             describe(id ? 'Loading discovered interfaces…' : 'Select a device first.');
+            select.removeAttribute('aria-busy');
             if (!id) return;
+            select.setAttribute('aria-busy', 'true');
+            const timeout = setTimeout(() => controller.abort(), 15000);
             try {
                 const url = new URL(location.href);
                 url.search = '';
                 url.searchParams.set('interface_device', id);
-                const response = await fetch(url, { headers: { Accept: 'application/json' } });
+                const response = await fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store', signal: controller.signal });
                 if (!response.ok) throw new Error();
                 const data = await response.json();
+                if (!Array.isArray(data.interfaces)) throw new Error();
                 if (current !== request || device.value !== id) return;
                 for (const port of data.interfaces) {
                     const option = new Option(port.name + ' · ifIndex ' + port.index +
@@ -39,16 +52,36 @@
                     option.dataset.identity = port.identity;
                     select.append(option);
                 }
+                if (!data.interfaces.length) {
+                    const status = new Option(data.message || 'No collected interfaces available', '');
+                    status.disabled = true;
+                    select.append(status);
+                    loadedDevice = null; // Allow selecting the device again after collection completes.
+                }
                 describe(data.message || '');
                 select.setCustomValidity('');
             } catch {
                 if (current !== request) return;
-                describe('Interfaces unavailable. Check collection and reload.');
+                loadedDevice = null;
+                const status = new Option('Interfaces unavailable — select the device again to retry', '');
+                status.disabled = true;
+                select.append(status);
+                describe(status.textContent);
                 // Keep the explicit unmapped choice available; never reuse another device’s port.
                 select.setCustomValidity('');
+            } finally {
+                clearTimeout(timeout);
+                if (current === request) select.removeAttribute('aria-busy');
             }
         };
+        device.addEventListener('input', load);
         device.addEventListener('change', load);
+        // Synchronize restored port choices with their hidden identity before submit.
+        select.addEventListener('input', updateIdentity);
+        select.form.addEventListener('submit', updateIdentity);
+        window.addEventListener('pageshow', () => { load(); updateIdentity(); });
+        load();
+        updateIdentity();
     });
     document.querySelectorAll('.connection-device-select').forEach((select) => {
         const picker = document.createElement('div');

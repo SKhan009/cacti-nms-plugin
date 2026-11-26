@@ -198,6 +198,7 @@ $scanResultAction = static function ($d) use ($management, $rowIcon) {
                                 title="<?= icct_nms_h($choices['message']) ?>"
                                 aria-description="<?= icct_nms_h($choices['message']) ?>"
                                 data-interface-picker="<?= $end ?>"
+                                data-interface-device="<?= $deviceId ?: '' ?>"
                                 data-selected-index="<?= $index ?>"
                                 data-selected-identity="<?= icct_nms_h($identity) ?>">
                                 <option value="0">Interface not mapped</option>
