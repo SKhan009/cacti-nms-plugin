@@ -159,13 +159,13 @@ For application-only deployment into an existing externally managed Cacti instal
 
 ### Optional protocol dependencies
 
-Installation Checks now inventories Redis, Python WebSocket support, NTP client tools, TACACS+ tools, Apache Guacamole and FTP/TFTP/Telnet clients separately from application integration. Installed dependencies have no Install button. Package-only setup does not configure plugin features, PAM, time sources or firewall rules. Repository package scripts may apply their distribution defaults.
+Installation Checks now inventories Python WebSocket support, NTP client tools, TACACS+ tools, Apache Guacamole and FTP/TFTP/Telnet clients separately from application integration. Installed dependencies have no Install button. Package-only setup does not configure plugin features, PAM, time sources or firewall rules. Repository package scripts may apply their distribution defaults.
 
-Use `setup.py install --component redis --online` (also `websocket`, `ntp`, `tacacs`, `guacamole`, `transfer`). Build an offline dependency bundle with `setup.py bundle --component redis --bundle /outside/webroot/redis-bundle`; install with `setup.py install --component redis --bundle /outside/webroot/redis-bundle`. Each bundle is pinned to its component, OS release and architecture; existing base bundles remain compatible.
+Use `setup.py install --component websocket --online` (also `ntp`, `tacacs`, `guacamole`, `transfer`). Build an offline dependency bundle with `setup.py bundle --component websocket --bundle /outside/webroot/websocket-bundle`; install with `setup.py install --component websocket --bundle /outside/webroot/websocket-bundle`. Each bundle is pinned to its component, OS release and architecture; existing base bundles remain compatible.
 
 Guacamole custom builds under `/opt/nms-guacamole/1.6.0` are recognized without replacing the running daemon. A stock guacd package does not satisfy the SSH strict-auth policy. Debian has no automatic Guacamole repository profile; use the approved native build guide. Debian TACACS+ profile installs a client library, while RHEL installs server tools; neither changes login authentication.
 
-BLR §5.2.2.3 requires Telnet, SSH, FTP, TFTP, NTP, TACACS+, NetFlow/IPFIX and SNMP/discovery protocols. §5.3.3.3 requires NTP node statistics (sync, source, offset, jitter, delay), which remain distinct from chrony being installed. Redis and WebSocket are supporting implementation dependencies requested for this project, not named BLR requirements.
+BLR §5.2.2.3 requires Telnet, SSH, FTP, TFTP, NTP, TACACS+, NetFlow/IPFIX and SNMP/discovery protocols. §5.3.3.3 requires NTP node statistics (sync, source, offset, jitter, delay), which remain distinct from chrony being installed. BLR §5.2.2.2 specifies Cacti on LAMP, §5.5.1.1.5 names MySQL/MariaDB, and §5.3.1.8 lists the diagnostic tools. Redis is not a named BLR requirement and the plugin has no Redis client integration. Diagnostics persist queued jobs/results in Cacti’s database and retain their authenticated loopback channel for immediate requests. WebSocket support is a separate implementation dependency.
 
 Permission checks cover required writable upload directories and critical source files. Keep application source owned by an administrator and not writable by the HTTP/collector account; keep only the documented storage directories writable. Existing service accounts, SELinux enforcement and pchar raw-socket capability are preserved.
 
@@ -198,7 +198,7 @@ Extract the ZIP outside the web root. Run `python3 install.py --cacti-root /path
 
 BLR §5.3.2.5.1 includes SFTP. Rebuild the transfer profile to include the OpenSSH client alongside FTP, TFTP and Telnet tools. Device file transfer and Telnet workflows, TACACS+ authentication and vendor-specific adapters require application integration and device acceptance tests.
 
-For online setup, `setup.py install --online --all-components` installs the core dependencies plus all available protocol package profiles. This includes Redis, Python WebSocket support, NTP tools, TACACS+ tools and FTP/TFTP/Telnet clients. RHEL also offers the distribution Guacamole package; Debian uses the verified native build instead. A package being installed does not imply its application backend is implemented.
+For online setup, `setup.py install --online --all-components` installs the core dependencies plus all available protocol package profiles. This includes Python WebSocket support, NTP tools, TACACS+ tools and FTP/TFTP/Telnet clients. RHEL also offers the distribution Guacamole package; Debian uses the verified native build instead. A package being installed does not imply its application backend is implemented.
 
 For a complete offline release, add repeated `--component-bundle /path/to/profile-bundle` arguments to `package.py` together with the core `--bundle` and native bundles. The resulting archive carries the profile manifests and packages inside the plugin’s private media folder. Its bootstrap validates every selected profile's OS/CPU, component ID and SHA-256 hashes before updating source or invoking a package manager, then automatically forwards them to setup. The read-only `install.py --plan` lists the selected components.
 
@@ -214,7 +214,7 @@ APT NTP profiles use `ntpsec-ntpdig`, a client-only query tool, so installing pr
 
 ### Preserve the working plugin during setup
 
-The release source is aligned with the running VM's public application source, including its database-backed diagnostics queue and shared UI helpers. Installing a Redis dependency does not switch diagnostics to another backend. Local credentials, MIB sessions, generated plugin query XML and uploaded device images are excluded from release archives and rejected as deployment targets. Existing source is backed up before replacement, and the bootstrap refuses a plugin version downgrade.
+The release source is aligned with the running VM's public application source, including its database-backed diagnostics queue and shared UI helpers. Redis is absent from the installer profiles, Installation Checks, offline media and diagnostics service dependencies. Upgrading replaces the plugin service definition; it does not stop, disable or uninstall an existing Redis installation that another application might use. Older Redis component bundles are no longer accepted. Local credentials, MIB sessions, generated plugin query XML and uploaded device images are excluded from release archives and rejected as deployment targets. Existing source is backed up before replacement, and the bootstrap refuses a plugin version downgrade.
 
 Setup provisions only the required writable application paths: MIB storage, uploaded device images and Cacti's `resource/snmp_queries/icct_nms` directory. On SELinux systems it preserves enforcement and applies persistent writable labels only to those paths. Other application source stays administrator-owned and read-only to the web account.
 

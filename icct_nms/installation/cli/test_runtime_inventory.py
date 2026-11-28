@@ -37,15 +37,15 @@ class RuntimeInventory(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             media = Path(directory)
             (media / 'packages').mkdir()
-            with patch.object(runner, 'profiles', return_value={'base': [], 'redis': []}), patch.object(runner, 'verified_media') as verify:
+            with patch.object(runner, 'profiles', return_value={'base': [], 'websocket': []}), patch.object(runner, 'verified_media') as verify:
                 self.assertEqual(runner.verify_available_media(media, {}), ['base'])
                 verify.assert_called_once_with(media, {}, 'base')
-                (media / 'components/redis').mkdir(parents=True)
+                (media / 'components/websocket').mkdir(parents=True)
                 def corrupt_optional(media, target, profile):
-                    if profile == 'redis':
-                        raise ValueError('corrupt redis')
+                    if profile == 'websocket':
+                        raise ValueError('corrupt websocket')
                 verify.side_effect = corrupt_optional
-                with self.assertRaisesRegex(ValueError, 'corrupt redis'):
+                with self.assertRaisesRegex(ValueError, 'corrupt websocket'):
                     runner.verify_available_media(media, {})
 
     def test_inventory_runner_adopts_only_fully_verified_media(self):
@@ -54,14 +54,14 @@ class RuntimeInventory(unittest.TestCase):
             media = root / 'plugins/icct_nms/installation/bundles/media'
             (media / 'packages').mkdir(parents=True)
             (media / 'packages/bundle.json').write_text('{}')
-            (media / 'components/redis').mkdir(parents=True)
+            (media / 'components/websocket').mkdir(parents=True)
             for component in runner.NATIVE_EXECUTABLES:
                 (media / 'native' / component).mkdir(parents=True)
             config = {'root': str(root), 'media': None}
             target = dict(family='rhel', id='rhel', version='9.8', arch='aarch64')
             with (patch.object(runner, 'STATE', root),
                   patch.object(runner, 'require_private_media') as private,
-                  patch.object(runner, 'profiles', return_value={'base': [], 'redis': []}),
+                  patch.object(runner, 'profiles', return_value={'base': [], 'websocket': []}),
                   patch.object(runner, 'verified_media') as verify,
                   patch.object(runner, 'native_media') as native):
                 runner.adopt_bundled_media(config, target)
@@ -78,7 +78,7 @@ class RuntimeInventory(unittest.TestCase):
             media = root / 'plugins/icct_nms/installation/bundles/media'
             (media / 'packages').mkdir(parents=True)
             (media / 'packages/bundle.json').write_text('{}')
-            (media / 'components/redis').mkdir(parents=True)
+            (media / 'components/websocket').mkdir(parents=True)
             for component in runner.NATIVE_EXECUTABLES:
                 (media / 'native' / component).mkdir(parents=True)
             config = {'root': str(root), 'media': None}
@@ -126,7 +126,7 @@ class RuntimeInventory(unittest.TestCase):
             (state / 'public').mkdir()
             (state / 'requests').mkdir()
             pending = state / 'requests/pending.json'
-            queued = '{"action":"install","target":"redis"}'
+            queued = '{"action":"install","target":"websocket"}'
             pending.write_text(queued)
             (state / 'config.json').write_text(json.dumps({'root': '/cacti', 'media': None}))
             target = dict(family='rhel', id='rhel', version='9.8', arch='aarch64')

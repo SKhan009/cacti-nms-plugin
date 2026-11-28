@@ -2,6 +2,16 @@
 require dirname(__DIR__) . '/services/package_jobs.php';
 $manifest = icct_nms_installation_manifest();
 $catalog = icct_nms_installation_package_catalog($manifest);
+if (isset($catalog['redis']) || isset($manifest['optional_components']['redis'])) {
+    throw new RuntimeException('An unused Redis profile must not appear in Installation Checks or Offline Packages.');
+}
+foreach ($catalog as $profile) {
+    foreach ($profile['packages'] as $names) {
+        if (array_intersect(['redis', 'redis-server', 'php-redis'], $names)) {
+            throw new RuntimeException('An installable feature must not request unused Redis packages.');
+        }
+    }
+}
 $covered = [];
 foreach ($catalog as $id => $profile) {
     if (isset($manifest['rhel_package_groups'][$id])) {

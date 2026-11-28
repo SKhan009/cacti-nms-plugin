@@ -33,7 +33,6 @@ REMOVAL_IMPACTS = {
     "mtr": "On-demand and scheduled MTR diagnostics",
     "iperf3": "iPerf bandwidth tests",
     "netperf": "Netperf throughput tests",
-    "redis": "Redis cache and messaging services that use this RPM",
     "python3-websockets": "Python applications that use the WebSocket library",
     "chrony": "Chrony clock synchronization and local NTP statistics",
     "tacacs": "The local TACACS+ server supplied by this RPM",

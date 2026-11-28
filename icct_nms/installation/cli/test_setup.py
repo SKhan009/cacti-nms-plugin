@@ -217,7 +217,8 @@ class BundleSafety(unittest.TestCase):
             download.assert_called_once_with("/tmp/test-bundle", target)
 
     def test_optional_component_isolated_and_bundle_profile_checked(self):
-        with patch.object(setup, "run") as run:
+        with (patch.object(setup, "run") as run,
+              patch.object(setup, "missing_packages", return_value=["python3-websockets"])):
             setup.install_packages(dict(family="rhel"), None, online=True, component="websocket")
             self.assertEqual(run.call_args[0][0], ["dnf", "-y", "install", "python3-websockets"])
         with self.assertRaisesRegex(ValueError, "approved native build"):
@@ -225,15 +226,15 @@ class BundleSafety(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             target, data = self.fixture(directory)
             with self.assertRaisesRegex(ValueError, "package list"):
-                setup.verify_bundle(directory, target, "redis")
+                setup.verify_bundle(directory, target, "websocket")
 
     def test_component_bundle_is_bound_to_profile_and_checked_before_mutation(self):
         with tempfile.TemporaryDirectory() as directory:
             target, data = self.fixture(directory)
-            data["component"] = "redis"
-            data["packages"] = setup.component_packages(target, "redis")
+            data["component"] = "websocket"
+            data["packages"] = setup.component_packages(target, "websocket")
             (Path(directory) / "bundle.json").write_text(json.dumps(data))
-            self.assertEqual(setup.verify_component_bundle(directory, target), "redis")
+            self.assertEqual(setup.verify_component_bundle(directory, target), "websocket")
             (Path(directory) / "test.rpm").write_bytes(b"changed")
             with (
                 patch.object(
@@ -392,7 +393,8 @@ class BundleSafety(unittest.TestCase):
         setup.check_python_runtime((3, 12, 3))
 
     def test_online_requires_explicit_selection(self):
-        with patch.object(setup, "run") as run:
+        with (patch.object(setup, "run") as run,
+              patch.object(setup, "missing_packages", return_value=["php-cli"])):
             setup.install_packages(dict(family="rhel"), None, online=True)
             self.assertEqual(run.call_args[0][0][:3], ["dnf", "-y", "install"])
         with self.assertRaisesRegex(ValueError, "combined"):

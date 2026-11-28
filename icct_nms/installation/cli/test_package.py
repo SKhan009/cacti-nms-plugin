@@ -70,7 +70,7 @@ class ReleasePackaging(unittest.TestCase):
             self.fixture(root)
             target = dict(family="rhel", id="rhel", version="9.8", arch="aarch64")
             bundles = []
-            for component in [None, "redis"]:
+            for component in [None, "websocket"]:
                 folder = base / (component or "base")
                 folder.mkdir()
                 bundles.append(folder)
@@ -88,11 +88,11 @@ class ReleasePackaging(unittest.TestCase):
             result = package.build_archive(
                 root, archive, bundles[0], component_bundles=[bundles[1]]
             )
-            self.assertEqual(result["package_components"], ["redis"])
+            self.assertEqual(result["package_components"], ["websocket"])
             with zipfile.ZipFile(archive) as stream:
                 media = "icct_nms/installation/bundles/media/"
                 self.assertIn(media + "packages/fixture.rpm", stream.namelist())
-                self.assertIn(media + "components/redis/bundle.json", stream.namelist())
+                self.assertIn(media + "components/websocket/bundle.json", stream.namelist())
                 self.assertNotIn("packages/fixture.rpm", stream.namelist())
                 stream.extractall(base / "unpacked")
             release = deploy.verify_release(base / "unpacked")

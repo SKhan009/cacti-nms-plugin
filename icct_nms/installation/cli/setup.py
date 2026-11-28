@@ -90,6 +90,8 @@ def check_python_runtime(version=None):
 
 
 def component_packages(target, component=None):
+    if component is not None and component not in MANIFEST["optional_components"]:
+        raise ValueError("Unknown component: " + str(component))
     packages = (
         MANIFEST["packages"][target["family"]]
         if component is None

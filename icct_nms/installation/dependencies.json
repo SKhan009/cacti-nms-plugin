@@ -305,16 +305,6 @@
         "Vendor-specific protocols": "Device-specific adapters and acceptance tests are required."
     },
     "optional_components": {
-        "redis": {
-            "label": "Redis",
-            "packages": {
-                "rhel": ["redis"],
-                "debian": ["redis-server"]
-            },
-            "binaries": ["redis-server"],
-            "note": "Cache / messaging dependency. Plugin integration pending.",
-            "category": "Optional services"
-        },
         "websocket": {
             "label": "WebSocket runtime",
             "packages": {

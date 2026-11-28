@@ -4,6 +4,12 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Device Mgmt designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
+## Version 1.4.32
+
+Redis is removed from installer profiles, Installation Checks, Offline Packages actions, shipped component media and diagnostics service ordering. Diagnostics continue to use the Cacti database for queued jobs/results and the authenticated loopback channel for immediate tests. Native Cacti polling, diagnostics tools and other protocol runtimes are unchanged. Existing system Redis installations are not stopped or uninstalled by this upgrade.
+
+BLR §5.2.2.2 specifies Cacti on LAMP; §5.5.1.1.5 specifies MySQL/MariaDB. The diagnostic requirements in §5.3.1.8 do not mandate Redis. A full search of the supplied 23-page scanned BLR chapter found no Redis reference; the relevant requirement pages were visually checked. Removing an unused implementation dependency does not waive the document's availability, scalability or performance acceptance requirements.
+
 ## Version 1.4.31
 
 MIB Repository accepts the main module and its dependencies together (up to 20 `.mib`, `.my` or `.txt` files; 1 MiB per file, 8 MiB per batch, 512 supported object definitions). Dependency order does not matter. Validation checks module structure, imports, imported symbols, OID resolution and supported object definitions before offering Save/Proceed. Missing or malformed dependencies reject the batch; no partial upload is committed. The dialog shows a validation result for each selected file and identifies locally resolved dependencies. Repository dependencies with different versions require the user to supply the intended file explicitly. Identical saved dependencies are reused, and existing duplicate/overlap review remains in place. Saved bundles retain dependency source references and checksums so a later review uses the same version; changed or damaged dependencies fail explicitly.
