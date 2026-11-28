@@ -13,16 +13,17 @@ function icct_mib_device_types()
 function icct_mib_validate_upload_selection($upload)
 {
     $names = $upload['name'] ?? [];
-    if (!is_array($names) || count($names) !== 1) {
-        throw new InvalidArgumentException('Select one MIB file.');
+    if (!is_array($names) || count($names) < 1 || count($names) > 8) {
+        throw new InvalidArgumentException('Select 1–8 MIB files including dependencies.');
     }
-    $name = reset($names);
-    if (
-        !is_string($name) ||
-        str_contains($name, "\0") ||
-        !in_array(strtolower(pathinfo($name, PATHINFO_EXTENSION)), ['mib', 'my', 'txt'], true)
-    ) {
-        throw new InvalidArgumentException('Select a .mib, .my or .txt MIB file.');
+    foreach ($names as $name) {
+        if (
+            !is_string($name) ||
+            str_contains($name, "\0") ||
+            !in_array(strtolower(pathinfo($name, PATHINFO_EXTENSION)), ['mib', 'my', 'txt'], true)
+        ) {
+            throw new InvalidArgumentException('Select .mib, .my or .txt MIB files.');
+        }
     }
 }
 /** Offline MIB repository and reviewed native Cacti templates. Parser adapted from the NMS reference. */
@@ -194,13 +195,14 @@ function icct_mib_parse_upload($upload, $allowUnresolved = false, $progress = nu
             !preg_match('/\b([A-Za-z][A-Za-z0-9-]*)\s+DEFINITIONS\s*::=\s*BEGIN\b/', $clean, $m)
         ) {
             throw new InvalidArgumentException(
-                'This file is not a MIB definition. Upload the vendor .mib, .my or .txt file containing ' .
-                    'a DEFINITIONS ::= BEGIN module, rather than an HTML download page.',
+                basename($name) . ': not a complete MIB module. Select a file containing ' .
+                    'MODULE-NAME DEFINITIONS ::= BEGIN and its closing END. RFC documents and bare macro excerpts are not complete modules. ' .
+                    'Standard RFC-1212 and RFC-1215 dependencies are included; you can upload the UPS/vendor MIB without those excerpts.',
             );
         }
         $module = $m[1];
         if (isset($files[$module])) {
-            throw new InvalidArgumentException('Duplicate MIB module.');
+            throw new InvalidArgumentException('Duplicate MIB module ' . $module . '. Select only one version of each module.');
         }
         $files[$module] = [
             'name' => basename($name),
@@ -229,6 +231,7 @@ function icct_mib_parse_upload($upload, $allowUnresolved = false, $progress = nu
     $queue = $requested;
     $missing = [];
     $dependencies = [];
+    $imported = [];
     $loadedBytes = 0;
     while ($queue) {
         $module = array_shift($queue);
@@ -238,6 +241,9 @@ function icct_mib_parse_upload($upload, $allowUnresolved = false, $progress = nu
         }
         preg_match_all('/\bFROM\s+([A-Za-z][A-Za-z0-9-]*)/', $imports[1], $matches);
         foreach ($matches[1] as $dependency) {
+            if ($dependency !== $module) {
+                $imported[$dependency] = true;
+            }
             if (isset($texts[$dependency]) || isset($missing[$dependency])) {
                 continue;
             }
@@ -268,10 +274,12 @@ function icct_mib_parse_upload($upload, $allowUnresolved = false, $progress = nu
             throw new RuntimeException(
                 'Missing MIB dependencies: ' .
                     implode(', ', array_keys($missing)) .
-                    '. Upload these modules to the MIB Repository. Internet access is not required.',
+                    '. Select the MIB and these dependency modules together, or upload the dependencies to the MIB Repository first. Match the module name inside DEFINITIONS, not the download filename. Internet access is not required.',
             );
         }
-        $records = (new IcctMibOfflineParser($texts))->records($requested, $progress);
+        // Uploaded dependencies supply definitions, not extra monitoring templates.
+        $monitoringModules = array_values(array_diff($requested, array_keys($imported)));
+        $records = (new IcctMibOfflineParser($texts))->records($monitoringModules, $progress);
     } catch (RuntimeException $e) {
         if (!$allowUnresolved) {
             throw $e;

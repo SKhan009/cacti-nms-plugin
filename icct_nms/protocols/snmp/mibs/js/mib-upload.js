@@ -208,15 +208,18 @@
         if (busy) return;
         const files = [...fileInput.files];
         if (!files.length) return;
+        const fileNames = files.map((file) => file.name).join(', ');
         dialog.showModal();
         const fileError =
-            files.length !== 1
-                ? 'Select one MIB file.'
-                : !/\.(mib|my|txt)$/i.test(files[0].name)
-                  ? 'Select a .mib, .my or .txt MIB file.'
-                  : files[0].size > 1048576
-                    ? 'The MIB file must be no larger than 1 MiB.'
-                    : '';
+            files.length > 8
+                ? 'Select up to 8 MIB files including dependencies.'
+                : files.some((file) => !/\.(mib|my|txt)$/i.test(file.name))
+                  ? 'Select .mib, .my or .txt MIB files.'
+                  : files.some((file) => file.size > 1048576)
+                    ? 'Each MIB file must be no larger than 1 MiB.'
+                    : files.reduce((total, file) => total + file.size, 0) > 4194304
+                      ? 'The selected MIB files must total no more than 4 MiB.'
+                      : '';
         if (fileError) {
             showError(fileError);
             return;
@@ -240,9 +243,9 @@
         bar.max = 100;
         bar.value = 0;
         progressText.textContent =
-            'Reading the file. It will only be saved when you choose Save or Proceed.';
-        filename.textContent = 'Uploading “' + files[0].name + '”';
-        count.textContent = 'Uploading file…';
+            'Reading the selected files. They will only be saved when you choose Save or Proceed.';
+        filename.textContent = 'Uploading “' + fileNames + '”';
+        count.textContent = 'Uploading files…';
         const body = new FormData(chooser);
         body.set('upload_response', 'json');
         body.set('upload_progress', '1');
@@ -299,7 +302,7 @@
                         update.processed + '/' + update.total + ' OIDs Read & Scanned';
                     filename.textContent =
                         'Scanning “' +
-                        files[0].name +
+                        fileNames +
                         '”' +
                         (update.symbol ? ' — ' + update.symbol : '');
                 } else if (typeof update.message === 'string') count.textContent = update.message;
@@ -310,13 +313,13 @@
             if (activeToken === token && event.lengthComputable) {
                 bar.max = 100;
                 bar.value = (event.loaded / event.total) * 100;
-                count.textContent = 'Uploading file: ' + Math.round(bar.value) + '%';
+                count.textContent = 'Uploading files: ' + Math.round(bar.value) + '%';
             }
         });
         xhr.upload.addEventListener('load', () => {
             if (activeToken === token) {
                 bar.removeAttribute('value');
-                count.textContent = 'File uploaded temporarily. Scanning OIDs…';
+                count.textContent = 'Files uploaded temporarily. Scanning OIDs…';
             }
         });
         xhr.addEventListener('load', () => {
@@ -372,14 +375,14 @@
                 : 'MIB Read & Scanned';
             bar.max = 100;
             bar.value = 100;
-            filename.textContent = 'File: ' + files[0].name;
+            filename.textContent = 'Files: ' + fileNames;
             count.textContent =
                 summary.object_count + '/' + summary.object_count + ' OIDs Read & Scanned';
             progressText.textContent =
                 'File reading completed. Nothing has been saved to the repository.';
             readyText.textContent = summary.parse_error
-                ? 'Resolve these dependencies to configure monitoring, or save the file to the repository only.'
-                : 'Choose Save or Proceed to keep this file. Closing discards it.';
+                ? 'Resolve these dependencies to configure monitoring, or save the files to the repository only.'
+                : 'Choose Save or Proceed to keep these files. Closing discards it.';
             nextStep
                 .querySelectorAll('[data-upload-summary]')
                 .forEach(

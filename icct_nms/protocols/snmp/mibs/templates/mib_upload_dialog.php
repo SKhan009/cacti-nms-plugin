@@ -3,7 +3,7 @@
     enctype="multipart/form-data" hidden>
     <?php icct_nms_token(); ?>
     <input type="hidden" name="action" value="upload">
-    <input id="mibUploadFile" type="file" name="mibs[]" accept=".mib,.my,.txt" aria-label="Choose MIB file" required>
+    <input id="mibUploadFile" type="file" name="mibs[]" accept=".mib,.my,.txt" aria-label="Choose MIB files and dependencies (up to 8)" multiple required>
 </form>
 <dialog
     id="mibUploadDialog"

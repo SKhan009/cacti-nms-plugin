@@ -4,6 +4,10 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Device Mgmt designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
+## Version 1.4.34
+
+MIB uploads accept up to eight files together (1 MiB per file, 4 MiB total), retaining the existing upload/review layout. Dependencies resolve by their declared module names from the selection, repository, or bundled offline modules. Legacy RFC-1212, RFC-1215, RFC1155-SMI and RFC1213-MIB imports used by vendor UPS MIBs are included. Uploaded dependency objects do not become additional monitoring templates. Invalid module excerpts and duplicate versions identify the offending file/module; missing vendor dependencies remain explicit errors.
+
 ## Version 1.4.33
 
 Reverts the complete v1.4.31 MIB update: restores the previous single-file upload, parser, dependency handling, repository review and UI. Removes the added UPS download bundle and its source manifest. Existing uploaded MIBs and generated Cacti templates remain intact. Redis removal and Cacti polling reuse fixes remain included.
