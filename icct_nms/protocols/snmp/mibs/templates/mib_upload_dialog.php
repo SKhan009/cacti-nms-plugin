@@ -3,7 +3,7 @@
     enctype="multipart/form-data" hidden>
     <?php icct_nms_token(); ?>
     <input type="hidden" name="action" value="upload">
-    <input id="mibUploadFile" type="file" name="mibs[]" accept=".mib,.my,.txt" aria-label="Choose MIB file" required>
+    <input id="mibUploadFile" type="file" name="mibs[]" accept=".mib,.my,.txt" aria-label="Choose MIB files and dependencies" multiple required>
 </form>
 <dialog
     id="mibUploadDialog"
@@ -11,13 +11,22 @@
     data-auto-open="<?= !empty($uploadOpen) ? 'true' : 'false' ?>"
     aria-labelledby="mibUploadTitle">
     <header class="mib-upload-heading">
-        <h2 id="mibUploadTitle">Upload MIB</h2>
+        <h2 id="mibUploadTitle">Upload MIB Files</h2>
         <button
             type="button"
             data-mib-upload-close
             aria-label="Close MIB upload">×</button>
     </header>
     <div class="mib-upload-body">
+        <p>Select the main MIB and its dependency files together. Up to 20 files, 1 MiB per file and 8 MiB total. Standard SNMPv2 dependencies are included for offline validation.</p>
+        <p><a href="shared/assets/mibs/UPS-MIB-dependencies.zip" download>Download UPS-MIB with dependencies (RFC 1628)</a></p>
+        <section id="mibUploadValidation" hidden aria-label="MIB file validation">
+            <table class="mib-upload-summary">
+                <thead><tr><th>File</th><th>Module</th><th>Validation</th></tr></thead>
+                <tbody id="mibUploadValidationRows"></tbody>
+            </table>
+            <p id="mibUploadDependencies"></p>
+        </section>
         <p
             id="mibUploadError"
             class="notice error"
@@ -41,7 +50,7 @@
             id="mibUploadProgress"
             hidden
             aria-label="MIB upload progress">
-            <p id="mibUploadProgressText">Please wait while the MIB file uploads and is read.</p>
+            <p id="mibUploadProgressText">Please wait while the MIB files upload and are validated.</p>
             <p id="mibUploadFilename"></p>
             <progress
                 id="mibUploadBar"
@@ -120,7 +129,7 @@
                         value="repository">
                     <span>
                         <strong>Option 2: Add to Repository Only</strong>
-                        <small>Save the file to the repository and configure monitoring later.
+                        <small>Save the files to the repository and configure monitoring later.
                         </small>
                     </span>
                 </label>

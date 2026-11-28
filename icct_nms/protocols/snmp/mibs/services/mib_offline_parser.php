@@ -12,11 +12,63 @@ final class IcctMibOfflineParser
     {
         foreach ($texts as $module => $text) {
             try {
+                if (self::validateText($text) !== $module) throw new RuntimeException('Module name does not match its dependency identity.');
                 $this->modules[$module] = $this->module($text);
             } catch (RuntimeException $e) {
                 throw new RuntimeException($module . ': ' . $e->getMessage());
             }
         }
+        foreach ($this->modules as $module => $data) {
+            foreach ($data['imports'] as $symbol => $owner) {
+                if (!isset($this->modules[$owner]['defs'][$symbol])) {
+                    throw new RuntimeException($module . ': imported symbol ' . $symbol . ' is not defined in ' . $owner . '. Supply the correct dependency version.');
+                }
+            }
+        }
+        foreach ($this->modules as $module => $data) {
+            foreach ($data['defs'] as $symbol => $definition) {
+                if ($definition['path'] !== null) $this->oid($module, $symbol);
+                if ($definition['kind'] === 'OBJECT-TYPE') {
+                    $body = $definition['body'];
+                    $syntax = $this->clause($body, 'SYNTAX');
+                    $access = $this->clause($body, 'MAX-ACCESS') ?: $this->clause($body, 'ACCESS');
+                    if (!$syntax || !in_array($access, ['read-only','read-write','read-create','not-accessible','accessible-for-notify','write-only'], true) ||
+                        !in_array($this->clause($body, 'STATUS'), ['current','deprecated','obsolete','mandatory','optional'], true)) {
+                        throw new RuntimeException($module . '::' . $symbol . ': OBJECT-TYPE requires valid SYNTAX, ACCESS/MAX-ACCESS and STATUS clauses.');
+                    }
+                    $this->syntax($module, $syntax);
+                }
+            }
+        }
+    }
+
+    /** Structural validation is deliberately separate from supported-object interpretation. */
+    public static function validateText(string $text): string
+    {
+        if (!preg_match('//u', $text) || preg_match('/[\x00-\x08\x0b\x0e-\x1f]/', $text)) {
+            throw new RuntimeException('Use a text MIB definition, not a binary file.');
+        }
+        $text = self::clean($text);
+        if (!preg_match('/^\s*([A-Za-z][A-Za-z0-9-]*)\s+DEFINITIONS\s*::=\s*BEGIN\b/', $text, $header)) {
+            throw new RuntimeException('Expected a MIB module with DEFINITIONS ::= BEGIN, not an HTML page or other document.');
+        }
+        preg_match_all('/"[^"]*+(?:""[^"]*+)*+"|::=|[A-Za-z][A-Za-z0-9-]*|[^\s]/s', $text, $match);
+        $stack = []; $blocks = 0; $closed = false;
+        foreach ($match[0] as $token) {
+            if ($token === '"') throw new RuntimeException('Unterminated quoted string.');
+            if ($closed) throw new RuntimeException('Use one module per file; unexpected text after END.');
+            if ($token === 'BEGIN') $blocks++;
+            if ($token === 'END') {
+                if (--$blocks < 0) throw new RuntimeException('Unexpected END.');
+                if ($blocks === 0) $closed = true;
+            }
+            if (in_array($token, ['{','(','['], true)) $stack[] = $token;
+            if (isset(['}'=>'{',')'=>'(',']'=>'['][$token]) && array_pop($stack) !== ['}'=>'{',')'=>'(',']'=>'['][$token]) {
+                throw new RuntimeException('Unbalanced definition delimiters.');
+            }
+        }
+        if (!$closed || $blocks !== 0 || $stack) throw new RuntimeException('Incomplete MIB definition: missing END or closing delimiter.');
+        return $header[1];
     }
     public static function clean(string $text): string
     {
@@ -53,13 +105,20 @@ final class IcctMibOfflineParser
         if ($count > 250000) {
             throw new RuntimeException('MIB token limit exceeded.');
         }
-        for ($i = 0; $i < $count; $i++) {
+        for ($i = 4; $i < $count; $i++) {
+            if ($t[$i] === 'EXPORTS') {
+                while ($i < $count && $t[$i] !== ';') $i++;
+                if ($i >= $count) throw new RuntimeException('Incomplete EXPORTS clause.');
+                continue;
+            }
             if ($t[$i] === 'IMPORTS') {
                 $names = [];
                 for ($i++; $i < $count && $t[$i] !== ';'; $i++) {
                     if ($t[$i] === 'FROM') {
                         $module = $t[++$i] ?? '';
+                        if (!$names || !preg_match('/^[A-Za-z][A-Za-z0-9-]*$/D', $module)) throw new RuntimeException('Invalid IMPORTS clause.');
                         foreach ($names as $name) {
+                            if (isset($imports[$name]) && $imports[$name] !== $module) throw new RuntimeException('Conflicting import: ' . $name . '.');
                             $imports[$name] = $module;
                         }
                         $names = [];
@@ -67,17 +126,19 @@ final class IcctMibOfflineParser
                         $names[] = $t[$i];
                     }
                 }
+                if ($i >= $count || $names) throw new RuntimeException('Incomplete IMPORTS clause: each symbol needs FROM and the clause must end with a semicolon.');
                 continue;
             }
             if (
-                in_array($t[$i], ['BEGIN', 'END', 'DEFINITIONS'], true) ||
-                !preg_match('/^[A-Za-z][A-Za-z0-9-]*$/D', $t[$i])
+                $t[$i] === 'END' && $i === $count - 1
             ) {
                 continue;
             }
             $name = $t[$i];
             $kind = $t[$i + 1] ?? '';
             if ($kind === 'MACRO') {
+                if (isset($defs[$name])) throw new RuntimeException('Duplicate definition: ' . $name . '.');
+                $defs[$name] = ['kind'=>'MACRO', 'body'=>[], 'path'=>null];
                 while ($i < $count && $t[$i] !== 'END') {
                     $i++;
                 }
@@ -134,6 +195,7 @@ final class IcctMibOfflineParser
                 continue;
             }
             if ($kind === '::=' && ($t[$i + 2] ?? '') !== 'BEGIN') {
+                if (isset($defs[$name])) throw new RuntimeException('Duplicate definition: ' . $name . '.');
                 $j = $i + 2;
                 $body = [];
                 $depth = 0;
@@ -159,12 +221,17 @@ final class IcctMibOfflineParser
                                     $t[$j + 1] ?? '',
                                     [
                                         '::=',
+                                        'MACRO',
                                         'OBJECT-TYPE',
                                         'OBJECT',
                                         'MODULE-IDENTITY',
                                         'NOTIFICATION-TYPE',
                                         'OBJECT-IDENTITY',
                                         'TRAP-TYPE',
+                                        'OBJECT-GROUP',
+                                        'NOTIFICATION-GROUP',
+                                        'MODULE-COMPLIANCE',
+                                        'AGENT-CAPABILITIES',
                                     ],
                                     true,
                                 )))
@@ -181,7 +248,9 @@ final class IcctMibOfflineParser
                 }
                 $defs[$name] = ['kind' => 'TYPE', 'body' => $body, 'path' => null];
                 $i = $j - 1;
+                continue;
             }
+            throw new RuntimeException('Unsupported or malformed definition near ' . $name . '.');
         }
         return ['imports' => $imports, 'defs' => $defs];
     }
@@ -389,6 +458,11 @@ final class IcctMibOfflineParser
                     $syntax = $this->syntax($module, $syntax);
                 }
                 $access = $this->clause($body, 'MAX-ACCESS') ?: $this->clause($body, 'ACCESS');
+                if ($def['kind'] === 'OBJECT-TYPE' && (!$syntax || !in_array($access,
+                    ['read-only','read-write','read-create','not-accessible','accessible-for-notify','write-only'], true) ||
+                    !in_array($this->clause($body, 'STATUS'), ['current','deprecated','obsolete','mandatory','optional'], true))) {
+                    throw new RuntimeException($module . '::' . $name . ': OBJECT-TYPE requires valid SYNTAX, ACCESS/MAX-ACCESS and STATUS clauses.');
+                }
                 $table = false;
                 $indexDescription = 'OID instance suffix';
                 foreach ($this->modules as $owner => $mod) {

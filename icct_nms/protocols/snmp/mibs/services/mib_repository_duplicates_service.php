@@ -81,11 +81,7 @@ function icct_mib_repository_comparison($preview)
                 if ($parsed === null) {
                     // Use the same current parser for both sides; historical parser output
                     // can differ in expanded syntax and index metadata for identical bytes.
-                    $upload = ['name' => [], 'stored_content' => []];
-                    foreach ($bundle['files'] as $index => $stored) {
-                        $upload['name'][] = $stored['name'];
-                        $upload['stored_content'][] = icct_mib_file($bundle, $index);
-                    }
+                    $upload = icct_mib_stored_upload($bundle);
                     $parsed = icct_mib_preview($upload, '__mib_unassigned__', true);
                     if (!empty($parsed['parse_error'])) {
                         $allOidsComparable = false;

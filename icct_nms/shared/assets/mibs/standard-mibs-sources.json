@@ -1,0 +1,34 @@
+{
+  "files": [
+    {
+      "module": "SNMPv2-SMI",
+      "url": "https://raw.githubusercontent.com/net-snmp/net-snmp/b44e7f15bdb9014e5cb199c81f787ce9398c7d14/mibs/SNMPv2-SMI.txt",
+      "upstream_sha256": "ece2355fc8b6140af702f86d77bd3f7398d80375fc6278c3e30ff3a31b53e0b7",
+      "sha256": "ece2355fc8b6140af702f86d77bd3f7398d80375fc6278c3e30ff3a31b53e0b7",
+      "corrections": []
+    },
+    {
+      "module": "SNMPv2-TC",
+      "url": "https://raw.githubusercontent.com/net-snmp/net-snmp/b44e7f15bdb9014e5cb199c81f787ce9398c7d14/mibs/SNMPv2-TC.txt",
+      "upstream_sha256": "c1379575e6a0ad25b2d7da68294153c1fd79750827376f2aa6323d072d73f0b8",
+      "sha256": "c1379575e6a0ad25b2d7da68294153c1fd79750827376f2aa6323d072d73f0b8",
+      "corrections": []
+    },
+    {
+      "module": "SNMPv2-CONF",
+      "url": "https://raw.githubusercontent.com/net-snmp/net-snmp/b44e7f15bdb9014e5cb199c81f787ce9398c7d14/mibs/SNMPv2-CONF.txt",
+      "upstream_sha256": "b3e90ba682e10c76f6de90e65a0013143f0ec531b0ed546b2b8aa5ad5c0001eb",
+      "sha256": "b3e90ba682e10c76f6de90e65a0013143f0ec531b0ed546b2b8aa5ad5c0001eb",
+      "corrections": []
+    },
+    {
+      "module": "UPS-MIB",
+      "url": "https://raw.githubusercontent.com/netdisco/netdisco-mibs/e817a0abd518ad314651ea7bf4490926b1e4cf69/rfc/UPS-MIB.txt",
+      "upstream_sha256": "3aa3d15badc41d44950a747b8bf4ff262242d53b6526e0fbe6ec529569db3135",
+      "sha256": "ded08fa7cab0464a8c70ed37e9f0f7c5a889bad675e75e8920c9c6490c65ed1e",
+      "corrections": [
+        "Added missing TEXTUAL-CONVENTION import from SNMPv2-TC; no OIDs or object semantics changed."
+      ]
+    }
+  ]
+}

@@ -10,16 +10,15 @@ function icct_mib_device_types()
         '__mib_unassigned__' => ['name' => 'Not assigned', 'category_id' => 0],
     ];
 }
-function icct_mib_validate_upload_selection($upload)
+function icct_mib_validate_upload_selection($upload, int $maximum = 20)
 {
     $names = $upload['name'] ?? [];
-    if (!is_array($names) || count($names) !== 1) {
-        throw new InvalidArgumentException('Select one MIB file.');
+    if (!is_array($names) || !count($names) || count($names) > $maximum) {
+        throw new InvalidArgumentException('Select 1–' . $maximum . ' MIB files, including dependencies.');
     }
-    $name = reset($names);
-    if (
+    foreach ($names as $name) if (
         !is_string($name) ||
-        str_contains($name, "\0") ||
+        str_contains($name, "\0") || basename($name) !== $name || str_contains($name, '\\') ||
         !in_array(strtolower(pathinfo($name, PATHINFO_EXTENSION)), ['mib', 'my', 'txt'], true)
     ) {
         throw new InvalidArgumentException('Select a .mib, .my or .txt MIB file.');
@@ -54,7 +53,7 @@ function icct_mib_upload_path($upload, $index)
         throw new InvalidArgumentException('Select .mib, .my or .txt MIB definition files.');
     }
     $path = $upload['tmp_name'][$index] ?? '';
-    if (!is_string($path) || !is_file($path) || !is_readable($path)) {
+    if (!is_string($path) || !is_uploaded_file($path) || !is_readable($path)) {
         throw new RuntimeException(
             'The uploaded MIB temporary file is unavailable. Select the file and retry.',
         );
@@ -168,39 +167,43 @@ function icct_mib_preview($upload, $typeId, $allowUnresolved = false, $progress 
     ];
 }
 
+/** Preserve the selected dependency versions when reviewing an existing bundle. */
+function icct_mib_stored_upload(array $bundle): array
+{
+    $upload = ['name'=>[], 'stored_content'=>[], 'reuse_repository_dependencies'=>false,
+        'dependency_sources'=>$bundle['dependency_sources'] ?? []];
+    foreach ($bundle['files'] as $index => $file) {
+        $upload['name'][] = $file['name'];
+        $upload['stored_content'][] = icct_mib_file($bundle, $index);
+    }
+    return $upload;
+}
+
 function icct_mib_parse_upload($upload, $allowUnresolved = false, $progress = null)
 {
     require_once __DIR__ . '/mib_offline_parser.php';
-    $names = $upload['name'] ?? [];
-    if (!is_array($names) || !count($names) || count($names) > 8) {
-        throw new InvalidArgumentException('Upload 1–8 MIB files including dependencies.');
-    }
+    icct_mib_validate_upload_selection($upload);
+    $names = $upload['name'];
     $files = [];
     $texts = [];
     $total = 0;
     foreach ($names as $i => $name) {
+        $path = isset($upload['stored_content'][$i]) ? null : icct_mib_upload_path($upload, $i);
+        if ($path !== null && filesize($path) > 1048576) throw new InvalidArgumentException($name . ': limit is 1 MiB per file.');
         $content = isset($upload['stored_content'][$i])
             ? $upload['stored_content'][$i]
-            : file_get_contents(icct_mib_upload_path($upload, $i));
+            : file_get_contents($path);
+        if (!is_string($content)) throw new InvalidArgumentException($name . ': could not read MIB text.');
         $size = strlen($content);
         $total += $size;
-        if ($size < 1 || $size > 1048576 || $total > 4194304) {
-            throw new InvalidArgumentException('Limit: 1 MiB per file, 4 MiB total.');
+        if ($size < 1 || $size > 1048576 || $total > 8388608) {
+            throw new InvalidArgumentException($name . ': limit is 1 MiB per file, 8 MiB per batch; empty files are not allowed.');
         }
         $text = icct_mib_text($content);
-        $clean = IcctMibOfflineParser::clean($text);
-        if (
-            str_contains($clean, "\0") ||
-            !preg_match('/\b([A-Za-z][A-Za-z0-9-]*)\s+DEFINITIONS\s*::=\s*BEGIN\b/', $clean, $m)
-        ) {
-            throw new InvalidArgumentException(
-                'This file is not a MIB definition. Upload the vendor .mib, .my or .txt file containing ' .
-                    'a DEFINITIONS ::= BEGIN module, rather than an HTML download page.',
-            );
-        }
-        $module = $m[1];
+        try { $module = IcctMibOfflineParser::validateText($text); }
+        catch (RuntimeException $error) { throw new InvalidArgumentException($name . ': ' . $error->getMessage()); }
         if (isset($files[$module])) {
-            throw new InvalidArgumentException('Duplicate MIB module.');
+            throw new InvalidArgumentException($name . ': module ' . $module . ' is also supplied by ' . $files[$module]['name'] . '. Select only one version.');
         }
         $files[$module] = [
             'name' => basename($name),
@@ -214,36 +217,61 @@ function icct_mib_parse_upload($upload, $allowUnresolved = false, $progress = nu
     if ($progress) {
         $progress([
             'phase' => 'dependencies',
-            'message' => 'File uploaded. Resolving local MIB dependencies…',
+            'message' => count($files) . ' files checked. Resolving local MIB dependencies…',
         ]);
     }
     $requested = array_keys($files);
     $catalog = [];
+    $ambiguous = [];
+    $storedHashes = [];
     foreach (icct_mib_list() as $bundle) {
         foreach ($bundle['files'] as $i => $file) {
+            $storedHashes[$file['module']][$file['sha256']] = [
+                'source'=>'repository', 'id'=>$bundle['id'], 'index'=>$i,
+                'parts'=>$file['parts'], 'sha256'=>$file['sha256'],
+            ];
             if (!isset($catalog[$file['module']])) {
                 $catalog[$file['module']] = [$bundle, $i];
+            } else {
+                [$existing, $index] = $catalog[$file['module']];
+                if ($existing['files'][$index]['sha256'] !== $file['sha256']) {
+                    $ambiguous[$file['module']] = true;
+                }
             }
         }
     }
     $queue = $requested;
     $missing = [];
+    $dependencyErrors = [];
     $dependencies = [];
+    $dependencySources = [];
+    $imported = [];
     $loadedBytes = 0;
     while ($queue) {
         $module = array_shift($queue);
-        $clean = IcctMibOfflineParser::clean($texts[$module]);
+        $clean = preg_replace('/"[^"]*+(?:""[^"]*+)*+"/s', '""', IcctMibOfflineParser::clean($texts[$module]));
         if (!preg_match('/\bIMPORTS\b(.*?);/s', $clean, $imports)) {
             continue;
         }
         preg_match_all('/\bFROM\s+([A-Za-z][A-Za-z0-9-]*)/', $imports[1], $matches);
         foreach ($matches[1] as $dependency) {
+            $imported[$dependency] = true;
             if (isset($texts[$dependency]) || isset($missing[$dependency])) {
                 continue;
             }
-            if (isset($catalog[$dependency])) {
+            $pin = $upload['dependency_sources'][$dependency] ?? null;
+            if ($pin && ($pin['source'] ?? '') === 'repository') {
+                $text = icct_mib_file(['id'=>$pin['id'], 'files'=>[$pin['index']=>$pin]], $pin['index']);
+                $dependencySources[$dependency] = $pin;
+            } elseif (!$pin && isset($catalog[$dependency])) {
+                if (isset($ambiguous[$dependency])) {
+                    $missing[$dependency] = true;
+                    $dependencyErrors[] = 'Multiple repository versions of ' . $dependency . '. Select the required dependency file with this upload.';
+                    continue;
+                }
                 [$b, $i] = $catalog[$dependency];
                 $text = icct_mib_file($b, $i);
+                $dependencySources[$dependency] = $storedHashes[$dependency][$b['files'][$i]['sha256']];
             } else {
                 $path = __DIR__ . '/../../../../shared/assets/mibs/' . $dependency . '.txt';
                 if (!is_file($path)) {
@@ -251,22 +279,42 @@ function icct_mib_parse_upload($upload, $allowUnresolved = false, $progress = nu
                     continue;
                 }
                 $text = file_get_contents($path);
+                $hash = hash('sha256', $text);
+                if ($pin && (($pin['source'] ?? '') !== 'bundled' || !hash_equals($pin['sha256'], $hash))) {
+                    throw new RuntimeException('Bundled dependency ' . $dependency . ' changed since validation. Upload and validate the intended version again.');
+                }
+                $dependencySources[$dependency] = ['source'=>'bundled', 'sha256'=>$hash];
             }
             $loadedBytes += strlen($text);
             if (count($texts) >= 128 || $loadedBytes > 8388608) {
                 throw new RuntimeException('Repository dependency limit exceeded.');
             }
             $texts[$dependency] = icct_mib_text($text);
+            if (IcctMibOfflineParser::validateText($texts[$dependency]) !== $dependency) {
+                throw new RuntimeException('Dependency file does not declare the expected module ' . $dependency . '.');
+            }
             $dependencies[] = $dependency;
             $queue[] = $dependency;
         }
     }
+    $validationFiles = $files;
+    foreach ($files as $module => $file) {
+        if (($upload['reuse_repository_dependencies'] ?? true) && isset($imported[$module], $storedHashes[$module][$file['sha256']])) {
+            unset($files[$module]);
+            $validationFiles[$module]['reused'] = true;
+            $dependencies[] = $module;
+            $dependencySources[$module] = $storedHashes[$module][$file['sha256']];
+        }
+    }
+    if (!$files) throw new InvalidArgumentException('These dependency files are already in the repository. Select the main MIB to add.');
+    $requested = array_keys($files);
     $error = '';
     $records = [];
     try {
+        if ($dependencyErrors) throw new RuntimeException(implode(' ', $dependencyErrors));
         if ($missing) {
             throw new RuntimeException(
-                'Missing MIB dependencies: ' .
+                'Missing MIB dependencies for ' . implode(', ', $requested) . ': ' .
                     implode(', ', array_keys($missing)) .
                     '. Upload these modules to the MIB Repository. Internet access is not required.',
             );
@@ -284,6 +332,12 @@ function icct_mib_parse_upload($upload, $allowUnresolved = false, $progress = nu
         'records' => $records,
         'parse_error' => $error,
         'dependencies' => $dependencies,
+        'dependency_sources' => $dependencySources,
+        'validation' => array_map(static fn($file)=>[
+            'name'=>$file['name'], 'module'=>$file['module'], 'bytes'=>$file['bytes'],
+            'status'=>$error === '' ? 'valid' : 'unresolved',
+            'message'=>$error === '' ? (!empty($file['reused']) ? 'Validated; reusing the identical repository dependency.' : 'Structure, imports and supported object definitions validated.') : $error,
+        ], array_values($validationFiles)),
         'parser' => 'plugin-php',
         'created' => time(),
         'owner' => icct_backend_current_user_id(),
@@ -1142,6 +1196,8 @@ function icct_mib_save($preview, $plan, $repositoryAcknowledgment = null)
                 'records' => $preview['records'],
                 'parse_error' => $preview['parse_error'] ?? '',
                 'dependencies' => $preview['dependencies'] ?? [],
+                'dependency_sources' => $preview['dependency_sources'] ?? [],
+                'validation' => $preview['validation'] ?? [],
             ];
             foreach ($preview['files'] as $i => $file) {
                 $parts = str_split(base64_encode($file['content']), 45000);
@@ -1462,6 +1518,8 @@ function icct_mib_wizard_reparse($id, $preview)
             $bundle['object_count'] = count($preview['records']);
             $bundle['parse_error'] = $preview['parse_error'] ?? '';
             $bundle['dependencies'] = $preview['dependencies'] ?? [];
+            $bundle['dependency_sources'] = $preview['dependency_sources'] ?? [];
+            $bundle['validation'] = $preview['validation'] ?? [];
             icct_mib_wizard_store($bundle);
             if (!db_execute('COMMIT')) {
                 throw new RuntimeException('Could not refresh saved MIB.');

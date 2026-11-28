@@ -75,6 +75,23 @@
             matches.append(row);
         }
     }
+    function validation(summary) {
+        const section = document.querySelector('#mibUploadValidation'),
+            rows = document.querySelector('#mibUploadValidationRows');
+        rows.replaceChildren();
+        for (const file of summary.validation || []) {
+            const row = document.createElement('tr');
+            for (const value of [file.name, file.module, file.message]) {
+                const cell = document.createElement('td');
+                cell.textContent = String(value ?? '');
+                row.append(cell);
+            }
+            rows.append(row);
+        }
+        document.querySelector('#mibUploadDependencies').textContent =
+            summary.dependencies?.length ? 'Dependencies resolved locally: ' + summary.dependencies.join(', ') : 'All dependencies are included in the selected files.';
+        section.hidden = false;
+    }
     function validComparison(value) {
         return (
             value &&
@@ -111,8 +128,9 @@
         readNext.hidden = true;
         proceed.disabled = false;
         repositoryWarning(null);
+        document.querySelector('#mibUploadValidation').hidden = true;
         dialog.classList.remove('mib-upload-next-step');
-        title.textContent = 'Upload MIB';
+        title.textContent = 'Upload MIB Files';
         if (token) discardDraft(token);
         if (returnFocus?.isConnected) returnFocus.focus();
     }
@@ -167,7 +185,7 @@
         working(true);
         proceed.disabled = true;
         error.hidden = true;
-        title.textContent = 'Saving MIB…';
+        title.textContent = 'Saving MIB Files…';
         try {
             const response = await fetch(endpoint.href, {
                 method: 'POST',
@@ -183,7 +201,7 @@
                     completed.repository_check = result.repository_check;
                     repositoryWarning(result.repository_check);
                 }
-                throw Error(result.error || 'Could not save the MIB file.');
+                throw Error(result.error || 'Could not save the MIB files.');
             }
             if (typeof result.redirect !== 'string')
                 throw Error(
@@ -208,20 +226,23 @@
         if (busy) return;
         const files = [...fileInput.files];
         if (!files.length) return;
-        dialog.showModal();
+        if (!dialog.open) dialog.showModal();
+        if (activeToken) discardDraft(activeToken);
+        activeToken = null;
+        completed = null;
+        progress.hidden = true;
+        nextStep.hidden = true;
+        readNext.hidden = true;
+        document.querySelector('#mibUploadValidation').hidden = true;
         const fileError =
-            files.length !== 1
-                ? 'Select one MIB file.'
-                : !/\.(mib|my|txt)$/i.test(files[0].name)
-                  ? 'Select a .mib, .my or .txt MIB file.'
-                  : files[0].size > 1048576
-                    ? 'The MIB file must be no larger than 1 MiB.'
-                    : '';
+            files.length > 20 ? 'Select up to 20 MIB files, including dependencies.' :
+            files.some(file => !/\.(mib|my|txt)$/i.test(file.name)) ? 'Select .mib, .my or .txt MIB files.' :
+            files.some(file => file.size < 1 || file.size > 1048576) ? 'Each MIB file must be nonempty and no larger than 1 MiB.' :
+            files.reduce((total, file) => total + file.size, 0) > 8388608 ? 'The selected files exceed the 8 MiB batch limit.' : '';
         if (fileError) {
             showError(fileError);
             return;
         }
-        if (activeToken) discardDraft(activeToken);
         let token;
         try {
             token = icctRandomToken();
@@ -232,18 +253,20 @@
         activeToken = token;
         completed = null;
         repositoryWarning(null);
+        document.querySelector('#mibUploadValidation').hidden = true;
         readNext.hidden = true;
         working(true);
-        title.textContent = 'Reading MIB';
+        title.textContent = 'Validating MIB Files';
         error.hidden = true;
         progress.hidden = false;
         bar.max = 100;
         bar.value = 0;
         progressText.textContent =
-            'Reading the file. It will only be saved when you choose Save or Proceed.';
-        filename.textContent = 'Uploading “' + files[0].name + '”';
-        count.textContent = 'Uploading file…';
+            'Validating all files and dependencies. Nothing is saved until you choose Save or Proceed.';
+        filename.textContent = 'Uploading “' + files.map(file => file.name).join(', ') + '”';
+        count.textContent = 'Uploading ' + files.length + ' files…';
         const body = new FormData(chooser);
+        body.set('upload_file_count', String(files.length));
         body.set('upload_response', 'json');
         body.set('upload_progress', '1');
         body.set('upload_token', token);
@@ -257,7 +280,7 @@
             if (activeToken !== token) return;
             activeRequest = null;
             working(false);
-            title.textContent = 'Upload MIB';
+            title.textContent = 'Upload MIB Files';
             progress.hidden = true;
             showError(message);
         }
@@ -299,7 +322,7 @@
                         update.processed + '/' + update.total + ' OIDs Read & Scanned';
                     filename.textContent =
                         'Scanning “' +
-                        files[0].name +
+                        files.map(file => file.name).join(', ') +
                         '”' +
                         (update.symbol ? ' — ' + update.symbol : '');
                 } else if (typeof update.message === 'string') count.textContent = update.message;
@@ -310,13 +333,13 @@
             if (activeToken === token && event.lengthComputable) {
                 bar.max = 100;
                 bar.value = (event.loaded / event.total) * 100;
-                count.textContent = 'Uploading file: ' + Math.round(bar.value) + '%';
+                count.textContent = 'Uploading files: ' + Math.round(bar.value) + '%';
             }
         });
         xhr.upload.addEventListener('load', () => {
             if (activeToken === token) {
                 bar.removeAttribute('value');
-                count.textContent = 'File uploaded temporarily. Scanning OIDs…';
+                count.textContent = 'Files uploaded temporarily. Validating imports and OIDs…';
             }
         });
         xhr.addEventListener('load', () => {
@@ -331,7 +354,7 @@
                             : JSON.parse(xhr.responseText || xhr.response || 'null');
             } catch (_) {}
             if (xhr.status < 200 || xhr.status >= 300 || !result?.ok) {
-                fail(result?.error || 'The file could not be read. Check the file and retry.');
+                fail(result?.error || 'The files could not be validated. Check the files and retry.');
                 return;
             }
             const summary = result.summary;
@@ -346,6 +369,8 @@
                 return;
             }
             if (
+                !Array.isArray(summary?.validation) || summary.validation.length !== files.length ||
+                !summary.validation.every(file => file.status === 'valid' && typeof file.module === 'string') ||
                 result.upload_token !== token ||
                 !summary ||
                 typeof summary.name !== 'string' ||
@@ -362,6 +387,7 @@
                 );
                 return;
             }
+            validation(summary);
             completed = summary;
             repositoryWarning(summary.repository_check);
             activeRequest = null;
@@ -372,14 +398,14 @@
                 : 'MIB Read & Scanned';
             bar.max = 100;
             bar.value = 100;
-            filename.textContent = 'File: ' + files[0].name;
+            filename.textContent = 'Files: ' + files.map(file => file.name).join(', ');
             count.textContent =
                 summary.object_count + '/' + summary.object_count + ' OIDs Read & Scanned';
             progressText.textContent =
-                'File reading completed. Nothing has been saved to the repository.';
+                'All files validated. Nothing has been saved to the repository.';
             readyText.textContent = summary.parse_error
                 ? 'Resolve these dependencies to configure monitoring, or save the file to the repository only.'
-                : 'Choose Save or Proceed to keep this file. Closing discards it.';
+                : 'Choose Save or Proceed to keep these files. Closing discards the batch.';
             nextStep
                 .querySelectorAll('[data-upload-summary]')
                 .forEach(

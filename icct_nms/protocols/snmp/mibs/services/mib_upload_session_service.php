@@ -53,6 +53,10 @@ function icct_mib_upload_session_commit($token, $automatic, $repositoryAcknowled
         return icct_mib_wizard_get($entry['saved_id']);
     }
     $draft = $entry['draft'];
+    if (!empty($draft['parse_error']) || empty($draft['validation']) ||
+        array_filter($draft['validation'], static fn($file)=>($file['status'] ?? '') !== 'valid')) {
+        throw new InvalidArgumentException('Validate the complete MIB batch and all dependencies before saving. Read the files again.');
+    }
     if ($automatic && !icct_mib_upload_summary($draft)['can_configure']) {
         throw new InvalidArgumentException(
             'Automatic configuration is unavailable. Choose Repository Only.',
