@@ -4,19 +4,15 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Device Mgmt designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
+## Version 1.4.33
+
+Reverts the complete v1.4.31 MIB update: restores the previous single-file upload, parser, dependency handling, repository review and UI. Removes the added UPS download bundle and its source manifest. Existing uploaded MIBs and generated Cacti templates remain intact. Redis removal and Cacti polling reuse fixes remain included.
+
 ## Version 1.4.32
 
 Redis is removed from installer profiles, Installation Checks, Offline Packages actions, shipped component media and diagnostics service ordering. Diagnostics continue to use the Cacti database for queued jobs/results and the authenticated loopback channel for immediate tests. Native Cacti polling, diagnostics tools and other protocol runtimes are unchanged. Existing system Redis installations are not stopped or uninstalled by this upgrade.
 
 BLR §5.2.2.2 specifies Cacti on LAMP; §5.5.1.1.5 specifies MySQL/MariaDB. The diagnostic requirements in §5.3.1.8 do not mandate Redis. A full search of the supplied 23-page scanned BLR chapter found no Redis reference; the relevant requirement pages were visually checked. Removing an unused implementation dependency does not waive the document's availability, scalability or performance acceptance requirements.
-
-## Version 1.4.31
-
-MIB Repository accepts the main module and its dependencies together (up to 20 `.mib`, `.my` or `.txt` files; 1 MiB per file, 8 MiB per batch, 512 supported object definitions). Dependency order does not matter. Validation checks module structure, imports, imported symbols, OID resolution and supported object definitions before offering Save/Proceed. Missing or malformed dependencies reject the batch; no partial upload is committed. The dialog shows a validation result for each selected file and identifies locally resolved dependencies. Repository dependencies with different versions require the user to supply the intended file explicitly. Identical saved dependencies are reused, and existing duplicate/overlap review remains in place. Saved bundles retain dependency source references and checksums so a later review uses the same version; changed or damaged dependencies fail explicitly.
-
-The repository and upload dialog include a download for [UPS-MIB with its dependencies](shared/assets/mibs/UPS-MIB-dependencies.zip): UPS-MIB (RFC 1628), SNMPv2-SMI, SNMPv2-TC and SNMPv2-CONF. Extract the ZIP and select the four text files together, or upload UPS-MIB alone to resolve its bundled dependencies locally. Sources, checksums and the explicit UPS import correction are recorded in [the source manifest](shared/assets/mibs/standard-mibs-sources.json). Vendor-specific UPS modules may require additional imports; the validator reports their module names rather than guessing from download filenames.
-
-Validation runs entirely in PHP, offline, without polling devices or adding packages. It validates the supported SMI definitions; it is not a full ASN.1 compiler or proof that a particular UPS implements the MIB. Existing native Cacti template/data-source generation remains unchanged. PHP request limits must admit the selected batch (`max_file_uploads`, `upload_max_filesize`, and `post_max_size`, allowing multipart overhead); truncated batches are rejected. Regression coverage includes all bundled MIBs, valid multi-file UPS uploads, malformed files, missing imports, stored dependency integrity, UI batch handling, commit guards and ZIP checksums.
 
 ## Version 1.4.30
 

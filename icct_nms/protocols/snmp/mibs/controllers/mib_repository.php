@@ -48,7 +48,7 @@ try {
         $action = $_POST['action'] ?? '';
         if ($action === 'simulator_upload') {
             $upload = $_FILES['simulator_mib'] ?? [];
-            icct_mib_validate_upload_selection($upload, 1);
+            icct_mib_validate_upload_selection($upload);
             if (strtolower(pathinfo($upload['name'][0], PATHINFO_EXTENSION)) !== 'mib') {
                 throw new InvalidArgumentException('Select a .mib file.');
             }
@@ -350,9 +350,6 @@ try {
             $mode = 'upload';
             icct_mib_upload_session_token($_POST['upload_token'] ?? '');
             icct_mib_validate_upload_selection($_FILES['mibs'] ?? []);
-            if ((string) count($_FILES['mibs']['name']) !== (string) ($_POST['upload_file_count'] ?? '')) {
-                throw new InvalidArgumentException('The server did not receive every selected file. Check PHP max_file_uploads and post_max_size, then retry the complete batch.');
-            }
             $uploadProgress = null;
             if ($uploadStream) {
                 header('Content-Type: application/x-ndjson; charset=utf-8');
@@ -370,13 +367,13 @@ try {
                 };
                 $uploadProgress([
                     'phase' => 'validate',
-                    'message' => 'Files uploaded. Validating MIB definitions…',
+                    'message' => 'File uploaded. Validating MIB definitions…',
                 ]);
             }
             $draft = icct_mib_preview(
                 $_FILES['mibs'] ?? [],
                 '__mib_unassigned__',
-                false,
+                true,
                 $uploadProgress,
             );
             $uploadToken = icct_mib_upload_session_token($_POST['upload_token'] ?? '');
@@ -421,7 +418,11 @@ try {
             if (!$bundle) {
                 throw new InvalidArgumentException('MIB upload not found.');
             }
-            $upload = icct_mib_stored_upload($bundle);
+            $upload = ['name' => [], 'stored_content' => []];
+            foreach ($bundle['files'] as $i => $file) {
+                $upload['name'][] = $file['name'];
+                $upload['stored_content'][] = icct_mib_file($bundle, $i);
+            }
             $draft = icct_mib_preview($upload, $bundle['type_id'], true);
             if (empty($bundle['rows'])) {
                 icct_mib_wizard_reparse($bundle['id'], $draft);

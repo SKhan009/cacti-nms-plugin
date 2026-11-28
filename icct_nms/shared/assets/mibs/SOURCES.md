@@ -17,7 +17,3 @@ These standard and Cisco modules supply the import dependencies of the downloada
 - IANAifType-MIB: https://raw.githubusercontent.com/net-snmp/net-snmp/master/mibs/IANAifType-MIB.txt
 - INET-ADDRESS-MIB: https://raw.githubusercontent.com/net-snmp/net-snmp/master/mibs/INET-ADDRESS-MIB.txt
 - SNMP-FRAMEWORK-MIB: https://raw.githubusercontent.com/net-snmp/net-snmp/master/mibs/SNMP-FRAMEWORK-MIB.txt
-
-- UPS-MIB (RFC 1628): https://raw.githubusercontent.com/netdisco/netdisco-mibs/e817a0abd518ad314651ea7bf4490926b1e4cf69/rfc/UPS-MIB.txt
-
-`standard-mibs-sources.json` records pinned revisions, upstream hashes and bundled hashes for the UPS download. The UPS copy adds the missing `TEXTUAL-CONVENTION` import from `SNMPv2-TC`; object definitions and OIDs are unchanged. `UPS-MIB-dependencies.zip` contains UPS-MIB, SNMPv2-SMI, SNMPv2-TC and SNMPv2-CONF with this provenance. It is MIB data, not an executable or an operating-system installer.

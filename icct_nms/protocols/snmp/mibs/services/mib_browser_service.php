@@ -266,8 +266,6 @@ function icct_mib_upload_summary($preview)
         'existing_count' => count($existing),
         'can_configure' => empty($preview['parse_error']) && $supported > count($existing),
         'parse_error' => $preview['parse_error'] ?? '',
-        'validation' => $preview['validation'] ?? [],
-        'dependencies' => $preview['dependencies'] ?? [],
     ];
 }
 

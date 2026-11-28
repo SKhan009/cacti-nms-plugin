@@ -32,7 +32,6 @@ endif; ?>
                     href="protocols/snmp/mibs/controllers/mib_repository.php">Back to Repository</a>
             <?php endif;
     if ($management && !$simulatorTab): ?>
-                <a class="button" href="shared/assets/mibs/UPS-MIB-dependencies.zip" download>UPS-MIB + Dependencies</a>
                 <button
                     class="button primary"
                     type="button"
