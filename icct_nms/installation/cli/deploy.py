@@ -154,9 +154,11 @@ def copy_source(directory, root, manifest, backup_root=Path("/var/backups/icct-n
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--cacti-root", required=True)
+    parser.add_argument("--cacti-root", help="Existing Cacti root; detected automatically for standard installations.")
     parser.add_argument("--plan", action="store_true")
     parser.add_argument("--online", action="store_true")
+    parser.add_argument("--offline", action="store_true", help="Require bundled packages; never use repositories.")
+    parser.add_argument("--allow-partial-media", action="store_true")
     parser.add_argument("--no-packages", action="store_true")
     parser.add_argument("--application-only", action="store_true")
     parser.add_argument("--web-user")
@@ -168,28 +170,36 @@ def main():
     parser.add_argument("--trap-auth-file")
     parser.add_argument("--trap-listener")
     args = parser.parse_args()
+    if args.offline and (args.online or args.no_packages or args.application_only):
+        parser.error('--offline cannot be combined with online or source-only installation.')
     if args.application_only and (
         args.online or args.no_packages or args.ssh_origin or args.trap_auth_file or args.trap_listener
     ):
         parser.error("--application-only cannot be combined with package or service options.")
     directory = Path(__file__).resolve().parent
     manifest = verify_release(directory)
+    if args.offline and not manifest.get('target'):
+        raise ValueError('This source-only archive contains no offline packages.')
+    if manifest.get('partial_media') and not args.application_only and not args.allow_partial_media:
+        raise ValueError('This archive has incomplete media. Use a complete release or explicitly select --allow-partial-media.')
+    if manifest.get('target') and args.no_packages:
+        raise ValueError('A bundled release cannot use --no-packages; use the full installer.')
     prefix = MEDIA_PATH.as_posix() + "/"
     embedded = any(name.startswith(prefix) for name in manifest["files"])
     media = directory / MEDIA_PATH if embedded else directory
     if not embedded:
         prefix = ""
-    root = Path(args.cacti_root).resolve()
-    if not re.fullmatch(r"/[A-Za-z0-9_./-]+", str(root)):
-        raise ValueError("Unsupported Cacti path characters.")
-    destination = validate_destination(root, manifest["files"])
-    release_version = check_release_version(directory, root)
     spec = importlib.util.spec_from_file_location(
         "icct_release_setup", directory / "icct_nms/installation/cli/setup.py"
     )
     setup = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(setup)
     setup.check_python_runtime()
+    root = setup.discover_cacti_root(args.cacti_root)
+    if not re.fullmatch(r"/[A-Za-z0-9_./-]+", str(root)):
+        raise ValueError("Unsupported Cacti path characters.")
+    destination = validate_destination(root, manifest["files"])
+    release_version = check_release_version(directory, root)
     target = setup.os_info()
     trap_auth = None
     if args.trap_auth_file or args.trap_listener:

@@ -121,9 +121,10 @@ class AutoInstallation(unittest.TestCase):
         fake.os_info.return_value = self.target(arch='x86_64')
         with tempfile.TemporaryDirectory() as temp:
             self.media(Path(temp), 'arm', self.target())
-            media, args = launcher.installation_source(fake, temp, ['--plan'])
-            self.assertIsNone(media)
-            self.assertEqual(args, ['--plan', '--online'])
+            with self.assertRaisesRegex(ValueError, 'No matching offline'):
+                launcher.installation_source(fake, temp, ['--plan'])
+            self.assertEqual(launcher.installation_source(fake, temp, ['--online']),
+                             (None, ['--online']))
             with self.assertRaisesRegex(ValueError, 'No matching offline'):
                 launcher.installation_source(fake, temp, ['--plan'], offline=True)
             with self.assertRaisesRegex(ValueError, 'cannot be combined'):

@@ -61,6 +61,16 @@ def validate_root(value):
     return root
 
 
+def discover_cacti_root(value=None):
+    if value:
+        return Path(value).resolve()
+    candidates = [path for path in (Path('/usr/share/cacti'), Path('/var/www/html/cacti'))
+                  if (path / 'include/cli_check.php').is_file()]
+    if len(candidates) != 1:
+        raise ValueError('Specify --cacti-root /path/to/cacti (no unique Cacti installation found).')
+    return candidates[0]
+
+
 def check_python_runtime(version=None):
     current = tuple(sys.version_info[:3] if version is None else version)
     required = tuple(int(part) for part in MANIFEST["python_min"].split("."))
@@ -242,7 +252,13 @@ def install_packages(target, bundle, online=False, component=None):
             verify_bundle(bundle, target, component) if component else verify_bundle(bundle, target)
         )
         if target["family"] == "rhel":
-            run(["dnf", "-y", "--disablerepo=*", "install", *files])
+            # Share the destination RPM database instead of requesting installation
+            # of every dependency in the build machine's downloaded closure.
+            spec = importlib.util.spec_from_file_location(
+                'icct_offline_rpm', Path(__file__).with_name('offline_rpm.py'))
+            offline = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(offline)
+            offline.install_missing(files, component_packages(target, component), target)
         else:
             # APT 2.6's --no-download breaks local-DEB dependency installation.
             # Empty sources AND lists leave only installed packages and verified local DEBs.

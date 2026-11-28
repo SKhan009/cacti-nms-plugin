@@ -36,10 +36,9 @@ def installation_source(setup, directory, arguments, offline=False):
     if media:
         print('Using matching offline media: ' + str(media), flush=True)
         return media, list(arguments)
-    if offline:
-        raise ValueError('No matching offline media for ' + json.dumps(target) + '. Supply --media with a matching bundle.')
-    print('No matching offline media. Using this system’s configured package repositories; existing packages are reused.', flush=True)
-    return None, list(arguments) + ['--online']
+    raise ValueError('No matching offline media for ' + json.dumps(target) +
+                     '. Supply the complete matching release or --media. '
+                     'Repository installation requires explicit --online.')
 
 
 def main():
@@ -48,25 +47,25 @@ def main():
     parser.add_argument('--cacti-root')
     parser.add_argument('--media', type=Path, help='Offline media or a directory containing platform-specific media trees.')
     parser.add_argument('--offline', action='store_true', help='Require matching offline media; never use repositories.')
+    parser.add_argument('--allow-partial-media', action='store_true',
+                        help='Explicitly allow a verified but incomplete package bundle.')
     args, remaining = parser.parse_known_args()
-    if not args.cacti_root and not any(flag in remaining for flag in ('-h', '--help')):
-        candidates = [p for p in (Path('/usr/share/cacti'), Path('/var/www/html/cacti'))
-                      if (p / 'include/cli_check.php').is_file()]
-        if len(candidates) != 1:
-            parser.error('Specify --cacti-root /path/to/cacti (no unique Cacti installation found).')
-        args.cacti_root = str(candidates[0])
     spec = importlib.util.spec_from_file_location('icct_release_package', source / 'installation/cli/package.py')
     package = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(package)
+    if not any(flag in remaining for flag in ('-h', '--help')):
+        args.cacti_root = str(package.setup.discover_cacti_root(args.cacti_root))
     media, remaining = installation_source(package.setup,
         args.media or source / 'installation/bundles/media', remaining, args.offline)
     with tempfile.TemporaryDirectory(prefix='icct-complete-installer-') as temporary:
         archive = Path(temporary) / 'installer.zip'
-        package.build_archive(source, archive, media=media, allow_partial=True)
+        package.build_archive(source, archive, media=media, allow_partial=args.allow_partial_media)
         release = Path(temporary) / 'release'
         with zipfile.ZipFile(archive) as stream:
             stream.extractall(release)
         command = [sys.executable, str(release / 'install.py')]
+        if args.allow_partial_media:
+            command.append('--allow-partial-media')
         if args.cacti_root:
             command += ['--cacti-root', args.cacti_root]
         subprocess.run(command + remaining, check=True)

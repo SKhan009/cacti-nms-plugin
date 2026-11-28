@@ -142,6 +142,8 @@ def build_archive(root, output, bundle=None, native_bundles=None, component_bund
                 manifest["files"][name] = hashlib.sha256(path.read_bytes()).hexdigest()
             archive.writestr("release.json", json.dumps(manifest, indent=2) + "\n")
             install_options = "" if target else " --no-packages"
+            if manifest['partial_media']:
+                install_options += " --allow-partial-media"
             media_note = (
                 "The installer automatically locates offline media in " + MEDIA_PREFIX + "."
                 if target else
@@ -152,8 +154,9 @@ def build_archive(root, output, bundle=None, native_bundles=None, component_bund
             archive.writestr(
                 "INSTALL.txt",
                 "Extract the entire ZIP outside the web root. Run these commands from the extracted directory.\n"
-                f"Read-only verification: python3 install.py --cacti-root /path/to/cacti{install_options} --plan\n"
-                f"Install: sudo python3 install.py --cacti-root /path/to/cacti{install_options}\n"
+                f"Read-only verification: python3 install.py{install_options} --plan\n"
+                f"Install: sudo python3 install.py{install_options}\n"
+                "Standard Cacti paths are detected. For a custom path add --cacti-root /path/to/cacti.\n"
                 f"{media_note} Existing local configuration and uploads are retained.\n"
                 "SHA-256 hashes detect transport changes; obtain this archive from your trusted build system.\n",
             )

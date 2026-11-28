@@ -2,6 +2,18 @@
 
 [RHEL administrator commands for installation, protocols and diagnostics](../READ.md).
 
+For a complete target-specific release, extract outside the web root and run
+`sudo /usr/bin/python3 install.py --offline` once. Standard Cacti paths are detected;
+custom installations add `--cacti-root`. Version 1.4.29 installs only missing RHEL
+requirements from local media and refuses to replace installed packages. It provisions
+the package runner through the full installer and reuses Cacti's existing APIs and database.
+Missing or mismatched media never causes an implicit online installation.
+
+The one-time `cli/build_release.py --media BUILD_DIRECTORY --output RELEASE.zip` command
+builds and audits all profiles on RHEL 9.4 x86_64. See the repository `INSTALL.md` for
+build prerequisites and release acceptance. The current checked-in media remains
+RHEL 9.8 aarch64; the source changes do not supply the missing x86_64 RPMs.
+
 Install Cacti itself first, then copy the complete `icct_nms` directory into its `plugins` directory. All application pages, PHP vendor libraries, browser scripts, fonts and standard MIB files are shipped locally. No npm/composer/CDN download runs during page use.
 
 Cacti 1.2.31 is the tested release. Other Cacti 1.2 releases can install when their native database and plugin APIs are available. PHP 8.0 or newer and the required PHP extensions are needed by the application. Installation errors identify the detected PHP runtime and missing extensions or Cacti APIs.
@@ -386,7 +398,7 @@ python3 icct_nms/installation/cli/package.py --output icct-nms-complete-offline.
 ```
 
 Extract the generated ZIP and follow its `INSTALL.txt`. Source-only builds remain available by
-omitting `--media`. Keep the Apache access restriction on `installation/bundles`.
+selecting `--source-only` explicitly. Keep the Apache access restriction on `installation/bundles`.
 
 
 ### Automatic Syslog receiver-port readiness

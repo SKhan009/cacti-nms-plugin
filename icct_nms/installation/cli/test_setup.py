@@ -129,10 +129,7 @@ class BundleSafety(unittest.TestCase):
                 setup.verify_bundle(directory, target)
 
     def test_offline_package_commands_cannot_download(self):
-        for family, executable, flag in [
-            ("rhel", "dnf", "--disablerepo=*"),
-            ("debian", "apt-get", "--no-remove"),
-        ]:
+        for family, executable, flag in [("debian", "apt-get", "--no-remove")]:
             with (
                 patch.object(setup, "verify_bundle", return_value=[Path("/bundle/test.rpm")]),
                 patch.object(setup, "run") as run,
