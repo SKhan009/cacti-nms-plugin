@@ -1,4 +1,6 @@
 <?php
+
+require_once __DIR__ . '/../../shared/services/native_rrd.php';
 require_once __DIR__ . '/../../protocols/snmp/services/native_samples.php';
 
 require_once __DIR__ . '/../../ports/services/port_monitoring_service.php';
@@ -724,7 +726,7 @@ function icct_backend_collect_faults()
                 $sample = 0;
                 try {
                     if (!isset($cache[$key])) {
-                        $cache[$key] = rrdtool_function_fetch(
+                        $cache[$key] = icct_nms_rrd_fetch(
                             $key,
                             $now - 3 * $interval,
                             $now,
@@ -813,7 +815,7 @@ function icct_nms_fault_rrd_read($host, $templateId, $metricId)
         if ($host['disabled'] !== '') {
             $reason = 'Device polling is disabled.';
         } else {
-            $fetch = rrdtool_function_fetch(
+            $fetch = icct_nms_rrd_fetch(
                 (int) $source['local_data_id'],
                 $now - 3 * $interval,
                 $now,

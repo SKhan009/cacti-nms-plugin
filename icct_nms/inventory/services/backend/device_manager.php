@@ -2,6 +2,29 @@
 
 /** ICCT-owned device manager services, derived from the existing ICCT NMS implementation. */
 
+/** Native association changes recache themselves; an unchanged empty query is loaded once per activation. */
+function icct_backend_device_prepare_query($device_id, $queryId): void
+{
+    $association = db_fetch_row_prepared(
+        'SELECT reindex_method FROM host_snmp_query WHERE host_id=? AND snmp_query_id=?',
+        [$device_id, $queryId],
+    );
+    if (!$association) {
+        // Native API also propagates the association to a remote collector and recaches once.
+        api_device_dq_add($device_id, $queryId, 2);
+    } elseif ((int) $association['reindex_method'] !== 2) {
+        api_device_dq_change($device_id, $queryId, 2);
+    }
+    if ($association && (int) $association['reindex_method'] === 2 &&
+        !db_fetch_cell_prepared(
+            'SELECT COUNT(*) FROM host_snmp_cache WHERE host_id=? AND snmp_query_id=?',
+            [$device_id, $queryId],
+        )
+    ) {
+        run_data_query($device_id, $queryId);
+    }
+}
+
 function icct_backend_device_activate_imported_templates(
     $device_id,
     $host_template_id,
@@ -89,22 +112,15 @@ function icct_backend_device_activate_imported_templates(
             ),
         );
     }
+    $preparedQueries = [];
     $known = array_column($templates, 'graph_template_id');
     foreach ($mibRows as $row) {
         // Indexed MIB graphs use Cacti's discovered cache and native poller lifecycle.
         if (!empty($row['snmp_query_id']) && !empty($row['snmp_query_graph_id'])) {
             $queryId = (int) $row['snmp_query_id'];
-            db_execute_prepared(
-                'REPLACE INTO host_snmp_query(host_id,snmp_query_id,reindex_method) VALUES(?,?,?)',
-                [$device_id, $queryId, 2],
-            );
-            if (
-                !db_fetch_cell_prepared(
-                    'SELECT COUNT(*) FROM host_snmp_cache WHERE host_id=? AND snmp_query_id=?',
-                    [$device_id, $queryId],
-                )
-            ) {
-                run_data_query($device_id, $queryId);
+            if (!isset($preparedQueries[$queryId])) {
+                icct_backend_device_prepare_query($device_id, $queryId);
+                $preparedQueries[$queryId] = true;
             }
             foreach (
                 db_fetch_assoc_prepared(

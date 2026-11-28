@@ -18,7 +18,7 @@ function db_fetch_assoc_prepared($sql,$args) {
     if (str_contains($sql,'FROM host_snmp_cache')) return array_values(array_filter($cache,static fn($r)=>$r['host_id']===$args[0]));
     throw new RuntimeException('Unexpected read: '.$sql);
 }
-function db_fetch_cell_prepared($sql,$args) { if (str_contains($sql,'FROM poller WHERE')) return 1; return $GLOBALS['meta'][$args[0]] ?? ''; }
+function db_fetch_cell_prepared($sql,$args) { if (str_contains($sql,'GET_LOCK') || str_contains($sql,'RELEASE_LOCK') || str_contains($sql,'FROM poller WHERE')) return 1; return $GLOBALS['meta'][$args[0]] ?? ''; }
 function db_fetch_row_prepared($sql,$args) { if (str_contains($sql,'SELECT baseline_value')) return []; return $GLOBALS['hosts'][$args[0]] ?? []; }
 function db_execute_prepared($sql,$args) {
     if (!str_starts_with($sql,'INSERT INTO plugin_icct_nms_meta')) throw new RuntimeException('Unexpected write');
@@ -29,7 +29,11 @@ function format_snmp_string($value,$included,$format) { return trim($value); }
 if (!defined('SNMP_STRING_OUTPUT_ASCII')) define('SNMP_STRING_OUTPUT_ASCII',2);
 if (!defined('SNMP_STRING_OUTPUT_HEX')) define('SNMP_STRING_OUTPUT_HEX',3);
 function checkReuse($ok,$message) { if (!$ok) throw new RuntimeException($message); }
-function resetReuse() { icct_nms_snmp_reuse_reset(); }
+function resetReuse() {
+    icct_nms_snmp_reuse_reset();
+    // Existing scenarios replace the fake database independently; discard their collected snapshots too.
+    foreach (array_keys($GLOBALS['meta']) as $key) if (str_starts_with($key,'snmp_shared_')) unset($GLOBALS['meta'][$key]);
+}
 $host=['id'=>37,'hostname'=>'198.51.100.17','poller_id'=>4,'disabled'=>'','snmp_version'=>2,
     'snmp_port'=>1161,'snmp_context'=>'lab','snmp_engine_id'=>'','snmp_username'=>'','snmp_community'=>'fixture-only',
     'snmp_password'=>'','snmp_auth_protocol'=>'','snmp_priv_passphrase'=>'','snmp_priv_protocol'=>'',
@@ -61,7 +65,9 @@ checkReuse(icct_nms_snmp_read($host,$in,$read)==='U' && $calls===0,'Unknown is n
 $saved['values'][$in]['value']='0'; $meta['cacti_snmp_samples_37']=json_encode($saved); resetReuse();
 checkReuse(icct_nms_snmp_read($host,$in,$read)==='0','A genuine native zero remains valid');
 $changed=$host; $changed['snmp_port']=2161;
+$hosts[37]=$changed;
 checkReuse(icct_nms_snmp_read($changed,$in,$read)==='unnecessary' && $calls===1,'Different endpoint/security profiles must not share a sample');
+$hosts[37]=$host;
 $calls=0;
 $oid='1.3.6.1.4.1.55555.1.0'; resetReuse();
 $collect=static function()use(&$calls){$calls++;return '42';};
@@ -90,10 +96,11 @@ icct_nms_snmp_column($host,$root,$walk,$get);
 $before=count($gets);
 $typed=icct_nms_snmp_column($host,$root,$walk,$get,[],2);
 checkReuse($walks===1 && count($gets)===$before && $typed[$root.'.9']['value']==='9','Discovery reuses a preceding plain interface walk');
-$other=$host; $other['id']=93; resetReuse(); $calls=0;
+$other=$host; $other['id']=93; $hosts[93]=$other; resetReuse(); $calls=0;
 checkReuse(icct_nms_snmp_read($other,$in,$collect)==='42' && $calls===1,'Never reuse another device sample');
 $remote=$host; $remote['poller_id']=99; resetReuse(); $calls=0;
-checkReuse(icct_nms_snmp_read($remote,$in,$collect)==='42' && $calls===1,'Collector identity prevents cross-collector reuse');
+try { icct_nms_snmp_read($remote,$in,$collect); throw new LogicException('Wrong collector accepted'); }
+catch (RuntimeException $error) { checkReuse($calls===0,'A different collector must not probe the host'); }
 $bad=icct_nms_snmp_wire(['value'=>'U','time'=>time()],70);
 checkReuse($bad===null,'Unknown wire counters must remain absent');
 checkReuse(icct_nms_snmp_wire(['source'=>'query','value'=>'123','time'=>time()],70)===null, 'Reindex-time query values cannot replace regularly collected raw counters');
@@ -125,7 +132,14 @@ echo "PASS: Actual inventory collection uses native samples and preserves databa
 
 $items[0]['rrd_step']=1800; resetReuse(); $wireGets=0;
 $slow=icct_nms_snmp_read($host,$in,static function()use(&$wireGets){$wireGets++;return 'fresh-required';});
+checkReuse($slow==='0' && $wireGets===0, 'A current observation from a slower native source is reusable');
+$saved['values'][$in]['time']=time()-301; $meta['cacti_snmp_samples_37']=json_encode($saved); resetReuse();
+$slow=icct_nms_snmp_read($host,$in,static function()use(&$wireGets){$wireGets++;return 'fresh-required';});
 checkReuse($slow==='fresh-required' && $wireGets===1, 'Slower native polling must not suppress the plugin required measurement cadence');
+$items[0]['rrd_step']=600; resetReuse(); $wireGets=0;
+$saved['values'][$in]['time']=time()-500; $meta['cacti_snmp_samples_37']=json_encode($saved);
+checkReuse(icct_nms_snmp_read_interval($host,$in,900,static function()use(&$wireGets){$wireGets++;return 'unnecessary';})==='0' && $wireGets===0,
+    'A slow consumer must use its own cadence rather than the global polling interval');
 echo "PASS: Sampling-cadence compatibility and reindex-counter exclusion.\n";
 
 $items[0]['rrd_step']=60;

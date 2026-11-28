@@ -11,6 +11,8 @@ require_once __DIR__ . '/backend/identity.php';
  */
 function icct_nms_inventory()
 {
+    $allowedIds = icct_backend_allowed_device_ids();
+    if (!$allowedIds) return [];
     $rows = db_fetch_assoc(
         "SELECT h.id,h.description,h.hostname,h.status,h.disabled,h.availability,\n        " .
             "h.snmp_sysName,h.snmp_sysUpTimeInstance,h.last_updated,h.site_id,h.poller_id,\n        " .
@@ -34,14 +36,7 @@ function icct_nms_inventory()
     }
     $allowed = [];
     foreach ($rows as $row) {
-        try {
-            icct_backend_require_device_access((int) $row['id']);
-        } catch (RuntimeException $error) {
-            if ($error->getMessage() !== 'Your Cacti account cannot access this device.') {
-                throw $error;
-            }
-            continue;
-        }
+        if (!isset($allowedIds[(int) $row['id']])) continue;
         $row['status_label'] = icct_backend_device_status_name($row);
         $row['polling_interval'] = (int) read_config_option('poller_interval');
         $allowed[] = $row;

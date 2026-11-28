@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../../shared/services/native_rrd.php';
+
 /** Read existing, authorized graph samples only; never poll devices from a web request. */
 function icct_nms_topology_capacity_spec($name, $units)
 {
@@ -89,7 +91,7 @@ function icct_nms_topology_capacity($host)
         try {
             $key = (int) $row['local_data_id'];
             if (!isset($cache[$key])) {
-                $cache[$key] = rrdtool_function_fetch(
+                $cache[$key] = icct_nms_rrd_fetch(
                     $key,
                     $now - 3 * $interval,
                     $now,

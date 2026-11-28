@@ -1,10 +1,12 @@
 <?php
 
+require_once __DIR__ . '/shared_samples.php';
+
 /** Reuse native Cacti samples without changing core polling, RRD updates or credentials. */
 function icct_nms_snmp_profile(array $host): string
 {
     $values = [];
-    foreach (['id', 'hostname', 'poller_id', 'disabled', 'snmp_version', 'snmp_port',
+    foreach (['id', 'hostname', 'poller_id', 'disabled', 'deleted', 'snmp_version', 'snmp_port',
         'snmp_context', 'snmp_engine_id', 'snmp_username', 'snmp_community', 'snmp_password',
         'snmp_auth_protocol', 'snmp_priv_passphrase', 'snmp_priv_protocol', 'snmp_timeout', 'max_oids'] as $field) {
         $values[$field] = (string) ($host[$field] ?? '');
@@ -37,8 +39,9 @@ function &icct_nms_snmp_samples(array $host): array
 {
     global $config;
     $key = icct_nms_snmp_profile($host);
-    if (!isset($GLOBALS['icct_nms_snmp_samples'][$key])) {
-        $state = ['values'=>[], 'owners'=>[], 'queries'=>[], 'walks'=>[], 'columns'=>[], 'used'=>[], 'ambiguous'=>[], 'query_fresh'=>[]];
+    if (!isset($GLOBALS['icct_nms_snmp_samples'][$key]) ||
+        ($GLOBALS['icct_nms_snmp_samples'][$key]['cycle'] ?? -1) !== icct_nms_snmp_cycle()) {
+        $state = ['cycle'=>icct_nms_snmp_cycle(), 'values'=>[], 'observations'=>[], 'owners'=>[], 'native_owners'=>[], 'queries'=>[], 'walks'=>[], 'columns'=>[], 'used'=>[], 'ambiguous'=>[], 'query_fresh'=>[], 'errors'=>[]];
         // This bridge is a collector service, never a way around web authorization.
         $authorized = PHP_SAPI === 'cli'
             ? (int) ($host['poller_id'] ?? 0) === (int) ($config['poller_id'] ?? 0)
@@ -57,16 +60,19 @@ function &icct_nms_snmp_samples(array $host): array
             foreach (db_fetch_assoc_prepared('SELECT * FROM poller_item WHERE host_id=? AND poller_id=? AND action=0 AND present=1',
                 [(int) $host['id'], (int) $host['poller_id']]) ?: [] as $item) {
                 $oid = icct_nms_snmp_oid($item['arg1'] ?? '');
-                if ($oid && (int) $item['rrd_step'] > 0 &&
-                    (int) $item['rrd_step'] <= (int) read_config_option('poller_interval') &&
-                    icct_nms_snmp_item_matches($host, $item)) $state['owners'][$oid][] = $item;
+                if ($oid && (int) $item['rrd_step'] > 0 && icct_nms_snmp_item_matches($host, $item)) {
+                    $state['native_owners'][$oid][] = $item;
+                    if ((int) $item['rrd_step'] <= (int) read_config_option('poller_interval')) $state['owners'][$oid][] = $item;
+                }
             }
             $saved = json_decode((string) db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
                 ['cacti_snmp_samples_' . (int) $host['id']]), true);
-            if (($saved['signature'] ?? '') === $key) {
+            $state['epoch'] = (string) db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
+                [icct_nms_snmp_shared_key($host) . '_epoch']);
+            if (($saved['signature'] ?? '') === $key && ($saved['epoch'] ?? '') === $state['epoch']) {
                 foreach ($saved['values'] ?? [] as $oid => $sample) {
                     if (!is_array($sample) || !isset($sample['local_data_id'], $sample['rrd_name'], $sample['time'])) continue;
-                    foreach ($state['owners'][$oid] ?? [] as $owner) {
+                    foreach ($state['native_owners'][$oid] ?? [] as $owner) {
                         if ((int) $sample['local_data_id'] === (int) $owner['local_data_id'] &&
                             $sample['rrd_name'] === $owner['rrd_name']) {
                             $sample['step'] = (int) $owner['rrd_step'];
@@ -113,17 +119,31 @@ function icct_nms_snmp_sample_fresh(array $sample): bool
     return $step > 0 && $age >= 0 && $age <= 2 * $step;
 }
 
-function icct_nms_snmp_known(array $host, string $oid): ?array
+function icct_nms_snmp_known(array $host, string $oid, ?int $interval = null): ?array
 {
     $state = &icct_nms_snmp_samples($host);
+    $interval ??= (int) read_config_option('poller_interval');
     $sample = $state['values'][$oid] ?? null;
+    $steps = array_column($state['native_owners'][$oid] ?? [], 'rrd_step');
+    $collected = $state['observations'][$oid] ?? null;
+    if ($steps && $interval < min($steps) && $collected &&
+        (int) $collected['time'] >= (int) ($sample['time'] ?? 0) &&
+        time() - (int) $collected['time'] >= 0 && time() - (int) $collected['time'] < $interval) {
+        $sample = $collected;
+    }
     if (isset($state['ambiguous'][$oid]) || !empty($sample['inexact'])) return null;
-    if ($sample && icct_nms_snmp_sample_fresh($sample)) {
+    $slow = ($sample['source'] ?? '') === 'native' && (int) ($sample['step'] ?? 0) > $interval;
+    if ($sample && icct_nms_snmp_sample_fresh($sample) &&
+        (!$slow || time() - (int) $sample['time'] < $interval)) {
         $state['used'][] = (int) $sample['time'];
         return $sample;
     }
     // Cacti owns these OIDs. A failed/late native sample is unknown, not permission to poll it twice.
-    return isset($state['owners'][$oid]) ? ['value'=>null, 'time'=>0, 'source'=>'native', 'reason'=>$sample ? 'stale' : 'missing'] : null;
+    foreach ($state['native_owners'][$oid] ?? [] as $owner) {
+        if ((int) $owner['rrd_step'] <= $interval) return ['value'=>null, 'time'=>0, 'step'=>(int) $owner['rrd_step'],
+            'source'=>'native', 'reason'=>$sample ? 'stale' : 'missing'];
+    }
+    return null;
 }
 
 function icct_nms_snmp_remember(array $host, string $oid, $value, ?array $wire = null): array
@@ -131,38 +151,64 @@ function icct_nms_snmp_remember(array $host, string $oid, $value, ?array $wire =
     $state = &icct_nms_snmp_samples($host);
     unset($state['ambiguous'][$oid]);
     $state['used'][] = time();
-    return $state['values'][$oid] = ['value'=>$value, 'wire'=>$wire, 'time'=>time(),
+    return $state['observations'][$oid] = $state['values'][$oid] = ['value'=>$value, 'wire'=>$wire, 'time'=>time(),
         'step'=>(int) read_config_option('poller_interval'), 'source'=>'collector'];
 }
 
 function icct_nms_snmp_read(array $host, $oid, callable $collect, $format = null)
 {
+    return icct_nms_snmp_shared($host, static fn()=>icct_nms_snmp_read_local($host, $oid, $collect, $format));
+}
+
+function icct_nms_snmp_read_local(array $host, $oid, callable $collect, $format = null)
+{
     $oid = icct_nms_snmp_oid($oid);
     $sample = $oid ? icct_nms_snmp_known($host, $oid) : null;
     $hex = defined('SNMP_STRING_OUTPUT_HEX') && $format === SNMP_STRING_OUTPUT_HEX;
     if ($sample && !$hex) return $sample['value'] ?? false;
+    if ($sample && in_array($sample['value'] ?? null, [null, false, 'U'], true)) return false;
     // Formatted Cacti strings cannot be relabelled as lossless binary octets.
     if ($sample && $hex && isset($sample['wire']) && $sample['wire']['type'] === 4) {
         return strtoupper(implode(' ', str_split(bin2hex($sample['wire']['value']), 2)));
     }
-    $value = $collect();
-    if ($oid && !$hex) icct_nms_snmp_remember($host, $oid, $value);
+    $started = time();
+    try {
+        $value = $collect();
+    } catch (RuntimeException $error) {
+        if ($oid) icct_nms_snmp_remember($host, $oid, false);
+        throw $error;
+    }
+    $state = &icct_nms_snmp_samples($host);
+    // Typed transports already retained the original octets; do not replace them with display text.
+    if ($oid && !$hex && !(isset($state['values'][$oid]['wire']) && $state['values'][$oid]['time'] >= $started)) {
+        icct_nms_snmp_remember($host, $oid, $value);
+    }
     return $value;
 }
 
 /** Faster consumers reuse a current native observation, then collect only the missing cadence. */
 function icct_nms_snmp_read_interval(array $host, string $oid, int $interval, callable $collect)
 {
+    return icct_nms_snmp_shared($host, static fn()=>icct_nms_snmp_read_interval_local($host, $oid, $interval, $collect));
+}
+
+function icct_nms_snmp_read_interval_local(array $host, string $oid, int $interval, callable $collect)
+{
     $oid = icct_nms_snmp_oid($oid);
-    $sample = icct_nms_snmp_known($host,$oid);
+    $sample = icct_nms_snmp_known($host,$oid,$interval);
     $state = &icct_nms_snmp_samples($host);
-    $steps = array_column($state['owners'][$oid] ?? [],'rrd_step');
+    $steps = array_column($state['native_owners'][$oid] ?? [],'rrd_step');
     $step = (int) ($sample['step'] ?? ($steps ? min($steps) : 0));
     if ($sample && ($step > 0 && $step <= $interval ||
         (int) $sample['time'] > 0 && time() - (int) $sample['time'] <= $interval)) return $sample['value'] ?? false;
     // Mark only observations actually consumed; a rejected old sample must not age a new fix.
     if ($sample && (int) $sample['time'] > 0) array_pop($state['used']);
-    $value = $collect();
+    try {
+        $value = $collect();
+    } catch (RuntimeException $error) {
+        if ($oid) icct_nms_snmp_remember($host, $oid, false);
+        throw $error;
+    }
     if ($oid) icct_nms_snmp_remember($host,$oid,$value);
     return $value;
 }
@@ -221,10 +267,28 @@ function icct_nms_snmp_complete_column(array $host, string $root): ?array
 /** A partially covered indexed column probes only missing instances, using native SNMP APIs. */
 function icct_nms_snmp_column(array $host, $root, callable $walk, callable $get, array $indexes = [], ?int $type = null): array
 {
+    return icct_nms_snmp_shared($host, static function () use ($host, $root, $walk, $get, $indexes, $type) {
+        $state = &icct_nms_snmp_samples($host);
+        $key = icct_nms_snmp_oid($root) . ':' . ($type ?? 'plain') . ':' . hash('sha256', json_encode(array_values($indexes)));
+        if (isset($state['errors'][$key])) throw new RuntimeException($state['errors'][$key]);
+        try {
+            return icct_nms_snmp_column_local($host, $root, $walk, $get, $indexes, $type);
+        } catch (RuntimeException $error) {
+            $state['errors'][$key] = $error->getMessage();
+            throw $error;
+        }
+    });
+}
+
+function icct_nms_snmp_column_local(array $host, $root, callable $walk, callable $get, array $indexes = [], ?int $type = null): array
+{
     $root = icct_nms_snmp_oid($root);
     $state = &icct_nms_snmp_samples($host);
     $key = $root . ':' . ($type ?? 'plain') . ':' . hash('sha256', json_encode(array_values($indexes)));
-    if (isset($state['walks'][$key])) return $state['walks'][$key];
+    if (isset($state['walks'][$key])) {
+        icct_nms_snmp_observe_rows($host, $state['walks'][$key]);
+        return $state['walks'][$key];
+    }
     $samples = [];
     if (!$indexes && array_key_exists($root, $state['columns'])) {
         $indexes = $state['columns'][$root];
@@ -275,52 +339,158 @@ function icct_nms_snmp_capture(array $updates): void
     $marks = implode(',', array_fill(0, count($hostIds), '?'));
     $hosts = array_column(db_fetch_assoc_prepared("SELECT * FROM host WHERE poller_id=? AND disabled='' AND deleted='' AND id IN ($marks)",
         array_merge([(int) $config['poller_id']], $hostIds)) ?: [], null, 'id');
-    $saved = [];
-    foreach ($items as $item) {
-        $id = (int) $item['host_id'];
-        $host = $hosts[$id] ?? null;
-        $oid = icct_nms_snmp_oid($item['arg1'] ?? '');
-        if (!$host || !$oid || !icct_nms_snmp_item_matches($host, $item)) continue;
-        if (!isset($saved[$id])) {
-            $prior = json_decode((string) db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
-                ['cacti_snmp_samples_' . $id]), true);
-            $signature = icct_nms_snmp_profile($host);
-            $saved[$id] = ($prior['signature'] ?? '') === $signature ? $prior : ['signature'=>$signature, 'values'=>[]];
+    foreach ($hosts as $host) {
+        // Native publication must not wait behind a device walk. Only competing publishers share this lease.
+        $lock = 'icct_native_' . substr(hash('sha256', icct_nms_snmp_shared_key($host)), 0, 48);
+        if ((int) db_fetch_cell_prepared('SELECT GET_LOCK(?, 1)', [$lock]) !== 1) {
+            cacti_log('ICCT native sample merge is busy for device ' . (int) $host['id'], false, 'ICCT NMS');
+            continue;
         }
-        foreach ($byId[(int) $item['local_data_id']] as $time => $values) {
-            if (!array_key_exists($item['rrd_name'], $values) || !ctype_digit((string) $time) ||
-                (int) $time > time() || (int) $time <= 0) continue;
-            $raw = $values[$item['rrd_name']];
-            // A float has already lost Counter64 precision. Do not manufacture an exact counter.
-            $inexact = is_float($raw);
-            if (!is_string($raw) && !is_int($raw)) $raw = 'U';
-            $previous = $saved[$id]['values'][$oid] ?? [];
-            if ((int) ($previous['time'] ?? 0) > (int) $time) continue;
-            if ((int) ($previous['time'] ?? 0) === (int) $time &&
-                isset($previous['value']) && (string) $previous['value'] !== (string) $raw) $inexact = true;
-            $saved[$id]['values'][$oid] = ['value'=>(string) $raw, 'time'=>(int) $time, 'inexact'=>$inexact,
-                'local_data_id'=>(int) $item['local_data_id'], 'rrd_name'=>$item['rrd_name'], 'source'=>'native'];
+        try {
+            icct_nms_snmp_capture_host($host, $items, $byId);
+        } finally {
+            db_fetch_cell_prepared('SELECT RELEASE_LOCK(?)', [$lock]);
         }
-    }
-    foreach ($saved as $id => $snapshot) {
-        $cutoff = time() - 2 * max((int) read_config_option('poller_interval'),
-            ...array_map(static fn($item)=>(int) $item['rrd_step'], $items));
-        $snapshot['values'] = array_filter($snapshot['values'], static fn($sample)=>(int) $sample['time'] >= $cutoff);
-        db_execute_prepared('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
-            ['cacti_snmp_samples_' . $id, json_encode($snapshot, JSON_THROW_ON_ERROR)]);
     }
     icct_nms_snmp_reuse_reset();
 }
 
-function icct_nms_snmp_get(array $host, $oid)
+/** Merge native batches under a publication lease without waiting for plugin network work. */
+function icct_nms_snmp_capture_host(array $host, array $items, array $byId): void
 {
-    return icct_nms_snmp_read($host, $oid, static fn() => cacti_snmp_get(
+    $id = (int) $host['id'];
+    $prior = json_decode((string) db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
+        ['cacti_snmp_samples_' . $id]), true);
+    $signature = icct_nms_snmp_profile($host);
+    $epoch = (string) db_fetch_cell_prepared('SELECT meta_value FROM plugin_icct_nms_meta WHERE meta_key=?',
+        [icct_nms_snmp_shared_key($host) . '_epoch']);
+    $epochTime = (int) (json_decode($epoch, true)['time'] ?? 0);
+    $snapshot = ($prior['signature'] ?? '') === $signature && ($prior['epoch'] ?? '') === $epoch
+        ? $prior : ['signature'=>$signature, 'epoch'=>$epoch, 'values'=>[]];
+    $steps = [(int) read_config_option('poller_interval')];
+    foreach ($items as $item) {
+        $oid = icct_nms_snmp_oid($item['arg1'] ?? '');
+        if (!$oid || !icct_nms_snmp_item_matches($host, $item)) continue;
+        $steps[] = (int) $item['rrd_step'];
+        foreach ($byId[(int) $item['local_data_id']] as $time => $values) {
+            if (!array_key_exists($item['rrd_name'], $values) || !ctype_digit((string) $time) ||
+                (int) $time > time() || (int) $time <= $epochTime) continue;
+            $raw = $values[$item['rrd_name']];
+            // A float has already lost Counter64 precision. Do not manufacture an exact counter.
+            $inexact = is_float($raw);
+            if (!is_string($raw) && !is_int($raw)) $raw = 'U';
+            $previous = $snapshot['values'][$oid] ?? [];
+            if ((int) ($previous['time'] ?? 0) > (int) $time) continue;
+            if ((int) ($previous['time'] ?? 0) === (int) $time &&
+                isset($previous['value']) && (string) $previous['value'] !== (string) $raw) $inexact = true;
+            $snapshot['values'][$oid] = ['value'=>(string) $raw, 'time'=>(int) $time, 'inexact'=>$inexact,
+                'local_data_id'=>(int) $item['local_data_id'], 'rrd_name'=>$item['rrd_name'], 'source'=>'native'];
+        }
+    }
+    $cutoff = time() - 2 * max($steps);
+    $snapshot['values'] = array_filter($snapshot['values'], static fn($sample)=>(int) $sample['time'] >= $cutoff);
+    if (!db_execute_prepared('INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
+        ['cacti_snmp_samples_' . $id, json_encode($snapshot, JSON_THROW_ON_ERROR)])) {
+        throw new RuntimeException('Could not save native Cacti observations.');
+    }
+}
+
+function icct_nms_snmp_get(array $host, $oid, $format = null)
+{
+    $format ??= SNMP_STRING_OUTPUT_ASCII;
+    return icct_nms_snmp_read($host, $oid, static fn()=>cacti_snmp_get(
         $host['hostname'], $host['snmp_community'], '.' . icct_nms_snmp_oid($oid),
         $host['snmp_version'], $host['snmp_username'], $host['snmp_password'],
         $host['snmp_auth_protocol'], $host['snmp_priv_passphrase'], $host['snmp_priv_protocol'],
         $host['snmp_context'], $host['snmp_port'], $host['snmp_timeout'],
-        (int) read_config_option('snmp_retries'), 'ICCT shared SNMP', $host['snmp_engine_id'], SNMP_STRING_OUTPUT_ASCII,
+        (int) read_config_option('snmp_retries'), 'ICCT shared SNMP', $host['snmp_engine_id'], $format,
     ));
+}
+
+function icct_nms_snmp_typed_get(array $host, $oid, $format = null)
+{
+    try {
+        $format ??= SNMP_STRING_OUTPUT_ASCII;
+        // Honor Cacti's configured transport before collection, never retry with a different transport.
+        if (snmp_get_method('get', $host['snmp_version'], $host['snmp_context'], $host['snmp_engine_id'], $format) !== SNMP_METHOD_PHP) {
+            return icct_nms_snmp_get($host, $oid, $format);
+        }
+        return icct_nms_snmp_read($host, $oid, static function () use ($host, $oid, $format) {
+            $session = icct_nms_snmp_transport($host);
+            try {
+                $wire = icct_backend_nd_snmp_scalar($session, icct_nms_snmp_oid($oid), INF);
+                if ($format === SNMP_STRING_OUTPUT_HEX && $wire['type'] === 4) {
+                    return strtoupper(implode(' ', str_split(bin2hex($wire['value']), 2)));
+                }
+                $state = &icct_nms_snmp_samples($host);
+                return $state['values'][icct_nms_snmp_oid($oid)]['value'];
+            } finally {
+                $session->close();
+            }
+        }, $format);
+    } catch (RuntimeException $error) {
+        return false;
+    }
+}
+
+function icct_nms_snmp_transport(array $host)
+{
+    require_once __DIR__ . '/backend/discovery_snmp.php';
+    return icct_backend_nd_discovery_session($host);
+}
+
+/** Collect typed values once; Cacti's formatter supplies the existing plain consumers. */
+function icct_nms_snmp_walk_plain(array $host, string $root): array
+{
+    $root = icct_nms_snmp_oid($root);
+    if (snmp_get_method('walk', $host['snmp_version'], $host['snmp_context'], $host['snmp_engine_id'], SNMP_STRING_OUTPUT_GUESS) !== SNMP_METHOD_PHP) {
+        $rows = cacti_snmp_walk($host['hostname'], $host['snmp_community'], '.' . $root,
+            $host['snmp_version'], $host['snmp_username'], $host['snmp_password'], $host['snmp_auth_protocol'],
+            $host['snmp_priv_passphrase'], $host['snmp_priv_protocol'], $host['snmp_context'], $host['snmp_port'],
+            $host['snmp_timeout'], (int) read_config_option('snmp_retries'), (int) $host['max_oids'],
+            'ICCT shared SNMP', $host['snmp_engine_id']);
+        $plain = [];
+        foreach (is_array($rows) ? $rows : [] as $row) {
+            $oid = icct_nms_snmp_oid($row['oid'] ?? '');
+            if ($oid && str_starts_with($oid, $root . '.')) {
+                $plain[$oid] = $row['value'] ?? '';
+                icct_nms_snmp_remember($host, $oid, $plain[$oid]);
+            }
+        }
+        return $plain;
+    }
+    $session = icct_nms_snmp_transport($host);
+    try {
+        $rows = icct_nms_snmp_bulk_column($session, $root, (int) $host['max_oids']);
+        $state = &icct_nms_snmp_samples($host);
+        $plain = [];
+        foreach ($rows as $oid => &$wire) {
+            $wire = icct_nms_snmp_remember_wire($host, $oid, $wire);
+            $plain[$oid] = $state['values'][$oid]['value'];
+        }
+        unset($wire);
+        $state['walks']['wire:' . $root] = $rows;
+        return $plain;
+    } finally {
+        $session->close();
+    }
+}
+
+/** Retain the native session's bulk size; typed sharing must not turn bulk walks into per-row requests. */
+function icct_nms_snmp_bulk_column($session, string $root, int $maxOids): array
+{
+    if ($root === '' || $maxOids < 1) throw new RuntimeException('Invalid native SNMP walk configuration.');
+    $rows = @$session->walk('.' . $root, false, $maxOids, 0);
+    if (!is_array($rows) || $session->getErrno()) throw new RuntimeException('SNMP table read failed: ' . $root);
+    $values = [];
+    foreach ($rows as $oid => $value) {
+        $oid = icct_nms_snmp_oid($oid);
+        if (!$oid || !str_starts_with($oid, $root . '.') || isset($values[$oid])) {
+            throw new RuntimeException('Malformed SNMP column; partial result discarded.');
+        }
+        $values[$oid] = icct_backend_nd_snmp_value($value, $oid);
+    }
+    return $values;
 }
 
 /** Use Cacti's own formatter when a raw discovery observation is shared with a plain reader. */
@@ -339,6 +509,15 @@ function icct_nms_snmp_observation_start(array $host): int
 {
     $state = &icct_nms_snmp_samples($host);
     return count($state['used']);
+}
+
+function icct_nms_snmp_observe_rows(array $host, array $rows): void
+{
+    $state = &icct_nms_snmp_samples($host);
+    foreach ($rows as $oid => $value) {
+        $time = is_array($value) ? ($value['_sample_time'] ?? 0) : ($state['values'][$oid]['time'] ?? 0);
+        if ($time > 0) $state['used'][] = (int) $time;
+    }
 }
 
 function icct_nms_snmp_observation_time(array $host, int $start): int

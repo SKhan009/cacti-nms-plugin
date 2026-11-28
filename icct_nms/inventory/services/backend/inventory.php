@@ -70,28 +70,32 @@ function icct_backend_collect_inventory_values($only_host_id = 0)
         $snmp_error = '';
         $reuseHost = array_replace($definition, ['id'=>(int) $definition['host_id']]);
         $observation = icct_nms_snmp_observation_start($reuseHost);
-        $value = icct_nms_snmp_read(
-            $reuseHost,
-            $definition['oid'],
-            static fn() => cacti_snmp_get(
-                $definition['hostname'],
-                $definition['snmp_community'],
+        try {
+            $value = icct_nms_snmp_read(
+                $reuseHost,
                 $definition['oid'],
-                $definition['snmp_version'],
-                $definition['snmp_username'],
-                $definition['snmp_password'],
-                $definition['snmp_auth_protocol'],
-                $definition['snmp_priv_passphrase'],
-                $definition['snmp_priv_protocol'],
-                $definition['snmp_context'],
-                $definition['snmp_port'],
-                $definition['snmp_timeout'],
-                $snmp_retries,
-                'ICCT NMS Device Mgmt',
-                $definition['snmp_engine_id'],
-                SNMP_STRING_OUTPUT_ASCII,
-            ),
-        );
+                static fn() => cacti_snmp_get(
+                    $definition['hostname'],
+                    $definition['snmp_community'],
+                    $definition['oid'],
+                    $definition['snmp_version'],
+                    $definition['snmp_username'],
+                    $definition['snmp_password'],
+                    $definition['snmp_auth_protocol'],
+                    $definition['snmp_priv_passphrase'],
+                    $definition['snmp_priv_protocol'],
+                    $definition['snmp_context'],
+                    $definition['snmp_port'],
+                    $definition['snmp_timeout'],
+                    $snmp_retries,
+                    'ICCT NMS Device Mgmt',
+                    $definition['snmp_engine_id'],
+                    SNMP_STRING_OUTPUT_ASCII,
+                ),
+            );
+        } catch (RuntimeException $error) {
+            $value = false; // Preserve per-field failure handling; never switch transport or collector.
+        }
 
         if (icct_backend_inventory_snmp_failed($value)) {
             // Backend diagnostics can include command arguments and credentials. Store

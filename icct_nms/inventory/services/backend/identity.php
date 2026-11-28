@@ -178,168 +178,127 @@ function icct_backend_collect_identity($only_host_id = 0)
     );
     $count = 0;
     foreach ($hosts as $host) {
-        $observation = icct_nms_snmp_observation_start($host);
-        $get = function ($oid, $format = SNMP_STRING_OUTPUT_ASCII) use ($host) {
-            return icct_nms_snmp_read($host, $oid, static fn() => cacti_snmp_get(
-                $host['hostname'],
-                $host['snmp_community'],
-                $oid,
-                $host['snmp_version'],
-                $host['snmp_username'],
-                $host['snmp_password'],
-                $host['snmp_auth_protocol'],
-                $host['snmp_priv_passphrase'],
-                $host['snmp_priv_protocol'],
-                $host['snmp_context'],
-                $host['snmp_port'],
-                $host['snmp_timeout'],
-                (int) read_config_option('snmp_retries'),
-                'ICCT Identity',
-                $host['snmp_engine_id'],
-                $format,
-            ), $format);
-        };
-        $values = [];
-        if (icct_backend_identity_local_endpoint($host['hostname'], $host['snmp_port'])) {
-            $mac = icct_backend_identity_local_mac();
-            if ($mac !== '') {
-                $values['mac_address'] = $mac;
-            }
-        }
-        // Test the configured endpoint first; an IP alone is not protocol configuration.
-        if (
-            (int) $host['snmp_version'] > 0 &&
-            !icct_backend_inventory_snmp_failed($get('.1.3.6.1.2.1.1.3.0'))
-        ) {
-            $mapped = db_fetch_assoc_prepared(
-                'SELECT inventory_key,observed_value FROM plugin_icct_nms_device_inventory WHERE ' .
-                    'host_id=? AND inventory_key IN (\'mac_address\',\'serial_number\',\'chassis_id\') AND status ' .
-                    'IN (\'ok\',\'changed\') AND last_success>=DATE_SUB(NOW(), INTERVAL ? SECOND)',
-                [$host['id'], max(120, 2 * (int) read_config_option('poller_interval'))],
-            );
-            foreach ($mapped as $row) {
-                $value = trim((string) $row['observed_value']);
-                if ($row['inventory_key'] === 'mac_address') {
-                    $value = icct_backend_identity_mac($value);
-                }
-                if ($value !== '') {
-                    $values[$row['inventory_key']] = $value;
-                }
-            }
-            // Resolve the interface owning the configured IPv4 address, rather than guessing an interface.
-            if (
-                empty($values['mac_address']) &&
-                !icct_backend_identity_local_endpoint($host['hostname'], $host['snmp_port'])
-            ) {
-                $addresses = filter_var($host['hostname'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)
-                    ? [$host['hostname']]
-                    : (filter_var($host['hostname'], FILTER_VALIDATE_IP)
-                        ? []
-                        : (gethostbynamel($host['hostname']) ?:
-                        []));
-                $macs = [];
-                foreach (array_unique($addresses) as $ip) {
-                    $index = trim((string) $get('.1.3.6.1.2.1.4.20.1.2.' . $ip));
-                    if (ctype_digit($index)) {
-                        $mac = icct_backend_identity_mac(
-                            $get('.1.3.6.1.2.1.2.2.1.6.' . $index, SNMP_STRING_OUTPUT_HEX),
-                        );
-                        if ($mac !== '') {
-                            $macs[$mac] = true;
-                        }
+        try {
+            icct_nms_snmp_shared($host, static function () use ($host) {
+                $observation = icct_nms_snmp_observation_start($host);
+                $get = static fn($oid, $format = SNMP_STRING_OUTPUT_ASCII) => icct_nms_snmp_typed_get($host, $oid, $format);
+                $values = [];
+                if (icct_backend_identity_local_endpoint($host['hostname'], $host['snmp_port'])) {
+                    $mac = icct_backend_identity_local_mac();
+                    if ($mac !== '') {
+                        $values['mac_address'] = $mac;
                     }
                 }
-                if (count($macs) === 1) {
-                    $values['mac_address'] = array_key_first($macs);
-                }
-            }
-            // LLDP's local chassis identifier is used as a chassis ID, never a serial number.
-            if (empty($values['chassis_id'])) {
-                $chassis = $get('.1.0.8802.1.1.2.1.3.2.0');
-                if (!icct_backend_inventory_snmp_failed($chassis)) {
-                    $subtype = trim((string) $get('.1.0.8802.1.1.2.1.3.1.0'));
-                    $chassis =
-                        $subtype === '4'
-                            ? icct_backend_identity_mac(
-                                $get('.1.0.8802.1.1.2.1.3.2.0', SNMP_STRING_OUTPUT_HEX),
-                            )
-                            : trim((string) $chassis, " \t\r\n\"");
-                    if ($chassis !== '') {
-                        $values['chassis_id'] = $chassis;
-                        // Subtype 4 explicitly identifies the device's chassis MAC.
-                        if ($subtype === '4' && empty($values['mac_address'])) {
-                            $values['mac_address'] = $chassis;
+                // Test the configured endpoint first; an IP alone is not protocol configuration.
+                if (
+                    (int) $host['snmp_version'] > 0 &&
+                    !icct_backend_inventory_snmp_failed($get('.1.3.6.1.2.1.1.3.0'))
+                ) {
+                    $mapped = db_fetch_assoc_prepared(
+                        'SELECT inventory_key,observed_value FROM plugin_icct_nms_device_inventory WHERE ' .
+                            'host_id=? AND inventory_key IN (\'mac_address\',\'serial_number\',\'chassis_id\') AND status ' .
+                            'IN (\'ok\',\'changed\') AND last_success>=DATE_SUB(NOW(), INTERVAL ? SECOND)',
+                        [$host['id'], max(120, 2 * (int) read_config_option('poller_interval'))],
+                    );
+                    foreach ($mapped as $row) {
+                        $value = trim((string) $row['observed_value']);
+                        if ($row['inventory_key'] === 'mac_address') {
+                            $value = icct_backend_identity_mac($value);
+                        }
+                        if ($value !== '') {
+                            $values[$row['inventory_key']] = $value;
                         }
                     }
-                }
-            }
-            // ENTITY-MIB can contain many component serials: accept exactly one physical chassis.
-            if (empty($values['serial_number'])) {
-                $classesByOid = icct_nms_snmp_column($host, '.1.3.6.1.2.1.47.1.1.1.1.5',
-                    static function () use ($host) {
-                        $rows = cacti_snmp_walk(
-                            $host['hostname'],
-                            $host['snmp_community'],
-                            '.1.3.6.1.2.1.47.1.1.1.1.5',
-                            $host['snmp_version'],
-                            $host['snmp_username'],
-                            $host['snmp_password'],
-                            $host['snmp_auth_protocol'],
-                            $host['snmp_priv_passphrase'],
-                            $host['snmp_priv_protocol'],
-                            $host['snmp_context'],
-                            $host['snmp_port'],
-                            $host['snmp_timeout'],
-                            (int) read_config_option('snmp_retries'),
-                            (int) $host['max_oids'],
-                            'ICCT Identity',
-                            $host['snmp_engine_id'],
-                        );
-                        $values = [];
-                        foreach (is_array($rows) ? $rows : [] as $row) {
-                            $oid = icct_nms_snmp_oid($row['oid'] ?? '');
-                            if ($oid) {
-                                $values[$oid] = $row['value'];
-                                icct_nms_snmp_remember($host, $oid, $row['value']);
+                    // Resolve the interface owning the configured IPv4 address, rather than guessing an interface.
+                    if (
+                        empty($values['mac_address']) &&
+                        !icct_backend_identity_local_endpoint($host['hostname'], $host['snmp_port'])
+                    ) {
+                        $addresses = filter_var($host['hostname'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)
+                            ? [$host['hostname']]
+                            : (filter_var($host['hostname'], FILTER_VALIDATE_IP)
+                                ? []
+                                : (gethostbynamel($host['hostname']) ?:
+                                []));
+                        $macs = [];
+                        foreach (array_unique($addresses) as $ip) {
+                            $index = trim((string) $get('.1.3.6.1.2.1.4.20.1.2.' . $ip));
+                            if (ctype_digit($index)) {
+                                $mac = icct_backend_identity_mac(
+                                    $get('.1.3.6.1.2.1.2.2.1.6.' . $index, SNMP_STRING_OUTPUT_HEX),
+                                );
+                                if ($mac !== '') {
+                                    $macs[$mac] = true;
+                                }
                             }
                         }
-                        return $values;
-                    }, static fn($oid) => $get('.' . $oid));
-                $classes = [];
-                foreach ($classesByOid as $oid => $value) $classes[] = ['oid'=>'.' . $oid, 'value'=>$value];
-                $chassisRows = array_filter(is_array($classes) ? $classes : [], function ($row) {
-                    return preg_match('/^(?:3|chassis(?:\(3\))?)$/i', trim((string) $row['value']));
-                });
-                if (count($chassisRows) === 1) {
-                    $row = array_values($chassisRows)[0];
-                    $index = substr($row['oid'], strrpos($row['oid'], '.') + 1);
-                    if (ctype_digit($index)) {
-                        $serial = $get('.1.3.6.1.2.1.47.1.1.1.1.11.' . $index);
-                        if (
-                            !icct_backend_inventory_snmp_failed($serial) &&
-                            trim((string) $serial, " \t\r\n\"") !== ''
-                        ) {
-                            $values['serial_number'] = trim((string) $serial, " \t\r\n\"");
+                        if (count($macs) === 1) {
+                            $values['mac_address'] = array_key_first($macs);
+                        }
+                    }
+                    // LLDP's local chassis identifier is used as a chassis ID, never a serial number.
+                    if (empty($values['chassis_id'])) {
+                        $chassis = $get('.1.0.8802.1.1.2.1.3.2.0');
+                        if (!icct_backend_inventory_snmp_failed($chassis)) {
+                            $subtype = trim((string) $get('.1.0.8802.1.1.2.1.3.1.0'));
+                            $chassis =
+                                $subtype === '4'
+                                    ? icct_backend_identity_mac(
+                                        $get('.1.0.8802.1.1.2.1.3.2.0', SNMP_STRING_OUTPUT_HEX),
+                                    )
+                                    : trim((string) $chassis, " \t\r\n\"");
+                            if ($chassis !== '') {
+                                $values['chassis_id'] = $chassis;
+                                // Subtype 4 explicitly identifies the device's chassis MAC.
+                                if ($subtype === '4' && empty($values['mac_address'])) {
+                                    $values['mac_address'] = $chassis;
+                                }
+                            }
+                        }
+                    }
+                    // ENTITY-MIB can contain many component serials: accept exactly one physical chassis.
+                    if (empty($values['serial_number'])) {
+                        $classesByOid = icct_nms_snmp_column($host, '.1.3.6.1.2.1.47.1.1.1.1.5',
+                            static fn() => icct_nms_snmp_walk_plain($host, '1.3.6.1.2.1.47.1.1.1.1.5'), static fn($oid) => $get('.' . $oid));
+                        $classes = [];
+                        foreach ($classesByOid as $oid => $value) $classes[] = ['oid'=>'.' . $oid, 'value'=>$value];
+                        $chassisRows = array_filter(is_array($classes) ? $classes : [], function ($row) {
+                            return preg_match('/^(?:3|chassis(?:\(3\))?)$/i', trim((string) $row['value']));
+                        });
+                        if (count($chassisRows) === 1) {
+                            $row = array_values($chassisRows)[0];
+                            $index = substr($row['oid'], strrpos($row['oid'], '.') + 1);
+                            if (ctype_digit($index)) {
+                                $serial = $get('.1.3.6.1.2.1.47.1.1.1.1.11.' . $index);
+                                if (
+                                    !icct_backend_inventory_snmp_failed($serial) &&
+                                    trim((string) $serial, " \t\r\n\"") !== ''
+                                ) {
+                                    $values['serial_number'] = trim((string) $serial, " \t\r\n\"");
+                                }
+                            }
                         }
                     }
                 }
-            }
-        }
-        icct_backend_category_execute(
-            'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
-                'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
-            [
-                'identity_snapshot_' . $host['id'],
-                json_encode(
+                icct_backend_category_execute(
+                    'INSERT INTO plugin_icct_nms_meta(meta_key,meta_value,updated_at) VALUES(?,?,NOW()) ON ' .
+                        'DUPLICATE KEY UPDATE meta_value=VALUES(meta_value),updated_at=NOW()',
                     [
-                        'signature' => icct_backend_identity_signature($host),
-                        'time' => icct_nms_snmp_observation_time($host, $observation),
-                        'values' => $values,
+                        'identity_snapshot_' . $host['id'],
+                        json_encode(
+                            [
+                                'signature' => icct_backend_identity_signature($host),
+                                'time' => icct_nms_snmp_observation_time($host, $observation),
+                                'values' => $values,
+                            ],
+                            JSON_THROW_ON_ERROR,
+                        ),
                     ],
-                    JSON_THROW_ON_ERROR,
-                ),
-            ],
-        );
+                );
+            });
+        } catch (Throwable $error) {
+            cacti_log('ICCT identity collection failed for device ' . (int) $host['id'] . ': ' . $error->getMessage(), false, 'ICCT NMS');
+        }
         $count++;
     }
     return $count;

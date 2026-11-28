@@ -4,6 +4,18 @@
 
 `icct_nms` is an independent Cacti 1.2.31 plugin implementing the shared responsive Device Mgmt designs. It works with the NMS plugin disabled or uninstalled. Runtime requests and collectors use only Cacti core tables and this plugin's `plugin_icct_nms_*` tables. There is no other-plugin database lookup or fallback.
 
+## Version 1.4.30
+
+Backend collection reuses native Cacti observations before issuing plugin-only requests. Additional observations are shared between workers through collector-local plugin metadata with per-device database leases, exact timestamps, lossless octet encoding and profile/cycle validation. Failed native-owned readings remain unknown; lock, storage or collector ownership failures do not enable another transport or poller. Fresh post-collection uptime checks remain mandatory for reboot detection.
+
+Ports and identity retain typed values when Cacti selects its PHP SNMP transport, then use Cacti formatting for the existing consumers. Cacti's configured command-line transport and native bulk size remain supported; failed operations never switch transports. Slower native sources can supply a sufficiently recent sample without suppressing faster configured measurements. Native poller-output batches merge under their own short publication lease, independent of network collection. Native datasource ownership is rechecked on lease acquisition. Native `run_data_query`, `device_remove` and `api_device_save` hooks invalidate affected observations; generation checks reject in-flight snapshots from before a reindex or configuration change. Obsolete shared samples are removed only from plugin-owned storage on the assigned collector.
+
+Collector stages keep their order but isolate exceptions. Long collection cycles are logged. Inventory uses native bulk authorization while preserving authorized disabled hosts. Identical RRD requests share one request-local result; time windows, consolidation functions and users remain separate. No persistent RRD cache masks Boost/rrdcached updates. Device data-query associations use native propagation APIs and recache once per query activation.
+
+UI templates/assets and SSH functionality are unchanged. Script/script-server output is not guessed into SNMP OIDs. General host identity fields without a trustworthy per-field observation time are not promoted to fresh measurements. Separate collector databases keep their own samples; the main server never probes on a remote collector's behalf. No new packages or Cacti core changes are required.
+
+Validation includes standalone PHP regressions, concurrent worker fixtures, JavaScript UI regressions, Python installer tests and PHP syntax checks. Run the portable suites with `python3 shared/tests/run_regressions.py` from the plugin directory (PHP with ctype, filter, mbstring, DOM and pcntl; Node.js; Python 3). The concurrent fixture exercises real PHP subprocesses with a file-backed test database/lock adapter; it is not a live MySQL, SNMP-device or RHEL certification. The explicitly guarded NTP integration test requires a disposable Cacti database. Live cmd.php/Spine, Boost, remote database recovery and device packet-count validation remain deployment checks.
+
 ## Version 1.4.24
 
 Devices send Syslog to the collector’s rsyslog TCP or UDP listener. The ICCT Syslog worker matches the sender IP to an enabled device on the assigned poller, then applies its transport, severity, facility and keyword selections. The offline package runner applies receiver-port changes. The receiver installer publishes the validated port for read-only display when the runner is unavailable. ARP diagnostics identify TAP interfaces from the collector’s detailed link information.

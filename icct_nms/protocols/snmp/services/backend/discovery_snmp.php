@@ -425,6 +425,13 @@ function icct_backend_nd_snmp_optional_subtree($session, $root, $deadline, &$bud
 
 function icct_backend_nd_snmp_scalar($session, $oid, $deadline, $fresh = false, $type = null)
 {
+    $host = $GLOBALS['icct_nms_snmp_sessions'][$session] ?? null;
+    $read = static fn()=>icct_backend_nd_snmp_scalar_local($session, $oid, $deadline, $fresh, $type);
+    return $host ? icct_nms_snmp_shared($host, $read) : $read();
+}
+
+function icct_backend_nd_snmp_scalar_local($session, $oid, $deadline, $fresh = false, $type = null)
+{
     if (microtime(true) > $deadline) throw new RuntimeException('Discovery time limit reached.');
     $host = $GLOBALS['icct_nms_snmp_sessions'][$session] ?? null;
     $normalized = icct_nms_snmp_oid($oid);
@@ -440,6 +447,7 @@ function icct_backend_nd_snmp_scalar($session, $oid, $deadline, $fresh = false, 
     // The post-collection uptime is deliberately a new observation: it guards mid-collection resets.
     $response = @$session->get($oid);
     if ($response === false || $session->getErrno()) {
+        if ($host) icct_nms_snmp_remember($host, $normalized, false);
         throw new RuntimeException('SNMP request failed or the required MIB object is not readable: ' . $oid);
     }
     $wire = icct_backend_nd_snmp_value($response, $oid);
@@ -541,6 +549,15 @@ function icct_backend_nd_entity_values($session, $deadline, &$budget)
 function icct_backend_nd_snmp_subtree($session, $root, $deadline, &$budget, $type = null, $indexes = [])
 {
     $host = $GLOBALS['icct_nms_snmp_sessions'][$session] ?? null;
+    $read = static function () use ($session, $root, $deadline, &$budget, $type, $indexes) {
+        return icct_backend_nd_snmp_subtree_local($session, $root, $deadline, $budget, $type, $indexes);
+    };
+    return $host ? icct_nms_snmp_shared($host, $read) : $read();
+}
+
+function icct_backend_nd_snmp_subtree_local($session, $root, $deadline, &$budget, $type = null, $indexes = [])
+{
+    $host = $GLOBALS['icct_nms_snmp_sessions'][$session] ?? null;
     if (!$host) return icct_backend_nd_snmp_subtree_live($session, $root, $deadline, $budget);
     $state = &icct_nms_snmp_samples($host);
     if ($type === null) {
@@ -548,7 +565,9 @@ function icct_backend_nd_snmp_subtree($session, $root, $deadline, &$budget, $typ
             if (str_starts_with($key, 'wire:')) {
                 $ancestor = substr($key, 5);
                 if ($ancestor === $root || str_starts_with($root, $ancestor . '.')) {
-                    return array_filter($rows, static fn($oid)=>str_starts_with($oid, $root . '.'), ARRAY_FILTER_USE_KEY);
+                    $rows = array_filter($rows, static fn($oid)=>str_starts_with($oid, $root . '.'), ARRAY_FILTER_USE_KEY);
+                    icct_nms_snmp_observe_rows($host, $rows);
+                    return $rows;
                 }
             }
         }
@@ -559,7 +578,16 @@ function icct_backend_nd_snmp_subtree($session, $root, $deadline, &$budget, $typ
         unset($wire);
         return $rows;
     };
-    if ($type === null) return $state['walks']['wire:' . $root] = $walk();
+    if ($type === null) {
+        $key = 'wire:' . $root;
+        if (isset($state['errors'][$key])) throw new RuntimeException($state['errors'][$key]);
+        try {
+            return $state['walks'][$key] = $walk();
+        } catch (RuntimeException $error) {
+            $state['errors'][$key] = $error->getMessage();
+            throw $error;
+        }
+    }
     return icct_nms_snmp_column($host, $root, $walk,
         static fn($oid)=>icct_backend_nd_snmp_scalar($session, $oid, $deadline, false, $type),
         $indexes, $type);

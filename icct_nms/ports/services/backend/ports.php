@@ -329,75 +329,49 @@ function icct_backend_collect_ports()
             'error' => '',
         ];
         try {
-            $columns = [];
-            foreach (
-                [
-                    'index' => '1.3.6.1.2.1.2.2.1.1',
-                    'description' => '1.3.6.1.2.1.2.2.1.2',
-                    'name' => '1.3.6.1.2.1.31.1.1.1.1',
-                    'admin' => '1.3.6.1.2.1.2.2.1.7',
-                    'oper' => '1.3.6.1.2.1.2.2.1.8',
-                    'type' => '1.3.6.1.2.1.2.2.1.3',
-                    'speed_bps' => '1.3.6.1.2.1.2.2.1.5',
-                    'high_speed_mbps' => '1.3.6.1.2.1.31.1.1.1.15',
-                    'connector' => '1.3.6.1.2.1.31.1.1.1.17',
-                    'alias' => '1.3.6.1.2.1.31.1.1.1.18',
-                    'last_change' => '1.3.6.1.2.1.2.2.1.9',
-                    'uptime' => '1.3.6.1.2.1.1.3',
-                    'bridge_ifindex' => '1.3.6.1.2.1.17.1.4.1.2',
-                    'pvid' => '1.3.6.1.2.1.17.7.1.4.5.1.1',
-                ]
-                as $field => $oid
-            ) {
-                if ($field === 'uptime') {
-                    $value = icct_nms_snmp_get($host, $oid . '.0');
-                    if ($value !== false) $columns[$field]['0'] = $value;
-                    continue;
-                }
-                $indexes = in_array($field, ['index','bridge_ifindex','pvid'], true)
-                    ? [] : array_keys($columns['index'] ?? []);
-                $rows = icct_nms_snmp_column($host, $oid,
-                    static function () use ($host, $oid) {
-                        $rows = cacti_snmp_walk(
-                            $host['hostname'],
-                            $host['snmp_community'],
-                            '.' . $oid,
-                            $host['snmp_version'],
-                            $host['snmp_username'],
-                            $host['snmp_password'],
-                            $host['snmp_auth_protocol'],
-                            $host['snmp_priv_passphrase'],
-                            $host['snmp_priv_protocol'],
-                            $host['snmp_context'],
-                            $host['snmp_port'],
-                            $host['snmp_timeout'],
-                            (int) read_config_option('snmp_retries'),
-                            (int) $host['max_oids'],
-                            'ICCT Ports',
-                            $host['snmp_engine_id'],
-                        );
-                        $values = [];
-                        foreach (is_array($rows) ? $rows : [] as $row) {
-                            $returned = icct_nms_snmp_oid($row['oid'] ?? '');
-                            if ($returned && str_starts_with($returned, $oid . '.')) {
-                                $values[$returned] = $row['value'] ?? '';
-                                icct_nms_snmp_remember($host, $returned, $values[$returned]);
-                            }
+            icct_nms_snmp_shared($host, static function () use ($host, &$snapshot) {
+                $columns = [];
+                foreach (
+                    [
+                        'index' => '1.3.6.1.2.1.2.2.1.1',
+                        'description' => '1.3.6.1.2.1.2.2.1.2',
+                        'name' => '1.3.6.1.2.1.31.1.1.1.1',
+                        'admin' => '1.3.6.1.2.1.2.2.1.7',
+                        'oper' => '1.3.6.1.2.1.2.2.1.8',
+                        'type' => '1.3.6.1.2.1.2.2.1.3',
+                        'speed_bps' => '1.3.6.1.2.1.2.2.1.5',
+                        'high_speed_mbps' => '1.3.6.1.2.1.31.1.1.1.15',
+                        'connector' => '1.3.6.1.2.1.31.1.1.1.17',
+                        'alias' => '1.3.6.1.2.1.31.1.1.1.18',
+                        'last_change' => '1.3.6.1.2.1.2.2.1.9',
+                        'uptime' => '1.3.6.1.2.1.1.3',
+                        'bridge_ifindex' => '1.3.6.1.2.1.17.1.4.1.2',
+                        'pvid' => '1.3.6.1.2.1.17.7.1.4.5.1.1',
+                    ]
+                    as $field => $oid
+                ) {
+                    if ($field === 'uptime') {
+                        $value = icct_nms_snmp_typed_get($host, $oid . '.0');
+                        if ($value !== false) $columns[$field]['0'] = $value;
+                        continue;
+                    }
+                    $indexes = in_array($field, ['index','bridge_ifindex','pvid'], true)
+                        ? [] : array_keys($columns['index'] ?? []);
+                    $rows = icct_nms_snmp_column($host, $oid,
+                        static fn() => icct_nms_snmp_walk_plain($host, $oid), static fn($missing) => icct_nms_snmp_typed_get($host, $missing), $indexes);
+                    foreach ($rows as $returned => $value) {
+                        $prefix = $oid . '.';
+                        if (str_starts_with($returned, $prefix)) {
+                            $columns[$field][substr($returned, strlen($prefix))] = $value;
                         }
-                        return $values;
-                    }, static fn($missing) => icct_nms_snmp_get($host, $missing), $indexes);
-                foreach ($rows as $returned => $value) {
-                    $prefix = $oid . '.';
-                    if (str_starts_with($returned, $prefix)) {
-                        $columns[$field][substr($returned, strlen($prefix))] = $value;
+                    }
+                    if ($field === 'type' && !icct_backend_ports_parse($columns)) {
+                        break;
                     }
                 }
-                if ($field === 'type' && !icct_backend_ports_parse($columns)) {
-                    break;
-                }
-            }
-            $snapshot['uptime_ticks'] = icct_backend_ports_ticks($columns['uptime']['0'] ?? '');
-            $snapshot['ports'] = icct_backend_ports_parse($columns);
+                $snapshot['uptime_ticks'] = icct_backend_ports_ticks($columns['uptime']['0'] ?? '');
+                $snapshot['ports'] = icct_backend_ports_parse($columns);
+            });
         } catch (Throwable $error) {
             $snapshot['error'] =
                 'Interface discovery failed. Check saved SNMP settings and device IF-MIB access.';

@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../../shared/services/native_rrd.php';
+
 /** Geographic topology uses native Cacti sites and this plugin's permitted inventory. */
 function icct_nms_map_coordinates($latitude, $longitude)
 {
@@ -94,7 +96,7 @@ function icct_nms_map_readings($id)
         try {
             $key = (int) $source['local_data_id'];
             if (!isset($cache[$key])) {
-                $cache[$key] = rrdtool_function_fetch(
+                $cache[$key] = icct_nms_rrd_fetch(
                     $key,
                     $now - 3 * $interval,
                     $now,

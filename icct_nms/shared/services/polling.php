@@ -8,13 +8,16 @@ function icct_nms_poller_bottom()
     try {
         icct_nms_backend();
         icct_nms_snmp_reuse_reset();
-        icct_backend_diag_dispatch();
-        icct_backend_collect_inventory_values();
-        icct_backend_collect_identity();
-        icct_backend_collect_ports();
-        icct_backend_collect_port_alarms();
-        icct_backend_collect_faults();
-        icct_backend_nd_poll();
+        icct_nms_poller_collectors([
+            'diagnostics'=>'icct_backend_diag_dispatch',
+            'inventory'=>'icct_backend_collect_inventory_values',
+            'identity'=>'icct_backend_collect_identity',
+            'ports'=>'icct_backend_collect_ports',
+            'port alarms'=>'icct_backend_collect_port_alarms',
+            'faults'=>'icct_backend_collect_faults',
+            'neighbors'=>'icct_backend_nd_poll',
+            'sample cleanup'=>'icct_nms_snmp_shared_cleanup',
+        ]);
     } catch (Throwable $error) {
         cacti_log('ICCT NMS collector: ' . $error->getMessage(), false, 'ICCT NMS');
     }
@@ -72,6 +75,23 @@ function icct_nms_poller_bottom()
         icct_nms_inventory_observe((int) $config['poller_id']);
     } catch (Throwable $error) {
         cacti_log('ICCT inventory events: ' . $error->getMessage(), false, 'ICCT NMS');
+    }
+}
+
+/** Preserve order and isolate failures; never retry a failed stage from another transport. */
+function icct_nms_poller_collectors(array $collectors): void
+{
+    $start = microtime(true);
+    foreach ($collectors as $name => $collector) {
+        try {
+            $collector();
+        } catch (Throwable $error) {
+            cacti_log('ICCT NMS ' . $name . ': ' . $error->getMessage(), false, 'ICCT NMS');
+        }
+    }
+    $elapsed = microtime(true) - $start;
+    if ($elapsed >= max(1, (int) read_config_option('poller_interval'))) {
+        cacti_log(sprintf('ICCT NMS collectors exceeded the polling interval (%.2fs).', $elapsed), false, 'ICCT NMS');
     }
 }
 

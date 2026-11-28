@@ -130,6 +130,26 @@ function icct_backend_poller_interval()
     return $interval;
 }
 
+/** Reuse Cacti's bulk ACL, adding only authorized disabled devices hidden by display preferences. */
+function icct_backend_allowed_device_ids(): array
+{
+    $user = icct_backend_current_user_id();
+    if (!auth_valid_user($user)) return [];
+    $total = -1;
+    $devices = get_allowed_devices('', '', '', $total, $user);
+    if (!is_array($devices)) throw new RuntimeException('Could not read native device permissions.');
+    $where = "WHERE h.deleted='' AND h.disabled='on'";
+    if ((int) read_config_option('auth_method') !== 0 && !get_simple_device_perms($user)) {
+        $where = get_policy_where(read_config_option('graph_auth_method'), get_policies($user), $where);
+    }
+    $disabled = db_fetch_assoc("SELECT DISTINCT h.id FROM host h
+        LEFT JOIN graph_local gl ON h.id=gl.host_id
+        LEFT JOIN graph_templates gt ON gt.id=gl.graph_template_id
+        LEFT JOIN host_template ht ON h.host_template_id=ht.id $where");
+    if (!is_array($disabled)) throw new RuntimeException('Could not read disabled device permissions.');
+    return array_fill_keys(array_map('intval', array_column(array_merge($devices, $disabled), 'id')), true);
+}
+
 function icct_backend_require_device_access($host_id)
 {
     if (function_exists('is_device_allowed') && is_device_allowed((int) $host_id)) {
